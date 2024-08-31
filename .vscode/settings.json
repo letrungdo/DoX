@@ -1,0 +1,23 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.fixAll": "explicit"
+  },
+  "editor.formatOnSave": true,
+  "dart.lineLength": 140,
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+      140
+    ],
+    "editor.defaultFormatter": "Dart-Code.dart-code"
+  },
+  "dart.flutterSdkPath": ".fvm/versions/3.29.3",
+  "search.exclude": {
+    "**/.fvm": true
+  },
+  "files.watcherExclude": {
+    "**/.fvm": true
+  },
+  "makefile.configureOnOpen": false
+}
