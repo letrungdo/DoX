@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:do_ai/app.dart';
-import 'package:do_ai/constant/env.dart';
+import 'package:do_ai/constants/env.dart';
 import 'package:do_ai/firebase_options.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -34,6 +35,10 @@ void main() {
                 ? DefaultFirebaseOptions.currentPlatform.appId
                 : null,
         options: DefaultFirebaseOptions.currentPlatform,
+      );
+      FirebaseAppCheck.instance.activate(
+        androidProvider: AndroidProvider.playIntegrity, //
+        appleProvider: AppleProvider.deviceCheck,
       );
 
       runApp(const MyApp());
