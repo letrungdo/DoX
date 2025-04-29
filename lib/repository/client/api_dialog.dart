@@ -1,7 +1,7 @@
-import 'package:do_ai/extensions/context_extensions.dart';
-import 'package:do_ai/extensions/string_extensions.dart';
-import 'package:do_ai/repository/client/error_handler.dart';
-import 'package:do_ai/utils/app_dialog.dart';
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/string_extensions.dart';
+import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/utils/app_dialog.dart';
 import 'package:flutter/material.dart';
 
 class ApiDialog {
@@ -73,7 +73,12 @@ class ApiDialog {
     }
     if (!context.mounted) return;
 
-    final action = await showAppDialog(context, title: title, message: message, actions: actions);
+    final action = await showAppDialog(
+      context, //
+      title: title,
+      message: message,
+      actions: actions,
+    );
     if (action == ActionButtonType.cancel) {
       onClose?.call(ApiErrorType.cancel);
     }

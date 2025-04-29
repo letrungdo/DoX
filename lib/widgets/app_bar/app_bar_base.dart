@@ -1,4 +1,4 @@
-import 'package:do_ai/constants/dimens.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 
 class DoAppBar extends StatefulWidget implements PreferredSizeWidget {

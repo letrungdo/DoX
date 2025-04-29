@@ -1,5 +1,6 @@
-import 'package:do_ai/screen/core/screen_state.dart';
-import 'package:do_ai/view_model/init_view_model.dart';
+import 'package:do_x/screen/core/app_scaffold.dart';
+import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/view_model/init_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -23,6 +24,6 @@ class InitScreen extends StatefulScreen implements ProviderWrapper {
 class _InitScreenState extends ScreenState<InitScreen, InitViewModel> {
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.red);
+    return AppScaffold();
   }
 }

@@ -1,7 +1,7 @@
-import 'package:do_ai/screen/core/app_scaffold.dart';
-import 'package:do_ai/screen/core/screen_state.dart';
-import 'package:do_ai/view_model/menu_view_model.dart';
-import 'package:do_ai/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/screen/core/app_scaffold.dart';
+import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/view_model/menu_view_model.dart';
+import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

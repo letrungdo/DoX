@@ -1,4 +1,4 @@
-import 'package:do_ai/l10n/app_localizations.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 extension ContextExtensions on BuildContext {

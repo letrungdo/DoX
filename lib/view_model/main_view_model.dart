@@ -1,6 +1,5 @@
-import 'package:do_ai/view_model/core/core_view_model.dart';
-import 'package:do_ai/view_model/mixin/auth.mixin.dart';
+import 'package:do_x/view_model/core/core_view_model.dart';
 
-class MainViewModel extends CoreViewModel with AuthMixin {
+class MainViewModel extends CoreViewModel {
   //
 }

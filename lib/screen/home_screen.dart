@@ -1,9 +1,10 @@
 import 'dart:io';
 
-import 'package:do_ai/screen/core/app_scaffold.dart';
-import 'package:do_ai/screen/core/screen_state.dart';
-import 'package:do_ai/view_model/home_view_model.dart';
-import 'package:do_ai/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/screen/core/app_scaffold.dart';
+import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/view_model/home_view_model.dart';
+import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -43,7 +44,12 @@ class _HomeScreenState<V extends HomeViewModel> extends ScreenState<HomeScreen, 
           child: Container(
             color: Colors.grey,
             height: 200, //
-            child: media == null ? SizedBox.expand() : Image.file(File(media.path)),
+            child:
+                media == null
+                    ? SizedBox.expand()
+                    : kIsWeb
+                    ? Image.network(media.path)
+                    : Image.file(File(media.path)),
           ),
         ),
         ElevatedButton(

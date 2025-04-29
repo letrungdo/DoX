@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:do_ai/utils/logger.dart';
+import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 
 const requestTimeOutMessage = "The semaphore timeout period has expired.";
@@ -49,20 +49,35 @@ class Result<T> {
         case DioExceptionType.receiveTimeout:
           return Result(error: ConnectionError(type: ApiErrorType.requestTimeout));
         case DioExceptionType.badResponse:
-          final error = e.error;
-          if (error is DioException) {
-            final statusCode = error.response?.statusCode;
-            switch (statusCode) {
-              case HttpStatus.badRequest: // 400
-                return Result(error: ConnectionError(type: ApiErrorType.badRequest, statusCode: statusCode));
-              case HttpStatus.movedPermanently: // 301
-              case HttpStatus.serviceUnavailable: // 503
-                return Result(error: ConnectionError(type: ApiErrorType.maintenance, message: error.message));
-              default:
-                return Result(error: ConnectionError(type: ApiErrorType.other, statusCode: statusCode));
-            }
+          final response = e.response;
+          final statusCode = response?.statusCode;
+          switch (statusCode) {
+            case HttpStatus.badRequest: // 400
+              return Result(
+                error: ConnectionError(
+                  type: ApiErrorType.badRequest, //
+                  message: response?.statusMessage,
+                  statusCode: statusCode,
+                ),
+              );
+            case HttpStatus.movedPermanently: // 301
+            case HttpStatus.serviceUnavailable: // 503
+              return Result(
+                error: ConnectionError(
+                  type: ApiErrorType.maintenance, //
+                  message: response?.statusMessage,
+                  statusCode: statusCode,
+                ),
+              );
+            default:
+              return Result(
+                error: ConnectionError(
+                  type: ApiErrorType.other, //
+                  message: response?.statusMessage,
+                  statusCode: statusCode,
+                ),
+              );
           }
-          return Result(error: ConnectionError(type: ApiErrorType.unknownError));
         case DioExceptionType.badCertificate:
         case DioExceptionType.connectionError:
           return Result(error: ConnectionError(type: ApiErrorType.networkError));

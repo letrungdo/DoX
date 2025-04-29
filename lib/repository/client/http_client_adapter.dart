@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/io.dart';
-import 'package:do_ai/constants/env.dart';
+import 'package:do_x/constants/env.dart';
 
 final httpClientAdapter = IOHttpClientAdapter(
   createHttpClient: () {

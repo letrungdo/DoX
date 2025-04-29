@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 enum ActionButtonType { cancel, ok }
 
@@ -30,7 +31,29 @@ Future<ActionButtonType> showAppDialog(
   List<Widget> Function(BuildContext context)? childrenBuilder,
   Widget? Function(Completer<ActionButtonType> completer)? contentBuilder,
 }) async {
-  // TODO:
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(title ?? ""),
+        content: Text(message ?? ""),
+        actions:
+            actions
+                ?.map(
+                  (e) => ElevatedButton(
+                    onPressed: () {
+                      e.onPressed?.call(context);
+                      if (e.autoClose) {
+                        context.pop();
+                      }
+                    }, //
+                    child: Text(e.text, style: e.textStyle),
+                  ),
+                )
+                .toList(),
+      );
+    },
+  );
 
   return ActionButtonType.ok;
 }

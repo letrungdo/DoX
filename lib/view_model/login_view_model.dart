@@ -1,10 +1,12 @@
-import 'package:do_ai/services/auth_service.dart';
-import 'package:do_ai/utils/logger.dart';
-import 'package:do_ai/view_model/core/core_view_model.dart';
-import 'package:do_ai/view_model/mixin/auth.mixin.dart';
+import 'package:do_x/screen/main_screen.dart';
+import 'package:do_x/services/auth_service.dart';
+import 'package:do_x/store/app_data.dart';
+import 'package:do_x/utils/logger.dart';
+import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class LoginViewModel extends CoreViewModel with AuthMixin {
+class LoginViewModel extends CoreViewModel {
   AuthService get _authService => context.read<AuthService>();
 
   String _username = "";
@@ -23,6 +25,20 @@ class LoginViewModel extends CoreViewModel with AuthMixin {
 
   void onLogin() async {
     final result = await _authService.login(email: username, password: password);
-    logger.d(result.toString());
+    if (result.isError) {
+      showAppError(
+        // ignore: use_build_context_synchronously
+        context,
+        result.error,
+        onRetry: onLogin,
+      );
+      return;
+    }
+    logger.d("idToken: ${result.data?.idToken}");
+
+    appData.setUser(result.data);
+    if (!context.mounted) return;
+
+    context.replace(MainScreen.path);
   }
 }
