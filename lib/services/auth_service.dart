@@ -1,30 +1,39 @@
 import 'dart:async';
 
-import 'package:do_ai/utils/logger.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dio/dio.dart';
+import 'package:do_x/constants/env.dart';
+import 'package:do_x/model/response/user_model.dart';
+import 'package:do_x/repository/client/dio_client.dart';
+import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/store/app_data.dart';
 
 class AuthService {
-  Future<UserCredential?> login({
+  final dio = DioClient.create();
+
+  Future<Result<UserModel>> login({
     required String email, //
     required String password,
   }) async {
-    try {
-      final result = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email, //
-        password: password,
+    return Result.guardFuture<UserModel>(() async {
+      final response = await dio.post(
+        "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${Envs.locketApiKey.iOS}",
+        options: Options(
+          headers: {
+            'X-Ios-Bundle-Identifier': 'com.locket.Locket', //
+          },
+        ),
+        data: {
+          "email": email, //
+          "password": password,
+          "clientType": "CLIENT_TYPE_IOS",
+          "returnSecureToken": true,
+        },
       );
-      return result;
-    } on FirebaseAuthException catch (e) {
-      logger.e(e.message ?? "", error: e);
-    }
-    return null;
+      return UserModel.fromJson(response.data);
+    });
   }
 
   Future<void> logout() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-    } catch (e) {
-      logger.e(e.toString());
-    }
+    appData.clearSession();
   }
 }

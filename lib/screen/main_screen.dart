@@ -1,8 +1,8 @@
-import 'package:do_ai/screen/core/app_scaffold.dart';
-import 'package:do_ai/screen/core/screen_state.dart';
-import 'package:do_ai/screen/home_screen.dart';
-import 'package:do_ai/screen/menu_screen.dart';
-import 'package:do_ai/view_model/main_view_model.dart';
+import 'package:do_x/screen/core/app_scaffold.dart';
+import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/home_screen.dart';
+import 'package:do_x/screen/menu_screen.dart';
+import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,7 +13,7 @@ class MainScreen extends StatefulScreen implements ProviderWrapper {
 
   @override
   State<MainScreen> createState() => _MainScreenState();
-  
+
   @override
   Widget providerWrapper() {
     return ChangeNotifierProvider(

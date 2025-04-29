@@ -1,4 +1,4 @@
-import 'package:do_ai/view_model/core/core_view_model.dart';
+import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

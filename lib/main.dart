@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:do_ai/app.dart';
-import 'package:do_ai/constants/env.dart';
-import 'package:do_ai/firebase_options.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:do_x/app.dart';
+import 'package:do_x/constants/env.dart';
+import 'package:do_x/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -28,19 +26,9 @@ void main() {
       _catchAllError();
 
       await Firebase.initializeApp(
-        name:
-            kIsWeb
-                ? null
-                : Platform.isAndroid
-                ? DefaultFirebaseOptions.currentPlatform.appId
-                : null,
-        options: DefaultFirebaseOptions.currentPlatform,
+        // name: DefaultFirebaseOptions.currentPlatform.projectId,
+        options: kIsWeb ? DefaultFirebaseOptions.currentPlatform : null,
       );
-      FirebaseAppCheck.instance.activate(
-        androidProvider: AndroidProvider.playIntegrity, //
-        appleProvider: AppleProvider.deviceCheck,
-      );
-
       runApp(const MyApp());
     },
     (error, stack) {

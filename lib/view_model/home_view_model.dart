@@ -1,16 +1,17 @@
-import 'dart:io';
-
-import 'package:do_ai/services/locket_service.dart';
-import 'package:do_ai/utils/logger.dart';
-import 'package:do_ai/view_model/core/core_view_model.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image/image.dart' as img;
+import 'package:do_x/services/locket_service.dart';
+import 'package:do_x/services/upload_service.dart';
+import 'package:do_x/store/app_data.dart';
+import 'package:do_x/utils/logger.dart';
+import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 
 class HomeViewModel extends CoreViewModel {
   LocketService get _locketService => context.read<LocketService>();
+  UploadService get _uploadService => context.read<UploadService>();
 
   XFile? _media;
   XFile? get media => _media;
@@ -23,32 +24,38 @@ class HomeViewModel extends CoreViewModel {
     notifyListeners();
   }
 
-  void upload() async {
+  void upload({String? caption = "test"}) async {
     final m = media;
     if (m == null) return;
-    final user = FirebaseAuth.instance.currentUser;
+    final user = appData.user;
     if (user == null) return;
 
-    final mime = lookupMimeType(m.path);
+    final mime = kIsWeb ? m.mimeType : lookupMimeType(m.path);
     if (mime == null) return;
-
     if (mime.startsWith("image/")) {
-      final imageFile = File(m.path);
-      final originalImage = img.decodeImage(await imageFile.readAsBytes());
-
-      if (originalImage == null) return;
-      final targetWidth = 600;
-      final newHeight = (originalImage.height * targetWidth / originalImage.width).round();
-      final resizedImage = img.copyResize(originalImage, width: targetWidth, height: newHeight);
-      final resizedImageData = img.encodeJpg(resizedImage);
-
-      final thumbnailUrl = await _locketService.uploadImage(
-        data: resizedImageData, //
-        userId: user.uid,
+      final imgData = await FlutterImageCompress.compressWithList(
+        await m.readAsBytes(),
+        minWidth: 800,
+        minHeight: 800,
+        format: CompressFormat.webp,
       );
+      final uploadRes = await _uploadService.uploadImage(
+        data: imgData, //
+        user: user,
+      );
+      if (uploadRes.isError) {
+        showAppError(
+          // ignore: use_build_context_synchronously
+          context,
+          uploadRes.error,
+          onRetry: () => upload(),
+        );
+        return;
+      }
+      final thumbnailUrl = uploadRes.data;
       logger.d("thumbnailUrl: $thumbnailUrl");
       if (thumbnailUrl == null) return;
-      _locketService.postImage(thumbnailUrl, "test");
+      _locketService.postImage(thumbnailUrl, caption: caption, user: user);
     }
   }
 }

@@ -1,96 +1,68 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:dio/dio.dart';
-import 'package:do_ai/repository/client/dio_client.dart';
-import 'package:do_ai/repository/client/error_handler.dart';
-import 'package:do_ai/utils/logger.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/model/response/user_model.dart';
+import 'package:do_x/repository/client/dio_client.dart';
+import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/utils/logger.dart';
+import 'package:flutter/cupertino.dart';
 
 class LocketService {
-  final dio = DioClient.create();
+  final dio = DioClient.createLocket();
 
-  Future<String?> uploadImage({
-    required Uint8List data, //
-    required String userId,
-  }) async {
-    try {
-      final Reference ref = FirebaseStorage.instance.ref().child(
-        '/users/$userId/moments/thumbnails/${_generateName(type: FileType.image)}',
-      );
+  Future<Result> postImage(
+    String thumbnailUrl, {
+    String? caption, //
+    OverlayType? overlayType,
+    required UserModel user,
+  }) {
+    return Result.guardFuture(() async {
+      final overlayName = (overlayType ?? OverlayType.standard).name;
+      final body = {
+        "data": {
+          "thumbnail_url": thumbnailUrl,
+          "recipients": [],
+          "sent_to_self_only": false,
+          "sent_to_all": true,
+          "caption": caption,
+          "overlays": [
+            {
+              "data": {
+                "background": {"material_blur": "ultra_thin", "colors": []},
+                "text_color": "#FFFFFFE6",
+                "type": overlayName,
+                "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
+                "text": caption,
+              },
+              "alt_text": caption,
+              "overlay_id": "caption:$overlayName",
+              "overlay_type": "caption",
+            },
+          ],
+        },
+      };
 
-      final UploadTask uploadTask = ref.putData(data);
-      final TaskSnapshot snapshot = await uploadTask.whenComplete(() {});
-
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
-    } catch (e) {
-      logger.e("Err: Failed to upload image ${e.toString()}");
-      return null;
-    }
+      final response = await dio.post('https://api.locketcamera.com/postMomentV2', data: body);
+      debugPrint(response.data.toString());
+      return response.data;
+    });
   }
 
-  Future<(String, String, bool)> uploadVideo({
-    required File video, //
-    required Uint8List thumbnail,
-    required String userId,
-  }) async {
-    try {
-      final String videoFileName = _generateName(type: FileType.video);
-      final Reference videoRef = FirebaseStorage.instance
-          .refFromURL("gs://locket-video")
-          .child('/users/$userId/moments/videos/$videoFileName');
+  Future postVideo(String videoUrl, String thumbnailUrl, String caption) async {
+    // final functions = FirebaseFunctions.instance;
+    // final request = _videoDataJson(videoUrl: videoUrl, thumbUrl: thumbnailUrl, caption: caption);
 
-      final UploadTask videoUploadTask = videoRef.putFile(video);
-      final TaskSnapshot videoSnapshot = await videoUploadTask.whenComplete(() {});
-      final String videoUrl = await videoSnapshot.ref.getDownloadURL();
-
-      final thumbnailUrl = await uploadImage(data: thumbnail, userId: userId);
-
-      if (thumbnailUrl != null) {
-        return (videoUrl, thumbnailUrl, true);
-      } else {
-        return ("", "", false);
-      }
-    } catch (e) {
-      logger.e(e.toString());
-      return ("", "", false);
-    }
-  }
-
-  Future<bool> postImage(String thumbnailUrl, String caption) async {
-    final functions = FirebaseFunctions.instance;
-    final request = {"thumbnail_url": thumbnailUrl, "caption": caption};
-
-    try {
-      final result = await functions.httpsCallableFromUrl(
-        "https://api.locketcamera.com/postMomentV2", //
-      )(request);
-      logger.d(result.data.toString());
-      return true;
-    } on FirebaseFunctionsException catch (e) {
-      logger.e(e.details.toString(), error: e);
-      return false;
-    }
-  }
-
-  Future<bool> postVideo(String videoUrl, String thumbnailUrl, String caption) async {
-    final functions = FirebaseFunctions.instance;
-    final request = _videoDataJson(videoUrl: videoUrl, thumbUrl: thumbnailUrl, caption: caption);
-
-    try {
-      final HttpsCallableResult<Map<String, dynamic>> result = await functions.httpsCallable(
-        "https://api.locketcamera.com/postMomentV2", //
-      )(request);
-      logger.d(result.data.toString());
-      return true;
-    } on FirebaseFunctionsException catch (e) {
-      logger.e(e.toString());
-      return false;
-    }
+    // try {
+    //   final HttpsCallableResult<Map<String, dynamic>> result = await functions.httpsCallable(
+    //     "https://api.locketcamera.com/postMomentV2", //
+    //   )(request);
+    //   logger.d(result.data.toString());
+    //   return true;
+    // } on FirebaseFunctionsException catch (e) {
+    //   logger.e(e.toString());
+    //   return false;
+    // }
   }
 
   Future<Result<bool>> postVideo2(String videoUrl, String thumbnailUrl, String caption, String token) async {
@@ -99,32 +71,11 @@ class LocketService {
     final url = "https://api.locketcamera.com/postMomentV2";
 
     return Result.guardFuture<bool>(() async {
-      final response = await dio.post(
-        url,
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json', //
-            'Authorization': 'Bearer $token',
-          },
-        ),
-        data: jsonEncode(json),
-      );
+      final response = await dio.post(url, data: jsonEncode(json));
       final responseJSON = jsonDecode(response.data);
       logger.d(responseJSON);
       return true;
     });
-  }
-
-  String _generateName({required FileType type}) {
-    final now = DateTime.now();
-    final timestamp = now.millisecondsSinceEpoch;
-    final random = DateTime.now().microsecondsSinceEpoch % 1000;
-    switch (type) {
-      case FileType.image:
-        return 'IMG_${timestamp}_$random.jpg';
-      case FileType.video:
-        return 'VID_${timestamp}_$random.mp4';
-    }
   }
 
   Map<String, dynamic> _videoDataJson({
@@ -139,5 +90,3 @@ class LocketService {
     };
   }
 }
-
-enum FileType { image, video }

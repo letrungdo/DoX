@@ -1,7 +1,7 @@
 import 'dart:collection';
 
-import 'package:do_ai/repository/client/api_dialog.dart';
-import 'package:do_ai/repository/client/error_handler.dart';
+import 'package:do_x/repository/client/api_dialog.dart';
+import 'package:do_x/repository/client/error_handler.dart';
 import 'package:flutter/material.dart';
 
 class ErrorCallback {

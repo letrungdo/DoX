@@ -1,5 +1,5 @@
-import 'package:do_ai/view_model/mixin/app_error.mixin.dart';
-import 'package:do_ai/view_model/mixin/cancel_future.mixin.dart';
+import 'package:do_x/view_model/mixin/app_error.mixin.dart';
+import 'package:do_x/view_model/mixin/cancel_future.mixin.dart';
 import 'package:flutter/material.dart';
 
 abstract class CoreViewModel with ChangeNotifier, CancelRequestMixin, AppErrorMixin {
@@ -20,10 +20,10 @@ abstract class CoreViewModel with ChangeNotifier, CancelRequestMixin, AppErrorMi
 
   /// Invoke after ui render
   @mustCallSuper
-  Future<void> initData() async {}
+  void initData() async {}
 
   @mustCallSuper
-  Future<void> initState() async {}
+  void initState() async {}
 
   @override
   void dispose() {

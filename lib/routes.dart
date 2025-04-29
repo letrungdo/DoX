@@ -1,6 +1,6 @@
-import 'package:do_ai/screen/init_screen.dart';
-import 'package:do_ai/screen/login_screen.dart';
-import 'package:do_ai/screen/main_screen.dart';
+import 'package:do_x/screen/init_screen.dart';
+import 'package:do_x/screen/login_screen.dart';
+import 'package:do_x/screen/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
