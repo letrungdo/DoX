@@ -11,6 +11,7 @@ class DoTextField extends StatefulWidget {
     this.obscureText = false,
     this.labelText,
     this.validator,
+    this.autofillHints,
   });
   final Function(String)? onChanged;
   final String? value;
@@ -20,6 +21,7 @@ class DoTextField extends StatefulWidget {
   final bool obscureText;
   final String? labelText;
   final String? Function(String?)? validator;
+  final Iterable<String>? autofillHints;
 
   @override
   State<DoTextField> createState() => _DoTextFieldState();
@@ -55,6 +57,7 @@ class _DoTextFieldState extends State<DoTextField> {
     return TextFormField(
       controller: _controller,
       keyboardType: widget.keyboardType,
+      autofillHints: widget.autofillHints,
       decoration: InputDecoration(
         labelText: widget.labelText,
         hintText: widget.placeholder,
