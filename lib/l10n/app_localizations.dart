@@ -105,6 +105,18 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get cancel;
 
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @login.
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get login;
+
   /// No description provided for @close.
   ///
   /// In en, this message translates to:
@@ -122,6 +134,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error'**
   String get error;
+
+  /// No description provided for @pleaseLoginAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in again!'**
+  String get pleaseLoginAgain;
+
+  /// No description provided for @sessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired'**
+  String get sessionExpired;
+
+  /// No description provided for @anErrorOccurred.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred.'**
+  String get anErrorOccurred;
 
   /// No description provided for @meSystemMaintenance.
   ///

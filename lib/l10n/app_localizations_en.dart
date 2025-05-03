@@ -15,6 +15,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
+  String get logout => 'Logout';
+
+  @override
+  String get login => 'Login';
+
+  @override
   String get close => 'Close';
 
   @override
@@ -22,6 +28,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get error => 'Error';
+
+  @override
+  String get pleaseLoginAgain => 'Please log in again!';
+
+  @override
+  String get sessionExpired => 'Session expired';
+
+  @override
+  String get anErrorOccurred => 'An error occurred.';
 
   @override
   String get meSystemMaintenance => 'System maintenance!';

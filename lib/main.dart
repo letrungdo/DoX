@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:do_x/app.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/firebase_options.dart';
+import 'package:do_x/services/secure_storage_service.dart';
+import 'package:do_x/utils/app_info.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -25,10 +27,15 @@ void main() {
       logger.d("init log");
       _catchAllError();
 
-      await Firebase.initializeApp(
-        // name: DefaultFirebaseOptions.currentPlatform.projectId,
-        options: kIsWeb ? DefaultFirebaseOptions.currentPlatform : null,
-      );
+      await Future.wait([
+        appInfo.init(),
+        Firebase.initializeApp(
+          // name: DefaultFirebaseOptions.currentPlatform.projectId,
+          options: kIsWeb ? DefaultFirebaseOptions.currentPlatform : null,
+        ),
+        secureStorage.getAccount(),
+      ]);
+
       runApp(const MyApp());
     },
     (error, stack) {

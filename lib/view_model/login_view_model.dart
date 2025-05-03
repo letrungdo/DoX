@@ -1,19 +1,21 @@
-import 'package:do_x/screen/main_screen.dart';
+import 'package:auto_route/auto_route.dart';
+import 'package:do_x/model/response/user_model.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/auth_service.dart';
+import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class LoginViewModel extends CoreViewModel {
   AuthService get _authService => context.read<AuthService>();
 
-  String _username = "";
-  String get username => _username;
+  String? _username = appData.user?.email;
+  String get username => _username ?? "";
 
-  String _password = "";
-  String get password => _password;
+  String? _password = appData.user?.password;
+  String get password => _password ?? "";
 
   void onUsernameChanged(String value) {
     _username = value;
@@ -35,10 +37,14 @@ class LoginViewModel extends CoreViewModel {
       return;
     }
     logger.d("idToken: ${result.data?.idToken}");
+    secureStorage.saveAccount(
+      result.data?.copyWith(
+        password: password, //
+      ),
+    );
 
-    appData.setUser(result.data);
     if (!context.mounted) return;
 
-    context.replace(MainScreen.path);
+    context.replaceRoute(const MainRoute());
   }
 }

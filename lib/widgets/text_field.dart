@@ -13,7 +13,7 @@ class DoTextField extends StatefulWidget {
     this.validator,
     this.autofillHints,
   });
-  final Function(String)? onChanged;
+  final Function(String value)? onChanged;
   final String? value;
   final TextEditingController? controller;
   final String? placeholder;
@@ -39,15 +39,9 @@ class _DoTextFieldState extends State<DoTextField> {
   @override
   void didUpdateWidget(covariant DoTextField oldWidget) {
     if (_controller?.text != widget.value) {
-      final prevSelection = _controller?.selection;
-      _controller?.text = widget.value ?? "";
-      if (prevSelection != null) {
-        try {
-          _controller?.selection = prevSelection;
-        } catch (e) {
-          debugPrint(e.toString());
-        }
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controller?.text = widget.value ?? "";
+      });
     }
     super.didUpdateWidget(oldWidget);
   }

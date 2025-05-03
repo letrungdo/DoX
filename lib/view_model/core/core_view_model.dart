@@ -12,6 +12,12 @@ abstract class CoreViewModel with ChangeNotifier, CancelRequestMixin, AppErrorMi
     this.context = context;
   }
 
+  void notifyInInitState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListenersSafe();
+    });
+  }
+
   void notifyListenersSafe() {
     if (!isDispose) {
       notifyListeners();

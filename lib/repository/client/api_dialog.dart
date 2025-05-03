@@ -1,6 +1,8 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/utils/app_dialog.dart';
 import 'package:flutter/material.dart';
 
@@ -39,6 +41,19 @@ class ApiDialog {
     List<ActionProps>? actions;
 
     switch (error.type) {
+      case ApiErrorType.sessionTimeout:
+      case ApiErrorType.unauthorized:
+        title = context.l10n.sessionExpired;
+        message = context.l10n.pleaseLoginAgain;
+        actions = [
+          ActionProps(
+            onPressed: (context) async {
+              context.replaceRoute(const LoginRoute());
+            },
+            text: context.l10n.logout,
+          ),
+        ];
+        break;
       case ApiErrorType.businessError:
         title = context.l10n.error;
         message = error.message;
@@ -48,15 +63,6 @@ class ApiDialog {
         message = context.l10n.meSystemMaintenance;
         actions = genActions();
         break;
-      case ApiErrorType.other:
-        message = error.message.withStatusCode(error.statusCode);
-        actions = genActions(alwayShowRetry: false);
-        break;
-      case ApiErrorType.sessionTimeout:
-        title = context.l10n.error;
-        message = error.message;
-        // TODO: logout
-        break;
       case ApiErrorType.requestTimeout:
         message = context.l10n.meRequestTimeout;
         actions = genActions();
@@ -65,9 +71,10 @@ class ApiDialog {
         message = context.l10n.meNetworkError;
         actions = genActions();
         break;
-      case ApiErrorType.unknownError:
+      case ApiErrorType.other:
       default:
-        message = error.message.withStatusCode(error.statusCode);
+        title = context.l10n.error;
+        message = (error.message ?? context.l10n.anErrorOccurred).withStatusCode(error.statusCode);
         actions = [closeAction];
         break;
     }
