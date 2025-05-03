@@ -20,6 +20,8 @@ class _SecureStorageService {
   }
 
   Future<void> saveAccount(UserModel? value) {
+    final expiryTime = DateTime.now().millisecondsSinceEpoch + ((value?.expiresIn ?? 0) * 1000);
+    value = value?.copyWith(expiryTime: expiryTime);
     appData.setUser(value);
 
     final encode = jsonEncode(value?.toJson());

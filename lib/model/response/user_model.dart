@@ -1,4 +1,5 @@
 import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:do_x/converter/string_to_int_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'user_model.g.dart';
@@ -14,7 +15,11 @@ class UserModel {
   final bool? registered;
   final String? profilePicture;
   final String? refreshToken;
-  final String? expiresIn;
+
+  @StringToIntConverter()
+  final int? expiresIn;
+
+  final int? expiryTime;
   final String? password;
 
   const UserModel({
@@ -27,6 +32,7 @@ class UserModel {
     this.profilePicture,
     this.refreshToken,
     this.expiresIn,
+    this.expiryTime,
     this.password,
   });
 
