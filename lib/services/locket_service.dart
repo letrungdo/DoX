@@ -5,14 +5,37 @@ import 'package:dio/dio.dart';
 import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/date_extensions.dart';
+import 'package:do_x/model/response/user_info_response.dart';
 import 'package:do_x/model/response/user_model.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/services/secure_storage_service.dart';
+import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/cupertino.dart';
 
 class LocketService {
   final dio = DioClient.createLocket();
+
+  Future<Result<UserInfoData>> fetchUserV2({required UserModel? user, CancelToken? cancelToken}) {
+    return Result.guardFuture<UserInfoData>(() async {
+      final response = await dio.post(
+        '/fetchUserV2', //
+        data: {
+          "data": {"user_uid": user!.localId},
+        },
+        cancelToken: cancelToken,
+      );
+      debugPrint(response.data.toString());
+      final userInfo = UserInfoResponse.fromJson(response.data).result.data;
+      secureStorage.saveAccount(
+        appData.user?.copyWith(
+          profilePicture: userInfo.profilePictureUrl, //
+        ),
+      );
+      return userInfo;
+    });
+  }
 
   Future<Result> postImage(
     String thumbnailUrl, {

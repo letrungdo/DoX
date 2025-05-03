@@ -1,3 +1,4 @@
+import 'package:do_x/converter/string_to_int_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'auth_response.g.dart';
@@ -7,8 +8,9 @@ class AuthResponse {
   @JsonKey(name: "access_token")
   final String? accessToken;
 
+  @StringToIntConverter()
   @JsonKey(name: "expires_in")
-  final String? expiresIn;
+  final int? expiresIn;
 
   @JsonKey(name: "token_type")
   final String? tokenType;

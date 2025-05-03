@@ -12,6 +12,8 @@ class DoTextField extends StatefulWidget {
     this.labelText,
     this.validator,
     this.autofillHints,
+    this.decoration,
+    this.textAlign = TextAlign.start,
   });
   final Function(String value)? onChanged;
   final String? value;
@@ -22,6 +24,8 @@ class DoTextField extends StatefulWidget {
   final String? labelText;
   final String? Function(String?)? validator;
   final Iterable<String>? autofillHints;
+  final InputDecoration? decoration;
+  final TextAlign textAlign;
 
   @override
   State<DoTextField> createState() => _DoTextFieldState();
@@ -49,20 +53,23 @@ class _DoTextFieldState extends State<DoTextField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      textAlign: widget.textAlign,
       controller: _controller,
       keyboardType: widget.keyboardType,
       autofillHints: widget.autofillHints,
-      decoration: InputDecoration(
-        labelText: widget.labelText,
-        hintText: widget.placeholder,
-        // border: InputBorder.none,
-        // focusedBorder: InputBorder.none,
-        // enabledBorder: InputBorder.none,
-        // errorBorder: InputBorder.none,
-        // disabledBorder: InputBorder.none,
-        // hintTextDirection: TextDirection.ltr,
-        // fillColor: Colors.transparent,
-      ),
+      decoration:
+          widget.decoration ??
+          InputDecoration(
+            labelText: widget.labelText,
+            hintText: widget.placeholder,
+            // border: InputBorder.none,
+            // focusedBorder: InputBorder.none,
+            // enabledBorder: InputBorder.none,
+            // errorBorder: InputBorder.none,
+            // disabledBorder: InputBorder.none,
+            // hintTextDirection: TextDirection.ltr,
+            // fillColor: Colors.transparent,
+          ),
       obscureText: widget.obscureText,
       onTapOutside: (event) {
         FocusManager.instance.primaryFocus?.unfocus();

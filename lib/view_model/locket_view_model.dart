@@ -1,6 +1,5 @@
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:do_x/screen/modal/crop_image_modal.dart';
-import 'package:do_x/services/auth_service.dart';
 import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
 import 'package:do_x/store/app_data.dart';
@@ -16,7 +15,6 @@ import 'package:provider/provider.dart';
 class LocketViewModel extends CoreViewModel {
   LocketService get _locketService => context.read<LocketService>();
   UploadService get _uploadService => context.read<UploadService>();
-  AuthService get _authService => context.read<AuthService>();
 
   XFile? _media;
 
@@ -40,6 +38,7 @@ class LocketViewModel extends CoreViewModel {
 
   void onCaptionChanged(String value) {
     _caption = value;
+    notifyListenersSafe();
   }
 
   Future<void> pickMedia() async {
@@ -76,8 +75,6 @@ class LocketViewModel extends CoreViewModel {
     if (mime == null || _croppedImage == null) return;
     renewCancelToken("upload");
     _setUploading(true);
-
-    await _authService.refreshToken(cancelToken: cancelToken);
 
     if (mime.startsWith("image/")) {
       final imgData = await FlutterImageCompress.compressWithList(

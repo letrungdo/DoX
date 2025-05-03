@@ -23,7 +23,9 @@ abstract class _$UserModelCWProxy {
 
   UserModel refreshToken(String? refreshToken);
 
-  UserModel expiresIn(String? expiresIn);
+  UserModel expiresIn(int? expiresIn);
+
+  UserModel expiryTime(int? expiryTime);
 
   UserModel password(String? password);
 
@@ -42,7 +44,8 @@ abstract class _$UserModelCWProxy {
     bool? registered,
     String? profilePicture,
     String? refreshToken,
-    String? expiresIn,
+    int? expiresIn,
+    int? expiryTime,
     String? password,
   });
 }
@@ -80,7 +83,10 @@ class _$UserModelCWProxyImpl implements _$UserModelCWProxy {
       this(refreshToken: refreshToken);
 
   @override
-  UserModel expiresIn(String? expiresIn) => this(expiresIn: expiresIn);
+  UserModel expiresIn(int? expiresIn) => this(expiresIn: expiresIn);
+
+  @override
+  UserModel expiryTime(int? expiryTime) => this(expiryTime: expiryTime);
 
   @override
   UserModel password(String? password) => this(password: password);
@@ -102,6 +108,7 @@ class _$UserModelCWProxyImpl implements _$UserModelCWProxy {
     Object? profilePicture = const $CopyWithPlaceholder(),
     Object? refreshToken = const $CopyWithPlaceholder(),
     Object? expiresIn = const $CopyWithPlaceholder(),
+    Object? expiryTime = const $CopyWithPlaceholder(),
     Object? password = const $CopyWithPlaceholder(),
   }) {
     return UserModel(
@@ -149,7 +156,12 @@ class _$UserModelCWProxyImpl implements _$UserModelCWProxy {
           expiresIn == const $CopyWithPlaceholder()
               ? _value.expiresIn
               // ignore: cast_nullable_to_non_nullable
-              : expiresIn as String?,
+              : expiresIn as int?,
+      expiryTime:
+          expiryTime == const $CopyWithPlaceholder()
+              ? _value.expiryTime
+              // ignore: cast_nullable_to_non_nullable
+              : expiryTime as int?,
       password:
           password == const $CopyWithPlaceholder()
               ? _value.password
@@ -178,7 +190,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
   registered: json['registered'] as bool?,
   profilePicture: json['profilePicture'] as String?,
   refreshToken: json['refreshToken'] as String?,
-  expiresIn: json['expiresIn'] as String?,
+  expiresIn: const StringToIntConverter().fromJson(json['expiresIn']),
+  expiryTime: (json['expiryTime'] as num?)?.toInt(),
   password: json['password'] as String?,
 );
 
@@ -191,6 +204,7 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'registered': instance.registered,
   'profilePicture': instance.profilePicture,
   'refreshToken': instance.refreshToken,
-  'expiresIn': instance.expiresIn,
+  'expiresIn': const StringToIntConverter().toJson(instance.expiresIn),
+  'expiryTime': instance.expiryTime,
   'password': instance.password,
 };

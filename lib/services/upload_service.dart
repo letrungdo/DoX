@@ -12,7 +12,7 @@ import 'package:do_x/utils/logger.dart';
 import 'package:flutter/cupertino.dart';
 
 class UploadService {
-  final dio = DioClient.create();
+  final dio = DioClient.createFirebase();
 
   static const uploadHeaders = {
     'content-type': 'application/octet-stream',
@@ -45,7 +45,6 @@ class UploadService {
       options: Options(
         headers: {
           "content-type": "application/json; charset=UTF-8",
-          HttpHeaders.authorizationHeader: "Firebase ${user.idToken}",
           "x-goog-upload-protocol": "resumable",
           "accept": "*/*",
           "x-goog-upload-command": "start",
@@ -72,11 +71,6 @@ class UploadService {
 
     final response = await dio.get(
       getUrl, //
-      options: Options(
-        headers: {
-          HttpHeaders.authorizationHeader: "Firebase ${user.idToken}", //
-        },
-      ),
       cancelToken: cancelToken,
     );
     final downloadToken = GeneratedImage.fromJson(response.data).downloadTokens;
@@ -101,12 +95,7 @@ class UploadService {
       final resUpload = await dio.put(
         uploadUrl, //
         data: data,
-        options: Options(
-          headers: {
-            HttpHeaders.authorizationHeader: "Firebase ${user.idToken}", //
-            ...uploadHeaders,
-          },
-        ),
+        options: Options(headers: uploadHeaders),
         onReceiveProgress: onReceiveProgress,
       );
       debugPrint("resUpload ${resUpload.data.toString()}");
