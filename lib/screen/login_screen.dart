@@ -54,6 +54,7 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
                       return DoTextField(
                         value: username,
                         labelText: "Username",
+                        autofillHints: [AutofillHints.username, AutofillHints.email],
                         keyboardType: TextInputType.emailAddress,
                         onChanged: (value) => vm.onUsernameChanged(value), //
                         validator: (value) {
@@ -79,6 +80,7 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
                       return DoTextField(
                         labelText: "Password",
                         value: password,
+                        autofillHints: [AutofillHints.password],
                         keyboardType: TextInputType.visiblePassword,
                         obscureText: true,
                         onChanged: (value) => vm.onPasswordChanged(value),

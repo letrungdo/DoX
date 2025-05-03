@@ -11,3 +11,6 @@
 - make: https://formulae.brew.sh/formula
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/bbdc9c84-6a3c-4f4c-ac12-d63ad0132147/deploy-status)](https://app.netlify.com/sites/do-x/deploys)
+
+# Pre
+> dart pub global activate flutterfire_cli

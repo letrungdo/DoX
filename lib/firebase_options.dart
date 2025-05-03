@@ -4,7 +4,6 @@ import 'package:do_x/constants/env.dart';
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] for use with your Firebase apps.
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -40,10 +39,10 @@ class DefaultFirebaseOptions {
 
   static final ios = FirebaseOptions(
     apiKey: Envs.firebaseApiKey.iOS,
-    appId: '1:66571675093:ios:de9146784dbf9abeda495c',
+    appId: '1:66571675093:ios:512255eab7d6526eda495c',
     messagingSenderId: '66571675093',
     projectId: 'do-appx',
     storageBucket: 'do-appx.firebasestorage.app',
-    iosBundleId: 'inc.do.x',
+    iosBundleId: 'com.momby.doctor',
   );
 }
