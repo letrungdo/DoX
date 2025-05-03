@@ -12,11 +12,11 @@ enum ApiErrorType {
   networkError, //
   requestTimeout,
   maintenance,
-  unknownError,
   cancel,
   sessionTimeout,
   businessError,
   badRequest,
+  unauthorized,
   other,
 }
 
@@ -69,6 +69,15 @@ class Result<T> {
                   statusCode: statusCode,
                 ),
               );
+            case HttpStatus.forbidden: // 403
+            case HttpStatus.unauthorized: // 401
+              return Result(
+                error: ConnectionError(
+                  type: ApiErrorType.unauthorized, //
+                  message: response?.statusMessage,
+                  statusCode: statusCode,
+                ),
+              );
             default:
               return Result(
                 error: ConnectionError(
@@ -94,11 +103,11 @@ class Result<T> {
               return Result(error: ConnectionError(type: ApiErrorType.requestTimeout));
             }
           }
-          return Result(error: ConnectionError(type: ApiErrorType.unknownError));
+          return Result(error: ConnectionError(type: ApiErrorType.other));
       }
     } catch (e) {
       logger.e('Api Unknown error', error: e);
-      return Result(error: ConnectionError(type: ApiErrorType.unknownError));
+      return Result(error: ConnectionError(type: ApiErrorType.other));
     }
   }
 }

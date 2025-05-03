@@ -1,5 +1,6 @@
 import 'package:do_x/l10n/app_localizations.dart';
-import 'package:do_x/routes.dart';
+import 'package:do_x/router/app_router.dart';
+import 'package:do_x/router/navigator_observer.dart';
 import 'package:do_x/services/auth_service.dart';
 import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
@@ -26,7 +27,9 @@ class MyApp extends StatelessWidget {
         locale: AppLocalizations.supportedLocales.first,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: routerConfig,
+        routerConfig: appRouter.config(
+          navigatorObservers: () => [MyObserver()],
+        ),
       ),
     );
   }

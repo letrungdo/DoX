@@ -1,10 +1,13 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/repository/client/dio_exception.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/material.dart';
 
 class BaseInterceptor extends Interceptor {
+  ClientType get clientType => ClientType.other;
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     debugPrint("""------------------------------------------------------

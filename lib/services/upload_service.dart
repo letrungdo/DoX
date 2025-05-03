@@ -28,6 +28,7 @@ class UploadService {
     required Uint8List data, //
     required UserModel user,
     required String imgName,
+    CancelToken? cancelToken,
   }) async {
     final fileSize = data.lengthInBytes;
     final idUser = user.localId;
@@ -52,6 +53,7 @@ class UploadService {
           "x-goog-upload-content-type": "image/webp",
         },
       ),
+      cancelToken: cancelToken,
     );
     final uploadUrl = response.headers['x-goog-upload-url']?.firstOrNull;
     if (uploadUrl == null) {
@@ -61,7 +63,11 @@ class UploadService {
     return uploadUrl;
   }
 
-  Future<String> _getDownloadUrl({required UserModel user, required String nameImg}) async {
+  Future<String> _getDownloadUrl({
+    required UserModel user, //
+    required String nameImg,
+    CancelToken? cancelToken,
+  }) async {
     final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$nameImg";
 
     final response = await dio.get(
@@ -71,6 +77,7 @@ class UploadService {
           HttpHeaders.authorizationHeader: "Firebase ${user.idToken}", //
         },
       ),
+      cancelToken: cancelToken,
     );
     final downloadToken = GeneratedImage.fromJson(response.data).downloadTokens;
     return "$getUrl?alt=media&token=$downloadToken";
@@ -79,11 +86,18 @@ class UploadService {
   Future<Result<String>> uploadImage({
     required Uint8List data, //
     required UserModel user,
+    CancelToken? cancelToken,
+    ProgressCallback? onReceiveProgress,
   }) {
     return Result.guardFuture(() async {
       final nameImg = _generateName(type: FileType.image);
 
-      final uploadUrl = await _initUploadImage(data: data, user: user, imgName: nameImg);
+      final uploadUrl = await _initUploadImage(
+        data: data, //
+        user: user,
+        imgName: nameImg,
+        cancelToken: cancelToken,
+      );
       final resUpload = await dio.put(
         uploadUrl, //
         data: data,
@@ -93,9 +107,14 @@ class UploadService {
             ...uploadHeaders,
           },
         ),
+        onReceiveProgress: onReceiveProgress,
       );
       debugPrint("resUpload ${resUpload.data.toString()}");
-      final downloadUrl = await _getDownloadUrl(nameImg: nameImg, user: user);
+      final downloadUrl = await _getDownloadUrl(
+        nameImg: nameImg, //
+        user: user,
+        cancelToken: cancelToken,
+      );
 
       return downloadUrl;
     });

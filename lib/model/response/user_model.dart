@@ -1,51 +1,36 @@
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'user_model.g.dart';
+
+@CopyWith()
+@JsonSerializable(explicitToJson: true)
 class UserModel {
-  final String kind;
-  final String localId;
-  final String email;
+  final String? kind;
+  final String? localId;
+  final String? email;
   final String? displayName;
-  final String idToken;
-  final bool registered;
+  final String? idToken;
+  final bool? registered;
   final String? profilePicture;
-  final String refreshToken;
-  final String expiresIn;
+  final String? refreshToken;
+  final String? expiresIn;
+  final String? password;
 
   const UserModel({
-    required this.kind,
-    required this.localId,
-    required this.email,
+    this.kind,
+    this.localId,
+    this.email,
     this.displayName,
-    required this.idToken,
-    required this.registered,
+    this.idToken,
+    this.registered,
     this.profilePicture,
-    required this.refreshToken,
-    required this.expiresIn,
+    this.refreshToken,
+    this.expiresIn,
+    this.password,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      kind: json['kind'] as String,
-      localId: json['localId'] as String,
-      email: json['email'] as String,
-      displayName: json['displayName'] as String?,
-      idToken: json['idToken'] as String,
-      registered: json['registered'] as bool,
-      profilePicture: json['profilePicture'] as String?,
-      refreshToken: json['refreshToken'] as String,
-      expiresIn: json['expiresIn'] as String,
-    );
-  }
+  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'kind': kind,
-      'localId': localId,
-      'email': email,
-      'displayName': displayName,
-      'idToken': idToken,
-      'registered': registered,
-      'profilePicture': profilePicture,
-      'refreshToken': refreshToken,
-      'expiresIn': expiresIn,
-    };
-  }
+  Map<String, dynamic> toJson() => _$UserModelToJson(this);
 }

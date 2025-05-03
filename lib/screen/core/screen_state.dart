@@ -2,10 +2,6 @@ import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-abstract class ProviderWrapper {
-  Widget providerWrapper();
-}
-
 abstract class StatefulScreen extends StatefulWidget {
   const StatefulScreen({super.key});
 }

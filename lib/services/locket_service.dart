@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
+import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/model/response/user_model.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
@@ -16,13 +19,16 @@ class LocketService {
     String? caption, //
     OverlayType? overlayType,
     required UserModel user,
+    CancelToken? cancelToken,
   }) {
     return Result.guardFuture(() async {
+      // final analytics = {"platform": "ios"};
       final overlayName = (overlayType ?? OverlayType.standard).name;
       final body = {
         "data": {
           "thumbnail_url": thumbnailUrl,
           "recipients": [],
+          // "analytics": analytics,
           "sent_to_self_only": false,
           "sent_to_all": true,
           "caption": caption,
@@ -40,10 +46,19 @@ class LocketService {
               "overlay_type": "caption",
             },
           ],
+          "update_streak_for_yyyymmdd": {
+            // TODO:
+            "value": DateTime.now().toStringFormat(DateTimeConst.yyyyMMdd),
+            "@type": "type.googleapis.com/google.protobuf.Int64Value",
+          },
         },
       };
 
-      final response = await dio.post('https://api.locketcamera.com/postMomentV2', data: body);
+      final response = await dio.post(
+        '/postMomentV2', //
+        data: body,
+        cancelToken: cancelToken,
+      );
       debugPrint(response.data.toString());
       return response.data;
     });

@@ -1,20 +1,21 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/login_view_model.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class LoginScreen extends StatefulScreen implements ProviderWrapper {
+@RoutePage()
+class LoginScreen extends StatefulScreen implements AutoRouteWrapper {
   const LoginScreen({super.key});
-
-  static const path = "/login";
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 
   @override
-  Widget providerWrapper() {
+  Widget wrappedRoute(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => LoginViewModel(), //
       child: this,
@@ -28,6 +29,13 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          height: 40,
+          alignment: Alignment.center, //
+          child: Text("© letrungdo. Ver ${appInfo.version}"),
+        ),
+      ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(15), //

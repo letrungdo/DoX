@@ -9,7 +9,10 @@ class _AppData {
   }
 
   void clearSession() {
-    _user = null;
+    _user = UserModel(
+      email: appData.user?.email, //
+      password: appData.user?.password,
+    );
   }
 }
 
