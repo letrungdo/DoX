@@ -1,8 +1,10 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/login_view_model.dart';
+import 'package:do_x/widgets/button.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -61,7 +63,7 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
                     builder: (context, username, _) {
                       return DoTextField(
                         value: username,
-                        labelText: "Username",
+                        labelText: "Email",
                         autofillHints: [AutofillHints.username, AutofillHints.email],
                         keyboardType: TextInputType.emailAddress,
                         onChanged: (value) => vm.onUsernameChanged(value), //
@@ -105,14 +107,20 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
               ],
             ),
             SizedBox(height: 50),
-            ElevatedButton(
-              onPressed: () {
-                if (!_formKey.currentState!.validate()) {
-                  return;
-                }
-                vm.onLogin();
+            Selector<V, bool>(
+              selector: (p0, p1) => p1.isBusy,
+              builder: (context, isBusy, _) {
+                return DoButton(
+                  isBusy: isBusy,
+                  onPressed: () {
+                    if (!_formKey.currentState!.validate()) {
+                      return;
+                    }
+                    vm.onLogin();
+                  },
+                  text: context.l10n.login, //
+                );
               },
-              child: Text("Login"), //
             ),
           ],
         ),

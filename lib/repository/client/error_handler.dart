@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/model/response/locket_error_res.dart';
+import 'package:do_x/repository/client/dio_exception.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 
@@ -51,6 +53,29 @@ class Result<T> {
         case DioExceptionType.badResponse:
           final response = e.response;
           final statusCode = response?.statusCode;
+          final error = e.error;
+          if (error is FXDioError) {
+            switch (error.clientType) {
+              case ClientType.locket:
+                switch (statusCode) {
+                  case 200:
+                    {
+                      final errorRes = LocketErrorResponse.fromJson(error.response.data).result;
+                      if (errorRes.errors != null) {
+                        return Result(
+                          error: ConnectionError(
+                            type: ApiErrorType.other,
+                            statusCode: errorRes.status,
+                            message: errorRes.errors?.map((e) => e.toString()).join(","),
+                          ),
+                        );
+                      }
+                    }
+                }
+              default:
+                break;
+            }
+          }
           switch (statusCode) {
             case HttpStatus.badRequest: // 400
               return Result(

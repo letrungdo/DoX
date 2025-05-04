@@ -3,4 +3,6 @@ class AppConst {
 
   /// Seconds
   static const apiRequestTimeout = 30;
+
+  static const loadingIdPrefix = "loading_";
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -8,7 +7,6 @@ import 'package:do_x/model/response/generated_image_model.dart';
 import 'package:do_x/model/response/user_model.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
-import 'package:do_x/utils/logger.dart';
 import 'package:flutter/cupertino.dart';
 
 class UploadService {
@@ -25,12 +23,11 @@ class UploadService {
   };
 
   Future<String> _initUploadImage({
-    required Uint8List data, //
+    required int fileSize, //
     required UserModel user,
     required String imgName,
     CancelToken? cancelToken,
   }) async {
-    final fileSize = data.lengthInBytes;
     final idUser = user.localId;
     final body = {
       "name": "users/$idUser/moments/thumbnails/$imgName",
@@ -62,12 +59,68 @@ class UploadService {
     return uploadUrl;
   }
 
-  Future<String> _getDownloadUrl({
-    required UserModel user, //
-    required String nameImg,
+  Future<String> _initUploadVideo({
+    required int fileSize, //
+    required UserModel user,
+    required String videoName,
     CancelToken? cancelToken,
   }) async {
-    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$nameImg";
+    final idUser = user.localId;
+    final body = {
+      "name": "users/$idUser/moments/videos/$videoName",
+      "contentType": 'video/mp4',
+      "bucket": '',
+      "metadata": {"creator": idUser, "visibility": 'private'},
+    };
+
+    final response = await dio.post(
+      "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName", //
+      data: body,
+      options: Options(
+        headers: {
+          'content-type': 'application/json; charset=UTF-8',
+          'x-goog-upload-protocol': 'resumable',
+          "accept": '*/*',
+          'x-goog-upload-command': 'start',
+          'x-goog-upload-content-length': fileSize,
+          'accept-language': 'vi-VN,vi;q=0.9',
+          'x-firebase-storage-version': 'ios/10.13.0',
+          'user-agent': 'com.locket.Locket/1.43.1 iPhone/17.3 hw/iPhone15_3 (GTMSUF/1)',
+          'x-goog-upload-content-type': 'video/mp4',
+          'x-firebase-gmpid': '1:641029076083:ios:cc8eb46290d69b234fa609',
+        },
+      ),
+      cancelToken: cancelToken,
+    );
+    final uploadUrl = response.headers['x-goog-upload-url']?.firstOrNull;
+    if (uploadUrl == null) {
+      throw "init upload url fail";
+    }
+
+    return uploadUrl;
+  }
+
+  Future<String> _getDownloadImageUrl({
+    required UserModel user, //
+    required String imgName,
+    CancelToken? cancelToken,
+  }) async {
+    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName";
+
+    final response = await dio.get(
+      getUrl, //
+      cancelToken: cancelToken,
+    );
+    final downloadToken = GeneratedImage.fromJson(response.data).downloadTokens;
+    return "$getUrl?alt=media&token=$downloadToken";
+  }
+
+  Future<String> _getDownloadVideoUrl({
+    required UserModel user, //
+    required String videoName,
+    CancelToken? cancelToken,
+  }) async {
+    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName";
 
     final response = await dio.get(
       getUrl, //
@@ -84,12 +137,12 @@ class UploadService {
     ProgressCallback? onReceiveProgress,
   }) {
     return Result.guardFuture(() async {
-      final nameImg = _generateName(type: FileType.image);
+      final imgName = _generateName(type: FileType.image);
 
       final uploadUrl = await _initUploadImage(
-        data: data, //
+        fileSize: data.lengthInBytes, //
         user: user,
-        imgName: nameImg,
+        imgName: imgName,
         cancelToken: cancelToken,
       );
       final resUpload = await dio.put(
@@ -99,8 +152,8 @@ class UploadService {
         onReceiveProgress: onReceiveProgress,
       );
       debugPrint("resUpload ${resUpload.data.toString()}");
-      final downloadUrl = await _getDownloadUrl(
-        nameImg: nameImg, //
+      final downloadUrl = await _getDownloadImageUrl(
+        imgName: imgName, //
         user: user,
         cancelToken: cancelToken,
       );
@@ -109,32 +162,36 @@ class UploadService {
     });
   }
 
-  Future uploadVideo({
-    required File video, //
-    required Uint8List thumbnail,
-    required String userId,
-  }) async {
-    try {
-      // final String videoFileName = _generateName(type: FileType.video);
-      // final Reference videoRef = FirebaseStorage.instance
-      //     .refFromURL("gs://locket-video")
-      //     .child('/users/$userId/moments/videos/$videoFileName');
+  Future<Result<String>> uploadVideo({
+    required Uint8List data, //
+    required UserModel user,
+    CancelToken? cancelToken,
+    ProgressCallback? onReceiveProgress,
+  }) {
+    return Result.guardFuture(() async {
+      final videoName = _generateName(type: FileType.video);
 
-      // final UploadTask videoUploadTask = videoRef.putFile(video);
-      // final TaskSnapshot videoSnapshot = await videoUploadTask.whenComplete(() {});
-      // final String videoUrl = await videoSnapshot.ref.getDownloadURL();
+      final uploadUrl = await _initUploadVideo(
+        fileSize: data.lengthInBytes, //
+        user: user,
+        videoName: videoName,
+        cancelToken: cancelToken,
+      );
+      final resUpload = await dio.put(
+        uploadUrl, //
+        data: data,
+        options: Options(headers: uploadHeaders),
+        onReceiveProgress: onReceiveProgress,
+      );
+      debugPrint("resUpload ${resUpload.data.toString()}");
+      final downloadUrl = await _getDownloadVideoUrl(
+        videoName: videoName, //
+        user: user,
+        cancelToken: cancelToken,
+      );
 
-      // final thumbnailUrl = await uploadImage(data: thumbnail, userId: userId);
-
-      // if (thumbnailUrl != null) {
-      //   return (videoUrl, thumbnailUrl, true);
-      // } else {
-      //   return ("", "", false);
-      // }
-    } catch (e) {
-      logger.e(e.toString());
-      return ("", "", false);
-    }
+      return downloadUrl;
+    });
   }
 
   String _generateName({required FileType type}) {

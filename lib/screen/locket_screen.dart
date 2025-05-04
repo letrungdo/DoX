@@ -8,6 +8,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/view_model/locket_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/button.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -73,10 +74,10 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               left: 0,
               right: 0,
               child: Selector<V, bool>(
-                selector: (p0, p1) => p1.isUploading,
-                builder: (context, isUploading, _) {
+                selector: (p0, p1) => p1.isBusy,
+                builder: (context, isLoading, _) {
                   return Visibility(
-                    visible: isUploading, //
+                    visible: isLoading, //
                     child: LinearProgressIndicator(
                       // backgroundColor: Colors.grey.withValues(alpha: 0.5), //
                     ),
@@ -152,18 +153,22 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
 
         SizedBox(height: 10),
 
-        Selector<V, bool>(
-          selector: (p0, p1) => p1.isUploading,
-          builder: (context, isUploading, _) {
-            return ElevatedButton(
-              onPressed: isUploading ? null : () => vm.pickMedia(), //
-              child: Text('Select Media'),
+        Selector<V, (bool, bool)>(
+          selector: (p0, p1) => (p1.isBusy || p1.isPickingFile, p1.isCompressingVideo),
+          builder: (context, data, _) {
+            final isBusy = data.$1;
+            final isCompressingVideo = data.$2;
+
+            return DoButton(
+              isBusy: isBusy,
+              onPressed: () => isCompressingVideo ? vm.cancelCompressVideo() : vm.pickMedia(), //
+              child: Text(isCompressingVideo ? "Cancel" : 'Select Media'),
             );
           },
         ),
         SizedBox(height: 32),
         Selector<V, bool>(
-          selector: (p0, p1) => p1.isUploading || p1.croppedImage == null,
+          selector: (p0, p1) => p1.isBusy || p1.croppedImage == null || p1.isCompressingVideo,
           builder: (context, isDisable, _) {
             return ElevatedButton(
               onPressed: isDisable ? null : () => vm.startUpload(), //
@@ -171,6 +176,16 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
             );
           },
         ),
+        SizedBox(height: 10),
+
+        Selector<V, (bool, double)>(
+          selector: (p0, p1) => (p1.isCompressingVideo, p1.compressVideoProgress),
+          builder: (context, data, _) {
+            if (data.$1) return Text("Compressing Video: ${data.$2.toStringAsFixed(1)}");
+            return SizedBox.shrink();
+          },
+        ),
+
         SizedBox(height: 20),
       ],
     );

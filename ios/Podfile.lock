@@ -104,6 +104,8 @@ PODS:
   - sqflite_darwin (0.0.4):
     - Flutter
     - FlutterMacOS
+  - video_compress (0.3.0):
+    - Flutter
 
 DEPENDENCIES:
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
@@ -115,6 +117,7 @@ DEPENDENCIES:
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
+  - video_compress (from `.symlinks/plugins/video_compress/ios`)
 
 SPEC REPOS:
   trunk:
@@ -155,6 +158,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   sqflite_darwin:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
+  video_compress:
+    :path: ".symlinks/plugins/video_compress/ios"
 
 SPEC CHECKSUMS:
   Firebase: 1fe1c0a7d9aaea32efe01fbea5f0ebd8d70e53a2
@@ -183,6 +188,7 @@ SPEC CHECKSUMS:
   SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
+  video_compress: fce97e4fb1dfd88175aa07d2ffc8a2f297f87fbe
 
 PODFILE CHECKSUM: f79e1872da79a29354b04cf03619f8f3d69fe58e
 

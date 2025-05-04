@@ -9,6 +9,16 @@
 
 import 'package:flutter/widgets.dart';
 
+class $AssetsAnimationGen {
+  const $AssetsAnimationGen();
+
+  /// File path: assets/animation/loading.json
+  String get loading => 'assets/animation/loading.json';
+
+  /// List of all assets
+  List<String> get values => [loading];
+}
+
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
@@ -23,6 +33,7 @@ class $AssetsImagesGen {
 class Assets {
   const Assets._();
 
+  static const $AssetsAnimationGen animation = $AssetsAnimationGen();
   static const $AssetsImagesGen images = $AssetsImagesGen();
 }
 
