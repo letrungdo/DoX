@@ -1,10 +1,13 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/view_model/locket_view_model.dart';
+import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,9 +37,11 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
   Widget build(BuildContext context) {
     super.build(context);
     final profilePicture = appData.user?.profilePicture;
+    final padding = EdgeInsets.symmetric(horizontal: 20);
     return AppScaffold(
-      appBar: AppBar(
-        leadingWidth: 76,
+      appBar: DoAppBar(
+        height: 60,
+        leadingWidth: 70,
         leading:
             profilePicture != null
                 ? CachedNetworkImage(
@@ -44,7 +49,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                   fadeInDuration: Durations.medium1,
                   imageBuilder:
                       (context, imageProvider) => Container(
-                        margin: EdgeInsets.only(left: 20),
+                        margin: EdgeInsets.only(left: 20, top: 5),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(30),
                           image: DecorationImage(
@@ -60,8 +65,8 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 20), //
-              child: _buildBody(),
+              padding: padding, //
+              child: _buildBody(padding),
             ),
             Positioned(
               top: 7,
@@ -85,7 +90,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(EdgeInsets padding) {
     return Column(
       children: [
         SizedBox(height: 20),
@@ -96,15 +101,16 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                 return Selector<V, Uint8List?>(
                   selector: (p0, p1) => p1.croppedImage,
                   builder: (context, data, _) {
-                    return Container(
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20), //
-                        color: Colors.grey,
+                    return Center(
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20), //
+                          color: Colors.grey,
+                        ),
+                        height: [constraints.maxWidth, Dimens.webMaxWidth - padding.horizontal].min, //
+                        child: data == null ? SizedBox.expand() : Image.memory(data),
                       ),
-                      alignment: Alignment.center,
-                      height: constraints.maxWidth, //
-                      child: data == null ? SizedBox.expand() : Image.memory(data),
                     );
                   },
                 );
@@ -165,6 +171,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
             );
           },
         ),
+        SizedBox(height: 20),
       ],
     );
   }
