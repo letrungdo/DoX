@@ -1,8 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:crop_your_image/crop_your_image.dart';
+import 'package:do_x/constants/dimens.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class CropImageModal extends StatefulWidget {
@@ -23,6 +23,13 @@ class _CropImageModalState extends State<CropImageModal> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+
+    final heightCheck = [size.height - 300, size.width - 20];
+    if (kIsWeb) {
+      heightCheck.add(Dimens.webMaxWidth);
+    }
+    final height = kIsWeb ? heightCheck.min : heightCheck.max;
+
     return Stack(
       children: [
         Column(
@@ -30,12 +37,14 @@ class _CropImageModalState extends State<CropImageModal> {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: [size.height - 300, size.width].max,
+              height: height,
               child: Crop(
                 initialRectBuilder: InitialRectBuilder.withSizeAndRatio(size: 1, aspectRatio: 1),
                 image: widget.image,
                 controller: widget.controller,
                 aspectRatio: 1,
+                baseColor: Colors.transparent,
+                // maskColor: Colors.transparent,
                 onCropped: (value) async {
                   widget.onCropped(value);
                   setState(() {

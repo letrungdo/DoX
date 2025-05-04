@@ -4,11 +4,15 @@ import 'package:flutter/material.dart';
 class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   const DoAppBar({
     super.key,
-    required this.title, //
+    this.title, //
     this.height = Dimens.appBarHeight,
+    this.leading,
+    this.leadingWidth,
   });
-  final String title;
+  final String? title;
   final double height;
+  final Widget? leading;
+  final double? leadingWidth;
 
   @override
   State<DoAppBar> createState() => _DoAppBarState();
@@ -21,8 +25,10 @@ class _DoAppBarState extends State<DoAppBar> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Theme.of(context).colorScheme.inversePrimary, //
-      title: Text(widget.title),
+      // backgroundColor: Theme.of(context).colorScheme.inversePrimary, //
+      title: widget.title != null ? Text(widget.title!) : null,
+      leading: widget.leading,
+      leadingWidth: widget.leadingWidth,
     );
   }
 }
