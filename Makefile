@@ -9,6 +9,9 @@ gen:
 	# fvm dart run build_runner clean
 	fvm dart run build_runner build --delete-conflicting-outputs
 
+gen-app-icon:
+	fvm dart run flutter_launcher_icons
+
 l10n:
 	fvm flutter gen-l10n
 
@@ -22,7 +25,7 @@ build-ipa:
 	fvm flutter build ipa --release \
 		--dart-define-from-file envs/dev.env \
 		--obfuscate --split-debug-info=build/obfuscate \
-		--build-name 1.0.0 --build-number 5 \
+		--build-name 1.0.0 --build-number 6 \
 		--export-options-plist=ios/options/ExportOptionsDevStore.plist
 
 build-macos:

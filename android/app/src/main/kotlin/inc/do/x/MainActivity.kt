@@ -1,4 +1,4 @@
-package inc.do.x
+package com.dox.app
 
 import io.flutter.embedding.android.FlutterActivity
 
