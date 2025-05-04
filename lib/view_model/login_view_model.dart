@@ -26,7 +26,10 @@ class LoginViewModel extends CoreViewModel {
   }
 
   void onLogin() async {
+    setBusy(true);
     final result = await _authService.login(email: username, password: password);
+    setBusy(false);
+
     if (result.isError) {
       showAppError(
         // ignore: use_build_context_synchronously

@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:do_x/constants/app_const.dart';
+
 extension StringNullableExtensions on String? {
   bool get isNullOrEmpty => this?.isEmpty ?? true;
 
@@ -9,4 +14,14 @@ extension StringNullableExtensions on String? {
     if (isNullOrEmpty) return null;
     return DateTime.tryParse(this!.replaceAll('/', '-'));
   }
+
+  String toMd5() {
+    return md5.convert(utf8.encode(this ?? "")).toString();
+  }
+
+  bool isImage() => this?.startsWith("image/") ?? false;
+
+  bool isVideo() => this?.startsWith("video/") ?? false;
+
+  bool isLoadingDialog() => this?.startsWith(AppConst.loadingIdPrefix) == true;
 }
