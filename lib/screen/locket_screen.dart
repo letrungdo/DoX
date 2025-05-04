@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
@@ -35,10 +36,25 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     final profilePicture = appData.user?.profilePicture;
     return AppScaffold(
       appBar: AppBar(
-        leadingWidth: 100,
-        leading: CircleAvatar(
-          backgroundImage: profilePicture != null ? NetworkImage(profilePicture) : null, //
-        ),
+        leadingWidth: 76,
+        leading:
+            profilePicture != null
+                ? CachedNetworkImage(
+                  imageUrl: profilePicture,
+                  fadeInDuration: Durations.medium1,
+                  imageBuilder:
+                      (context, imageProvider) => Container(
+                        margin: EdgeInsets.only(left: 20),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(30),
+                          image: DecorationImage(
+                            image: imageProvider, //
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                )
+                : null,
       ),
       child: SafeArea(
         child: Stack(

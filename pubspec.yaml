@@ -2,7 +2,7 @@ name: do_x
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.7.2 <4.0.0'
+  sdk: ">=3.7.2 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -46,13 +46,14 @@ dependencies:
   image: ^4.5.4
   flutter_image_compress: ^2.4.0
   json_annotation: ^4.9.0
-  flutter_secure_storage: ^4.2.1
+  flutter_secure_storage: ^9.2.4
   lottie: ^3.3.1
   crop_your_image: ^2.0.0
   auto_route: ^10.0.1
   package_info_plus: ^8.3.0
   collection: ^1.19.1
   copy_with_extension: ^6.0.1
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,7 @@ dev_dependencies:
   flutter_gen_runner: ^5.10.0
   auto_route_generator: ^10.0.1
   copy_with_extension_gen: ^6.0.1
+  flutter_launcher_icons: ^0.14.3
 
 flutter_gen:
   output: lib/gen/
