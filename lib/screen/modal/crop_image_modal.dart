@@ -2,6 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -55,7 +57,7 @@ class _CropImageModalState extends State<CropImageModal> {
               ),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
+            DoButton(
               onPressed:
                   _isCroping
                       ? null
@@ -65,7 +67,7 @@ class _CropImageModalState extends State<CropImageModal> {
                         });
                         widget.onCrop?.call();
                       }, //
-              child: Text('Crop'),
+              text: context.l10n.crop,
             ),
             SizedBox(height: 50),
           ],

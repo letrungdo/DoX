@@ -30,6 +30,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get error => 'Error';
 
   @override
+  String get crop => 'Crop';
+
+  @override
   String get pleaseLoginAgain => 'Please log in again!';
 
   @override

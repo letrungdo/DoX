@@ -1,7 +1,9 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
+import 'package:do_x/widgets/button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -44,9 +46,9 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
         SizedBox(height: 50),
         Align(
           alignment: Alignment.center,
-          child: ElevatedButton(
+          child: DoButton(
             onPressed: () => vm.onLogout(),
-            child: Text("Log out"), //
+            text: context.l10n.logout, //
           ),
         ),
       ],

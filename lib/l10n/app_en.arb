@@ -7,6 +7,7 @@
   "close": "Close",
   "retry": "Retry",
   "error": "Error",
+  "crop": "Crop",
   "pleaseLoginAgain": "Please log in again!",
   "sessionExpired": "Session expired",
   "anErrorOccurred": "An error occurred.",
