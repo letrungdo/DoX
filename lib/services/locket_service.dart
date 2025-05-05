@@ -37,11 +37,62 @@ class LocketService {
   }
 
   List<Map>? _createOverlay({
-    OverlayType? overlayType,
-    String? caption, //
+    required OverlayType overlayType,
+    required String? caption, //
+    required String? reviewCaption,
+    required double? reviewRating,
+    required DateTime? currentTime,
   }) {
-    if (caption.isNullOrEmpty) return null;
-    final overlayName = (overlayType ?? OverlayType.standard).name;
+    final overlayName = overlayType.name;
+
+    switch (overlayType) {
+      case OverlayType.standard:
+        if (caption.isNullOrEmpty) return null;
+      case OverlayType.review:
+        if (reviewRating == 0 && reviewCaption.isNullOrEmpty) return null;
+        final text = "★$reviewRating - “$reviewCaption”";
+        return [
+          {
+            "data": {
+              "background": {"material_blur": "regular", "colors": []},
+              "payload": {
+                "comment": reviewCaption,
+                "rating": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": reviewRating},
+              },
+              "text_color": "#FFFFFFE6",
+              "type": overlayName,
+              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
+              "text": text,
+            },
+            "alt_text": text,
+            "overlay_id": "caption:$overlayName",
+            "overlay_type": "caption",
+          },
+        ];
+      // case OverlayType.music:
+      // case OverlayType.location:
+      // case OverlayType.weather:
+      case OverlayType.time:
+        if (currentTime == null) return null;
+        final text = currentTime.toStringFormat(DateTimeConst.HHmma);
+        final date = currentTime.millisecondsSinceEpoch / 1000;
+        return [
+          {
+            "data": {
+              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
+              "payload": {"date": date},
+              "text": text,
+              "background": {"material_blur": "regular", "colors": []},
+              "type": overlayName,
+              "icon": {"type": "sf_symbol", "color": "#FFFFFFCC", "data": "clock.fill"},
+              "text_color": "#FFFFFFE6",
+            },
+            "alt_text": text,
+            "overlay_id": "caption:$overlayName",
+            "overlay_type": "caption",
+          },
+        ];
+    }
     return [
       {
         "data": {
@@ -60,8 +111,11 @@ class LocketService {
 
   Future<Result> postImage(
     String? thumbnailUrl, {
-    String? caption, //
-    OverlayType? overlayType,
+    required String? caption,
+    required String? reviewCaption,
+    required double? reviewRating,
+    required DateTime? currentTime,
+    required OverlayType overlayType,
     required UserModel user,
     CancelToken? cancelToken,
   }) {
@@ -83,7 +137,13 @@ class LocketService {
           },
         },
       };
-      final overlays = _createOverlay(caption: caption, overlayType: overlayType);
+      final overlays = _createOverlay(
+        caption: caption, //
+        reviewCaption: reviewCaption,
+        reviewRating: reviewRating,
+        overlayType: overlayType,
+        currentTime: currentTime,
+      );
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
       }
@@ -100,8 +160,11 @@ class LocketService {
   Future<Result> postVideo({
     required String? thumbnailUrl,
     required String? videoUrl,
-    String? caption, //
-    OverlayType? overlayType,
+    required String? caption, //
+    required String? reviewCaption,
+    required double? reviewRating,
+    required DateTime? currentTime,
+    required OverlayType overlayType,
     required UserModel user,
     CancelToken? cancelToken,
   }) async {
@@ -118,7 +181,13 @@ class LocketService {
           "sent_to_all": true,
         },
       };
-      final overlays = _createOverlay(caption: caption, overlayType: overlayType);
+      final overlays = _createOverlay(
+        caption: caption, //
+        reviewCaption: reviewCaption,
+        reviewRating: reviewRating,
+        overlayType: overlayType,
+        currentTime: currentTime,
+      );
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
       }

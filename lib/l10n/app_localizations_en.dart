@@ -33,6 +33,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crop => 'Crop';
 
   @override
+  String get addMessage => 'Add a message';
+
+  @override
+  String get writeReview => 'Write a review...';
+
+  @override
   String get pleaseLoginAgain => 'Please log in again!';
 
   @override

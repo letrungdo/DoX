@@ -8,6 +8,8 @@ extension StringNullableExtensions on String? {
 
   bool get isNotNullOrEmpty => this?.isNotEmpty ?? false;
 
+  String get toDashIfNull => this ?? "-";
+
   String withStatusCode(int? statusCode) => statusCode == null ? toString() : '$this（$statusCode）';
 
   DateTime? toDateTime() {

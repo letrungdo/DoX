@@ -15,7 +15,7 @@ class DoTextField extends StatefulWidget {
     this.decoration,
     this.textAlign = TextAlign.start,
   });
-  final Function(String value)? onChanged;
+  final void Function(String value)? onChanged;
   final String? value;
   final TextEditingController? controller;
   final String? placeholder;

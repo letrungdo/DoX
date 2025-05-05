@@ -1,4 +1,5 @@
 import 'package:crop_your_image/crop_your_image.dart';
+import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/screen/modal/crop_image_modal.dart';
 import 'package:do_x/services/locket_service.dart';
@@ -29,7 +30,31 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   bool get isPickingFile => _isPickingFile;
 
   String? _caption;
-  String? get caption => _caption ?? "";
+  String get caption => _caption ?? "";
+
+  String? _reviewCaption;
+  String get reviewCaption => _reviewCaption ?? "";
+  double _reviewRating = 0;
+  double get reviewRating => _reviewRating;
+
+  DateTime? _currentTime;
+  DateTime? get currentTime => _currentTime;
+
+  int _overlayIndex = 0;
+  int get overlayIndex => _overlayIndex;
+
+  void setOverlayIndex(int index) {
+    _overlayIndex = index;
+    if (OverlayType.values[index] == OverlayType.time) {
+      _currentTime = DateTime.now();
+    }
+    notifyListenersSafe();
+  }
+
+  void setReviewRating(double rating) {
+    _reviewRating = rating;
+    notifyListenersSafe();
+  }
 
   late final _picker = ImagePicker();
 
@@ -40,6 +65,11 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
 
   void onCaptionChanged(String value) {
     _caption = value;
+    notifyListenersSafe();
+  }
+
+  void onReviewCaptionChanged(String value) {
+    _reviewCaption = value;
     notifyListenersSafe();
   }
 
@@ -147,6 +177,10 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
     final resPost = await _locketService.postImage(
       thumbnailUrl, //
       caption: caption,
+      reviewCaption: reviewCaption,
+      reviewRating: reviewRating,
+      currentTime: currentTime,
+      overlayType: OverlayType.values[overlayIndex],
       user: appData.user!,
       cancelToken: cancelToken,
     );
@@ -181,6 +215,10 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
       thumbnailUrl: thumbnailUrl, //
       videoUrl: videoUrl,
       caption: caption,
+      reviewCaption: reviewCaption,
+      reviewRating: reviewRating,
+      currentTime: currentTime,
+      overlayType: OverlayType.values[overlayIndex],
       user: appData.user!,
       cancelToken: cancelToken,
     );
@@ -203,6 +241,8 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
     _croppedImage = null;
     _media = null;
     _caption = null;
+    _reviewCaption = null;
+    _reviewRating = 0;
     clearCacheVideo();
     notifyListenersSafe();
   }

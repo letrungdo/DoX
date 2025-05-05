@@ -1,9 +1,14 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:collection/collection.dart';
+import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
+import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/store/app_data.dart';
@@ -13,6 +18,7 @@ import 'package:do_x/widgets/button.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -34,6 +40,8 @@ class LocketScreen extends StatefulScreen implements AutoRouteWrapper {
 class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScreen, V> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
+
+  final _carouselController = CarouselSliderController();
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +104,12 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     return Column(
       children: [
         SizedBox(height: 20),
-        Stack(
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Selector<V, Uint8List?>(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final height = [constraints.maxWidth, Dimens.webMaxWidth - padding.horizontal].min;
+            return Stack(
+              children: [
+                Selector<V, Uint8List?>(
                   selector: (p0, p1) => p1.croppedImage,
                   builder: (context, data, _) {
                     return Center(
@@ -110,48 +119,79 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                           borderRadius: BorderRadius.circular(20), //
                           color: context.theme.colorScheme.primary,
                         ),
-                        height: [constraints.maxWidth, Dimens.webMaxWidth - padding.horizontal].min, //
+                        height: height, //
                         child: data == null ? SizedBox.expand() : Image.memory(data),
                       ),
                     );
                   },
-                );
-              },
-            ),
-            Positioned(
-              bottom: 10,
-              left: 20,
-              right: 20,
-              child: Selector<V, String?>(
-                selector: (p0, p1) => p1.caption,
-                builder: (context, caption, _) {
-                  return Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.inputBadgeBg.withAlpha(180), //
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: IntrinsicWidth(
-                        child: DoTextField(
-                          value: caption, //
-                          decoration: InputDecoration(
-                            isDense: true, // Remove the default content padding.
-                            contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                            hintText: caption.isNullOrEmpty ? "Input your caption" : null, //
-                            border: InputBorder.none,
-                          ),
-                          textAlign: TextAlign.center,
-                          onChanged: vm.onCaptionChanged,
+                ),
+                Positioned(
+                  bottom: 10,
+                  left: 10,
+                  right: 10,
+                  child: Column(
+                    children: [
+                      CarouselSlider(
+                        carouselController: _carouselController,
+                        options: CarouselOptions(
+                          height: height, //
+                          enlargeCenterPage: true,
+                          viewportFraction: 1,
+                          enlargeFactor: 0,
+                          onPageChanged: (index, reason) {
+                            vm.setOverlayIndex(index);
+                          },
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
 
+                        items:
+                            OverlayType.values.map((type) {
+                              return Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: context.colors.inputBadgeBg.withAlpha(180), //
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: switch (type) {
+                                    OverlayType.standard => _buildCaptionOverlay(),
+                                    OverlayType.review => _buildReviewOverlay(),
+                                    // case OverlayType.music:
+                                    // case OverlayType.location:
+                                    // case OverlayType.weather:
+                                    OverlayType.time => _buildTimeOverlay(),
+                                  },
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                      Selector<V, int>(
+                        selector: (p0, p1) => p1.overlayIndex,
+                        builder: (context, overlayIndex, _) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children:
+                                OverlayType.values.asMap().entries.map((entry) {
+                                  return Container(
+                                    width: 8,
+                                    height: 8,
+                                    margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: context.colors.inputBadgeBg.withAlpha(overlayIndex == entry.key ? 220 : 100),
+                                    ),
+                                  );
+                                }).toList(),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
         SizedBox(height: 10),
 
         Selector<V, (bool, bool)>(
@@ -189,6 +229,91 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
 
         SizedBox(height: 20),
       ],
+    );
+  }
+
+  Widget _buildCaptionOverlay() {
+    return Selector<V, String>(
+      selector: (p0, p1) => p1.caption,
+      builder: (context, caption, _) {
+        return _buildCaptionInput(
+          caption, //
+          hintText: context.l10n.addMessage,
+          onChanged: vm.onCaptionChanged,
+        );
+      },
+    );
+  }
+
+  Widget _buildCaptionInput(
+    String? caption, {
+    void Function(String)? onChanged, //
+    required String hintText,
+  }) {
+    return IntrinsicWidth(
+      child: DoTextField(
+        value: caption, //
+        decoration: InputDecoration(
+          isDense: true, // Remove the default content padding.
+          contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          hintText: caption.isNullOrEmpty ? hintText : null, //
+          border: InputBorder.none,
+        ),
+        textAlign: TextAlign.center,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildReviewOverlay() {
+    return Selector<V, (String, double)>(
+      selector: (p0, p1) => (p1.reviewCaption, p1.reviewRating),
+      builder: (context, data, _) {
+        final caption = data.$1;
+        final rating = data.$2;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RatingBar.builder(
+              initialRating: rating,
+              minRating: 0,
+              allowHalfRating: true,
+              itemCount: 5,
+              itemSize: 20,
+              glow: false,
+              itemPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+              itemBuilder: (context, _) => Icon(Icons.star, color: Colors.amber),
+              onRatingUpdate: vm.setReviewRating,
+            ),
+            if (rating > 0)
+              _buildCaptionInput(
+                caption, //
+                hintText: context.l10n.writeReview,
+                onChanged: vm.onReviewCaptionChanged,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTimeOverlay() {
+    return Selector<V, DateTime?>(
+      selector: (p0, p1) => p1.currentTime,
+      builder: (context, currentTime, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.timelapse), //
+            SizedBox(width: 4),
+            Text(
+              currentTime.toStringFormat(DateTimeConst.HHmma),
+              style: context.textTheme.primary.bold, //
+            ),
+          ],
+        );
+      },
     );
   }
 }
