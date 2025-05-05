@@ -141,6 +141,18 @@ abstract class AppLocalizations {
   /// **'Crop'**
   String get crop;
 
+  /// No description provided for @addMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a message'**
+  String get addMessage;
+
+  /// No description provided for @writeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a review...'**
+  String get writeReview;
+
   /// No description provided for @pleaseLoginAgain.
   ///
   /// In en, this message translates to:
