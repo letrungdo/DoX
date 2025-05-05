@@ -1,5 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/app_info.dart';
@@ -39,7 +41,7 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
         ),
       ),
       child: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(15), //
           child: _buildBody(),
         ),
@@ -131,7 +133,26 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
   Widget _buildBody() {
     return Column(
       children: [
-        SizedBox(height: 100), //
+        SizedBox(height: 50), //
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Assets.images.appIcon.image(
+              width: 60,
+              height: 60,
+              fit: BoxFit.contain, //
+            ), //
+            SizedBox(width: 10),
+            Text(
+              "Do X",
+              style: context.textTheme.primary.size24.copyWith(
+                color: context.theme.colorScheme.primary, //
+              ), //
+            ),
+          ],
+        ),
+        SizedBox(height: 50), //
+
         _buildLoginForms(),
       ],
     );

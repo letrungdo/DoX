@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
@@ -107,7 +108,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20), //
-                          color: Colors.grey,
+                          color: context.theme.colorScheme.primary,
                         ),
                         height: [constraints.maxWidth, Dimens.webMaxWidth - padding.horizontal].min, //
                         child: data == null ? SizedBox.expand() : Image.memory(data),
@@ -127,7 +128,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                   return Center(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white70, //
+                        color: context.colors.inputBadgeBg.withAlpha(180), //
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: IntrinsicWidth(
@@ -162,7 +163,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
             return DoButton(
               isBusy: isBusy,
               onPressed: () => isCompressingVideo ? vm.cancelCompressVideo() : vm.pickMedia(), //
-              child: Text(isCompressingVideo ? "Cancel" : 'Select Media'),
+              text: isCompressingVideo ? "Cancel" : 'Select Media',
             );
           },
         ),
@@ -170,9 +171,9 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
         Selector<V, bool>(
           selector: (p0, p1) => p1.isBusy || p1.croppedImage == null || p1.isCompressingVideo,
           builder: (context, isDisable, _) {
-            return ElevatedButton(
+            return DoButton(
               onPressed: isDisable ? null : () => vm.startUpload(), //
-              child: Text('Upload'),
+              text: 'Upload',
             );
           },
         ),

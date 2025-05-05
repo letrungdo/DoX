@@ -5,6 +5,7 @@ import 'package:do_x/router/navigator_observer.dart';
 import 'package:do_x/services/auth_service.dart';
 import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
+import 'package:do_x/theme/app_theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,10 +23,9 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'Do X',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true, //
-        ),
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
         locale: AppLocalizations.supportedLocales.first,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

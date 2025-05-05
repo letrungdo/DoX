@@ -62,13 +62,9 @@ class _DoTextFieldState extends State<DoTextField> {
           InputDecoration(
             labelText: widget.labelText,
             hintText: widget.placeholder,
-            // border: InputBorder.none,
-            // focusedBorder: InputBorder.none,
-            // enabledBorder: InputBorder.none,
-            // errorBorder: InputBorder.none,
-            // disabledBorder: InputBorder.none,
-            // hintTextDirection: TextDirection.ltr,
-            // fillColor: Colors.transparent,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20), //
+            ), //
           ),
       obscureText: widget.obscureText,
       onTapOutside: (event) {

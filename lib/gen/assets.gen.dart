@@ -22,12 +22,12 @@ class $AssetsAnimationGen {
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
-  /// File path: assets/images/locket_icon.png
-  AssetGenImage get locketIcon =>
-      const AssetGenImage('assets/images/locket_icon.png');
+  /// File path: assets/images/app_icon.png
+  AssetGenImage get appIcon =>
+      const AssetGenImage('assets/images/app_icon.png');
 
   /// List of all assets
-  List<AssetGenImage> get values => [locketIcon];
+  List<AssetGenImage> get values => [appIcon];
 }
 
 class Assets {

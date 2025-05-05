@@ -135,6 +135,12 @@ abstract class AppLocalizations {
   /// **'Error'**
   String get error;
 
+  /// No description provided for @crop.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop'**
+  String get crop;
+
   /// No description provided for @pleaseLoginAgain.
   ///
   /// In en, this message translates to:
