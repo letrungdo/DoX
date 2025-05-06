@@ -1,5 +1,4 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/init_view_model.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +23,6 @@ class InitScreen extends StatefulScreen implements AutoRouteWrapper {
 class _InitScreenState extends ScreenState<InitScreen, InitViewModel> {
   @override
   Widget build(BuildContext context) {
-    return AppScaffold();
+    return Scaffold();
   }
 }

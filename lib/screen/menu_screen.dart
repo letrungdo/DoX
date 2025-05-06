@@ -1,6 +1,5 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/screen/core/app_scaffold.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/button.dart';
@@ -30,8 +29,8 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return AppScaffold(
-      child: SafeArea(
+    return Scaffold(
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(15), //
           child: _buildBody(),

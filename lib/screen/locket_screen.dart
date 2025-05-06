@@ -9,7 +9,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
-import 'package:do_x/screen/core/app_scaffold.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/view_model/locket_view_model.dart';
@@ -48,7 +48,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     super.build(context);
     final profilePicture = appData.user?.profilePicture;
     final padding = EdgeInsets.symmetric(horizontal: 20);
-    return AppScaffold(
+    return Scaffold(
       appBar: DoAppBar(
         height: 60,
         leadingWidth: 70,
@@ -71,7 +71,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                 )
                 : null,
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Stack(
           children: [
             SingleChildScrollView(
@@ -102,6 +102,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
 
   Widget _buildBody(EdgeInsets padding) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(height: 20),
         LayoutBuilder(
@@ -191,7 +192,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               ],
             );
           },
-        ),
+        ).webConstrainedBox(),
         SizedBox(height: 10),
 
         Selector<V, (bool, bool)>(

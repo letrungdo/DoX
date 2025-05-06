@@ -38,7 +38,6 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
         return Scaffold(
-          body: child,
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: tabsRouter.activeIndex,
             onTap: tabsRouter.setActiveIndex,
@@ -48,6 +47,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
               BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
             ],
           ),
+          body: child,
         );
       },
     );
