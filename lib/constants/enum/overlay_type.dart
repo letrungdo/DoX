@@ -2,7 +2,7 @@ enum OverlayType {
   standard,
   review,
   // music,
-  // location,
-  // weather,
+  location,
+  weather,
   time,
 }

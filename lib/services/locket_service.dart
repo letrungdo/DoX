@@ -4,9 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/date_extensions.dart';
+import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/model/response/user_info_response.dart';
 import 'package:do_x/model/response/user_model.dart';
+import 'package:do_x/model/weather_data.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/services/secure_storage_service.dart';
@@ -42,15 +44,32 @@ class LocketService {
     required String? reviewCaption,
     required double? reviewRating,
     required DateTime? currentTime,
+    required CurrentWeather? weather,
+    required String? locationName,
   }) {
     final overlayName = overlayType.name;
 
     switch (overlayType) {
       case OverlayType.standard:
-        if (caption.isNullOrEmpty) return null;
+        final text = caption?.trim();
+        if (text.isNullOrEmpty) return null;
+        return [
+          {
+            "data": {
+              "background": {"material_blur": "ultra_thin", "colors": []},
+              "text_color": "#FFFFFFE6",
+              "type": overlayName,
+              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
+              "text": text,
+            },
+            "alt_text": text,
+            "overlay_id": "caption:$overlayName",
+            "overlay_type": "caption",
+          },
+        ];
       case OverlayType.review:
         if (reviewRating == 0 && reviewCaption.isNullOrEmpty) return null;
-        final text = "★$reviewRating - “$reviewCaption”";
+        final text = "★$reviewRating - “${reviewCaption?.trim()}”";
         return [
           {
             "data": {
@@ -70,8 +89,52 @@ class LocketService {
           },
         ];
       // case OverlayType.music:
-      // case OverlayType.location:
-      // case OverlayType.weather:
+      case OverlayType.location:
+        final text = locationName?.trim();
+        if (text.isNullOrEmpty) return null;
+        return [
+          {
+            "data": {
+              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
+              "payload": {},
+              "text": text,
+              "background": {"material_blur": "regular", "colors": []},
+              "type": overlayName,
+              "icon": {"color": "#24B0FF", "data": "location.fill", "type": "sf_symbol"},
+              "text_color": "#FFFFFFE6",
+            },
+            "alt_text": text,
+            "overlay_id": "caption:$overlayName",
+            "overlay_type": "caption",
+          },
+        ];
+      case OverlayType.weather:
+        if (weather == null) return null;
+        final text = weather.temperatureText;
+        return [
+          {
+            "data": {
+              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
+              "payload": {
+                "temperature": weather.temperature2m.celsiusToFahrenheit(),
+                // "wk_condition": "mostlyClear", // TODO:
+                // "wk_condition": weather.weatherCode,
+                "is_daylight": weather.isDaylight,
+                "cloud_cover": (weather.cloudCover ?? 0) / 100,
+              },
+              "text": text,
+              "background": {
+                "colors": ["#370C6F", "#575CD4"],
+              },
+              "type": overlayName,
+              "icon": {"color": "#FFFFFF", "data": "moon.stars.fill", "type": "sf_symbol"},
+              "text_color": "#FFFFFFE6",
+            },
+            "alt_text": text,
+            "overlay_id": "caption:$overlayName",
+            "overlay_type": "caption",
+          },
+        ];
       case OverlayType.time:
         if (currentTime == null) return null;
         final text = currentTime.toStringFormat(DateTimeConst.HHmma);
@@ -93,31 +156,19 @@ class LocketService {
           },
         ];
     }
-    return [
-      {
-        "data": {
-          "background": {"material_blur": "ultra_thin", "colors": []},
-          "text_color": "#FFFFFFE6",
-          "type": overlayName,
-          "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
-          "text": caption,
-        },
-        "alt_text": caption,
-        "overlay_id": "caption:$overlayName",
-        "overlay_type": "caption",
-      },
-    ];
   }
 
   Future<Result> postImage(
     String? thumbnailUrl, {
+    required UserModel user,
+    CancelToken? cancelToken,
+    required OverlayType overlayType,
     required String? caption,
     required String? reviewCaption,
     required double? reviewRating,
+    required CurrentWeather? weather,
     required DateTime? currentTime,
-    required OverlayType overlayType,
-    required UserModel user,
-    CancelToken? cancelToken,
+    required String? locationName,
   }) {
     return Result.guardFuture(() async {
       if (thumbnailUrl == null) throw "thumbnail url invalid";
@@ -143,6 +194,8 @@ class LocketService {
         reviewRating: reviewRating,
         overlayType: overlayType,
         currentTime: currentTime,
+        weather: weather,
+        locationName: locationName,
       );
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
@@ -158,15 +211,17 @@ class LocketService {
   }
 
   Future<Result> postVideo({
+    required UserModel user,
+    CancelToken? cancelToken,
+    required OverlayType overlayType,
     required String? thumbnailUrl,
     required String? videoUrl,
     required String? caption, //
     required String? reviewCaption,
     required double? reviewRating,
+    required CurrentWeather? weather,
     required DateTime? currentTime,
-    required OverlayType overlayType,
-    required UserModel user,
-    CancelToken? cancelToken,
+    required String? locationName,
   }) async {
     return Result.guardFuture(() async {
       if (thumbnailUrl == null) throw "thumbnail url invalid";
@@ -187,6 +242,8 @@ class LocketService {
         reviewRating: reviewRating,
         overlayType: overlayType,
         currentTime: currentTime,
+        weather: weather,
+        locationName: locationName,
       );
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;

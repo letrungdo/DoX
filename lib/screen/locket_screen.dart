@@ -1,5 +1,4 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/date_time.dart';
@@ -10,15 +9,18 @@ import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/model/weather_data.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/store/app_data.dart';
 import 'package:do_x/view_model/locket_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button.dart';
+import 'package:do_x/widgets/loading.dart';
+import 'package:do_x/widgets/rating_bar.dart';
 import 'package:do_x/widgets/text_field.dart';
+import 'package:do_x/widgets/user_avatar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -46,30 +48,19 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final profilePicture = appData.user?.profilePicture;
     final padding = EdgeInsets.symmetric(horizontal: 20);
     return Scaffold(
       appBar: DoAppBar(
         height: 60,
-        leadingWidth: 70,
-        leading:
-            profilePicture != null
-                ? CachedNetworkImage(
-                  imageUrl: profilePicture,
-                  fadeInDuration: Durations.medium1,
-                  imageBuilder:
-                      (context, imageProvider) => Container(
-                        margin: EdgeInsets.only(left: 20, top: 5),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30),
-                          image: DecorationImage(
-                            image: imageProvider, //
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                )
-                : null,
+        leadingWidth: 76,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 20),
+          child: UserAvatar(
+            onPressed: () {
+              context.pushRoute(const AccountRoute());
+            },
+          ),
+        ),
       ),
       body: SafeArea(
         child: Stack(
@@ -127,9 +118,9 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                   },
                 ),
                 Positioned(
-                  bottom: 10,
-                  left: 10,
-                  right: 10,
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
                   child: Column(
                     children: [
                       CarouselSlider(
@@ -143,13 +134,21 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                             vm.setOverlayIndex(index);
                           },
                         ),
-
                         items:
                             OverlayType.values.map((type) {
                               return Align(
                                 alignment: Alignment.bottomCenter,
                                 child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
+                                  margin: EdgeInsets.symmetric(horizontal: 10),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical:
+                                        type == OverlayType.review
+                                            ? 3
+                                            : type == OverlayType.time
+                                            ? 7
+                                            : 8, //
+                                  ),
                                   decoration: BoxDecoration(
                                     color: context.colors.inputBadgeBg.withAlpha(180), //
                                     borderRadius: BorderRadius.circular(20),
@@ -157,9 +156,9 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                                   child: switch (type) {
                                     OverlayType.standard => _buildCaptionOverlay(),
                                     OverlayType.review => _buildReviewOverlay(),
-                                    // case OverlayType.music:
-                                    // case OverlayType.location:
-                                    // case OverlayType.weather:
+                                    // OverlayType.music =>
+                                    OverlayType.location => _buildLocationOverlay(),
+                                    OverlayType.weather => _buildWeatherOverlay(),
                                     OverlayType.time => _buildTimeOverlay(),
                                   },
                                 ),
@@ -250,17 +249,22 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     String? caption, {
     void Function(String)? onChanged, //
     required String hintText,
+    int? maxLength,
+    TextInputAction? textInputAction,
   }) {
     return IntrinsicWidth(
       child: DoTextField(
         value: caption, //
+        maxLines: null,
+        maxLength: maxLength,
         decoration: InputDecoration(
           isDense: true, // Remove the default content padding.
-          contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          contentPadding: EdgeInsets.symmetric(horizontal: 5),
           hintText: caption.isNullOrEmpty ? hintText : null, //
           border: InputBorder.none,
         ),
         textAlign: TextAlign.center,
+        textInputAction: textInputAction,
         onChanged: onChanged,
       ),
     );
@@ -283,7 +287,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               itemCount: 5,
               itemSize: 20,
               glow: false,
-              itemPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+              itemPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 6),
               itemBuilder: (context, _) => Icon(Icons.star, color: Colors.amber),
               onRatingUpdate: vm.setReviewRating,
             ),
@@ -292,6 +296,8 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                 caption, //
                 hintText: context.l10n.writeReview,
                 onChanged: vm.onReviewCaptionChanged,
+                maxLength: 40,
+                textInputAction: TextInputAction.done,
               ),
           ],
         );
@@ -312,6 +318,53 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               currentTime.toStringFormat(DateTimeConst.HHmma),
               style: context.textTheme.primary.bold, //
             ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWeatherOverlay() {
+    return Selector<V, CurrentWeather?>(
+      selector: (p0, p1) => p1.weatherData,
+      builder: (context, data, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (data == null) Loading(size: 20),
+            if (data != null) ...[
+              Icon(data.isDaylight ? Icons.sunny : Icons.dark_mode),
+              SizedBox(width: 4),
+              Text(
+                (data.temperatureText).toDashIfNull,
+                style: context.textTheme.primary.bold, //
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLocationOverlay() {
+    return Selector<V, String?>(
+      selector: (p0, p1) => p1.currentLocation,
+      builder: (context, currentLocation, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on), //
+            SizedBox(width: 4),
+            currentLocation == null
+                ? Loading(size: 20)
+                : Flexible(
+                  child: Text(
+                    currentLocation,
+                    style: context.textTheme.primary.bold, //
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
           ],
         );
       },

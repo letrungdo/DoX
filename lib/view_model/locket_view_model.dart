@@ -1,9 +1,13 @@
 import 'package:crop_your_image/crop_your_image.dart';
+import 'package:dio/dio.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/string_extensions.dart';
+import 'package:do_x/model/weather_data.dart';
 import 'package:do_x/screen/modal/crop_image_modal.dart';
+import 'package:do_x/services/location_service.dart';
 import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
+import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
@@ -18,6 +22,8 @@ import 'package:provider/provider.dart';
 class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   LocketService get _locketService => context.read<LocketService>();
   UploadService get _uploadService => context.read<UploadService>();
+  WeatherService get _weatherService => context.read<WeatherService>();
+  LocationService get _locationService => context.read<LocationService>();
 
   XFile? _media;
 
@@ -40,14 +46,65 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   DateTime? _currentTime;
   DateTime? get currentTime => _currentTime;
 
+  String? _currentLocation;
+  String? get currentLocation => _currentLocation;
+
   int _overlayIndex = 0;
   int get overlayIndex => _overlayIndex;
 
-  void setOverlayIndex(int index) {
+  CurrentWeather? _weatherData;
+  CurrentWeather? get weatherData => _weatherData;
+
+  CancelToken? _cancelTokenWeather;
+
+  void setOverlayIndex(int index) async {
     _overlayIndex = index;
-    if (OverlayType.values[index] == OverlayType.time) {
-      _currentTime = DateTime.now();
+    switch (OverlayType.values[index]) {
+      case OverlayType.time:
+        _currentTime = DateTime.now();
+        break;
+      case OverlayType.location:
+        _getLocation();
+        break;
+      case OverlayType.weather:
+        _getWeather();
+        break;
+      default:
+        break;
     }
+    notifyListenersSafe();
+  }
+
+  void _getLocation() async {
+    try {
+      final position = await _locationService.getCurrentPosition();
+      if (position == null) throw "can't get position";
+      _currentLocation = await _locationService.getLocationName(position);
+      notifyListenersSafe();
+    } catch (e) {
+      logger.e(e.toString());
+    }
+  }
+
+  void _getWeather() async {
+    _cancelTokenWeather?.cancel();
+    _cancelTokenWeather = CancelToken();
+    final position = await _locationService.getCurrentPosition();
+    final result = await _weatherService.getCurrentWeather(
+      latitude: position?.latitude, //
+      longitude: position?.longitude,
+      timezone: await _locationService.getCurrentTimeZone(),
+      cancelToken: _cancelTokenWeather,
+    );
+    if (result.isError) {
+      showAppError(
+        // ignore: use_build_context_synchronously
+        context,
+        result.error,
+        onRetry: () => _getWeather(),
+      );
+    }
+    _weatherData = result.data?.current;
     notifyListenersSafe();
   }
 
@@ -137,8 +194,8 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   Future<String?> _uploadImage() async {
     final imgData = await FlutterImageCompress.compressWithList(
       _croppedImage!, //
-      minWidth: 800,
-      minHeight: 800,
+      minWidth: 1020,
+      minHeight: 1020,
       format: CompressFormat.webp,
     );
     final uploadRes = await _uploadService.uploadImage(
@@ -176,13 +233,15 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
 
     final resPost = await _locketService.postImage(
       thumbnailUrl, //
+      overlayType: OverlayType.values[overlayIndex],
+      user: appData.user!,
+      cancelToken: cancelToken,
       caption: caption,
       reviewCaption: reviewCaption,
       reviewRating: reviewRating,
       currentTime: currentTime,
-      overlayType: OverlayType.values[overlayIndex],
-      user: appData.user!,
-      cancelToken: cancelToken,
+      weather: _weatherData,
+      locationName: currentLocation,
     );
     setBusy(false);
     if (resPost.isError) {
@@ -212,15 +271,17 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
     ]);
 
     final resPost = await _locketService.postVideo(
+      overlayType: OverlayType.values[overlayIndex],
+      user: appData.user!,
+      cancelToken: cancelToken,
       thumbnailUrl: thumbnailUrl, //
       videoUrl: videoUrl,
       caption: caption,
       reviewCaption: reviewCaption,
       reviewRating: reviewRating,
       currentTime: currentTime,
-      overlayType: OverlayType.values[overlayIndex],
-      user: appData.user!,
-      cancelToken: cancelToken,
+      weather: _weatherData,
+      locationName: currentLocation,
     );
     setBusy(false);
     if (resPost.isError) {

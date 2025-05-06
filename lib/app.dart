@@ -2,8 +2,10 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.dart';
 import 'package:do_x/router/navigator_observer.dart';
 import 'package:do_x/services/auth_service.dart';
+import 'package:do_x/services/location_service.dart';
 import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
+import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +20,8 @@ class MyApp extends StatelessWidget {
         Provider<AuthService>(create: (_) => AuthService()), //
         Provider<LocketService>(create: (_) => LocketService()),
         Provider<UploadService>(create: (_) => UploadService()),
+        Provider<WeatherService>(create: (_) => WeatherService()),
+        Provider<LocationService>(create: (_) => LocationService()),
       ],
       child: MaterialApp.router(
         title: 'Do X',

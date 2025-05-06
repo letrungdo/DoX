@@ -27,7 +27,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     return AutoTabsRouter(
       routes: [
         const LocketRoute(), //
-        const MenuRoute(),
+        const NewsRoute(),
       ],
       transitionBuilder:
           (context, child, animation) => FadeTransition(
@@ -44,7 +44,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             // selectedItemColor: Colors.amber[800],
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.image), label: 'Locket'),
-              BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
+              BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
             ],
           ),
           body: child,
