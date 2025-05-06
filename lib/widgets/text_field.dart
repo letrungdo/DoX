@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class DoTextField extends StatefulWidget {
   const DoTextField({
@@ -14,6 +15,9 @@ class DoTextField extends StatefulWidget {
     this.autofillHints,
     this.decoration,
     this.textAlign = TextAlign.start,
+    this.maxLines = 1,
+    this.maxLength,
+    this.textInputAction,
   });
   final void Function(String value)? onChanged;
   final String? value;
@@ -26,6 +30,9 @@ class DoTextField extends StatefulWidget {
   final Iterable<String>? autofillHints;
   final InputDecoration? decoration;
   final TextAlign textAlign;
+  final int? maxLines;
+  final int? maxLength;
+  final TextInputAction? textInputAction;
 
   @override
   State<DoTextField> createState() => _DoTextFieldState();
@@ -57,6 +64,10 @@ class _DoTextFieldState extends State<DoTextField> {
       controller: _controller,
       keyboardType: widget.keyboardType,
       autofillHints: widget.autofillHints,
+      maxLines: widget.maxLines,
+      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+      maxLength: widget.maxLength,
+      textInputAction: widget.textInputAction,
       decoration:
           widget.decoration ??
           InputDecoration(

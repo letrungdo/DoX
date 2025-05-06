@@ -1,28 +1,26 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/view_model/menu_view_model.dart';
-import 'package:do_x/widgets/button.dart';
+import 'package:do_x/view_model/news_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
-class MenuScreen extends StatefulScreen implements AutoRouteWrapper {
-  const MenuScreen({super.key});
+class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
+  const NewsScreen({super.key});
 
   @override
-  State<MenuScreen> createState() => _MenuScreenState();
+  State<NewsScreen> createState() => _NewsScreenState();
 
   @override
   Widget wrappedRoute(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => MenuViewModel(), //
+      create: (_) => NewsViewModel(), //
       child: this,
     );
   }
 }
 
-class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, V> with AutomaticKeepAliveClientMixin {
+class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -41,15 +39,9 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
 
   Widget _buildBody() {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(height: 50),
-        Align(
-          alignment: Alignment.center,
-          child: DoButton(
-            onPressed: () => vm.onLogout(),
-            text: context.l10n.logout, //
-          ),
-        ),
+        Center(child: Text("COMING SOON!")), //
       ],
     );
   }

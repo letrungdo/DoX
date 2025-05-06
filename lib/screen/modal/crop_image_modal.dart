@@ -46,6 +46,7 @@ class _CropImageModalState extends State<CropImageModal> {
                 controller: widget.controller,
                 aspectRatio: 1,
                 baseColor: Colors.transparent,
+                filterQuality: FilterQuality.high,
                 // maskColor: Colors.transparent,
                 onCropped: (value) async {
                   widget.onCropped(value);

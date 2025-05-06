@@ -12,6 +12,8 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String? title;
   final double height;
   final Widget? leading;
+
+  /// Default 56
   final double? leadingWidth;
 
   @override
