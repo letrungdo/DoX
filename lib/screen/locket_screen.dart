@@ -12,7 +12,8 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/weather_data.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/view_model/locket_view_model.dart';
+import 'package:do_x/view_model/locket/locket_view_model.dart';
+import 'package:do_x/view_model/locket/weather.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button.dart';
 import 'package:do_x/widgets/loading.dart';
@@ -21,6 +22,7 @@ import 'package:do_x/widgets/text_field.dart';
 import 'package:do_x/widgets/user_avatar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -193,23 +195,21 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
           },
         ).webConstrainedBox(),
         SizedBox(height: 10),
-
-        Selector<V, (bool, bool)>(
-          selector: (p0, p1) => (p1.isBusy || p1.isPickingFile, p1.isCompressingVideo),
-          builder: (context, data, _) {
-            final isBusy = data.$1;
-            final isCompressingVideo = data.$2;
-
-            return DoButton(
-              isBusy: isBusy,
-              onPressed: () => isCompressingVideo ? vm.cancelCompressVideo() : vm.pickMedia(), //
-              text: isCompressingVideo ? "Cancel" : 'Select Media',
-            );
-          },
+        Row(
+          children: [
+            IconButton(
+              icon: SFIcon(SFIcons.sf_photo),
+              onPressed: () => vm.pickPhoto(), //
+            ),
+            IconButton(
+              icon: SFIcon(SFIcons.sf_video),
+              onPressed: () => vm.pickVideo(), //
+            ),
+          ],
         ),
         SizedBox(height: 32),
         Selector<V, bool>(
-          selector: (p0, p1) => p1.isBusy || p1.croppedImage == null || p1.isCompressingVideo,
+          selector: (p0, p1) => p1.isBusy || p1.croppedImage == null,
           builder: (context, isDisable, _) {
             return DoButton(
               onPressed: isDisable ? null : () => vm.startUpload(), //
@@ -217,16 +217,6 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
             );
           },
         ),
-        SizedBox(height: 10),
-
-        Selector<V, (bool, double)>(
-          selector: (p0, p1) => (p1.isCompressingVideo, p1.compressVideoProgress),
-          builder: (context, data, _) {
-            if (data.$1) return Text("Compressing Video: ${data.$2.toStringAsFixed(1)}");
-            return SizedBox.shrink();
-          },
-        ),
-
         SizedBox(height: 20),
       ],
     );
@@ -262,6 +252,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
           contentPadding: EdgeInsets.symmetric(horizontal: 5),
           hintText: caption.isNullOrEmpty ? hintText : null, //
           border: InputBorder.none,
+          counterText: "",
         ),
         textAlign: TextAlign.center,
         textInputAction: textInputAction,
@@ -312,7 +303,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.timelapse), //
+            SFIcon(SFIcons.sf_clock, fontSize: 20, fontWeight: FontWeight.bold), //
             SizedBox(width: 4),
             Text(
               currentTime.toStringFormat(DateTimeConst.HHmma),
@@ -333,7 +324,11 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
           children: [
             if (data == null) Loading(size: 20),
             if (data != null) ...[
-              Icon(data.isDaylight ? Icons.sunny : Icons.dark_mode),
+              SFIcon(
+                wmoWeatherInfos[data.weatherCode]?.icon ?? SFIcons.sf_questionmark,
+                fontSize: 20,
+                fontWeight: FontWeight.bold, //
+              ),
               SizedBox(width: 4),
               Text(
                 (data.temperatureText).toDashIfNull,

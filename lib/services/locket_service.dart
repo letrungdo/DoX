@@ -13,6 +13,7 @@ import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/store/app_data.dart';
+import 'package:do_x/view_model/locket/weather.dart';
 import 'package:flutter/cupertino.dart';
 
 class LocketService {
@@ -111,23 +112,27 @@ class LocketService {
       case OverlayType.weather:
         if (weather == null) return null;
         final text = weather.temperatureText;
+        final data = wmoWeatherInfos[weather.weatherCode];
+
         return [
           {
             "data": {
               "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
               "payload": {
                 "temperature": weather.temperature2m.celsiusToFahrenheit(),
-                // "wk_condition": "mostlyClear", // TODO:
-                // "wk_condition": weather.weatherCode,
+                "wk_condition": data?.description,
                 "is_daylight": weather.isDaylight,
-                "cloud_cover": (weather.cloudCover ?? 0) / 100,
+                "cloud_cover": {
+                  "value": weather.cloudCover, //
+                  "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                },
               },
               "text": text,
               "background": {
-                "colors": ["#370C6F", "#575CD4"],
+                "colors": ["#370C6F", "#575CD4"], // TODO:
               },
               "type": overlayName,
-              "icon": {"color": "#FFFFFF", "data": "moon.stars.fill", "type": "sf_symbol"},
+              "icon": {"color": "#FFFFFF", "data": data?.symbolName, "type": "sf_symbol"},
               "text_color": "#FFFFFFE6",
             },
             "alt_text": text,

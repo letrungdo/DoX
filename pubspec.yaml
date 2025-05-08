@@ -55,11 +55,18 @@ dependencies:
   copy_with_extension: ^6.0.1
   cached_network_image: ^3.4.1
   crypto: ^3.0.6
-  video_compress: ^3.1.4
   carousel_slider: ^5.0.0
   geolocator: ^14.0.0
   flutter_timezone: ^4.1.0
   geocoding: ^3.0.0
+  video_player: ^2.9.5
+  flutter_sficon: ^1.1.2
+  video_editor: ^3.0.0
+  ffmpeg_kit_flutter:
+    git:
+      url: https://github.com/letrungdo/ffmpeg-kit.git
+      path: flutter/flutter
+      ref: flutter_fix_retired_v6.0.3
 
 dev_dependencies:
   flutter_test:

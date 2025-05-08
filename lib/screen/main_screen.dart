@@ -3,6 +3,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -41,9 +42,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: tabsRouter.activeIndex,
             onTap: tabsRouter.setActiveIndex,
-            // selectedItemColor: Colors.amber[800],
+            selectedItemColor: Colors.amber,
+            unselectedFontSize: 14,
             items: <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: Icon(Icons.image), label: 'Locket'),
+              BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
             ],
           ),

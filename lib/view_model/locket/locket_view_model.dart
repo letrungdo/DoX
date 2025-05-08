@@ -1,31 +1,25 @@
+import 'dart:io';
+
+import 'package:auto_route/auto_route.dart';
 import 'package:crop_your_image/crop_your_image.dart';
-import 'package:dio/dio.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
-import 'package:do_x/extensions/string_extensions.dart';
-import 'package:do_x/model/weather_data.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/modal/crop_image_modal.dart';
-import 'package:do_x/services/location_service.dart';
 import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
-import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:do_x/view_model/mixin/compress_video.mixin.dart';
+import 'package:do_x/view_model/locket/overlays.mixin.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 
-class LocketViewModel extends CoreViewModel with CompressVideoMixin {
+class LocketViewModel extends CoreViewModel with LocketOverlays {
   LocketService get _locketService => context.read<LocketService>();
   UploadService get _uploadService => context.read<UploadService>();
-  WeatherService get _weatherService => context.read<WeatherService>();
-  LocationService get _locationService => context.read<LocationService>();
-
-  XFile? _media;
 
   Uint8List? _croppedImage;
   Uint8List? get croppedImage => _croppedImage;
@@ -35,126 +29,53 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   bool _isPickingFile = false;
   bool get isPickingFile => _isPickingFile;
 
-  String? _caption;
-  String get caption => _caption ?? "";
-
-  String? _reviewCaption;
-  String get reviewCaption => _reviewCaption ?? "";
-  double _reviewRating = 0;
-  double get reviewRating => _reviewRating;
-
-  DateTime? _currentTime;
-  DateTime? get currentTime => _currentTime;
-
-  String? _currentLocation;
-  String? get currentLocation => _currentLocation;
-
-  int _overlayIndex = 0;
-  int get overlayIndex => _overlayIndex;
-
-  CurrentWeather? _weatherData;
-  CurrentWeather? get weatherData => _weatherData;
-
-  CancelToken? _cancelTokenWeather;
-
-  void setOverlayIndex(int index) async {
-    _overlayIndex = index;
-    switch (OverlayType.values[index]) {
-      case OverlayType.time:
-        _currentTime = DateTime.now();
-        break;
-      case OverlayType.location:
-        _getLocation();
-        break;
-      case OverlayType.weather:
-        _getWeather();
-        break;
-      default:
-        break;
-    }
-    notifyListenersSafe();
-  }
-
-  void _getLocation() async {
-    try {
-      final position = await _locationService.getCurrentPosition();
-      if (position == null) throw "can't get position";
-      _currentLocation = await _locationService.getLocationName(position);
-      notifyListenersSafe();
-    } catch (e) {
-      logger.e(e.toString());
-    }
-  }
-
-  void _getWeather() async {
-    _cancelTokenWeather?.cancel();
-    _cancelTokenWeather = CancelToken();
-    final position = await _locationService.getCurrentPosition();
-    final result = await _weatherService.getCurrentWeather(
-      latitude: position?.latitude, //
-      longitude: position?.longitude,
-      timezone: await _locationService.getCurrentTimeZone(),
-      cancelToken: _cancelTokenWeather,
-    );
-    if (result.isError) {
-      showAppError(
-        // ignore: use_build_context_synchronously
-        context,
-        result.error,
-        onRetry: () => _getWeather(),
-      );
-    }
-    _weatherData = result.data?.current;
-    notifyListenersSafe();
-  }
-
-  void setReviewRating(double rating) {
-    _reviewRating = rating;
-    notifyListenersSafe();
-  }
-
   late final _picker = ImagePicker();
+
+  Uint8List? _videoCroped;
+  Uint8List? get videoCroped => _videoCroped;
 
   void _setPickingFile(bool value) {
     _isPickingFile = value;
     notifyListenersSafe();
   }
 
-  void onCaptionChanged(String value) {
-    _caption = value;
-    notifyListenersSafe();
-  }
-
-  void onReviewCaptionChanged(String value) {
-    _reviewCaption = value;
-    notifyListenersSafe();
-  }
-
-  Future<void> pickMedia() async {
+  Future<void> pickPhoto() async {
     _setPickingFile(true);
-    final xFile = await _picker.pickMedia(maxHeight: 2000, maxWidth: 2000);
+    final xFile = await _picker.pickImage(source: ImageSource.gallery);
     _setPickingFile(false);
     if (xFile == null) return;
 
     final imageData = await xFile.readAsBytes();
     if (!context.mounted) return;
-    _media = xFile;
-    final mime = kIsWeb ? xFile.mimeType : lookupMimeType(xFile.path);
-    if (mime == null) return;
-    if (mime.isImage()) {
-      clearCacheVideo();
-      _openCropImage(imageData);
-    } else if (mime.isVideo()) {
-      final videoThumbnail = await getVideoThumbnail(xFile.path);
-      if (!context.mounted) return;
+    _videoCroped = null;
+    _openCropImage(imageData);
+  }
 
-      if (videoThumbnail == null) {
-        showErrorMessage(context, message: "Can't get video thumbnail!");
-        return;
-      }
-      _openCropImage(videoThumbnail);
-      compressVideo(xFile.path);
+  Future<void> pickVideo() async {
+    _setPickingFile(true);
+    final xFile = await _picker.pickVideo(source: ImageSource.gallery);
+    _setPickingFile(false);
+    if (xFile == null) return;
+    if (!context.mounted) return;
+
+    final result = await context.router.push<List<String?>?>(TrimmerRoute(file: File(xFile.path)));
+    if (result == null) return;
+    final [videoPath, coverPath] = result;
+    if (videoPath == null) {
+      if (!context.mounted) return;
+      showErrorMessage(context, message: "Can't export video!");
+      return;
     }
+    if (coverPath == null) {
+      if (!context.mounted) return;
+      showErrorMessage(context, message: "Can't get video thumbnail!");
+      return;
+    }
+    await Future.wait([
+      File(videoPath).readAsBytes().then((data) => _videoCroped = data),
+      File(coverPath).readAsBytes().then((data) => _croppedImage = data),
+    ]);
+    notifyListenersSafe();
   }
 
   void _openCropImage(Uint8List image) {
@@ -178,17 +99,15 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   }
 
   void startUpload() async {
-    final m = _media;
-    if (m == null) return;
-
-    final mime = kIsWeb ? m.mimeType : lookupMimeType(m.path);
-    if (mime == null || _croppedImage == null) return;
-
-    if (mime.isImage()) {
-      _postImage();
-    } else if (mime.isVideo()) {
-      _postVideo();
+    if (_croppedImage == null) {
+      showErrorMessage(context, message: "Thumbnail is not set!");
+      return;
     }
+    if (_videoCroped != null) {
+      _postVideo();
+      return;
+    }
+    _postImage();
   }
 
   Future<String?> _uploadImage() async {
@@ -240,7 +159,7 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
       reviewCaption: reviewCaption,
       reviewRating: reviewRating,
       currentTime: currentTime,
-      weather: _weatherData,
+      weather: weatherData,
       locationName: currentLocation,
     );
     setBusy(false);
@@ -259,7 +178,7 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
   }
 
   Future<void> _postVideo() async {
-    if (videoCompressed == null) {
+    if (videoCroped == null) {
       return;
     }
     renewCancelToken("upload video");
@@ -267,7 +186,7 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
 
     final [thumbnailUrl, videoUrl] = await Future.wait([
       _uploadImage(), //
-      _uploadVideo(videoCompressed!),
+      _uploadVideo(videoCroped!),
     ]);
 
     final resPost = await _locketService.postVideo(
@@ -280,7 +199,7 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
       reviewCaption: reviewCaption,
       reviewRating: reviewRating,
       currentTime: currentTime,
-      weather: _weatherData,
+      weather: weatherData,
       locationName: currentLocation,
     );
     setBusy(false);
@@ -300,11 +219,8 @@ class LocketViewModel extends CoreViewModel with CompressVideoMixin {
 
   void _clearInput() {
     _croppedImage = null;
-    _media = null;
-    _caption = null;
-    _reviewCaption = null;
-    _reviewRating = 0;
-    clearCacheVideo();
+    clearOverlayInput();
+    _videoCroped = null;
     notifyListenersSafe();
   }
 
