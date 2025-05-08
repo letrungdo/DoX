@@ -32,6 +32,10 @@ class _AppRouter extends RootStackRouter {
       page: AccountRoute.page,
       // transitionsBuilder: TransitionsBuilders.fadeIn,
     ),
+    AutoRoute(
+      path: '/trimmer', //
+      page: TrimmerRoute.page,
+    ),
   ];
 }
 

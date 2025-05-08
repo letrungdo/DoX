@@ -25,7 +25,7 @@ build-ipa:
 	fvm flutter build ipa --release \
 		--dart-define-from-file envs/dev.env \
 		--obfuscate --split-debug-info=build/obfuscate \
-		--build-name 1.0.2 --build-number 9 \
+		--build-name 1.1.1 --build-number 12 \
 		--export-options-plist=ios/options/ExportOptionsDevStore.plist
 
 build-macos:
@@ -39,3 +39,8 @@ build-windows:
 		--dart-define-from-file envs/dev.env \
 		--obfuscate --split-debug-info=build/obfuscate \
 		--build-name 1.0.0 --build-number 1
+
+# git delete all local branch without remote branch
+delete-local-branch:
+	git fetch --prune
+	git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D
