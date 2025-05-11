@@ -67,6 +67,8 @@ dependencies:
       url: https://github.com/letrungdo/ffmpeg-kit.git
       path: flutter/flutter
       ref: flutter_fix_retired_v6.0.3
+  camera: ^0.11.1
+  visibility_detector: ^0.4.0+2
 
 dev_dependencies:
   flutter_test:

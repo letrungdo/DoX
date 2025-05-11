@@ -132,7 +132,7 @@ class LocketService {
                 "colors": ["#370C6F", "#575CD4"], // TODO:
               },
               "type": overlayName,
-              "icon": {"color": "#FFFFFF", "data": data?.symbolName, "type": "sf_symbol"},
+              "icon": {"color": "#FFFFFF", "data": data.symbolName(weather.isDaylight), "type": "sf_symbol"},
               "text_color": "#FFFFFFE6",
             },
             "alt_text": text,

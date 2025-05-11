@@ -4,7 +4,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/view_model/account_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/button.dart';
+import 'package:do_x/widgets/button/button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

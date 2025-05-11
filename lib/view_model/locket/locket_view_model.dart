@@ -1,8 +1,12 @@
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:camera/camera.dart';
+import 'package:carousel_slider/carousel_controller.dart';
+import 'package:collection/collection.dart';
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/modal/crop_image_modal.dart';
 import 'package:do_x/services/locket_service.dart';
@@ -11,9 +15,11 @@ import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:do_x/view_model/locket/overlays.mixin.dart';
+import 'package:do_x/widgets/do_camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -21,10 +27,15 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
   LocketService get _locketService => context.read<LocketService>();
   UploadService get _uploadService => context.read<UploadService>();
 
+  final cameraKey = GlobalKey();
+
+  DoCameraState? get _cameraState => cameraKey.currentState as DoCameraState?;
+
   Uint8List? _croppedImage;
   Uint8List? get croppedImage => _croppedImage;
 
   late final cropController = CropController();
+  late final carouselController = CarouselSliderController();
 
   bool _isPickingFile = false;
   bool get isPickingFile => _isPickingFile;
@@ -33,6 +44,8 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
 
   Uint8List? _videoCroped;
   Uint8List? get videoCroped => _videoCroped;
+
+  FlashMode get flashMode => _cameraState?.flashMode ?? FlashMode.off;
 
   void _setPickingFile(bool value) {
     _isPickingFile = value;
@@ -108,6 +121,70 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
       return;
     }
     _postImage();
+  }
+
+  void cancelUpload() {
+    _clearInput();
+  }
+
+  void showOverlaysModal() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      // isScrollControlled: true,
+      enableDrag: true,
+      builder: (BuildContext context) {
+        return Container(
+          alignment: Alignment.topCenter,
+          padding: EdgeInsets.only(top: 20),
+          child: Wrap(
+            runSpacing: 15,
+            spacing: 8,
+            children: [
+              ...OverlayType.values.mapIndexed((index, type) {
+                return TextButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStatePropertyAll(context.theme.colorScheme.primaryContainer), //
+                  ),
+                  onPressed: () {
+                    carouselController.jumpToPage(index);
+                    context.pop();
+                  },
+                  child: switch (type) {
+                    OverlayType.standard => Text("Aa Text"),
+                    OverlayType.review => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SFIcon(
+                          SFIcons.sf_star_fill,
+                          fontSize: 16,
+                          color: Colors.amber, //
+                        ),
+                        SizedBox(width: 4),
+                        Text("Review"),
+                      ],
+                    ),
+                    // OverlayType.music =>
+                    OverlayType.location => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [Icon(Icons.location_on), SizedBox(width: 4), Text("Location")],
+                    ),
+                    OverlayType.weather => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [SFIcon(SFIcons.sf_sun_max_fill, fontSize: 16), SizedBox(width: 4), Text("Weather")],
+                    ),
+                    OverlayType.time => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [SFIcon(SFIcons.sf_clock, fontSize: 16), SizedBox(width: 4), Text("Time")],
+                    ),
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<String?> _uploadImage() async {
@@ -231,5 +308,20 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
       showErrorMessage(context, message: result.cause.toString());
     }
     notifyListenersSafe();
+  }
+
+  void capture() async {
+    final dataImg = await _cameraState?.takePicture();
+    _croppedImage = dataImg;
+    notifyListenersSafe();
+  }
+
+  void toggleFlash() async {
+    await _cameraState?.toggleFlashMode();
+    notifyListenersSafe();
+  }
+
+  void switchCamera() {
+    _cameraState?.switchCamera();
   }
 }

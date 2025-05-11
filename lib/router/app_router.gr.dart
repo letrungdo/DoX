@@ -14,7 +14,7 @@ import 'dart:io' as _i9;
 import 'package:auto_route/auto_route.dart' as _i8;
 import 'package:do_x/screen/account_screen.dart' as _i1;
 import 'package:do_x/screen/init_screen.dart' as _i2;
-import 'package:do_x/screen/locket_screen.dart' as _i3;
+import 'package:do_x/screen/locket_screen/locket_screen.dart' as _i3;
 import 'package:do_x/screen/login_screen.dart' as _i4;
 import 'package:do_x/screen/main_screen.dart' as _i5;
 import 'package:do_x/screen/news_screen.dart' as _i6;

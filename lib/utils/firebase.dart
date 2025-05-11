@@ -15,8 +15,9 @@ class FirebaseUtil {
   };
 
   static Future<Result?> refreshTokenIfNeed() async {
-    final expiryTime = appData.user?.expiryTime;
-    if (expiryTime != null && expiryTime - 1000 > DateTime.now().millisecondsSinceEpoch) {
+    final expiryTime = (appData.user?.expiryTime ?? 0) - 1000;
+    final curr = DateTime.now().millisecondsSinceEpoch;
+    if (expiryTime > curr) {
       // No need refresh token
       return null;
     }

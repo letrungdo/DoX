@@ -8,6 +8,12 @@ class MyObserver extends AutoRouterObserver {
     debugPrint('New route pushed: ${route.settings.name}');
   }
 
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    super.didPop(route, previousRoute);
+    debugPrint('didPop: ${previousRoute?.settings.name}');
+  }
+
   // only override to observer tab routes
   @override
   void didInitTabRoute(TabPageRoute route, TabPageRoute? previousRoute) {

@@ -5,7 +5,7 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/login_view_model.dart';
-import 'package:do_x/widgets/button.dart';
+import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

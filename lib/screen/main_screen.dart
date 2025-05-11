@@ -42,8 +42,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: tabsRouter.activeIndex,
             onTap: tabsRouter.setActiveIndex,
-            selectedItemColor: Colors.amber,
-            unselectedFontSize: 14,
+            selectedItemColor: Colors.amber[800],
+            unselectedFontSize: 12,
+            selectedFontSize: 12,
+            enableFeedback: true,
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),

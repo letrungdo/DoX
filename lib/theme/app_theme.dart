@@ -25,7 +25,7 @@ class AppTheme {
     brightness: Brightness.dark,
     colorScheme: ColorScheme.fromSeed(
       brightness: Brightness.dark, //
-      seedColor: Colors.lightGreenAccent,
+      seedColor: Colors.deepPurple,
     ),
     // elevatedButtonTheme: ElevatedButtonThemeData(
     //   style: ButtonStyle(

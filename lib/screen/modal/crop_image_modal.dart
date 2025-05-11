@@ -3,7 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/widgets/button.dart';
+import 'package:do_x/widgets/button/button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
