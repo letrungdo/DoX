@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/services/export_service.dart';
+import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:flutter/material.dart';
 import 'package:video_editor/video_editor.dart';
@@ -25,6 +26,8 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     widget.file,
     minDuration: const Duration(milliseconds: 500),
     maxDuration: const Duration(seconds: 10),
+    trimThumbnailsQuality: 50,
+    coverThumbnailsQuality: 50,
   );
 
   @override
@@ -78,6 +81,18 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     );
     final coverConfig = CoverFFmpegVideoEditorConfig(_controller);
 
+    FFmpegVideoEditorExecute? cover;
+
+    try {
+      cover = await coverConfig.getExecuteConfig();
+    } catch (e) {
+      logger.e(e.toString(), error: e);
+    }
+    if (cover == null) {
+      _showErrorSnackBar("Please select cover!");
+      return;
+    }
+
     final [videoPath, coverPath] = await Future.wait([
       ExportService.runFFmpegCommand(
         await config.getExecuteConfig(),
@@ -90,7 +105,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         },
       ),
       ExportService.runFFmpegCommand(
-        await coverConfig.getExecuteConfig(),
+        cover,
         onError: (e, s) => _showErrorSnackBar("Error on cover exportation :("),
         onCompleted: (cover) {
           if (!mounted) return;

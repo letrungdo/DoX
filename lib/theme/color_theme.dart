@@ -2,28 +2,37 @@ import 'package:flutter/material.dart';
 
 class ColorTheme extends ThemeExtension<ColorTheme> {
   const ColorTheme({
-    required this.inputBadgeBg, //
+    required this.buttonBg, //
     required this.disabled,
+    required this.iconColor,
   });
 
-  final Color inputBadgeBg;
+  final Color buttonBg;
   final Color disabled;
+  final Color iconColor;
 
   static final light = ColorTheme(
-    inputBadgeBg: const Color.fromARGB(255, 255, 255, 255), //
+    buttonBg: Colors.white, //
     disabled: const Color(0xFFCFCFDD),
+    iconColor: Colors.grey[800]!,
   );
 
   static final dark = ColorTheme(
-    inputBadgeBg: const Color.fromARGB(255, 13, 55, 222), //
+    buttonBg: Colors.black, //
     disabled: Colors.white.withValues(alpha: 0.3),
+    iconColor: Colors.white,
   );
 
   @override
-  ThemeExtension<ColorTheme> copyWith({Color? inputBadgeBg, Color? disabled}) {
+  ThemeExtension<ColorTheme> copyWith({
+    Color? buttonBg,
+    Color? disabled,
+    Color? iconColor, //
+  }) {
     return ColorTheme(
-      inputBadgeBg: inputBadgeBg ?? this.inputBadgeBg, //
+      buttonBg: buttonBg ?? this.buttonBg, //
       disabled: disabled ?? this.disabled,
+      iconColor: iconColor ?? this.iconColor,
     );
   }
 
@@ -33,8 +42,9 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
       return this;
     }
     return ColorTheme(
-      inputBadgeBg: Color.lerp(inputBadgeBg, other.inputBadgeBg, t)!, //
+      buttonBg: Color.lerp(buttonBg, other.buttonBg, t)!, //
       disabled: Color.lerp(disabled, other.disabled, t)!,
+      iconColor: Color.lerp(iconColor, other.iconColor, t)!,
     );
   }
 }

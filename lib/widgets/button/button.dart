@@ -24,6 +24,7 @@ class DoButton extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: isBusy ? null : onPressed, //
+          style: style,
           child:
               child ??
               (text != null
