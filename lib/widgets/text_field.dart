@@ -18,6 +18,7 @@ class DoTextField extends StatefulWidget {
     this.maxLines = 1,
     this.maxLength,
     this.textInputAction,
+    this.style,
   });
   final void Function(String value)? onChanged;
   final String? value;
@@ -33,6 +34,7 @@ class DoTextField extends StatefulWidget {
   final int? maxLines;
   final int? maxLength;
   final TextInputAction? textInputAction;
+  final TextStyle? style;
 
   @override
   State<DoTextField> createState() => _DoTextFieldState();
@@ -68,6 +70,7 @@ class _DoTextFieldState extends State<DoTextField> {
       maxLengthEnforcement: MaxLengthEnforcement.enforced,
       maxLength: widget.maxLength,
       textInputAction: widget.textInputAction,
+      style: widget.style,
       decoration:
           widget.decoration ??
           InputDecoration(

@@ -132,6 +132,12 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               icon: SFIcon(SFIcons.sf_video),
               onPressed: () => vm.pickVideo(), //
             ),
+            Spacer(),
+            IconButton(
+              icon: SFIcon(SFIcons.sf_pencil_tip_crop_circle), //
+              onPressed: () => vm.colorPickerDialog(),
+            ),
+            SizedBox(width: 20),
           ],
         ),
         SizedBox(height: 32),

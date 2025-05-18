@@ -238,6 +238,8 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
       currentTime: currentTime,
       weather: weatherData,
       locationName: currentLocation,
+      textColor: overlayTextColor,
+      bgColors: [overlayBgColor, overlayBgColor],
     );
     setBusy(false);
     if (resPost.isError) {
@@ -278,6 +280,8 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
       currentTime: currentTime,
       weather: weatherData,
       locationName: currentLocation,
+      textColor: overlayTextColor,
+      bgColors: [overlayBgColor, overlayBgColor],
     );
     setBusy(false);
     if (resPost.isError) {

@@ -24,28 +24,35 @@ Widget _buildOverlays<V extends LocketViewModel>(BuildContext context, {required
                   alignment: Alignment.bottomCenter,
                   child: Theme(
                     data: AppTheme.lightTheme,
-                    child: Container(
-                      margin: EdgeInsets.symmetric(horizontal: 10),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical:
-                            type == OverlayType.review
-                                ? 3
-                                : type == OverlayType.time
-                                ? 7
-                                : 8, //
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(230), //
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: switch (type) {
-                        OverlayType.standard => _buildCaptionOverlay(),
-                        OverlayType.review => _buildReviewOverlay(),
-                        // OverlayType.music =>
-                        OverlayType.location => _buildLocationOverlay(),
-                        OverlayType.weather => _buildWeatherOverlay(),
-                        OverlayType.time => _buildTimeOverlay(),
+                    child: Selector<V, (Color, Color?)>(
+                      selector: (p0, p1) => (p1.overlayTextColor, p1.overlayBgColor),
+                      builder: (context, data, _) {
+                        final textColor = data.$1;
+                        final bgColor = type == OverlayType.standard ? data.$2 : null;
+                        return Container(
+                          margin: EdgeInsets.symmetric(horizontal: 10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical:
+                                type == OverlayType.review
+                                    ? 3
+                                    : type == OverlayType.time
+                                    ? 7
+                                    : 8, //
+                          ),
+                          decoration: BoxDecoration(
+                            color: bgColor ?? Colors.white.withAlpha(230), //
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: switch (type) {
+                            OverlayType.standard => _buildCaptionOverlay(textColor),
+                            OverlayType.review => _buildReviewOverlay(),
+                            // OverlayType.music =>
+                            OverlayType.location => _buildLocationOverlay(),
+                            OverlayType.weather => _buildWeatherOverlay(),
+                            OverlayType.time => _buildTimeOverlay(),
+                          },
+                        );
                       },
                     ),
                   ),
@@ -77,7 +84,7 @@ Widget _buildOverlays<V extends LocketViewModel>(BuildContext context, {required
   );
 }
 
-Widget _buildCaptionOverlay<V extends LocketViewModel>() {
+Widget _buildCaptionOverlay<V extends LocketViewModel>(Color textColor) {
   return Selector<V, String>(
     selector: (p0, p1) => p1.caption,
     builder: (context, caption, _) {
@@ -85,6 +92,7 @@ Widget _buildCaptionOverlay<V extends LocketViewModel>() {
         caption, //
         hintText: context.l10n.addMessage,
         onChanged: context.read<V>().onCaptionChanged,
+        textColor: textColor,
       );
     },
   );
@@ -96,18 +104,21 @@ Widget _buildCaptionInput(
   required String hintText,
   int? maxLength,
   TextInputAction? textInputAction,
+  Color? textColor,
 }) {
   return IntrinsicWidth(
     child: DoTextField(
       value: caption, //
       maxLines: null,
       maxLength: maxLength,
+      style: TextStyle(color: textColor).bold,
       decoration: InputDecoration(
         isDense: true, // Remove the default content padding.
         contentPadding: EdgeInsets.symmetric(horizontal: 5),
         hintText: caption.isNullOrEmpty ? hintText : null, //
         border: InputBorder.none,
         counterText: "",
+        hintStyle: TextStyle(color: textColor).regular,
       ),
       textAlign: TextAlign.center,
       textInputAction: textInputAction,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/extensions/color_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
@@ -47,8 +48,11 @@ class LocketService {
     required DateTime? currentTime,
     required CurrentWeather? weather,
     required String? locationName,
+    required Color? textColor,
+    required List<Color?>? bgColors,
   }) {
     final overlayName = overlayType.name;
+    final colors = bgColors?.where((e) => e != null).map(((e) => e.toHexString(includeAlpha: false))).toList() ?? [];
 
     switch (overlayType) {
       case OverlayType.standard:
@@ -57,8 +61,9 @@ class LocketService {
         return [
           {
             "data": {
-              "background": {"material_blur": "ultra_thin", "colors": []},
-              "text_color": "#FFFFFFE6",
+              "background": {"material_blur": "ultra_thin", "colors": colors},
+              "text_color": textColor.toHexString(),
+              // "text_color": "#FFFFFFE6",
               "type": overlayName,
               "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
               "text": text,
@@ -128,9 +133,7 @@ class LocketService {
                 },
               },
               "text": text,
-              "background": {
-                "colors": ["#370C6F", "#575CD4"], // TODO:
-              },
+              "background": {"colors": []},
               "type": overlayName,
               "icon": {"color": "#FFFFFF", "data": data.symbolName(weather.isDaylight), "type": "sf_symbol"},
               "text_color": "#FFFFFFE6",
@@ -174,6 +177,8 @@ class LocketService {
     required CurrentWeather? weather,
     required DateTime? currentTime,
     required String? locationName,
+    required Color? textColor,
+    required List<Color?>? bgColors,
   }) {
     return Result.guardFuture(() async {
       if (thumbnailUrl == null) throw "thumbnail url invalid";
@@ -185,7 +190,6 @@ class LocketService {
           // "analytics": analytics,
           "sent_to_self_only": false,
           "sent_to_all": true,
-          "caption": caption,
           "update_streak_for_yyyymmdd": {
             // TODO:
             "value": DateTime.now().toStringFormat(DateTimeConst.yyyyMMdd),
@@ -201,6 +205,8 @@ class LocketService {
         currentTime: currentTime,
         weather: weather,
         locationName: locationName,
+        textColor: textColor,
+        bgColors: bgColors,
       );
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
@@ -227,6 +233,8 @@ class LocketService {
     required CurrentWeather? weather,
     required DateTime? currentTime,
     required String? locationName,
+    required Color? textColor,
+    required List<Color?>? bgColors,
   }) async {
     return Result.guardFuture(() async {
       if (thumbnailUrl == null) throw "thumbnail url invalid";
@@ -249,6 +257,8 @@ class LocketService {
         currentTime: currentTime,
         weather: weather,
         locationName: locationName,
+        textColor: textColor,
+        bgColors: bgColors,
       );
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
