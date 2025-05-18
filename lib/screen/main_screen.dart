@@ -29,6 +29,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       routes: [
         const LocketRoute(), //
         const NewsRoute(),
+        const MenuRoute(),
       ],
       transitionBuilder:
           (context, child, animation) => FadeTransition(
@@ -49,6 +50,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
+              BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
             ],
           ),
           body: child,

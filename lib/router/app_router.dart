@@ -23,8 +23,9 @@ class _AppRouter extends RootStackRouter {
       page: MainRoute.page,
       transitionsBuilder: TransitionsBuilders.fadeIn,
       children: [
-        AutoRoute(path: 'locket', page: LocketRoute.page), //
+        AutoRoute(path: 'locket', page: LocketRoute.page),
         AutoRoute(path: 'news', page: NewsRoute.page),
+        AutoRoute(path: 'menu', page: MenuRoute.page),
       ],
     ),
     AutoRoute(

@@ -5,6 +5,7 @@ import 'package:do_x/app.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/firebase_options.dart';
 import 'package:do_x/services/secure_storage_service.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -35,6 +36,7 @@ void main() {
         DeviceOrientation.portraitDown, //
       ]);
       await Future.wait([
+        storageService.init(),
         appInfo.init(),
         Firebase.initializeApp(
           // name: DefaultFirebaseOptions.currentPlatform.projectId,

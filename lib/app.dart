@@ -7,11 +7,26 @@ import 'package:do_x/services/locket_service.dart';
 import 'package:do_x/services/upload_service.dart';
 import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/theme/app_theme.dart';
+import 'package:do_x/view_model/app_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final appVm = AppViewModel();
+
+  @override
+  void initState() {
+    super.initState();
+    appVm.setCurrentContext(context);
+    appVm.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,16 +37,22 @@ class MyApp extends StatelessWidget {
         Provider<UploadService>(create: (_) => UploadService()),
         Provider<WeatherService>(create: (_) => WeatherService()),
         Provider<LocationService>(create: (_) => LocationService()),
+        ChangeNotifierProvider(create: (_) => appVm),
       ],
-      child: MaterialApp.router(
-        title: 'Do X',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        locale: AppLocalizations.supportedLocales.first,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: appRouter.config(navigatorObservers: () => [MyObserver()]),
+      child: Selector<AppViewModel, ThemeMode>(
+        selector: (p0, p1) => p1.themeMode,
+        builder: (context, themeMode, _) {
+          return MaterialApp.router(
+            title: 'Do X',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeMode,
+            locale: AppLocalizations.supportedLocales.first,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: appRouter.config(navigatorObservers: () => [MyObserver()]),
+          );
+        },
       ),
     );
   }
