@@ -238,6 +238,8 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
       currentTime: currentTime,
       weather: weatherData,
       locationName: currentLocation,
+      textColor: overlayTextColor,
+      bgColors: [overlayBgColor, overlayBgColor],
     );
     setBusy(false);
     if (resPost.isError) {
@@ -278,6 +280,8 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
       currentTime: currentTime,
       weather: weatherData,
       locationName: currentLocation,
+      textColor: overlayTextColor,
+      bgColors: [overlayBgColor, overlayBgColor],
     );
     setBusy(false);
     if (resPost.isError) {
