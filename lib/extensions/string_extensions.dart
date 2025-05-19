@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:decimal/decimal.dart';
 import 'package:do_x/constants/app_const.dart';
 
 extension StringNullableExtensions on String? {
@@ -26,6 +27,10 @@ extension StringNullableExtensions on String? {
   bool isVideo() => this?.startsWith("video/") ?? false;
 
   bool isLoadingDialog() => this?.startsWith(AppConst.loadingIdPrefix) == true;
+
+  Decimal? toDecimal() {
+    return Decimal.tryParse(this ?? "");
+  }
 }
 
 extension StringExtensions on String {

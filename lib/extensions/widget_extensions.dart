@@ -14,4 +14,8 @@ extension WidgetExt on Widget {
     }
     return this;
   }
+
+  Widget expaned(int flex) {
+    return Expanded(flex: flex, child: this);
+  }
 }
