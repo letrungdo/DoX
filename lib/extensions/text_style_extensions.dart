@@ -6,6 +6,7 @@ extension TextStyleExt on TextStyle {
   }
 
   // Font Size
+  TextStyle get size13 => copyWith(fontSize: 13);
   TextStyle get size15 => copyWith(fontSize: 15);
   TextStyle get size16 => copyWith(fontSize: 16);
   TextStyle get size17 => copyWith(fontSize: 17);

@@ -71,6 +71,7 @@ dependencies:
   visibility_detector: ^0.4.0+2
   shared_preferences: ^2.5.3
   flex_color_picker: ^3.7.1
+  decimal: ^3.0.2
 
 dev_dependencies:
   flutter_test:

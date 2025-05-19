@@ -20,22 +20,26 @@ class DoButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style0 = style ?? context.theme.elevatedButtonTheme.style;
-    return Stack(
-      children: [
-        ElevatedButton(
-          onPressed: isBusy ? null : onPressed, //
-          style: style,
-          child:
-              child ??
-              (text != null
-                  ? Text(
-                    text!,
-                    style: style0?.textStyle?.resolve({}), //
-                  )
-                  : SizedBox.shrink()),
-        ),
-        if (isBusy) Positioned.fill(child: Loading()),
-      ],
+    final button = ElevatedButton(
+      onPressed: isBusy ? null : onPressed, //
+      style: style,
+      child:
+          child ??
+          (text != null
+              ? Text(
+                text!,
+                style: style0?.textStyle?.resolve({}), //
+              )
+              : SizedBox.shrink()),
     );
+    if (isBusy) {
+      return Stack(
+        children: [
+          button, //
+          if (isBusy) Positioned.fill(child: Loading()),
+        ],
+      );
+    }
+    return button;
   }
 }
