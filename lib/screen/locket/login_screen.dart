@@ -3,7 +3,6 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/login_view_model.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/text_field.dart';
@@ -32,13 +31,6 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          height: 40,
-          alignment: Alignment.center, //
-          child: Text("© letrungdo. Ver ${appInfo.version}"),
-        ),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(15), //

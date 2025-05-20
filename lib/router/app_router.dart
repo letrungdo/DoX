@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/store/app_data.dart';
 
 @AutoRouterConfig(replaceInRouteName: 'Screen|Page,Route')
 class _AppRouter extends RootStackRouter {
@@ -9,35 +10,52 @@ class _AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
     CustomRoute(
-      path: "/",
-      page: InitRoute.page, //
-      transitionsBuilder: TransitionsBuilders.fadeIn,
-    ),
-    CustomRoute(
-      path: '/login', //
-      page: LoginRoute.page,
-      transitionsBuilder: TransitionsBuilders.fadeIn,
-    ),
-    CustomRoute(
-      path: '/main',
+      path: '/',
+      initial: true,
       page: MainRoute.page,
       transitionsBuilder: TransitionsBuilders.fadeIn,
       children: [
-        AutoRoute(path: 'locket', page: LocketRoute.page),
+        AutoRoute(
+          path: 'locket',
+          page: locketTab.page,
+          children: [
+            AutoRoute(
+              path: '',
+              page: LocketRoute.page,
+              guards: [
+                AutoRouteGuard.simple((resolver, _) {
+                  if (appData.user?.idToken != null) {
+                    resolver.next();
+                  } else {
+                    resolver.redirectUntil(LoginRoute());
+                  }
+                }),
+              ],
+            ),
+            CustomRoute(
+              path: 'login', //
+              page: LoginRoute.page,
+              transitionsBuilder: TransitionsBuilders.fadeIn,
+            ),
+            AutoRoute(
+              path: 'account', //
+              page: AccountRoute.page,
+              // transitionsBuilder: TransitionsBuilders.fadeIn,
+            ),
+            AutoRoute(
+              path: 'trimmer', //
+              page: TrimmerRoute.page,
+            ),
+          ],
+        ),
         AutoRoute(path: 'news', page: NewsRoute.page),
         AutoRoute(path: 'menu', page: MenuRoute.page),
       ],
     ),
-    AutoRoute(
-      path: '/account', //
-      page: AccountRoute.page,
-      // transitionsBuilder: TransitionsBuilders.fadeIn,
-    ),
-    AutoRoute(
-      path: '/trimmer', //
-      page: TrimmerRoute.page,
-    ),
+    RedirectRoute(path: '*', redirectTo: '/'),
   ];
 }
+
+const locketTab = EmptyShellRoute('LocketTab');
 
 final appRouter = _AppRouter();

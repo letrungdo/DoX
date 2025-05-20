@@ -95,6 +95,12 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
               );
             },
           ),
+          Spacer(),
+          Container(
+            height: 40,
+            alignment: Alignment.center, //
+            child: Text("© letrungdo. Ver ${appInfo.version}"),
+          ),
         ],
       ),
     );

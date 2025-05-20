@@ -27,8 +27,8 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   Widget build(BuildContext context) {
     return AutoTabsRouter(
       routes: [
-        const LocketRoute(), //
         const NewsRoute(),
+        const LocketRoute(), //
         const MenuRoute(),
       ],
       transitionBuilder:
@@ -48,8 +48,8 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             selectedFontSize: 12,
             enableFeedback: true,
             items: <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
+              BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
             ],
           ),
