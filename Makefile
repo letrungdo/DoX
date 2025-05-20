@@ -25,7 +25,7 @@ build-ipa:
 	fvm flutter build ipa --release \
 		--dart-define-from-file envs/dev.env \
 		--obfuscate --split-debug-info=build/obfuscate \
-		--build-name 1.2.4 --build-number 17 \
+		--build-name 1.2.6 --build-number 19 \
 		--export-options-plist=ios/options/ExportOptionsDevStore.plist
 
 build-macos:
