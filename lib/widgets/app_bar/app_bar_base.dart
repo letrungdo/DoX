@@ -36,6 +36,7 @@ class _DoAppBarState extends State<DoAppBar> {
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,
       actions: widget.actions,
+      toolbarHeight: widget.height,
     );
   }
 }

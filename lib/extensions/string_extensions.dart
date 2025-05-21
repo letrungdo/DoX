@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:decimal/decimal.dart';
 import 'package:do_x/constants/app_const.dart';
+import 'package:flutter/foundation.dart';
 
 extension StringNullableExtensions on String? {
   bool get isNullOrEmpty => this?.isEmpty ?? true;
@@ -30,6 +31,13 @@ extension StringNullableExtensions on String? {
 
   Decimal? toDecimal() {
     return Decimal.tryParse(this ?? "");
+  }
+
+  String withProxy() {
+    if (kIsWeb) {
+      return "https://app.xn--t-lia.vn/api/proxy?url=${Uri.encodeComponent(this ?? "")}";
+    }
+    return this ?? "";
   }
 }
 

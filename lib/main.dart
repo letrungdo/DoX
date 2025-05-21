@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:camera/camera.dart';
 import 'package:do_x/app.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/firebase_options.dart';
@@ -14,8 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'utils/logger.dart';
-
-late List<CameraDescription> cameras;
 
 void main() {
   runZonedGuarded(
@@ -43,7 +40,6 @@ void main() {
           options: kIsWeb ? DefaultFirebaseOptions.currentPlatform : null,
         ),
         secureStorage.getAccount(),
-        _initCamera(),
       ]);
 
       runApp(const MyApp());
@@ -52,14 +48,6 @@ void main() {
       logger.e("___App error!!", error: error, stackTrace: stack);
     },
   );
-}
-
-Future<void> _initCamera() async {
-  try {
-    cameras = await availableCameras();
-  } catch (e) {
-    logger.e(e.toString(), error: e);
-  }
 }
 
 void _catchAllError() {
