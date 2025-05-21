@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/login_view_model.dart';
@@ -45,66 +46,63 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
       key: _formKey,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 25),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 380),
-          child: Column(
-            children: [
-              Selector<V, String>(
-                selector: (p0, p1) => p1.username,
-                builder: (context, username, _) {
-                  return DoTextField(
-                    value: username,
-                    labelText: "Email",
-                    autofillHints: [AutofillHints.username, AutofillHints.email],
-                    keyboardType: TextInputType.emailAddress,
-                    onChanged: (value) => vm.onUsernameChanged(value), //
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your email!';
-                      }
-                      return null;
-                    },
-                  );
-                },
-              ),
-              SizedBox(height: 15),
-              Selector<V, String>(
-                selector: (p0, p1) => p1.password,
-                builder: (context, password, _) {
-                  return DoTextField(
-                    labelText: "Password",
-                    value: password,
-                    autofillHints: [AutofillHints.password],
-                    keyboardType: TextInputType.visiblePassword,
-                    obscureText: true,
-                    onChanged: (value) => vm.onPasswordChanged(value),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your password!';
-                      }
-                      return null;
-                    },
-                  );
-                },
-              ),
-              SizedBox(height: 50),
-              Selector<V, bool>(
-                selector: (p0, p1) => p1.isBusy,
-                builder: (context, isBusy, _) {
-                  return DoButton(
-                    isBusy: isBusy,
-                    onPressed: () {
-                      if (!_formKey.currentState!.validate()) {
-                        return;
-                      }
-                      vm.onLogin();
-                    },
-                    text: context.l10n.login, //
-                  );
-                },
-              ),
-            ],
-          ),
+        child: Column(
+          children: [
+            Selector<V, String>(
+              selector: (p0, p1) => p1.username,
+              builder: (context, username, _) {
+                return DoTextField(
+                  value: username,
+                  labelText: "Email",
+                  autofillHints: [AutofillHints.username, AutofillHints.email],
+                  keyboardType: TextInputType.emailAddress,
+                  onChanged: (value) => vm.onUsernameChanged(value), //
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email!';
+                    }
+                    return null;
+                  },
+                );
+              },
+            ),
+            SizedBox(height: 15),
+            Selector<V, String>(
+              selector: (p0, p1) => p1.password,
+              builder: (context, password, _) {
+                return DoTextField(
+                  labelText: "Password",
+                  value: password,
+                  autofillHints: [AutofillHints.password],
+                  keyboardType: TextInputType.visiblePassword,
+                  obscureText: true,
+                  onChanged: (value) => vm.onPasswordChanged(value),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your password!';
+                    }
+                    return null;
+                  },
+                );
+              },
+            ),
+            SizedBox(height: 50),
+            Selector<V, bool>(
+              selector: (p0, p1) => p1.isBusy,
+              builder: (context, isBusy, _) {
+                return DoButton(
+                  isBusy: isBusy,
+                  onPressed: () {
+                    if (!_formKey.currentState!.validate()) {
+                      return;
+                    }
+                    vm.onLogin();
+                  },
+                  text: context.l10n.login, //
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -133,7 +131,7 @@ class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScree
         ),
         SizedBox(height: 50), //
 
-        _buildLoginForms(),
+        _buildLoginForms().webConstrainedBox(),
       ],
     );
   }

@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/app_info.dart';
@@ -38,9 +39,14 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
     super.build(context);
     return Scaffold(
       appBar: DoAppBar(title: "Menu"),
-      body: Padding(
+      bottomNavigationBar: Container(
+        height: 40,
+        alignment: Alignment.center, //
+        child: Text("© letrungdo. Ver ${appInfo.version}"),
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20), //
-        child: _buildBody(),
+        child: _buildBody().webConstrainedBox(),
       ),
     );
   }
@@ -71,7 +77,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
                     SFIcon(switch (themeMode) {
                       ThemeMode.dark => SFIcons.sf_moon_fill,
                       ThemeMode.light => SFIcons.sf_sun_min_fill,
-                      ThemeMode.system => SFIcons.sf_a_circle_fill,
+                      ThemeMode.system => context.theme.brightness == Brightness.light ? SFIcons.sf_sun_min_fill : SFIcons.sf_moon_fill,
                     }),
                     Text(
                       "${themeMode.name.toCapitalized} Mode",
@@ -94,12 +100,6 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
                 context: context,
               );
             },
-          ),
-          Spacer(),
-          Container(
-            height: 40,
-            alignment: Alignment.center, //
-            child: Text("© letrungdo. Ver ${appInfo.version}"),
           ),
         ],
       ),

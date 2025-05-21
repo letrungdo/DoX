@@ -8,7 +8,13 @@
       "name": "do_ai (dev)",
       "request": "launch",
       "type": "dart",
-      "args": ["--debug", "-v", "--dart-define-from-file", "envs/dev.env"],
+      "args": [
+        "--debug",
+        "-v",
+        "--dart-define-from-file",
+        "envs/dev.env",
+        "--web-experimental-hot-reload"
+      ],
       "program": "lib/main.dart"
     },
     {

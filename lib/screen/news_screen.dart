@@ -9,6 +9,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/finpath_service.dart';
 import 'package:do_x/view_model/news_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -42,66 +43,84 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
     super.build(context);
     return Scaffold(
       appBar: DoAppBar(title: "News"),
-      body: Padding(
-        padding: const EdgeInsets.all(15), //
-        child: RefreshIndicator(
-          onRefresh: () => vm.fetchData(), //
-          child: _buildBody(),
-        ),
+      body: RefreshIndicator(
+        onRefresh: () => vm.fetchData(), //
+        child: _buildBody(),
       ),
     );
   }
 
   Widget _buildBody() {
+    final items = _buildPrice();
+    const padding = EdgeInsets.all(15);
+
     return CustomScrollView(
       physics: AlwaysScrollableScrollPhysics(), //
       slivers: [
-        SliverList(
-          delegate: SliverChildListDelegate([
-            Selector<V, String?>(
-              selector: (p0, p1) => p1.smileRate,
-              builder: (context, smileRate, _) {
-                return Text.rich(
-                  style: context.textTheme.primary.size16,
-                  TextSpan(
-                    children: [
-                      TextSpan(text: "Smile Rate: ", style: TextStyle().bold),
-                      TextSpan(text: "1 JPY = "),
-                      TextSpan(text: smileRate.toDashIfNull, style: TextStyle(color: Colors.green).bold),
-                      TextSpan(text: " VND"),
-                    ],
-                  ),
-                );
-              },
+        kIsWeb
+            ? SliverToBoxAdapter(
+              child: UnconstrainedBox(
+                child: Padding(
+                  padding: padding, //
+                  child:
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start, //
+                        children: items,
+                      ).webConstrainedBox(),
+                ),
+              ),
+            )
+            : SliverPadding(
+              padding: padding, //
+              sliver: SliverList(delegate: SliverChildListDelegate(items)),
             ),
-            SizedBox(height: 20),
-            Text(
-              "Giá vàng",
-              style: context.textTheme.primary.size16.bold, //
-            ),
-            SizedBox(height: 20),
-            Row(
-              children: [
-                Text("Chỉ số").expaned(colsRatio[0]), //
-                Text("Mua vào", textAlign: TextAlign.right).expaned(colsRatio[1]),
-                Text("Bán ra", textAlign: TextAlign.right).expaned(colsRatio[2]),
-              ],
-            ),
-            Selector<V, List<GoldSymbol>>(
-              selector: (p0, p1) => p1.goldPrices,
-              builder: (context, data, _) {
-                return Column(
-                  children:
-                      data.map((item) {
-                        return _buildGoldPriceItem(item);
-                      }).toList(),
-                );
-              },
-            ),
-          ]),
-        ),
       ],
     );
+  }
+
+  List<Widget> _buildPrice() {
+    return [
+      Selector<V, String?>(
+        selector: (p0, p1) => p1.smileRate,
+        builder: (context, smileRate, _) {
+          return Text.rich(
+            style: context.textTheme.primary.size16,
+            TextSpan(
+              children: [
+                TextSpan(text: "Smile Rate: ", style: TextStyle().bold),
+                TextSpan(text: "1 JPY = "),
+                TextSpan(text: smileRate.toDashIfNull, style: TextStyle(color: Colors.green).bold),
+                TextSpan(text: " VND"),
+              ],
+            ),
+          );
+        },
+      ),
+      SizedBox(height: 20),
+      Text(
+        "Giá vàng",
+        style: context.textTheme.primary.size16.bold, //
+      ),
+      SizedBox(height: 20),
+      Row(
+        children: [
+          Text("Chỉ số").expaned(colsRatio[0]), //
+          Text("Mua vào", textAlign: TextAlign.right).expaned(colsRatio[1]),
+          Text("Bán ra", textAlign: TextAlign.right).expaned(colsRatio[2]),
+        ],
+      ),
+      Selector<V, List<GoldSymbol>>(
+        selector: (p0, p1) => p1.goldPrices,
+        builder: (context, data, _) {
+          return Column(
+            children:
+                data.map((item) {
+                  return _buildGoldPriceItem(item);
+                }).toList(),
+          );
+        },
+      ),
+    ];
   }
 
   Widget _buildGoldPriceItem(GoldSymbol item) {

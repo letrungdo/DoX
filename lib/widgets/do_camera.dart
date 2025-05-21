@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:camera/camera.dart';
 import 'package:collection/collection.dart';
-import 'package:do_x/main.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:visibility_detector/visibility_detector.dart';
@@ -19,6 +18,7 @@ class DoCamera extends StatefulWidget {
 }
 
 class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
+  List<CameraDescription>? _cameras;
   CameraController? controller;
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 1.0;
@@ -38,12 +38,22 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _camera =
-        cameras.firstWhereOrNull(
-          (c) => c.lensDirection == CameraLensDirection.front, //
-        ) ??
-        cameras.firstOrNull;
-    _initializeCameraController(_camera);
+    _initCamera().then((_) {
+      _camera =
+          _cameras?.firstWhereOrNull(
+            (c) => c.lensDirection == CameraLensDirection.front, //
+          ) ??
+          _cameras?.firstOrNull;
+      _initializeCameraController(_camera);
+    });
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      _cameras = await availableCameras();
+    } catch (e) {
+      logger.e(e.toString(), error: e);
+    }
   }
 
   @override
@@ -61,7 +71,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final tabsRouter = AutoTabsRouter.of(context);
-    if (tabsRouter.activeIndex != 0) {
+    if (tabsRouter.currentPath != "/locket") {
       return;
     }
 
@@ -106,12 +116,14 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {});
       }
-      await controller!.lockCaptureOrientation();
-      controller!.setFlashMode(flashMode);
-      await Future.wait(<Future<Object?>>[
-        controller!.getMaxZoomLevel().then((double value) => _maxAvailableZoom = value),
-        controller!.getMinZoomLevel().then((double value) => _minAvailableZoom = value),
-      ]);
+      if (!kIsWeb) {
+        await controller!.lockCaptureOrientation();
+        controller!.setFlashMode(flashMode);
+        await Future.wait(<Future<Object?>>[
+          controller!.getMaxZoomLevel().then((double value) => _maxAvailableZoom = value),
+          controller!.getMinZoomLevel().then((double value) => _minAvailableZoom = value),
+        ]);
+      }
     } on CameraException catch (e) {
       switch (e.code) {
         case 'CameraAccessDenied':
@@ -172,7 +184,9 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       key: Key('do_camera_widget'),
       onVisibilityChanged: (info) {
         if (widget.imgData != null) return;
-        final isVisible = info.visibleFraction == 1;
+        final visibleFraction = info.visibleFraction;
+        if (visibleFraction > 0 && visibleFraction < 1) return;
+        final isVisible = visibleFraction == 1;
         if (isVisible) {
           _initializeCameraController(_camera);
         } else {
@@ -183,16 +197,17 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
         duration: Durations.medium2,
         child: SizedBox(
           width: width,
+          height: width,
           child:
               widget.imgData == null
                   ? FittedBox(
-                    fit: BoxFit.fitWidth,
+                    fit: kIsWeb ? BoxFit.fitHeight : BoxFit.fitWidth,
                     child: SizedBox(
                       width: width, //
                       child: _buildCameraPreview(),
                     ),
                   )
-                  : Image.memory(widget.imgData!, fit: BoxFit.contain),
+                  : Image.memory(widget.imgData!, fit: BoxFit.fitWidth),
         ),
       ),
     );
@@ -268,7 +283,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
 
     try {
       img.Image? image;
-      if (flashMode == FlashMode.always) {
+      if (flashMode == FlashMode.always || kIsWeb) {
         final xFile = await controller!.takePicture();
         final bytes = await xFile.readAsBytes();
         image = img.decodeJpg(bytes);
@@ -321,7 +336,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   }
 
   Future<void> switchCamera() async {
-    for (final camera in cameras) {
+    for (final camera in _cameras ?? []) {
       if (camera.lensDirection != _camera?.lensDirection) {
         _camera = camera;
         await controller?.setDescription(camera);

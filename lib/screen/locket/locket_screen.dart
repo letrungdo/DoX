@@ -3,7 +3,6 @@ import 'package:camera/camera.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/date_time.dart';
-import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
@@ -17,7 +16,6 @@ import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/locket/locket_view_model.dart';
 import 'package:do_x/view_model/locket/weather.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/do_camera.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/rating_bar.dart';
@@ -55,21 +53,23 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     super.build(context);
     return Scaffold(
       appBar: DoAppBar(
-        height: 60,
-        leadingWidth: 76,
-        leading: Padding(
-          padding: EdgeInsets.only(left: 20),
-          child: UserAvatar(
-            onPressed: () {
-              context.pushRoute(const AccountRoute());
-            },
-          ),
+        height: kIsWeb ? 80 : 60,
+        leadingWidth: 120,
+        leading: Row(
+          children: [
+            SizedBox(width: 20),
+            UserAvatar(
+              onPressed: () {
+                context.pushRoute(const AccountRoute());
+              },
+            ),
+          ],
         ),
       ),
       body: SafeArea(
         child: Stack(
           children: [
-            SingleChildScrollView(child: _buildBody()),
+            SingleChildScrollView(child: _buildBody().webConstrainedBox()),
             Positioned(
               top: 7,
               left: 0,
@@ -95,10 +95,10 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(height: 20),
+        if (!kIsWeb) SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
-            final height = [constraints.maxWidth, Dimens.webMaxWidth].min;
+            final height = [constraints.maxWidth, 430.0].min;
             return Selector<V, Uint8List?>(
               selector: (p0, p1) => p1.croppedImage,
               builder: (context, data, _) {
@@ -111,6 +111,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                         color: context.theme.scaffoldBackgroundColor,
                       ),
                       height: height, //
+                      width: height,
                       child: DoCamera(key: cameraKey, imgData: data),
                     ),
                     if (data != null) _buildOverlays(context, height: height),
@@ -119,7 +120,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               },
             );
           },
-        ).webConstrainedBox(),
+        ),
         SizedBox(height: 10),
         Row(
           children: [
@@ -140,7 +141,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
             SizedBox(width: 20),
           ],
         ),
-        SizedBox(height: 32),
+        if (!kIsWeb) SizedBox(height: 32),
         Selector<V, (bool, Uint8List?, FlashMode)>(
           selector: (p0, p1) => (p1.isBusy, p1.croppedImage, p1.flashMode),
           builder: (context, data, _) {
@@ -153,47 +154,49 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Positioned(
-                    left: 20,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: _iconButton(
-                        isCameraMode: isCameraMode,
-                        action: vm.cancelUpload,
-                        cameraAction: vm.toggleFlash,
-                        icon: SFIcons.sf_xmark,
-                        cameraIcon: flashMode == FlashMode.off ? SFIcons.sf_bolt : SFIcons.sf_bolt_fill,
-                        cameraIconColor: flashMode == FlashMode.always ? Colors.amber : null,
+                  if (!kIsWeb || (kIsWeb && !isCameraMode))
+                    Positioned(
+                      left: 20,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _iconButton(
+                          isCameraMode: isCameraMode,
+                          action: vm.cancelUpload,
+                          cameraAction: vm.toggleFlash,
+                          icon: SFIcons.sf_xmark,
+                          cameraIcon: flashMode == FlashMode.off ? SFIcons.sf_bolt : SFIcons.sf_bolt_fill,
+                          cameraIconColor: flashMode == FlashMode.always ? Colors.amber : null,
+                        ),
                       ),
                     ),
-                  ),
                   Center(
                     child: _buildActionButton(
                       isBusy: isBusy,
                       isCameraMode: isCameraMode, //
                     ),
                   ),
-                  Positioned(
-                    right: 20,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: _iconButton(
-                        isCameraMode: isCameraMode,
-                        action: vm.showOverlaysModal,
-                        cameraAction: vm.switchCamera,
-                        icon: SFIcons.sf_wand_and_rays,
-                        cameraIcon: SFIcons.sf_arrow_triangle_2_circlepath_circle,
+                  if (!kIsWeb)
+                    Positioned(
+                      right: 20,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _iconButton(
+                          isCameraMode: isCameraMode,
+                          action: vm.showOverlaysModal,
+                          cameraAction: vm.switchCamera,
+                          icon: SFIcons.sf_wand_and_rays,
+                          cameraIcon: SFIcons.sf_arrow_triangle_2_circlepath_circle,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             );
           },
         ),
-        SizedBox(height: 20),
+        if (!kIsWeb) SizedBox(height: 20),
       ],
     );
   }
@@ -216,23 +219,40 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
   }
 
   Widget _buildActionButton({required bool isCameraMode, required bool isBusy}) {
-    return DoButton(
-      onPressed: isBusy ? null : () => isCameraMode ? vm.capture() : vm.startUpload(), //
-      style: ButtonStyle(
-        padding: WidgetStateProperty.all(EdgeInsets.all(isCameraMode ? 8 : 15)), //
-        backgroundColor: WidgetStatePropertyAll(context.theme.colorScheme.primaryContainer),
+    return SizedBox(
+      width: 63,
+      height: 63,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: context.theme.colorScheme.primaryContainer, //
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child:
+                  isCameraMode
+                      ? Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: context.colors.iconColor.withAlpha(250), //
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                      )
+                      : SFIcon(SFIcons.sf_paperplane, fontSize: 35),
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isBusy ? null : () => isCameraMode ? vm.capture() : vm.startUpload(), //
+              customBorder: CircleBorder(),
+            ),
+          ),
+        ],
       ),
-      child:
-          isCameraMode
-              ? Container(
-                width: 55,
-                height: 55,
-                decoration: BoxDecoration(
-                  color: context.colors.iconColor.withAlpha(250), //
-                  borderRadius: BorderRadius.circular(40),
-                ),
-              )
-              : SFIcon(SFIcons.sf_paperplane, fontSize: 35),
     );
   }
 }

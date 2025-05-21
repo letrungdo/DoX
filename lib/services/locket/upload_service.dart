@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/model/response/generated_image_model.dart';
 import 'package:do_x/model/response/user_model.dart';
 import 'package:do_x/repository/client/dio_client.dart';
@@ -37,7 +38,7 @@ class UploadService {
     };
 
     final response = await dio.post(
-      "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName", //
+      "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName".withProxy(), //
       data: body,
       options: Options(
         headers: {
@@ -74,7 +75,7 @@ class UploadService {
     };
 
     final response = await dio.post(
-      "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName", //
+      "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName".withProxy(), //
       data: body,
       options: Options(
         headers: {
@@ -105,7 +106,7 @@ class UploadService {
     required String imgName,
     CancelToken? cancelToken,
   }) async {
-    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName";
+    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName".withProxy();
 
     final response = await dio.get(
       getUrl, //
@@ -120,7 +121,7 @@ class UploadService {
     required String videoName,
     CancelToken? cancelToken,
   }) async {
-    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName";
+    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName".withProxy();
 
     final response = await dio.get(
       getUrl, //
