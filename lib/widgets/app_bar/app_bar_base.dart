@@ -37,6 +37,7 @@ class _DoAppBarState extends State<DoAppBar> {
       leadingWidth: widget.leadingWidth,
       actions: widget.actions,
       toolbarHeight: widget.height,
+      actionsPadding: EdgeInsets.only(right: 10),
     );
   }
 }

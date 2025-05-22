@@ -54,5 +54,5 @@ class AppLocalizationsEn extends AppLocalizations {
   String get meRequestTimeout => 'Request timeout!';
 
   @override
-  String get meNetworkError => 'Network error!';
+  String get meNetworkError => 'Lost connect internet';
 }

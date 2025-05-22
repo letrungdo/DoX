@@ -30,13 +30,9 @@ class MenuScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, V> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, V> {
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return Scaffold(
       appBar: DoAppBar(title: "Menu"),
       bottomNavigationBar: Container(

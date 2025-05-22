@@ -7,7 +7,7 @@ import 'package:do_x/model/finpath/smile_model.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 
-class FinpathService {
+class FxRateService {
   final dio = DioClient.create();
 
   Future<Result<List<GoldSymbol>?>> getGoldPrice({CancelToken? cancelToken}) {
@@ -31,6 +31,18 @@ class FinpathService {
       final data = ExchangeData.fromJson(response.data);
 
       return data.rates.allAllAll.currency;
+    });
+  }
+
+  Future<Result<double?>> getDcomRate({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final response = await dio.get(
+        'https://app.xn--t-lia.vn/api/fx-rate/dcom', //
+        cancelToken: cancelToken,
+      );
+      final data = response.data as Map<String, dynamic>;
+
+      return (data["vnd"] as num).toDouble();
     });
   }
 }

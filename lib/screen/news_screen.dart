@@ -6,11 +6,12 @@ import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/finpath/gold_model.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/services/finpath_service.dart';
+import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/view_model/news_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -25,26 +26,38 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => NewsViewModel()),
-        Provider(create: (_) => FinpathService()), //
+        Provider(create: (_) => FxRateService()), //
       ],
       child: this,
     );
   }
 }
 
-class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> {
   final colsRatio = [40, 30, 30];
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return Scaffold(
-      appBar: DoAppBar(title: "News"),
+      appBar: DoAppBar(
+        title: "News", //
+        actions: [
+          IconButton(
+            padding: EdgeInsets.zero,
+            onPressed: vm.onRefresh, //
+            icon: SFIcon(SFIcons.sf_arrow_clockwise),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Selector<V, bool>(
+        selector: (p0, p1) => p1.isBusy,
+        builder: (context, isBusy, child) {
+          return isBusy ? child! : SizedBox.shrink();
+        },
+        child: LinearProgressIndicator(),
+      ),
       body: RefreshIndicator(
-        onRefresh: () => vm.fetchData(), //
+        onRefresh: () => vm.onRefresh(), //
         child: _buildBody(),
       ),
     );
@@ -52,49 +65,65 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
 
   Widget _buildBody() {
     final items = _buildPrice();
-    const padding = EdgeInsets.all(15);
-
     return CustomScrollView(
-      physics: AlwaysScrollableScrollPhysics(), //
+      physics: AlwaysScrollableScrollPhysics(),
       slivers: [
-        kIsWeb
-            ? SliverToBoxAdapter(
-              child: UnconstrainedBox(
-                child: Padding(
-                  padding: padding, //
-                  child:
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start, //
-                        children: items,
-                      ).webConstrainedBox(),
-                ),
-              ),
-            )
-            : SliverPadding(
-              padding: padding, //
-              sliver: SliverList(delegate: SliverChildListDelegate(items)),
-            ),
+        SliverPadding(
+          padding: EdgeInsets.all(15),
+          sliver:
+              kIsWeb
+                  ? SliverToBoxAdapter(
+                    child: UnconstrainedBox(
+                      child:
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start, //
+                            children: items,
+                          ).webConstrainedBox(),
+                    ),
+                  )
+                  : SliverList(delegate: SliverChildListDelegate(items)),
+        ),
       ],
     );
   }
 
   List<Widget> _buildPrice() {
+    final [dcomRate, smileRate] = context.select((V v) => [v.dcomRate, v.smileRate]);
     return [
-      Selector<V, String?>(
-        selector: (p0, p1) => p1.smileRate,
-        builder: (context, smileRate, _) {
-          return Text.rich(
-            style: context.textTheme.primary.size16,
-            TextSpan(
-              children: [
-                TextSpan(text: "Smile Rate: ", style: TextStyle().bold),
-                TextSpan(text: "1 JPY = "),
-                TextSpan(text: smileRate.toDashIfNull, style: TextStyle(color: Colors.green).bold),
-                TextSpan(text: " VND"),
-              ],
-            ),
-          );
-        },
+      Text(
+        "1 JPY to VND",
+        style: context.textTheme.primary.size16.bold, //
+      ),
+      SizedBox(height: 8),
+      Table(
+        border: TableBorder.all(
+          color: context.theme.textTheme.bodyMedium!.color!, //
+          borderRadius: BorderRadius.circular(5),
+        ),
+        columnWidths: {0: FlexColumnWidth(), 1: FlexColumnWidth()},
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: [
+          TableRow(
+            children: [
+              Text("Smile", style: TextStyle(color: Colors.green).bold, textAlign: TextAlign.center),
+              Text("Dcom", style: TextStyle(color: Colors.orange).bold, textAlign: TextAlign.center),
+            ],
+          ),
+          TableRow(
+            children: [
+              Text(
+                smileRate.toDashIfNull,
+                style: TextStyle(color: Colors.green).bold, //
+                textAlign: TextAlign.center,
+              ), //
+              Text(
+                dcomRate.toDashIfNull,
+                style: TextStyle(color: Colors.green).bold, //
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ],
       ),
       SizedBox(height: 20),
       Text(
@@ -132,7 +161,13 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(item.name.toDashIfNull, style: context.textTheme.primary.bold), //
-              Text(item.desc.toDashIfNull, style: context.textTheme.secondary.size13.copyWith(letterSpacing: -1)), //
+              Text(
+                item.desc.toDashIfNull,
+                style: context.textTheme.secondary.size13,
+                overflow: TextOverflow.fade,
+                maxLines: 1,
+                softWrap: false,
+              ), //
             ],
           ).expaned(colsRatio[0]),
           Column(

@@ -44,13 +44,9 @@ class LocketScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScreen, V> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScreen, V> {
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return Scaffold(
       appBar: DoAppBar(
         height: kIsWeb ? 80 : 60,
@@ -126,22 +122,24 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
           children: [
             SizedBox(width: 20),
             IconButton(
+              padding: EdgeInsets.all(4),
               icon: SFIcon(SFIcons.sf_photo),
               onPressed: () => vm.pickPhoto(), //
             ),
             IconButton(
+              padding: EdgeInsets.all(4),
               icon: SFIcon(SFIcons.sf_video),
               onPressed: () => vm.pickVideo(), //
             ),
             Spacer(),
             IconButton(
+              padding: EdgeInsets.all(4),
               icon: SFIcon(SFIcons.sf_pencil_tip_crop_circle), //
               onPressed: () => vm.colorPickerDialog(),
             ),
             SizedBox(width: 20),
           ],
         ),
-        if (!kIsWeb) SizedBox(height: 32),
         Selector<V, (bool, Uint8List?, FlashMode)>(
           selector: (p0, p1) => (p1.isBusy, p1.croppedImage, p1.flashMode),
           builder: (context, data, _) {
@@ -187,7 +185,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                           action: vm.showOverlaysModal,
                           cameraAction: vm.switchCamera,
                           icon: SFIcons.sf_wand_and_rays,
-                          cameraIcon: SFIcons.sf_arrow_triangle_2_circlepath_circle,
+                          cameraIcon: SFIcons.sf_arrow_triangle_2_circlepath,
                         ),
                       ),
                     ),
@@ -196,7 +194,6 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
             );
           },
         ),
-        if (!kIsWeb) SizedBox(height: 20),
       ],
     );
   }
@@ -214,7 +211,12 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
       padding: EdgeInsets.zero,
       constraints: BoxConstraints(minWidth: size, maxWidth: size, minHeight: size, maxHeight: size),
       onPressed: () => isCameraMode ? cameraAction.call() : action.call(), //
-      icon: SFIcon(isCameraMode ? cameraIcon : icon, fontSize: 35, color: cameraIconColor),
+      icon: SFIcon(
+        isCameraMode ? cameraIcon : icon,
+        fontSize: 35, //
+        color: cameraIconColor,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 

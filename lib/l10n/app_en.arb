@@ -15,5 +15,5 @@
   "anErrorOccurred": "An error occurred.",
   "meSystemMaintenance": "System maintenance!",
   "meRequestTimeout": "Request timeout!",
-  "meNetworkError": "Network error!"
+  "meNetworkError": "Lost connect internet"
 }
