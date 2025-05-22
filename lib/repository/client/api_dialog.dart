@@ -14,8 +14,6 @@ class ApiDialog {
     ConnectionError error, {
     VoidCallback? onRetry,
     ValueChanged<ApiErrorType?>? onClose,
-    bool isGetSymbolAll = false,
-    bool isMainWindow = false,
   }) async {
     final closeAction = ActionProps(
       onPressed: (context) async {
@@ -36,7 +34,7 @@ class ApiDialog {
       ];
     }
 
-    String? title;
+    String title = context.l10n.error;
     String? message;
     List<ActionProps>? actions;
 
@@ -57,7 +55,7 @@ class ApiDialog {
       case ApiErrorType.businessError:
         title = context.l10n.error;
         message = error.message;
-        actions = genActions(alwayShowRetry: isGetSymbolAll);
+        actions = genActions();
         break;
       case ApiErrorType.maintenance:
         message = context.l10n.meSystemMaintenance;

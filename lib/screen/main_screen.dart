@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
@@ -42,7 +43,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
         return Scaffold(
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: tabsRouter.activeIndex,
-            onTap: tabsRouter.setActiveIndex,
+            onTap: (value) {
+              tabsRouter.setActiveIndex(value);
+              storageService.setTabIndex(value);
+            },
             selectedItemColor: Colors.amber[800],
             unselectedFontSize: 12,
             selectedFontSize: 12,

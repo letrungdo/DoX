@@ -5,4 +5,5 @@ class StorageKey {
 
   // SharedPreferences
   static const themeMode = "themeMode";
+  static const tabIndex = "tabIndex";
 }

@@ -187,7 +187,7 @@ abstract class AppLocalizations {
   /// No description provided for @meNetworkError.
   ///
   /// In en, this message translates to:
-  /// **'Network error!'**
+  /// **'Lost connect internet'**
   String get meNetworkError;
 }
 

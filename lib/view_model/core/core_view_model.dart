@@ -41,7 +41,7 @@ abstract class CoreViewModel with ChangeNotifier, CancelRequestMixin, AppErrorMi
     );
   }
 
-  void setCurrentContext(BuildContext context, [GlobalKey? gkey]) {
+  void setCurrentContext(BuildContext context) {
     this.context = context;
   }
 

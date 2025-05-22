@@ -13,27 +13,38 @@ class NewsViewModel extends CoreViewModel {
   String? _smileRate;
   String? get smileRate => _smileRate;
 
+  String? _dcomRate;
+  String? get dcomRate => _dcomRate;
+
   @override
   void initData() {
     super.initData();
-    fetchData();
+    _fetchData();
   }
 
-  Future<void> fetchData() {
-    return Future.wait([
-      getGoldPrice(), //
-      getSmileRate(),
+  Future<void> _fetchData() async {
+    setBusy(true);
+    await Future.wait([
+      _getGoldPrice(), //
+      _getSmileRate(),
+      _getDcomRate(),
     ]);
+    setBusy(false);
   }
 
-  Future<void> getGoldPrice() async {
+  Future<void> onRefresh() {
+    renewCancelToken("onRefresh");
+    return _fetchData();
+  }
+
+  Future<void> _getGoldPrice() async {
     final res = await fxRateService.getGoldPrice(cancelToken: cancelToken);
     if (res.isError) {
       showAppError(
         // ignore: use_build_context_synchronously
         context,
         res.error, //
-        onRetry: getGoldPrice,
+        onRetry: _getGoldPrice,
       );
       return;
     }
@@ -41,19 +52,33 @@ class NewsViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
-  Future<void> getSmileRate() async {
+  Future<void> _getSmileRate() async {
     final res = await fxRateService.getSmileRate(cancelToken: cancelToken);
     if (res.isError) {
       showAppError(
         // ignore: use_build_context_synchronously
         context,
         res.error, //
-        onRetry: getSmileRate,
+        onRetry: _getSmileRate,
       );
       return;
     }
     _smileRate = res.data?["Currency_JPY_VND"]?.sellingRate.formatUnit();
-    
+    notifyListenersSafe();
+  }
+
+  Future<void> _getDcomRate() async {
+    final res = await fxRateService.getDcomRate(cancelToken: cancelToken);
+    if (res.isError) {
+      showAppError(
+        // ignore: use_build_context_synchronously
+        context,
+        res.error, //
+        onRetry: _getDcomRate,
+      );
+      return;
+    }
+    _dcomRate = res.data.formatUnit();
     notifyListenersSafe();
   }
 }

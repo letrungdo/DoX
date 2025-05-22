@@ -33,4 +33,16 @@ class FxRateService {
       return data.rates.allAllAll.currency;
     });
   }
+
+  Future<Result<double?>> getDcomRate({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final response = await dio.get(
+        'https://app.xn--t-lia.vn/api/fx-rate/dcom', //
+        cancelToken: cancelToken,
+      );
+      final data = response.data as Map<String, dynamic>;
+
+      return (data["vnd"] as num).toDouble();
+    });
+  }
 }

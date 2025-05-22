@@ -23,7 +23,7 @@ class ActionProps {
   final ActionButtonType type;
 }
 
-Future<ActionButtonType> showAppDialog(
+Future<ActionButtonType?> showAppDialog(
   BuildContext context, {
   String? title,
   String? message,
@@ -31,7 +31,7 @@ Future<ActionButtonType> showAppDialog(
   List<Widget> Function(BuildContext context)? childrenBuilder,
   Widget? Function(Completer<ActionButtonType> completer)? contentBuilder,
 }) async {
-  showDialog(
+  return showDialog<ActionButtonType>(
     context: context,
     builder: (context) {
       return AlertDialog(
@@ -44,7 +44,7 @@ Future<ActionButtonType> showAppDialog(
                     onPressed: () {
                       e.onPressed?.call(context);
                       if (e.autoClose) {
-                        context.pop();
+                        context.pop(e.type);
                       }
                     }, //
                     child: Text(e.text, style: e.textStyle),
@@ -54,6 +54,4 @@ Future<ActionButtonType> showAppDialog(
       );
     },
   );
-
-  return ActionButtonType.ok;
 }

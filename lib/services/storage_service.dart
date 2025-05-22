@@ -21,6 +21,14 @@ class _StorageService {
   Future<bool> setThemeMode(ThemeMode value) {
     return prefs.setString(StorageKey.themeMode, value.name);
   }
+
+  int getTabIndex() {
+    return prefs.getInt(StorageKey.tabIndex) ?? 0;
+  }
+
+  Future<bool> setTabIndex(int index) {
+    return prefs.setInt(StorageKey.tabIndex, index);
+  }
 }
 
 final storageService = _StorageService();
