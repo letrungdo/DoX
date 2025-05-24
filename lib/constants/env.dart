@@ -10,6 +10,8 @@ class Envs {
 
   static final bool isDev = flavor != Flavor.prod;
 
+  static const googleSheetKey = String.fromEnvironment('GOOGLE_SHEET_KEY');
+
   static const locketApiKey = PlatformValue(
     iOS: String.fromEnvironment('LOCKET_API_KEY_IOS'),
     android: String.fromEnvironment('LOCKET_API_KEY_ANDROID'),

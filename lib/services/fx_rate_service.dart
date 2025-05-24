@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/env.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/model/finpath/gold_model.dart';
 import 'package:do_x/model/finpath/smile_model.dart';
@@ -11,6 +12,18 @@ import 'package:html/parser.dart' show parse; // Để parse HTML
 
 class FxRateService {
   final dio = DioClient.create();
+
+  Future<Result<double?>> getGoogleJpyVnd({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final response = await dio.get(
+        'https://script.google.com/macros/s/${Envs.googleSheetKey}/exec'.withProxy(), //
+        cancelToken: cancelToken,
+      );
+      final data = response.data as Map<String, dynamic>;
+
+      return data["google_jpy_vnd"] as double;
+    });
+  }
 
   Future<Result<List<GoldSymbol>?>> getGoldPrice({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {

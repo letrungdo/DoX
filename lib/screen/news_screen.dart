@@ -87,7 +87,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
   }
 
   List<Widget> _buildPrice() {
-    final [dcomRate, smileRate] = context.select((V v) => [v.dcomRate, v.smileRate]);
+    final [dcomRate, smileRate, googleRate] = context.select((V v) => [v.dcomRate, v.smileRate, v.googleRate]);
     return [
       Text(
         "1 JPY to VND",
@@ -104,6 +104,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         children: [
           TableRow(
             children: [
+              Text("Google", style: TextStyle(color: Colors.blue).bold, textAlign: TextAlign.center),
               Text("Smile", style: TextStyle(color: Colors.green).bold, textAlign: TextAlign.center),
               Text("Dcom", style: TextStyle(color: Colors.orange).bold, textAlign: TextAlign.center),
             ],
@@ -111,13 +112,18 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           TableRow(
             children: [
               Text(
+                googleRate.toDashIfNull,
+                style: TextStyle(color: Colors.blue).bold, //
+                textAlign: TextAlign.center,
+              ),
+              Text(
                 smileRate.toDashIfNull,
                 style: TextStyle(color: Colors.green).bold, //
                 textAlign: TextAlign.center,
-              ), //
+              ),
               Text(
                 dcomRate.toDashIfNull,
-                style: TextStyle(color: Colors.green).bold, //
+                style: TextStyle(color: Colors.orange).bold, //
                 textAlign: TextAlign.center,
               ),
             ],

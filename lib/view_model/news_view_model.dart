@@ -10,6 +10,9 @@ class NewsViewModel extends CoreViewModel {
   List<GoldSymbol> _goldPrices = [];
   List<GoldSymbol> get goldPrices => _goldPrices;
 
+  String? _googleRate;
+  String? get googleRate => _googleRate;
+
   String? _smileRate;
   String? get smileRate => _smileRate;
 
@@ -28,6 +31,7 @@ class NewsViewModel extends CoreViewModel {
       _getGoldPrice(), //
       _getSmileRate(),
       _getDcomRate(),
+      _getGoogleRate(),
     ]);
     setBusy(false);
   }
@@ -49,6 +53,21 @@ class NewsViewModel extends CoreViewModel {
       return;
     }
     _goldPrices = res.data ?? [];
+    notifyListenersSafe();
+  }
+
+  Future<void> _getGoogleRate() async {
+    final res = await fxRateService.getGoogleJpyVnd(cancelToken: cancelToken);
+    if (res.isError) {
+      showAppError(
+        // ignore: use_build_context_synchronously
+        context,
+        res.error, //
+        onRetry: _getGoogleRate,
+      );
+      return;
+    }
+    _googleRate = res.data.formatUnit(digit: 2);
     notifyListenersSafe();
   }
 
