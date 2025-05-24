@@ -12,8 +12,8 @@
         "--debug",
         "-v",
         "--dart-define-from-file",
-        "envs/dev.env",
-        "--web-experimental-hot-reload"
+        "envs/dev.env"
+        // "--web-experimental-hot-reload"
       ],
       "program": "lib/main.dart"
     },

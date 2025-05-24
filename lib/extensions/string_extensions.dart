@@ -33,6 +33,10 @@ extension StringNullableExtensions on String? {
     return Decimal.tryParse(this ?? "");
   }
 
+  double? toDouble() {
+    return double.tryParse(this ?? "");
+  }
+
   String withProxy() {
     if (kIsWeb) {
       return "https://app.xn--t-lia.vn/api/proxy?url=${Uri.encodeComponent(this ?? "")}";

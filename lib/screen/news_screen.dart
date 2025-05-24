@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
@@ -9,7 +10,6 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/view_model/news_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
@@ -68,20 +68,19 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
     return CustomScrollView(
       physics: AlwaysScrollableScrollPhysics(),
       slivers: [
-        SliverPadding(
-          padding: EdgeInsets.all(15),
-          sliver:
-              kIsWeb
-                  ? SliverToBoxAdapter(
-                    child: UnconstrainedBox(
-                      child:
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start, //
-                            children: items,
-                          ).webConstrainedBox(),
-                    ),
-                  )
-                  : SliverList(delegate: SliverChildListDelegate(items)),
+        SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.crossAxisExtent;
+            const maxContentWidth = Dimens.webMaxWidth;
+            double horizontalPadding = 15;
+            if (screenWidth > maxContentWidth) {
+              horizontalPadding = (screenWidth - maxContentWidth) / 2;
+            }
+            return SliverPadding(
+              padding: EdgeInsets.symmetric(vertical: 15, horizontal: horizontalPadding), //
+              sliver: SliverList(delegate: SliverChildListDelegate(items)),
+            );
+          },
         ),
       ],
     );
