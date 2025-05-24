@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/date_time.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
@@ -94,7 +95,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
         if (!kIsWeb) SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
-            final height = [constraints.maxWidth, 430.0].min;
+            final height = [constraints.maxWidth, Dimens.webMaxWidth].min;
             return Selector<V, Uint8List?>(
               selector: (p0, p1) => p1.croppedImage,
               builder: (context, data, _) {
@@ -108,7 +109,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                       ),
                       height: height, //
                       width: height,
-                      child: DoCamera(key: cameraKey, imgData: data),
+                      child: DoCamera(key: cameraKey, imgData: data, parentSize: height),
                     ),
                     if (data != null) _buildOverlays(context, height: height),
                   ],

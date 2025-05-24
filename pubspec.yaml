@@ -48,7 +48,6 @@ dependencies:
   json_annotation: ^4.9.0
   flutter_secure_storage: ^9.2.4
   lottie: ^3.3.1
-  crop_your_image: ^2.0.0
   auto_route: ^10.0.1
   package_info_plus: ^8.3.0
   collection: ^1.19.1
@@ -72,6 +71,8 @@ dependencies:
   shared_preferences: ^2.5.3
   flex_color_picker: ^3.7.1
   decimal: ^3.0.2
+  crop_image: ^1.0.16
+  html: ^0.15.6
 
 dev_dependencies:
   flutter_test:

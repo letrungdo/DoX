@@ -4,7 +4,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:camera/camera.dart';
 import 'package:carousel_slider/carousel_controller.dart';
 import 'package:collection/collection.dart';
-import 'package:crop_your_image/crop_your_image.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/router/app_router.gr.dart';
@@ -34,7 +33,6 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
   Uint8List? _croppedImage;
   Uint8List? get croppedImage => _croppedImage;
 
-  late final cropController = CropController();
   late final carouselController = CarouselSliderController();
 
   bool _isPickingFile = false;
@@ -93,20 +91,14 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
 
   void _openCropImage(Uint8List image) {
     showModalBottomSheet<void>(
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       context: context,
-      // useSafeArea: true,
+      useSafeArea: true,
       showDragHandle: true,
       isScrollControlled: true,
       enableDrag: false,
       builder: (BuildContext context) {
-        return CropImageModal(
-          controller: cropController,
-          onCropped: _onCropped,
-          image: image,
-          onCrop: () {
-            cropController.crop();
-          },
-        );
+        return CropImageModal(onCropped: _onCropped, image: image);
       },
     );
   }
@@ -130,6 +122,7 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
   void showOverlaysModal() {
     showModalBottomSheet<void>(
       context: context,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       showDragHandle: true,
       // isScrollControlled: true,
       enableDrag: true,
@@ -229,7 +222,7 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
 
     final resPost = await _locketService.postImage(
       thumbnailUrl, //
-      overlayType: OverlayType.values[overlayIndex],
+      overlayType: OverlayType.options[overlayIndex],
       user: appData.user!,
       cancelToken: cancelToken,
       caption: caption,
@@ -305,12 +298,8 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
     notifyListenersSafe();
   }
 
-  void _onCropped(CropResult result) {
-    if (result is CropSuccess) {
-      _croppedImage = result.croppedImage;
-    } else if (result is CropFailure) {
-      showErrorMessage(context, message: result.cause.toString());
-    }
+  void _onCropped(Uint8List imgData) async {
+    _croppedImage = imgData;
     notifyListenersSafe();
   }
 

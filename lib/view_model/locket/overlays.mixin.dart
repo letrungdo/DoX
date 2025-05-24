@@ -41,7 +41,7 @@ mixin LocketOverlays on CoreViewModel {
 
   void setOverlayIndex(int index) async {
     _overlayIndex = index;
-    switch (OverlayType.values[index]) {
+    switch (OverlayType.options[index]) {
       case OverlayType.time:
         _currentTime = DateTime.now();
         break;

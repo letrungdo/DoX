@@ -19,7 +19,7 @@ Widget _buildOverlays<V extends LocketViewModel>(BuildContext context, {required
             },
           ),
           items:
-              OverlayType.values.map((type) {
+              OverlayType.options.map((type) {
                 return Align(
                   alignment: Alignment.bottomCenter,
                   child: Theme(
@@ -65,7 +65,7 @@ Widget _buildOverlays<V extends LocketViewModel>(BuildContext context, {required
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children:
-                  OverlayType.values.asMap().entries.map((entry) {
+                  OverlayType.options.asMap().entries.map((entry) {
                     return Container(
                       width: 8,
                       height: 8,

@@ -10,8 +10,9 @@ import 'package:image/image.dart' as img;
 import 'package:visibility_detector/visibility_detector.dart';
 
 class DoCamera extends StatefulWidget {
-  const DoCamera({super.key, this.imgData});
+  const DoCamera({super.key, this.imgData, required this.parentSize});
   final Uint8List? imgData;
+  final double parentSize;
 
   @override
   State<DoCamera> createState() => DoCameraState();
@@ -179,7 +180,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
+    final size = MediaQuery.sizeOf(context);
     return VisibilityDetector(
       key: Key('do_camera_widget'),
       onVisibilityChanged: (info) {
@@ -196,14 +197,14 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       child: AnimatedSwitcher(
         duration: Durations.medium2,
         child: SizedBox(
-          width: width,
-          height: width,
+          width: size.width,
+          height: size.width,
           child:
               widget.imgData == null
                   ? FittedBox(
-                    fit: kIsWeb ? BoxFit.fitHeight : BoxFit.fitWidth,
+                    fit: size.width > widget.parentSize ? BoxFit.fitHeight : BoxFit.fitWidth,
                     child: SizedBox(
-                      width: width, //
+                      width: size.width, //
                       child: _buildCameraPreview(),
                     ),
                   )
