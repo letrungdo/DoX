@@ -1,20 +1,20 @@
 PODS:
   - camera_avfoundation (0.0.1):
     - Flutter
-  - ffmpeg_kit_flutter (6.0.3):
-    - ffmpeg_kit_flutter/ffmpeg_kit_ios_local (= 6.0.3)
+  - ffmpeg_kit_flutter_new (1.0.0):
+    - ffmpeg_kit_flutter_new/full-gpl-lts (= 1.0.0)
     - Flutter
-  - ffmpeg_kit_flutter/ffmpeg_kit_ios_local (6.0.3):
+  - ffmpeg_kit_flutter_new/full-gpl-lts (1.0.0):
     - Flutter
   - Firebase/CoreOnly (11.10.0):
     - FirebaseCore (~> 11.10.0)
   - Firebase/Crashlytics (11.10.0):
     - Firebase/CoreOnly
     - FirebaseCrashlytics (~> 11.10.0)
-  - firebase_core (3.13.0):
+  - firebase_core (3.13.1):
     - Firebase/CoreOnly (= 11.10.0)
     - Flutter
-  - firebase_crashlytics (4.3.5):
+  - firebase_crashlytics (4.3.6):
     - Firebase/Crashlytics (= 11.10.0)
     - firebase_core
     - Flutter
@@ -130,7 +130,7 @@ PODS:
 
 DEPENDENCIES:
   - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/ios`)
-  - ffmpeg_kit_flutter (from `.symlinks/plugins/ffmpeg_kit_flutter/ios`)
+  - ffmpeg_kit_flutter_new (from `.symlinks/plugins/ffmpeg_kit_flutter_new/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_crashlytics (from `.symlinks/plugins/firebase_crashlytics/ios`)
   - Flutter (from `Flutter`)
@@ -170,8 +170,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   camera_avfoundation:
     :path: ".symlinks/plugins/camera_avfoundation/ios"
-  ffmpeg_kit_flutter:
-    :path: ".symlinks/plugins/ffmpeg_kit_flutter/ios"
+  ffmpeg_kit_flutter_new:
+    :path: ".symlinks/plugins/ffmpeg_kit_flutter_new/ios"
   firebase_core:
     :path: ".symlinks/plugins/firebase_core/ios"
   firebase_crashlytics:
@@ -205,10 +205,10 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   camera_avfoundation: adb0207d868b2d873e895371d88448399ab78d87
-  ffmpeg_kit_flutter: 4c1741908fce335f6f3e021d6829686c0b1109c7
+  ffmpeg_kit_flutter_new: 1be4ac1d0c080cd1d9a08c1b19ddadccd9f378e8
   Firebase: 1fe1c0a7d9aaea32efe01fbea5f0ebd8d70e53a2
-  firebase_core: 432718558359a8c08762151b5f49bb0f093eb6e0
-  firebase_crashlytics: f3b2649ae73f440895f285021bf70bdf4d36dec4
+  firebase_core: 3c2f323cae65c97a636a05a23b17730ef93df2cf
+  firebase_crashlytics: 6f5f71ba7ec7b6a0412c4ed076272643c434f69f
   FirebaseCore: 8344daef5e2661eb004b177488d6f9f0f24251b7
   FirebaseCoreExtension: 6f357679327f3614e995dc7cf3f2d600bdc774ac
   FirebaseCoreInternal: ef4505d2afb1d0ebbc33162cb3795382904b5679

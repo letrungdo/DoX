@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:camera/camera.dart';
@@ -75,6 +76,10 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
     if (tabsRouter.currentPath != "/locket") {
       return;
     }
+    // App state changed before we got the chance to initialize.
+    if (controller == null || !controller!.value.isInitialized) {
+      return;
+    }
 
     switch (state) {
       case AppLifecycleState.inactive:
@@ -110,7 +115,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       cameraDescription,
       ResolutionPreset.veryHigh, //
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.bgra8888,
+      imageFormatGroup: Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
     );
     try {
       await controller!.initialize();
@@ -175,7 +180,6 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   void _stopCamera() async {
     _isRunning = false;
     await controller?.dispose();
-    controller = null;
   }
 
   @override
@@ -284,11 +288,11 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
 
     try {
       img.Image? image;
-      if (flashMode == FlashMode.always || kIsWeb) {
+      if (flashMode == FlashMode.always || kIsWeb || Platform.isAndroid) {
         final xFile = await controller!.takePicture();
         final bytes = await xFile.readAsBytes();
         image = img.decodeJpg(bytes);
-        if (_camera?.lensDirection == CameraLensDirection.front) {
+        if (_camera?.lensDirection == CameraLensDirection.front && Platform.isIOS) {
           image = img.flipHorizontal(image!);
         }
       } else {

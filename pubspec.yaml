@@ -61,11 +61,6 @@ dependencies:
   video_player: ^2.9.5
   flutter_sficon: ^1.1.2
   video_editor: ^3.0.0
-  ffmpeg_kit_flutter:
-    git:
-      url: https://github.com/letrungdo/ffmpeg-kit.git
-      path: flutter/flutter
-      ref: flutter_fix_retired_v6.0.3
   camera: ^0.11.1
   visibility_detector: ^0.4.0+2
   shared_preferences: ^2.5.3
@@ -73,6 +68,7 @@ dependencies:
   decimal: ^3.0.2
   crop_image: ^1.0.16
   html: ^0.15.6
+  ffmpeg_kit_flutter_new: ^1.6.1
 
 dev_dependencies:
   flutter_test:
