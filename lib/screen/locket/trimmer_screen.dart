@@ -1,12 +1,13 @@
-import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/services/export_service.dart';
-import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:easy_video_editor/easy_video_editor.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:video_editor/video_editor.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 @RoutePage()
 class TrimmerScreen extends StatefulWidget {
@@ -26,8 +27,8 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     widget.file,
     minDuration: const Duration(milliseconds: 500),
     maxDuration: const Duration(seconds: 10),
-    trimThumbnailsQuality: 50,
-    coverThumbnailsQuality: 50,
+    trimThumbnailsQuality: 20,
+    coverThumbnailsQuality: 20,
   );
 
   @override
@@ -42,79 +43,81 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
 
   @override
   void dispose() async {
-    _exportingProgress.dispose();
-    _isExporting.dispose();
     _controller.dispose();
-    ExportService.dispose();
+    _isExporting.dispose();
+
     super.dispose();
   }
 
   void _showErrorSnackBar(String message) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 1)));
 
-  void _exportVideo() async {
+  Rect get cropRect {
+    if (_controller.minCrop <= minOffset && _controller.maxCrop >= maxOffset) {
+      return Rect.zero;
+    }
+    final enddx = _controller.videoWidth * _controller.maxCrop.dx;
+    final enddy = _controller.videoHeight * _controller.maxCrop.dy;
+    final startdx = _controller.videoWidth * _controller.minCrop.dx;
+    final startdy = _controller.videoHeight * _controller.minCrop.dy;
+
+    return Rect.fromLTWH(startdx, startdy, enddx - startdx, enddy - startdy);
+  }
+
+  Future<void> _exportVideo() async {
     _exportingProgress.value = 0;
     _isExporting.value = true;
-
-    final config = VideoFFmpegVideoEditorConfig(
-      _controller,
-      isFiltersEnabled: false, // TODO:
-      // commandBuilder: (config, videoPath, outputPath) {
-      //   String filtersCmd(List<String> filters) {
-      //     filters.removeWhere((item) => item.isEmpty);
-      //     return filters.isNotEmpty ? "-vf '${filters.join(",")}'" : "";
-      //   }
-
-      //   final filters = config.getExportFilters();
-      //   final startTrimCmd = "-ss ${_controller.startTrim}";
-      //   final toTrimCmd = "-t ${_controller.trimmedDuration}";
-
-      //   final cmd = "$startTrimCmd -i '$videoPath' $toTrimCmd ${filtersCmd(filters)} ${filters.isEmpty ? '-c copy' : ''} -y '$outputPath'";
-
-      //   // -c:v libx264 → use the widely-supported H.264 encoder
-      //   // -crf 18   → quality level (lower = better; 18–23 is a good sweet-spot)
-      //   // -preset veryfast → controls speed vs. compression (try medium or slow for even smaller files)
-      //   // -pix_fmt yuv420p → ensures broad compatibility (iOS players, web)
-      //   // -movflags +faststart → moves metadata to the front so videos start immediately when streaming
-      //   return cmd;
-      // },
-    );
-    final coverConfig = CoverFFmpegVideoEditorConfig(_controller);
-
-    FFmpegVideoEditorExecute? cover;
-
-    try {
-      cover = await coverConfig.getExecuteConfig();
-    } catch (e) {
-      logger.e(e.toString(), error: e);
-    }
-    if (cover == null) {
-      _showErrorSnackBar("Please select cover!");
+    final [videoPath, thumbnailData] = await Future.wait([_trimVideo(), _getThumbnail()]);
+    _isExporting.value = false;
+    if (videoPath == null || thumbnailData == null) {
       return;
     }
-
-    final [videoPath, coverPath] = await Future.wait([
-      ExportService.runFFmpegCommand(
-        await config.getExecuteConfig(),
-        onProgress: (stats) {
-          _exportingProgress.value = config.getFFmpegProgress(stats.getTime().toInt());
-        },
-        onError: (e, s) => _showErrorSnackBar("Error on export video :("),
-        onCompleted: (file) {
-          _isExporting.value = false;
-        },
-      ),
-      ExportService.runFFmpegCommand(
-        cover,
-        onError: (e, s) => _showErrorSnackBar("Error on cover exportation :("),
-        onCompleted: (cover) {
-          if (!mounted) return;
-        },
-      ),
-    ]);
-
     if (!mounted) return;
-    context.pop([videoPath, coverPath]);
+    context.pop([videoPath, thumbnailData]);
+  }
+
+  Future<String?> _trimVideo() async {
+    try {
+      final editor = VideoEditorBuilder(videoPath: _controller.file.path).trim(
+        startTimeMs: _controller.startTrim.inMilliseconds, //
+        endTimeMs: _controller.endTrim.inMilliseconds,
+      );
+      // .crop(aspectRatio: VideoAspectRatio.ratio1x1);
+      if (Platform.isAndroid) {
+        editor.compress(resolution: VideoResolution.p720);
+      }
+      return editor.export(
+        onProgress: (progress) {
+          _exportingProgress.value = progress;
+        },
+      );
+    } catch (e) {
+      _showErrorSnackBar("Error on export video :(");
+    }
+    return null;
+  }
+
+  Future<Uint8List?> _getThumbnail() async {
+    try {
+      final data = await VideoThumbnail.thumbnailData(
+        video: _controller.file.path,
+        imageFormat: ImageFormat.JPEG,
+        timeMs: _controller.selectedCoverVal?.timeMs ?? _controller.startTrim.inMilliseconds,
+        quality: 100,
+      );
+      final image = img.decodeJpg(data!);
+      img.Image cropped = img.copyCrop(
+        image!,
+        x: cropRect.left.toInt(),
+        y: cropRect.top.toInt(),
+        width: cropRect.width.toInt(),
+        height: cropRect.height.toInt(),
+      );
+      return Uint8List.fromList(img.encodeJpg(cropped));
+    } catch (e) {
+      _showErrorSnackBar("Error on cover exportation :(");
+    }
+    return null;
   }
 
   @override
@@ -127,9 +130,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
         appBar: DoAppBar(
-          backgroundColor: Colors.black,
           actions: [
             IconButton(
               onPressed: () => _controller.rotate90Degrees(RotateDirection.left),
@@ -142,7 +143,12 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
               tooltip: 'Rotate clockwise',
             ),
             const SizedBox(width: 22),
-            IconButton(onPressed: _exportVideo, icon: const Icon(Icons.save)),
+            ValueListenableBuilder(
+              valueListenable: _isExporting,
+              builder: (context, value, _) {
+                return IconButton(onPressed: value ? null : _exportVideo, icon: const Icon(Icons.save));
+              },
+            ),
           ],
         ),
         body: SafeArea(child: _buildBody()),

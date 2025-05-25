@@ -361,6 +361,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  easy_video_editor:
+    dependency: "direct main"
+    description:
+      name: easy_video_editor
+      sha256: "47ab3bb74feb0ef92bbdcf9a4285bc25e62fa398fdae437ffa3df7d6caea395b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
   fake_async:
     dependency: transitive
     description:
@@ -377,30 +385,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
-  ffmpeg_kit_flutter_android:
-    dependency: transitive
-    description:
-      name: ffmpeg_kit_flutter_android
-      sha256: "1bcd2e18169862d9782f019e3e83f92a41a12692deb25e0e767ecd44518c0f7e"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.4.0"
-  ffmpeg_kit_flutter_new:
-    dependency: "direct main"
-    description:
-      name: ffmpeg_kit_flutter_new
-      sha256: dbaf0f4963b08a034a4f787276c1e12efc36a56670693f1721e46f95554f0979
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.6.1"
-  ffmpeg_kit_flutter_platform_interface:
-    dependency: transitive
-    description:
-      name: ffmpeg_kit_flutter_platform_interface
-      sha256: addf046ae44e190ad0101b2fde2ad909a3cd08a2a109f6106d2f7048b7abedee
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
   file:
     dependency: transitive
     description:
@@ -1531,7 +1515,7 @@ packages:
     source: hosted
     version: "2.3.5"
   video_thumbnail:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: video_thumbnail
       sha256: "181a0c205b353918954a881f53a3441476b9e301641688a581e0c13f00dc588b"

@@ -35,6 +35,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   CameraDescription? _camera;
 
   bool _isRunning = false;
+  bool _isDispose = false;
 
   @override
   void initState() {
@@ -111,6 +112,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       return;
     }
     _isRunning = true;
+    _isDispose = false;
     controller = CameraController(
       cameraDescription,
       ResolutionPreset.veryHigh, //
@@ -179,6 +181,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
 
   void _stopCamera() async {
     _isRunning = false;
+    _isDispose = true;
     await controller?.dispose();
   }
 
@@ -221,7 +224,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   Widget _buildCameraPreview() {
     debugPrint("controller __ ${controller?.value.isInitialized}");
 
-    return controller?.value.isInitialized == true
+    return controller?.value.isInitialized == true && !_isDispose
         ? Listener(
           onPointerDown: (_) => _pointers++,
           onPointerUp: (_) => _pointers--,

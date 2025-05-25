@@ -69,24 +69,23 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
     if (xFile == null) return;
     if (!context.mounted) return;
 
-    final result = await context.router.push<List<String?>?>(TrimmerRoute(file: File(xFile.path)));
+    final result = await context.router.push<List<dynamic>?>(TrimmerRoute(file: File(xFile.path)));
     if (result == null) return;
-    final [videoPath, coverPath] = result;
+    final [videoPath, coverData] = result;
     if (videoPath == null) {
       if (!context.mounted) return;
       showErrorMessage(context, message: "Can't export video!");
       return;
     }
-    if (coverPath == null) {
+    if (coverData == null) {
       if (!context.mounted) return;
       showErrorMessage(context, message: "Can't get video thumbnail!");
       return;
     }
-    await Future.wait([
-      File(videoPath).readAsBytes().then((data) => _videoCroped = data),
-      File(coverPath).readAsBytes().then((data) => _croppedImage = data),
-    ]);
+    _croppedImage = coverData;
+    _videoCroped = await File(videoPath).readAsBytes();
     notifyListenersSafe();
+    // VideoTrimmerPlatform.instance.clearCache();
   }
 
   void _openCropImage(Uint8List image) {
