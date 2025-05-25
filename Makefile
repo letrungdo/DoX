@@ -18,14 +18,12 @@ l10n:
 build-apk:
 	fvm flutter build apk --release \
 		--dart-define-from-file envs/dev.env \
-		--obfuscate --split-debug-info=build/obfuscate \
-		--build-name 1.0.0 --build-number 1
+		--obfuscate --split-debug-info=build/obfuscate
 
 build-ipa:
 	fvm flutter build ipa --release \
 		--dart-define-from-file envs/dev.env \
 		--obfuscate --split-debug-info=build/obfuscate \
-		--build-name 1.2.9 --build-number 22 \
 		--export-options-plist=ios/options/ExportOptionsDevStore.plist
 
 build-macos:

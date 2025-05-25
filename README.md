@@ -3,7 +3,7 @@
 ## Prerequisites Installation
 
 - Xcode 16.3
-- JDK version 11
+- JDK version 17
 - IDE: VSCode
 - fvm: https://fvm.app/documentation/getting-started/installation
 - make: https://formulae.brew.sh/formula

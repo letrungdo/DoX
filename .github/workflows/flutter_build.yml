@@ -1,0 +1,137 @@
+name: Build Flutter Android and iOS
+
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - "v*"
+
+env:
+  FLUTTER_VERSION: "3.29.3"
+
+jobs:
+  build-android:
+    runs-on: macos-15
+    steps:
+      # Check out the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Decode keystore and create jks and properties file for signing the app
+        run: |
+          sed -i -e "s/signingConfigs.getByName("debug")/signingConfigs.getByName("release")/" app/build.gradle.kts
+          echo "$PLAY_STORE_UPLOAD_KEY" | base64 --decode > app/keystore.jks
+          echo "storeFile=keystore.jks" >> key.properties
+          echo "keyAlias=$KEYSTORE_KEY_ALIAS" >> key.properties
+          echo "storePassword=$KEYSTORE_STORE_PASSWORD" >> key.properties
+          echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> key.properties
+        env:
+          PLAY_STORE_UPLOAD_KEY: ${{ secrets.PLAY_STORE_UPLOAD_KEY }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+        working-directory: android
+
+      # Set up Java for Android build
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      # Set up Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+
+      # Build Android APK
+      - name: Build APK
+        run: flutter build apk --release --dart-define-from-file envs/dev.env --obfuscate --split-debug-info=build/obfuscate
+
+      # Upload APK as release asset
+      - name: Upload APK to Release
+        uses: svenstaro/upload-release-action@2.9.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/app/outputs/flutter-apk/app-release.apk
+          asset_name: app-release.apk
+          tag: ${{ github.ref }}
+          overwrite: true
+
+  build-ios:
+    runs-on: macos-15
+    steps:
+      # Check out the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods -v 1.16.2
+
+      # https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development
+      - name: Install the Apple certificate and provisioning profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate and provisioning profile from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # apply provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Set XCode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.3"
+
+      # Set up Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+
+      # Build iOS IPA
+      - name: Build IPA
+        run: |
+          flutter build ipa --release -v --dart-define-from-file envs/dev.env --obfuscate --split-debug-info=build/obfuscate --export-options-plist=ios/options/ExportOptionsDevStore.plist
+
+      - name: Clean up keychain and provisioning profile
+        if: ${{ always() }}
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
+          rm ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision
+
+      # Upload IPA as release asset
+      - name: Upload IPA to Release
+        uses: svenstaro/upload-release-action@2.9.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/ios/ipa/do_x.ipa
+          asset_name: do_x.ipa
+          tag: ${{ github.ref }}
+          overwrite: true
