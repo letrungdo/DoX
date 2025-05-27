@@ -1,8 +1,8 @@
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.dart';
 import 'package:do_x/router/navigator_observer.dart';
-import 'package:do_x/services/locket/auth_service.dart';
 import 'package:do_x/services/location_service.dart';
+import 'package:do_x/services/locket/auth_service.dart';
 import 'package:do_x/services/locket/locket_service.dart';
 import 'package:do_x/services/locket/upload_service.dart';
 import 'package:do_x/services/weather_service.dart';

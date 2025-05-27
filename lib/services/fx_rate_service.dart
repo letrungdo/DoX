@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/extensions/string_extensions.dart';
-import 'package:do_x/model/finpath/gold_model.dart';
-import 'package:do_x/model/finpath/smile_model.dart';
+import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/model/fx/smile_model.dart';
+import 'package:do_x/model/response/market_response.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:flutter/foundation.dart';
@@ -12,6 +14,19 @@ import 'package:html/parser.dart' show parse; // Để parse HTML
 
 class FxRateService {
   final dio = DioClient.create();
+
+  Future<Result<List<MarketCodeInfo>>> getMarket({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final codes = MarketCode.values.map((e) => e.code).join(",");
+      final response = await dio.get(
+        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=5m&code=$codes&countBack=200', //
+        cancelToken: cancelToken,
+      );
+      final data = MarketResponse.fromJson(response.data);
+
+      return data.data.codes;
+    });
+  }
 
   Future<Result<double?>> getGoogleJpyVnd({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
@@ -46,6 +61,19 @@ class FxRateService {
       final data = ExchangeData.fromJson(response.data);
 
       return data.rates.allAllAll.currency;
+    });
+  }
+
+  Future<Result<double?>> getMoneyGramRate({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final response = await dio.get(
+        'https://ewm.digitalwalletcorp.com/EWA/DP/Tenant/1/Calculation?TenantID=1&DPType=15&ToCountry=VNM&RemitAmount=1000&BeneficiaryCurrency=VND&PointForFee=0&sendAmount=1000&sendCurrency=JPY&deliveryOption=BANK_DEPOSIT&RemittenceMethod=1&BankCode=970436&BankName=VIETCOMBANK%20-%20JOINT%20STOCK%20COMMERCIAL%20BANK%20FOR%20FOREIGN%20TRADE%20OF%20VIETNAM&ReceiveAgentID=73247188&RegionCode=JP&FromCurrency=JPY'
+            .withProxy(), //
+        cancelToken: cancelToken,
+      );
+      final data = response.data as Map<String, dynamic>;
+
+      return data["Rate"];
     });
   }
 

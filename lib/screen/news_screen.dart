@@ -1,15 +1,20 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
-import 'package:do_x/model/finpath/gold_model.dart';
+import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
-import 'package:do_x/view_model/news_view_model.dart';
+import 'package:do_x/services/web_socket/web_socket_service.dart';
+import 'package:do_x/view_model/news/coin_chart.dart';
+import 'package:do_x/view_model/news/news_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/text/text_loading.dart';
+import 'package:financial_chart/financial_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
@@ -27,13 +32,14 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
       providers: [
         ChangeNotifierProvider(create: (_) => NewsViewModel()),
         Provider(create: (_) => FxRateService()), //
+        Provider<WebSocketService>(create: (_) => WebSocketService()),
       ],
       child: this,
     );
   }
 }
 
-class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> {
+class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with TickerProviderStateMixin {
   final colsRatio = [40, 30, 30];
 
   @override
@@ -49,13 +55,6 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           ),
         ],
       ),
-      bottomNavigationBar: Selector<V, bool>(
-        selector: (p0, p1) => p1.isBusy,
-        builder: (context, isBusy, child) {
-          return isBusy ? child! : SizedBox.shrink();
-        },
-        child: LinearProgressIndicator(),
-      ),
       body: RefreshIndicator(
         onRefresh: () => vm.onRefresh(), //
         child: _buildBody(),
@@ -64,7 +63,6 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
   }
 
   Widget _buildBody() {
-    final items = _buildPrice();
     return CustomScrollView(
       physics: AlwaysScrollableScrollPhysics(),
       slivers: [
@@ -78,7 +76,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
             }
             return SliverPadding(
               padding: EdgeInsets.symmetric(vertical: 15, horizontal: horizontalPadding), //
-              sliver: SliverList(delegate: SliverChildListDelegate(items)),
+              sliver: SliverList(delegate: SliverChildListDelegate(_buildPrice())),
             );
           },
         ),
@@ -87,10 +85,9 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
   }
 
   List<Widget> _buildPrice() {
-    final [dcomRate, smileRate, googleRate] = context.select((V v) => [v.dcomRate, v.smileRate, v.googleRate]);
     return [
       Text(
-        "1 JPY to VND",
+        "JPY/VND",
         style: context.textTheme.primary.size16.bold, //
       ),
       SizedBox(height: 8),
@@ -99,32 +96,57 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           color: context.theme.textTheme.bodyMedium!.color!, //
           borderRadius: BorderRadius.circular(5),
         ),
-        columnWidths: {0: FlexColumnWidth(), 1: FlexColumnWidth()},
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
           TableRow(
             children: [
               Text("Google", style: TextStyle(color: Colors.blue).bold, textAlign: TextAlign.center),
               Text("Smile", style: TextStyle(color: Colors.green).bold, textAlign: TextAlign.center),
+              Text("MoneyGram", style: TextStyle(color: Colors.redAccent).bold, textAlign: TextAlign.center),
               Text("Dcom", style: TextStyle(color: Colors.orange).bold, textAlign: TextAlign.center),
             ],
           ),
           TableRow(
             children: [
-              Text(
-                googleRate.toDashIfNull,
-                style: TextStyle(color: Colors.blue).bold, //
-                textAlign: TextAlign.center,
+              Selector<V, String?>(
+                selector: (p0, p1) => p1.googleRate,
+                builder: (context, value, _) {
+                  return TextLoading(
+                    value,
+                    style: TextStyle(color: Colors.blue).bold, //
+                    textAlign: TextAlign.center,
+                  );
+                },
               ),
-              Text(
-                smileRate.toDashIfNull,
-                style: TextStyle(color: Colors.green).bold, //
-                textAlign: TextAlign.center,
+              Selector<V, String?>(
+                selector: (p0, p1) => p1.smileRate,
+                builder: (context, value, _) {
+                  return TextLoading(
+                    value,
+                    style: TextStyle(color: Colors.green).bold, //
+                    textAlign: TextAlign.center,
+                  );
+                },
               ),
-              Text(
-                dcomRate.toDashIfNull,
-                style: TextStyle(color: Colors.orange).bold, //
-                textAlign: TextAlign.center,
+              Selector<V, String?>(
+                selector: (p0, p1) => p1.moneyGramRate,
+                builder: (context, value, _) {
+                  return TextLoading(
+                    value,
+                    style: TextStyle(color: Colors.redAccent).bold, //
+                    textAlign: TextAlign.center,
+                  );
+                },
+              ),
+              Selector<V, String?>(
+                selector: (p0, p1) => p1.dcomRate,
+                builder: (context, value, _) {
+                  return TextLoading(
+                    value,
+                    style: TextStyle(color: Colors.orange).bold, //
+                    textAlign: TextAlign.center,
+                  );
+                },
               ),
             ],
           ),
@@ -150,6 +172,44 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
             children:
                 data.map((item) {
                   return _buildGoldPriceItem(item);
+                }).toList(),
+          );
+        },
+      ),
+      SizedBox(height: 20),
+      Selector<V, List<MarketCode>>(
+        selector: (p0, p1) => p1.coinChartMap.keys.toList(),
+        builder: (context, codes, _) {
+          return Column(
+            children:
+                codes.map((code) {
+                  return Selector<V, ChartData>(
+                    selector: (p0, p1) => p1.coinChartMap[code]!,
+                    builder: (context, data, _) {
+                      debugPrint("render $code");
+                      return Row(
+                        spacing: 8,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(text: code.getName(), style: context.textTheme.primary.bold), //
+                                TextSpan(text: "\n"), //
+                                TextSpan(
+                                  text: data.price.formatUnit(digit: 3), //
+                                  style: TextStyle(color: data.color),
+                                ),
+                              ],
+                            ),
+                          ).expaned(30),
+                          SizedBox(
+                            height: 60, //
+                            child: GChartWidget(chart: data.chart, tickerProvider: this),
+                          ).expaned(70),
+                        ],
+                      );
+                    },
+                  );
                 }).toList(),
           );
         },
