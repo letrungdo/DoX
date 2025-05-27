@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:do_x/app.dart';
-import 'package:do_x/constants/env.dart';
 import 'package:do_x/firebase_options.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -18,14 +17,12 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      if (kReleaseMode) {
-        debugPrint = (String? message, {int? wrapWidth}) {
-          if (Envs.isDev) {
-            // ignore: avoid_print
-            print('kcmsr_log: $message');
-          }
-        };
-      }
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('dox_log: $message');
+        }
+      };
       logger.d("init log");
       _catchAllError();
       SystemChrome.setPreferredOrientations([
