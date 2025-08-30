@@ -152,4 +152,14 @@ class TrimmerRouteArgs {
   String toString() {
     return 'TrimmerRouteArgs{file: $file, key: $key}';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! TrimmerRouteArgs) return false;
+    return file == other.file && key == other.key;
+  }
+
+  @override
+  int get hashCode => file.hashCode ^ key.hashCode;
 }
