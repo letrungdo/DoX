@@ -15,6 +15,9 @@ gen-app-icon:
 l10n:
 	fvm flutter gen-l10n
 
+env:
+	./scripts/restore-env-configs.sh dev
+
 build-apk:
 	fvm flutter build apk --release \
 		--dart-define-from-file envs/dev.env \

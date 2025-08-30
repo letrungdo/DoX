@@ -8,12 +8,14 @@
       "name": "do_ai (dev)",
       "request": "launch",
       "type": "dart",
+      "preLaunchTask": "restore-env-configs",
       "args": [
         "--debug",
         "-v",
         "--dart-define-from-file",
-        "envs/dev.env"
-        // "--web-experimental-hot-reload"
+        "envs/dev/dart-define.env",
+        "--web-browser-flag",
+        "--disable-web-security"
       ],
       "program": "lib/main.dart"
     },
@@ -27,7 +29,12 @@
       "name": "do_ai (release mode)",
       "request": "launch",
       "type": "dart",
-      "args": ["--debug", "-v", "--dart-define-from-file", "envs/prod.env"],
+      "args": [
+        "--debug",
+        "-v",
+        "--dart-define-from-file",
+        "envs/dev/dart-define.env"
+      ],
       "flutterMode": "release"
     }
   ]

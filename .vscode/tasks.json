@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "restore-env-configs",
+      "type": "shell",
+      "command": "bash",
+      "args": ["scripts/restore-env-configs.sh", "dev"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
