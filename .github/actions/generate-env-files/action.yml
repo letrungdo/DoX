@@ -1,0 +1,55 @@
+name: 'Generate Environment Files'
+description: 'Generate environment configuration files from base64 encoded secrets'
+inputs:
+  environment:
+    description: 'Environment name (dev, staging, prod)'
+    required: true
+    default: 'dev'
+  dart_define_base64:
+    description: 'Base64 encoded dart-define.env content'
+    required: true
+  google_services_base64:
+    description: 'Base64 encoded google-services.json content'
+    required: true
+  google_service_info_base64:
+    description: 'Base64 encoded GoogleService-Info.plist content'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create required directories
+      shell: bash
+      run: |
+        mkdir -p envs/${{ inputs.environment }}
+
+    - name: Generate dart-define.env
+      shell: bash
+      run: |
+        echo "${{ inputs.dart_define_base64 }}" | base64 -d > envs/${{ inputs.environment }}/dart-define.env
+        echo "✅ Generated envs/${{ inputs.environment }}/dart-define.env"
+
+    - name: Generate google-services.json for Android
+      shell: bash
+      run: |
+        echo "${{ inputs.google_services_base64 }}" | base64 -d > android/app/google-services.json
+        echo "✅ Generated android/app/google-services.json"
+
+    - name: Generate GoogleService-Info.plist for iOS
+      shell: bash
+      run: |
+        echo "${{ inputs.google_service_info_base64 }}" | base64 -d > ios/Runner/GoogleService-Info.plist
+        echo "✅ Generated ios/Runner/GoogleService-Info.plist"
+
+    - name: Verify files
+      shell: bash
+      run: |
+        echo "📁 Files generated:"
+        echo "Environment config:"
+        ls -la envs/${{ inputs.environment }}/
+        echo ""
+        echo "Android config:"
+        ls -la android/app/google-services.json
+        echo ""
+        echo "iOS config:"
+        ls -la ios/Runner/GoogleService-Info.plist

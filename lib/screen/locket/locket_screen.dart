@@ -186,7 +186,7 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                           action: vm.showOverlaysModal,
                           cameraAction: vm.switchCamera,
                           icon: SFIcons.sf_wand_and_rays,
-                          cameraIcon: SFIcons.sf_arrow_triangle_2_circlepath,
+                          cameraIcon: SFIcons.sf_arrow_trianglehead_2_clockwise_rotate_90,
                         ),
                       ),
                     ),

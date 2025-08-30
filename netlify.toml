@@ -7,5 +7,17 @@
 
 [build]
 
-command = "flutter build web --release --dart-define-from-file envs/dev.env"
+command = """
+mkdir -p envs && \
+echo 'FLAVOR=$FLAVOR' > envs/dart-define.env && \
+echo 'LOCKET_API_KEY_IOS=$LOCKET_API_KEY_IOS' >> envs/dart-define.env && \
+echo 'LOCKET_API_KEY_ANDROID=$LOCKET_API_KEY_ANDROID' >> envs/dart-define.env && \
+echo 'LOCKET_API_KEY_WEB=$LOCKET_API_KEY_WEB' >> envs/dart-define.env && \
+echo 'FIREBASE_API_KEY_IOS=$FIREBASE_API_KEY_IOS' >> envs/dart-define.env && \
+echo 'FIREBASE_API_KEY_ANDROID=$FIREBASE_API_KEY_ANDROID' >> envs/dart-define.env && \
+echo 'FIREBASE_API_KEY_WEB=$FIREBASE_API_KEY_WEB' >> envs/dart-define.env && \
+echo 'GOOGLE_SHEET_KEY=$GOOGLE_SHEET_KEY' >> envs/dart-define.env && \
+
+flutter build web --release --dart-define-from-file envs/dart-define.env
+"""
 publish = "build/web"

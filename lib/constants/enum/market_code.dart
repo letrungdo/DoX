@@ -4,6 +4,7 @@ enum MarketCode {
   xauUSD("XAUUSD"),
   xagUSD("XAGUSD"),
   btcUSDT("BTCUSDT"),
+  bnbUSDT("BNBUSDT"),
   ethUSDT("ETHUSDT"),
   vnIndex("VNIndex");
 
@@ -16,10 +17,11 @@ enum MarketCode {
 
   String getName() {
     return switch (this) {
-      xauUSD => "Gold / USD",
-      xagUSD => "Sliver / USD",
-      btcUSDT => "BTC / USDT",
-      ethUSDT => "ETH / USDT",
+      xauUSD => "Gold/USD",
+      xagUSD => "Sliver/USD",
+      btcUSDT => "BTC/USDT",
+      bnbUSDT => "BNB/USDT",
+      ethUSDT => "ETH/USDT",
       vnIndex => "VNIndex",
     };
   }

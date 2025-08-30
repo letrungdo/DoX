@@ -26,8 +26,23 @@ class $AssetsImagesGen {
   AssetGenImage get appIcon =>
       const AssetGenImage('assets/images/app_icon.png');
 
+  /// File path: assets/images/bnb.png
+  AssetGenImage get bnb => const AssetGenImage('assets/images/bnb.png');
+
+  /// File path: assets/images/btc.png
+  AssetGenImage get btc => const AssetGenImage('assets/images/btc.png');
+
+  /// File path: assets/images/eth.png
+  AssetGenImage get eth => const AssetGenImage('assets/images/eth.png');
+
+  /// File path: assets/images/gold.png
+  AssetGenImage get gold => const AssetGenImage('assets/images/gold.png');
+
+  /// File path: assets/images/silver.png
+  AssetGenImage get silver => const AssetGenImage('assets/images/silver.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [appIcon];
+  List<AssetGenImage> get values => [appIcon, bnb, btc, eth, gold, silver];
 }
 
 class Assets {

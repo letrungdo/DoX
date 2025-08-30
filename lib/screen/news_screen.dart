@@ -6,6 +6,7 @@ import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
@@ -13,8 +14,9 @@ import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/news/coin_chart.dart';
 import 'package:do_x/view_model/news/news_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/chart/line_area_chart.dart';
+import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/text/text_loading.dart';
-import 'package:financial_chart/financial_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
@@ -39,7 +41,7 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with TickerProviderStateMixin {
+class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> {
   final colsRatio = [40, 30, 30];
 
   @override
@@ -55,7 +57,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () => vm.onRefresh(), //
         child: _buildBody(),
       ),
@@ -181,32 +183,56 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         selector: (p0, p1) => p1.coinChartMap.keys.toList(),
         builder: (context, codes, _) {
           return Column(
+            spacing: 16,
             children:
                 codes.map((code) {
-                  return Selector<V, ChartData>(
-                    selector: (p0, p1) => p1.coinChartMap[code]!,
+                  return Selector<V, ChartData?>(
+                    selector: (p0, p1) => p1.coinChartMap[code],
                     builder: (context, data, _) {
-                      debugPrint("render $code");
-                      return Row(
-                        spacing: 8,
-                        children: [
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(text: code.getName(), style: context.textTheme.primary.bold), //
-                                TextSpan(text: "\n"), //
-                                TextSpan(
-                                  text: data.price.formatUnit(digit: 3), //
-                                  style: TextStyle(color: data.color),
-                                ),
-                              ],
+                      return SizedBox(
+                        height: 60,
+                        child: Row(
+                          spacing: 4,
+                          children: [
+                            SizedBox(
+                              width: 123,
+                              child: Row(
+                                spacing: 6,
+                                children: [
+                                  _buildCurrencyIcon(code),
+                                  Expanded(
+                                    child: TextAutoScaleWidget(
+                                      code.getName(),
+                                      style: context.textTheme.primary.bold,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ).expaned(30),
-                          SizedBox(
-                            height: 60, //
-                            child: GChartWidget(chart: data.chart, tickerProvider: this),
-                          ).expaned(70),
-                        ],
+                            Expanded(
+                              flex: 60,
+                              child:
+                                  data == null
+                                      ? SizedBox.shrink()
+                                      : LineAreaChart(
+                                        data: data.chartData,
+                                        lineColor: data.color ?? Colors.blue,
+                                        areaColor: (data.color ?? Colors.blue).withValues(alpha: 0.1),
+                                        strokeWidth: 2.0,
+                                        showArea: true,
+                                      ),
+                            ),
+                            Expanded(
+                              flex: 40,
+                              child: TextAutoScaleWidget(
+                                (data?.price).formatUnit(digit: 3),
+                                style: context.textTheme.primary.bold.copyWith(color: data?.color),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   );
@@ -215,6 +241,42 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         },
       ),
     ];
+  }
+
+  Widget _buildCurrencyIcon(MarketCode code) {
+    IconData? iconData;
+    Color? iconColor;
+    AssetGenImage? image;
+    switch (code) {
+      case MarketCode.xauUSD:
+        image = Assets.images.gold;
+        break;
+      case MarketCode.xagUSD:
+        image = Assets.images.silver;
+        break;
+      case MarketCode.btcUSDT:
+        image = Assets.images.btc;
+        break;
+      case MarketCode.bnbUSDT:
+        image = Assets.images.bnb;
+        break;
+      case MarketCode.ethUSDT:
+        image = Assets.images.eth;
+        break;
+      case MarketCode.vnIndex:
+        iconData = Icons.trending_up;
+        iconColor = Colors.green;
+        break;
+    }
+    if (iconData != null) {
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(color: iconColor?.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+        child: Icon(iconData, size: 20, color: iconColor),
+      );
+    }
+    return image!.image(width: 32, height: 32);
   }
 
   Widget _buildGoldPriceItem(GoldSymbol item) {

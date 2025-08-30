@@ -2,7 +2,7 @@
 
 ## Prerequisites Installation
 
-- Xcode 16.3
+- Xcode 16.4
 - JDK version 17
 - IDE: VSCode
 - fvm: https://fvm.app/documentation/getting-started/installation

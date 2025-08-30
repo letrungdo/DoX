@@ -1,0 +1,16 @@
+name: 'Get Pubspec Version'
+description: 'Extract version from pubspec.yaml file'
+outputs:
+  version:
+    description: 'The full version with v prefix extracted from pubspec.yaml (e.g., v1.0.0+5)'
+    value: ${{ steps.extract.outputs.version }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract version from pubspec.yaml
+      id: extract
+      shell: bash
+      run: |
+        FULL_VERSION=$(grep '^version:' pubspec.yaml | cut -d ' ' -f 2)
+        echo "version=v$FULL_VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: v$FULL_VERSION"
