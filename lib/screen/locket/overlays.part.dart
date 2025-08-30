@@ -41,7 +41,7 @@ Widget _buildOverlays<V extends LocketViewModel>(BuildContext context, {required
                                     : 8, //
                           ),
                           decoration: BoxDecoration(
-                            color: bgColor ?? Colors.white.withAlpha(230), //
+                            color: bgColor ?? Colors.white.withAlpha(200), //
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: switch (type) {

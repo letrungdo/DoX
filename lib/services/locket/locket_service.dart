@@ -191,7 +191,6 @@ class LocketService {
           "sent_to_self_only": false,
           "sent_to_all": true,
           "update_streak_for_yyyymmdd": {
-            // TODO:
             "value": DateTime.now().toStringFormat(DateTimeConst.yyyyMMdd),
             "@type": "type.googleapis.com/google.protobuf.Int64Value",
           },

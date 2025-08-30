@@ -36,7 +36,7 @@ mixin LocketOverlays on CoreViewModel {
   int _overlayIndex = 0;
   int get overlayIndex => _overlayIndex;
 
-  Color overlayTextColor = Colors.white.withAlpha(230).getTextColor()!;
+  Color overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
   Color? overlayBgColor;
 
   void setOverlayIndex(int index) async {
@@ -133,42 +133,76 @@ mixin LocketOverlays on CoreViewModel {
   };
 
   Future<bool> colorPickerDialog() async {
-    return ColorPicker(
-      color: overlayBgColor ?? Colors.pink,
-      onColorChanged: (Color color) {
-        overlayBgColor = color;
-        overlayTextColor = color.getTextColor()!;
-        notifyListeners();
+    Color tempColor = overlayBgColor ?? Colors.pink;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          titlePadding: const EdgeInsets.all(0),
+          contentPadding: const EdgeInsets.all(0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              color: tempColor,
+              onColorChanged: (Color color) {
+                tempColor = color;
+              },
+              width: 40,
+              height: 40,
+              borderRadius: 4,
+              spacing: 5,
+              runSpacing: 5,
+              wheelDiameter: 155,
+              heading: Text('Select color', style: Theme.of(context).textTheme.titleSmall),
+              subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleSmall),
+              wheelSubheading: Text('Selected color and its shades', style: Theme.of(context).textTheme.titleSmall),
+              copyPasteBehavior: const ColorPickerCopyPasteBehavior(longPressMenu: true),
+              materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
+              colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
+              colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
+              pickersEnabled: const <ColorPickerType, bool>{
+                ColorPickerType.both: false,
+                ColorPickerType.primary: true,
+                ColorPickerType.accent: true,
+                ColorPickerType.bw: false,
+                ColorPickerType.custom: true,
+                ColorPickerType.wheel: true,
+              },
+              customColorSwatchesAndNames: colorsNameMap,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                overlayBgColor = null;
+                overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
+                notifyListeners();
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Reset'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                overlayBgColor = tempColor;
+                overlayTextColor = tempColor.getTextColor()!;
+                notifyListeners();
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
       },
-      width: 40,
-      height: 40,
-      borderRadius: 4,
-      spacing: 5,
-      runSpacing: 5,
-      wheelDiameter: 155,
-      heading: Text('Select color', style: Theme.of(context).textTheme.titleSmall),
-      subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleSmall),
-      wheelSubheading: Text('Selected color and its shades', style: Theme.of(context).textTheme.titleSmall),
-      copyPasteBehavior: const ColorPickerCopyPasteBehavior(longPressMenu: true),
-      materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
-      colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
-      colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
-      pickersEnabled: const <ColorPickerType, bool>{
-        ColorPickerType.both: false,
-        ColorPickerType.primary: true,
-        ColorPickerType.accent: true,
-        ColorPickerType.bw: false,
-        ColorPickerType.custom: true,
-        ColorPickerType.wheel: true,
-      },
-      customColorSwatchesAndNames: colorsNameMap,
-    ).showPickerDialog(
-      context,
-      transitionBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2, Widget widget) {
-        return FadeTransition(opacity: a1, child: widget);
-      },
-      transitionDuration: const Duration(milliseconds: 150),
-      constraints: const BoxConstraints(minHeight: 460, minWidth: 300, maxWidth: 320),
     );
+
+    return result ?? false;
   }
 }

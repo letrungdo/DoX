@@ -4,19 +4,46 @@ on:
   push:
     branches:
       - develop
-    tags:
-      - "v*"
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select environment to build"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  contents: write
+  actions: read
 
 env:
-  FLUTTER_VERSION: "3.29.3"
+  XCODE_VERSION: "16.4"
+  BUILD_ENV: ${{ github.event.inputs.environment || 'dev' }}
 
 jobs:
   build-android:
     runs-on: macos-15
+    environment: ${{ github.event.inputs.environment || 'dev' }}
     steps:
-      # Check out the repository code
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate environment files
+        uses: ./.github/actions/generate-env-files
+        with:
+          environment: ${{ env.BUILD_ENV }}
+          dart_define_base64: ${{ secrets.DART_DEFINE_BASE64 }}
+          google_services_base64: ${{ secrets.GOOGLE_SERVICES_BASE64 }}
+          google_service_info_base64: ${{ secrets.GOOGLE_SERVICE_INFO_BASE64 }}
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        uses: ./.github/actions/get-pubspec-version
 
       - name: Decode keystore and create jks and properties file for signing the app
         run: |
@@ -40,16 +67,21 @@ jobs:
           distribution: "zulu"
           java-version: "17"
 
-      # Set up Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: "stable"
+          flutter-version-file: pubspec.yaml
+
+      - name: Setup FlutterFire
+        run: dart pub global activate flutterfire_cli
 
       # Build Android APK
       - name: Build APK
-        run: flutter build apk --release --dart-define-from-file envs/dev.env --obfuscate --split-debug-info=build/obfuscate
+        run: |
+          flutter build apk --release \
+            --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
+            --obfuscate --split-debug-info=build/obfuscate
 
       # Upload APK as release asset
       - name: Upload APK to Release
@@ -58,19 +90,27 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/app/outputs/flutter-apk/app-release.apk
           asset_name: app-release.apk
-          tag: ${{ github.ref }}
+          tag: ${{ steps.get_version.outputs.version }}
           overwrite: true
 
   build-ios:
     runs-on: macos-15
+    environment: ${{ github.event.inputs.environment || 'dev' }}
     steps:
-      # Check out the repository code
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      - name: Install CocoaPods
-        run: |
-          gem install cocoapods -v 1.16.2
+      - name: Generate environment files
+        uses: ./.github/actions/generate-env-files
+        with:
+          environment: ${{ env.BUILD_ENV }}
+          dart_define_base64: ${{ secrets.DART_DEFINE_BASE64 }}
+          google_services_base64: ${{ secrets.GOOGLE_SERVICES_BASE64 }}
+          google_service_info_base64: ${{ secrets.GOOGLE_SERVICE_INFO_BASE64 }}
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        uses: ./.github/actions/get-pubspec-version
 
       # https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: Install the Apple certificate and provisioning profile
@@ -106,19 +146,24 @@ jobs:
       - name: Set XCode version
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16.3"
+          xcode-version: ${{ env.XCODE_VERSION }}
 
-      # Set up Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: "stable"
+          flutter-version-file: pubspec.yaml
+
+      - name: Setup FlutterFire
+        run: dart pub global activate flutterfire_cli
 
       # Build iOS IPA
       - name: Build IPA
         run: |
-          flutter build ipa --release -v --dart-define-from-file envs/dev.env --obfuscate --split-debug-info=build/obfuscate --export-options-plist=ios/options/ExportOptionsDevStore.plist
+          flutter build ipa --release \
+            --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
+            --obfuscate --split-debug-info=build/obfuscate \
+            --export-options-plist=ios/options/ExportOptionsDevStore.plist
 
       - name: Clean up keychain and provisioning profile
         if: ${{ always() }}
@@ -133,5 +178,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/ios/ipa/do_x.ipa
           asset_name: do_x.ipa
-          tag: ${{ github.ref }}
+          tag: ${{ steps.get_version.outputs.version }}
           overwrite: true
