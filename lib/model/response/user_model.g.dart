@@ -29,12 +29,13 @@ abstract class _$UserModelCWProxy {
 
   UserModel password(String? password);
 
-  /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `UserModel(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
+  /// Creates a new instance with the provided field values.
+  /// Passing `null` to a nullable field nullifies it, while `null` for a non-nullable field is ignored. To update a single field use `UserModel(...).copyWith.fieldName(value)`.
   ///
-  /// Usage
+  /// Example:
   /// ```dart
   /// UserModel(...).copyWith(id: 12, name: "My name")
-  /// ````
+  /// ```
   UserModel call({
     String? kind,
     String? localId,
@@ -50,54 +51,56 @@ abstract class _$UserModelCWProxy {
   });
 }
 
-/// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfUserModel.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfUserModel.copyWith.fieldName(...)`
+/// Callable proxy for `copyWith` functionality.
+/// Use as `instanceOfUserModel.copyWith(...)` or call `instanceOfUserModel.copyWith.fieldName(value)` for a single field.
 class _$UserModelCWProxyImpl implements _$UserModelCWProxy {
   const _$UserModelCWProxyImpl(this._value);
 
   final UserModel _value;
 
   @override
-  UserModel kind(String? kind) => this(kind: kind);
+  UserModel kind(String? kind) => call(kind: kind);
 
   @override
-  UserModel localId(String? localId) => this(localId: localId);
+  UserModel localId(String? localId) => call(localId: localId);
 
   @override
-  UserModel email(String? email) => this(email: email);
+  UserModel email(String? email) => call(email: email);
 
   @override
-  UserModel displayName(String? displayName) => this(displayName: displayName);
+  UserModel displayName(String? displayName) => call(displayName: displayName);
 
   @override
-  UserModel idToken(String? idToken) => this(idToken: idToken);
+  UserModel idToken(String? idToken) => call(idToken: idToken);
 
   @override
-  UserModel registered(bool? registered) => this(registered: registered);
+  UserModel registered(bool? registered) => call(registered: registered);
 
   @override
   UserModel profilePicture(String? profilePicture) =>
-      this(profilePicture: profilePicture);
+      call(profilePicture: profilePicture);
 
   @override
   UserModel refreshToken(String? refreshToken) =>
-      this(refreshToken: refreshToken);
+      call(refreshToken: refreshToken);
 
   @override
-  UserModel expiresIn(int? expiresIn) => this(expiresIn: expiresIn);
+  UserModel expiresIn(int? expiresIn) => call(expiresIn: expiresIn);
 
   @override
-  UserModel expiryTime(int? expiryTime) => this(expiryTime: expiryTime);
+  UserModel expiryTime(int? expiryTime) => call(expiryTime: expiryTime);
 
   @override
-  UserModel password(String? password) => this(password: password);
+  UserModel password(String? password) => call(password: password);
 
   @override
-  /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `UserModel(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
+  /// Creates a new instance with the provided field values.
+  /// Passing `null` to a nullable field nullifies it, while `null` for a non-nullable field is ignored. To update a single field use `UserModel(...).copyWith.fieldName(value)`.
   ///
-  /// Usage
+  /// Example:
   /// ```dart
   /// UserModel(...).copyWith(id: 12, name: "My name")
-  /// ````
+  /// ```
   UserModel call({
     Object? kind = const $CopyWithPlaceholder(),
     Object? localId = const $CopyWithPlaceholder(),
@@ -172,7 +175,8 @@ class _$UserModelCWProxyImpl implements _$UserModelCWProxy {
 }
 
 extension $UserModelCopyWith on UserModel {
-  /// Returns a callable class that can be used as follows: `instanceOfUserModel.copyWith(...)` or like so:`instanceOfUserModel.copyWith.fieldName(...)`.
+  /// Returns a callable class used to build a new instance with modified fields.
+  /// Example: `instanceOfUserModel.copyWith(...)` or `instanceOfUserModel.copyWith.fieldName(...)`.
   // ignore: library_private_types_in_public_api
   _$UserModelCWProxy get copyWith => _$UserModelCWProxyImpl(this);
 }
