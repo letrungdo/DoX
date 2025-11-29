@@ -20,24 +20,24 @@ env:
 
 build-apk:
 	fvm flutter build apk --release \
-		--dart-define-from-file envs/dev.env \
+		--dart-define-from-file envs/dev/dart-define.env \
 		--obfuscate --split-debug-info=build/obfuscate
 
 build-ipa:
 	fvm flutter build ipa --release \
-		--dart-define-from-file envs/dev.env \
+		--dart-define-from-file envs/dev/dart-define.env \
 		--obfuscate --split-debug-info=build/obfuscate \
 		--export-options-plist=ios/options/ExportOptionsDevStore.plist
 
 build-macos:
 	fvm flutter build macos \
-		--dart-define-from-file envs/dev.env \
+		--dart-define-from-file envs/dev/dart-define.env \
 		--obfuscate --split-debug-info=build/obfuscate \
 		--build-name 1.0.0 --build-number 1
 
 build-windows:
 	fvm flutter build windows \
-		--dart-define-from-file envs/dev.env \
+		--dart-define-from-file envs/dev/dart-define.env \
 		--obfuscate --split-debug-info=build/obfuscate \
 		--build-name 1.0.0 --build-number 1
 
