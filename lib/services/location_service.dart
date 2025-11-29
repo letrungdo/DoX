@@ -31,7 +31,7 @@ class LocationService {
 
   Future<String> getCurrentTimeZone() async {
     try {
-      _currentTimeZone ??= await FlutterTimezone.getLocalTimezone();
+      _currentTimeZone ??= (await FlutterTimezone.getLocalTimezone()).identifier;
     } catch (e) {
       logger.e(e.toString(), error: e);
     }

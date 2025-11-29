@@ -12,7 +12,7 @@
     ],
     "editor.defaultFormatter": "Dart-Code.dart-code"
   },
-  "dart.flutterSdkPath": ".fvm/versions/3.35.2",
+  "dart.flutterSdkPath": ".fvm/versions/3.38.3",
   "search.exclude": {
     "**/.fvm": true
   },
