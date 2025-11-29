@@ -173,7 +173,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                         AnimatedBuilder(
                           animation: _controller.video,
                           builder:
-                              (_, __) => AnimatedOpacity(
+                              (_, _) => AnimatedOpacity(
                                 opacity: _controller.isPlaying ? 0 : 1,
                                 duration: kThemeAnimationDuration,
                                 child: GestureDetector(
@@ -226,7 +226,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                   title: ValueListenableBuilder(
                     valueListenable: _exportingProgress,
                     builder:
-                        (_, double value, __) => Text("Exporting video ${(value * 100).ceil()}%", style: const TextStyle(fontSize: 12)),
+                        (_, double value, _) => Text("Exporting video ${(value * 100).ceil()}%", style: const TextStyle(fontSize: 12)),
                   ),
                 ),
               ),
@@ -245,7 +245,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     return [
       AnimatedBuilder(
         animation: Listenable.merge([_controller, _controller.video]),
-        builder: (_, __) {
+        builder: (_, _) {
           final int duration = _controller.videoDuration.inSeconds;
           final double pos = _controller.trimPosition * duration;
 
