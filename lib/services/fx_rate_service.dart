@@ -11,7 +11,7 @@ import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
-import 'package:html/parser.dart' show parse; // Để parse HTML
+import 'package:html/parser.dart' show parse;
 
 class FxRateService {
   final dio = DioClient.create();
@@ -20,7 +20,7 @@ class FxRateService {
     return Result.guardFuture(() async {
       final codes = MarketCode.values.map((e) => e.code).join(",");
       final response = await dio.get(
-        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=5m&code=$codes&countBack=200', //
+        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=5m&code=$codes&countBack=200'.withProxy(),
         cancelToken: cancelToken,
       );
       final data = MarketResponse.fromJson(response.data);
@@ -32,7 +32,7 @@ class FxRateService {
   Future<Result<double?>> getGoogleJpyVnd({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
       final response = await dio.get(
-        'https://script.google.com/macros/s/${Envs.googleSheetKey}/exec'.withProxy(), //
+        'https://script.google.com/macros/s/${Envs.googleSheetKey}/exec'.withProxy(),
         cancelToken: cancelToken,
       );
       final data = response.data as Map<String, dynamic>;
@@ -44,7 +44,7 @@ class FxRateService {
   Future<Result<List<GoldSymbol>?>> getGoldPrice({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
       final response = await dio.get(
-        'https://api.finpath.vn/api/domesticgold/symbols', //
+        'https://api.finpath.vn/api/domesticgold/symbols'.withProxy(), //
         cancelToken: cancelToken,
       );
       final data = GoldResponse.fromJson(response.data);
@@ -56,7 +56,7 @@ class FxRateService {
   Future<Result<Map<String, CurrencyRate>>> getSmileRate({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
       final response = await dio.get(
-        'https://ewm.digitalwalletcorp.com/EWA/WalletEx/ExchangeRate?TenantID=1&RegionCode=JP&CurrencyCode=JPY'.withProxy(), //
+        'https://ewm.digitalwalletcorp.com/EWA/WalletEx/ExchangeRate?TenantID=1&RegionCode=JP&CurrencyCode=JPY'.withProxy(),
         cancelToken: cancelToken,
       );
       final data = ExchangeData.fromJson(response.data);
@@ -81,7 +81,7 @@ class FxRateService {
   Future<Result<double?>> getDcomRate({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
       final response = await dio.get(
-        kIsWeb ? 'https://app.xn--t-lia.vn/api/fx-rate/dcom' : "https://sendmoney.co.jp/en/fx-rate", //
+        kIsWeb ? 'https://app.xn--t-lia.vn/api/fx-rate/dcom' : "https://sendmoney.co.jp/en/fx-rate",
         cancelToken: cancelToken,
       );
       if (kIsWeb) {
@@ -102,7 +102,7 @@ Map<String, String> _parseExchangeRatesFromHtml(String htmlContent) {
   // Get the tbody first to avoid nested tr elements
   final tbody = document.querySelector('table.country-table tbody');
   if (tbody == null) return rates;
-  
+
   // Get only direct children tr elements
   final rows = tbody.children.where((element) => element.localName == 'tr');
 
@@ -111,7 +111,7 @@ Map<String, String> _parseExchangeRatesFromHtml(String htmlContent) {
 
     if (columns.length >= 3) {
       final currencyCellText = columns[0].text.trim();
-      
+
       final currencyCodeRegex = RegExp(r'\(([^)]+)\)');
       final currencyCodeMatch = currencyCodeRegex.firstMatch(currencyCellText);
 
@@ -128,20 +128,20 @@ Map<String, String> _parseExchangeRatesFromHtml(String htmlContent) {
               if (nestedCells.isNotEmpty) {
                 double? maxRate;
                 String? maxRateString;
-                
+
                 // Process all cells to find the maximum rate
                 for (final cell in nestedCells) {
                   final cellText = cell.text.trim();
                   final cellParts = cellText.split(RegExp(r'\s+'));
-                  
+
                   if (cellParts.length >= 2) {
                     // Extract the numeric value, removing any (T+1) suffix
                     final rateString = cellParts[1].replaceAll(RegExp(r'\(.*\)'), '');
                     final rateValue = double.tryParse(rateString);
-                    
+
                     if (rateValue != null) {
                       logger.d("Found VND rate: $rateString (value: $rateValue) from text: $cellText");
-                      
+
                       if (maxRate == null || rateValue > maxRate) {
                         maxRate = rateValue;
                         maxRateString = rateString;
@@ -149,7 +149,7 @@ Map<String, String> _parseExchangeRatesFromHtml(String htmlContent) {
                     }
                   }
                 }
-                
+
                 if (maxRateString != null) {
                   logger.d("Selected maximum VND rate: $maxRateString");
                   rates[currencyCode.toLowerCase()] = maxRateString;

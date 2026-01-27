@@ -115,61 +115,50 @@ class _$UserModelCWProxyImpl implements _$UserModelCWProxy {
     Object? password = const $CopyWithPlaceholder(),
   }) {
     return UserModel(
-      kind:
-          kind == const $CopyWithPlaceholder()
-              ? _value.kind
-              // ignore: cast_nullable_to_non_nullable
-              : kind as String?,
-      localId:
-          localId == const $CopyWithPlaceholder()
-              ? _value.localId
-              // ignore: cast_nullable_to_non_nullable
-              : localId as String?,
-      email:
-          email == const $CopyWithPlaceholder()
-              ? _value.email
-              // ignore: cast_nullable_to_non_nullable
-              : email as String?,
-      displayName:
-          displayName == const $CopyWithPlaceholder()
-              ? _value.displayName
-              // ignore: cast_nullable_to_non_nullable
-              : displayName as String?,
-      idToken:
-          idToken == const $CopyWithPlaceholder()
-              ? _value.idToken
-              // ignore: cast_nullable_to_non_nullable
-              : idToken as String?,
-      registered:
-          registered == const $CopyWithPlaceholder()
-              ? _value.registered
-              // ignore: cast_nullable_to_non_nullable
-              : registered as bool?,
-      profilePicture:
-          profilePicture == const $CopyWithPlaceholder()
-              ? _value.profilePicture
-              // ignore: cast_nullable_to_non_nullable
-              : profilePicture as String?,
-      refreshToken:
-          refreshToken == const $CopyWithPlaceholder()
-              ? _value.refreshToken
-              // ignore: cast_nullable_to_non_nullable
-              : refreshToken as String?,
-      expiresIn:
-          expiresIn == const $CopyWithPlaceholder()
-              ? _value.expiresIn
-              // ignore: cast_nullable_to_non_nullable
-              : expiresIn as int?,
-      expiryTime:
-          expiryTime == const $CopyWithPlaceholder()
-              ? _value.expiryTime
-              // ignore: cast_nullable_to_non_nullable
-              : expiryTime as int?,
-      password:
-          password == const $CopyWithPlaceholder()
-              ? _value.password
-              // ignore: cast_nullable_to_non_nullable
-              : password as String?,
+      kind: kind == const $CopyWithPlaceholder()
+          ? _value.kind
+          // ignore: cast_nullable_to_non_nullable
+          : kind as String?,
+      localId: localId == const $CopyWithPlaceholder()
+          ? _value.localId
+          // ignore: cast_nullable_to_non_nullable
+          : localId as String?,
+      email: email == const $CopyWithPlaceholder()
+          ? _value.email
+          // ignore: cast_nullable_to_non_nullable
+          : email as String?,
+      displayName: displayName == const $CopyWithPlaceholder()
+          ? _value.displayName
+          // ignore: cast_nullable_to_non_nullable
+          : displayName as String?,
+      idToken: idToken == const $CopyWithPlaceholder()
+          ? _value.idToken
+          // ignore: cast_nullable_to_non_nullable
+          : idToken as String?,
+      registered: registered == const $CopyWithPlaceholder()
+          ? _value.registered
+          // ignore: cast_nullable_to_non_nullable
+          : registered as bool?,
+      profilePicture: profilePicture == const $CopyWithPlaceholder()
+          ? _value.profilePicture
+          // ignore: cast_nullable_to_non_nullable
+          : profilePicture as String?,
+      refreshToken: refreshToken == const $CopyWithPlaceholder()
+          ? _value.refreshToken
+          // ignore: cast_nullable_to_non_nullable
+          : refreshToken as String?,
+      expiresIn: expiresIn == const $CopyWithPlaceholder()
+          ? _value.expiresIn
+          // ignore: cast_nullable_to_non_nullable
+          : expiresIn as int?,
+      expiryTime: expiryTime == const $CopyWithPlaceholder()
+          ? _value.expiryTime
+          // ignore: cast_nullable_to_non_nullable
+          : expiryTime as int?,
+      password: password == const $CopyWithPlaceholder()
+          ? _value.password
+          // ignore: cast_nullable_to_non_nullable
+          : password as String?,
     );
   }
 }

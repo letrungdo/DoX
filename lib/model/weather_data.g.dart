@@ -14,10 +14,9 @@ WeatherData _$WeatherDataFromJson(Map<String, dynamic> json) => WeatherData(
   timezone: json['timezone'] as String?,
   timezoneAbbreviation: json['timezoneAbbreviation'] as String?,
   elevation: (json['elevation'] as num?)?.toDouble(),
-  current:
-      json['current'] == null
-          ? null
-          : CurrentWeather.fromJson(json['current'] as Map<String, dynamic>),
+  current: json['current'] == null
+      ? null
+      : CurrentWeather.fromJson(json['current'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$WeatherDataToJson(WeatherData instance) =>
