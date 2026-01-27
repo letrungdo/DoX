@@ -7,20 +7,18 @@ part of 'gold_model.dart';
 // **************************************************************************
 
 GoldResponse _$GoldResponseFromJson(Map<String, dynamic> json) => GoldResponse(
-  data:
-      json['data'] == null
-          ? null
-          : GoldData.fromJson(json['data'] as Map<String, dynamic>),
+  data: json['data'] == null
+      ? null
+      : GoldData.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$GoldResponseToJson(GoldResponse instance) =>
     <String, dynamic>{'data': instance.data?.toJson()};
 
 GoldData _$GoldDataFromJson(Map<String, dynamic> json) => GoldData(
-  symbols:
-      (json['symbols'] as List<dynamic>?)
-          ?.map((e) => GoldSymbol.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  symbols: (json['symbols'] as List<dynamic>?)
+      ?.map((e) => GoldSymbol.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$GoldDataToJson(GoldData instance) => <String, dynamic>{
