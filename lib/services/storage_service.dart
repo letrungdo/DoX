@@ -23,7 +23,7 @@ class _StorageService {
   }
 
   int getTabIndex() {
-    return prefs.getInt(StorageKey.tabIndex) ?? 0;
+    return prefs.getInt(StorageKey.tabIndex) ?? 1;
   }
 
   Future<bool> setTabIndex(int index) {
