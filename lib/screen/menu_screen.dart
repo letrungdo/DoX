@@ -5,8 +5,10 @@ import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/services/google_sync_service.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/app_view_model.dart';
+import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button/button.dart';
@@ -87,6 +89,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
               context.read<AppViewModel>().toggleThemeMode();
             },
           ),
+          _buildGoogleSyncControl(),
           DoButton(
             text: "About",
             onPressed: () {
@@ -99,6 +102,40 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGoogleSyncControl() {
+    return Column(
+      spacing: 8,
+      children: [
+        DoButton(
+          onPressed: () async {
+            if (googleSyncService.currentUser == null) {
+              await googleSyncService.signIn();
+            } else {
+              await googleSyncService.signOut();
+            }
+            setState(() {});
+          },
+          child: Row(
+            spacing: 8,
+            children: [
+              Icon(googleSyncService.currentUser == null ? Icons.login : Icons.logout),
+              Text(googleSyncService.currentUser == null ? "Đăng nhập Google" : "Đăng xuất (${googleSyncService.currentUser!.email})"),
+            ],
+          ),
+        ),
+        if (googleSyncService.currentUser != null)
+          DoButton(
+            text: "Khôi phục dữ liệu từ Cloud",
+            onPressed: () {
+              final chickenVM = context.read<ChickenViewModel>();
+              chickenVM.setCurrentContext(context);
+              chickenVM.restoreFromGoogle();
+            },
+          ),
+      ],
     );
   }
 }

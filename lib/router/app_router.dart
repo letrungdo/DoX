@@ -19,14 +19,11 @@ class _AppRouter extends RootStackRouter {
         page: MainRoute.page,
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
-          AutoRoute(
-            initial: initialTabIndex == 0, //
-            path: 'news',
-            page: NewsRoute.page,
-          ),
+          AutoRoute(initial: initialTabIndex == 0, path: 'news', page: NewsRoute.page),
+          AutoRoute(initial: initialTabIndex == 1, path: 'chicken', page: ChickenRoute.page),
           AutoRoute(
             path: 'locket',
-            initial: initialTabIndex == 1,
+            initial: initialTabIndex == 2,
             page: locketTab.page,
             children: [
               AutoRoute(
@@ -42,29 +39,17 @@ class _AppRouter extends RootStackRouter {
                   }),
                 ],
               ),
-              CustomRoute(
-                path: 'login', //
-                page: LoginRoute.page,
-                transitionsBuilder: TransitionsBuilders.fadeIn,
-              ),
-              AutoRoute(
-                path: 'account', //
-                page: AccountRoute.page,
-                // transitionsBuilder: TransitionsBuilders.fadeIn,
-              ),
-              AutoRoute(
-                path: 'trimmer', //
-                page: TrimmerRoute.page,
-              ),
+              CustomRoute(path: 'login', page: LoginRoute.page, transitionsBuilder: TransitionsBuilders.fadeIn),
+              AutoRoute(path: 'account', page: AccountRoute.page),
+              AutoRoute(path: 'trimmer', page: TrimmerRoute.page),
             ],
           ),
-          AutoRoute(
-            initial: initialTabIndex == 2, //
-            path: 'menu',
-            page: MenuRoute.page,
-          ),
+          AutoRoute(initial: initialTabIndex == 3, path: 'menu', page: MenuRoute.page),
         ],
       ),
+      AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page),
+      AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page),
+      AutoRoute(path: '/cock-sales', page: CockSalesRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];
   }

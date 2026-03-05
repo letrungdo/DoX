@@ -29,15 +29,15 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     return AutoTabsRouter(
       routes: [
         const NewsRoute(),
+        const ChickenRoute(),
         const LocketRoute(), //
         const MenuRoute(),
       ],
-      transitionBuilder:
-          (context, child, animation) => FadeTransition(
-            opacity: animation,
-            // the passed child is technically our animated selected-tab page
-            child: child,
-          ),
+      transitionBuilder: (context, child, animation) => FadeTransition(
+        opacity: animation,
+        // the passed child is technically our animated selected-tab page
+        child: child,
+      ),
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
         return Scaffold(
@@ -47,12 +47,14 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
               tabsRouter.setActiveIndex(value);
               storageService.setTabIndex(value);
             },
+            type: BottomNavigationBarType.fixed,
             selectedItemColor: Colors.amber[800],
             unselectedFontSize: 12,
             selectedFontSize: 12,
             enableFeedback: true,
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
+              BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Chicken'),
               BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
             ],

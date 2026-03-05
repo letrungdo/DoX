@@ -10,12 +10,14 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.leadingWidth,
     this.actions,
     this.backgroundColor,
+    this.bottom,
   });
   final String? title;
   final double height;
   final Widget? leading;
   final List<Widget>? actions;
   final Color? backgroundColor;
+  final PreferredSizeWidget? bottom;
 
   /// Default 56
   final double? leadingWidth;
@@ -24,7 +26,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<DoAppBar> createState() => _DoAppBarState();
 
   @override
-  Size get preferredSize => Size.fromHeight(height);
+  Size get preferredSize => Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
 }
 
 class _DoAppBarState extends State<DoAppBar> {
@@ -38,6 +40,7 @@ class _DoAppBarState extends State<DoAppBar> {
       actions: widget.actions,
       toolbarHeight: widget.height,
       actionsPadding: EdgeInsets.only(right: 10),
+      bottom: widget.bottom,
     );
   }
 }

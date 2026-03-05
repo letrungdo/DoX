@@ -8,6 +8,7 @@ import 'package:do_x/services/locket/upload_service.dart';
 import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/app_view_model.dart';
+import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,12 +21,15 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final appVm = AppViewModel();
+  final chickenVm = ChickenViewModel();
 
   @override
   void initState() {
     super.initState();
     appVm.setCurrentContext(context);
     appVm.initState();
+    chickenVm.setCurrentContext(context);
+    chickenVm.initState();
   }
 
   @override
@@ -38,6 +42,7 @@ class _MyAppState extends State<MyApp> {
         Provider<WeatherService>(create: (_) => WeatherService()),
         Provider<LocationService>(create: (_) => LocationService()),
         ChangeNotifierProvider(create: (_) => appVm),
+        ChangeNotifierProvider(create: (_) => chickenVm),
       ],
       child: Selector<AppViewModel, ThemeMode>(
         selector: (p0, p1) => p1.themeMode,

@@ -37,6 +37,7 @@ class DialogHelper {
     if (hidePrevious) {
       hideImmediate(context, id: id, rootOverlay: rootOverlay);
     }
+    if (!context.mounted) return;
     final overlayState = Overlay.of(context, rootOverlay: rootOverlay);
     final StreamController<double> controller = StreamController();
     final overlayFocusNode = FocusScopeNode();
@@ -49,26 +50,25 @@ class DialogHelper {
     }
 
     final OverlayEntry overlayEntry = OverlayEntry(
-      builder:
-          (_) => Stack(
-            children: <Widget>[
-              // This ModalBarrier blocks touch and focus interactions with underlying widgets
-              AppearWidget(
-                progress: controller.stream,
-                duration: defaultDuration,
-                style: AppearStyle.opacity,
-                child: ModalBarrier(
-                  color: overlayColor,
-                  onDismiss: () async {
-                    if (dialog.closable) {
-                      hideInternal();
-                    }
-                  },
-                ),
-              ),
-              dialog,
-            ],
+      builder: (_) => Stack(
+        children: <Widget>[
+          // This ModalBarrier blocks touch and focus interactions with underlying widgets
+          AppearWidget(
+            progress: controller.stream,
+            duration: defaultDuration,
+            style: AppearStyle.opacity,
+            child: ModalBarrier(
+              color: overlayColor,
+              onDismiss: () async {
+                if (dialog.closable) {
+                  hideInternal();
+                }
+              },
+            ),
           ),
+          dialog,
+        ],
+      ),
     );
     currentOverlay.add(IndexedData<OverlayEntry>(id: id, data: overlayEntry, controller: controller, isWindowDialog: isWindowDialog));
 

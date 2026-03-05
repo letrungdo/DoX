@@ -21,6 +21,7 @@ abstract class CoreViewModel with ChangeNotifier, CancelRequestMixin, AppErrorMi
   }
 
   void showLoading() {
+    if (!context.mounted) return;
     final id = context.loadingId;
     if (DialogHelper().isExists(id)) {
       return;
