@@ -7,8 +7,9 @@
       "command": "bash",
       "args": ["scripts/restore-env-configs.sh", "dev"],
       "presentation": {
-        "reveal": "always",
-        "panel": "new"
+        "reveal": "silent",
+        "panel": "shared",
+        "close": true
       },
       "problemMatcher": []
     }
