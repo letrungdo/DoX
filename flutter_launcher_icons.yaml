@@ -11,7 +11,8 @@ flutter_launcher_icons:
   remove_alpha_ios: true
 
   web:
-    generate: false
+    generate: true
+    image_path: "assets/app_icon/icon_android.png"
 
   windows:
     generate: false

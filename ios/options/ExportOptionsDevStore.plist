@@ -10,7 +10,7 @@
 	<string>app-store</string>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.momby.doctor</key>
+		<key>vn.dox.app</key>
 		<string>MombyDoctorProvisioning</string>
 	</dict>
 	<key>signingCertificate</key>

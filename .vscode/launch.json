@@ -29,9 +29,8 @@
       "name": "do_ai (release mode)",
       "request": "launch",
       "type": "dart",
+      "preLaunchTask": "restore-env-configs",
       "args": [
-        "--debug",
-        "-v",
         "--dart-define-from-file",
         "envs/dev/dart-define.env"
       ],
