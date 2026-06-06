@@ -4,6 +4,16 @@ import 'package:do_x/constants/env.dart';
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+/// Default [FirebaseOptions] for use with your Firebase apps.
+///
+/// Example:
+/// ```dart
+/// import 'firebase_options.dart';
+/// // ...
+/// await Firebase.initializeApp(
+///   options: DefaultFirebaseOptions.currentPlatform,
+/// );
+/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -14,12 +24,27 @@ class DefaultFirebaseOptions {
         return android;
       case TargetPlatform.iOS:
         return ios;
+      case TargetPlatform.macOS:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      case TargetPlatform.windows:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       default:
         throw UnsupportedError('DefaultFirebaseOptions are not supported for this platform.');
     }
   }
 
-  static final web = FirebaseOptions(
+  static final FirebaseOptions web = FirebaseOptions(
     apiKey: Envs.firebaseApiKey.web,
     appId: '1:66571675093:web:17b59d0335bbfca2da495c',
     messagingSenderId: '66571675093',
@@ -29,20 +54,21 @@ class DefaultFirebaseOptions {
     measurementId: 'G-0CPJ0B5YLC',
   );
 
-  static final android = FirebaseOptions(
+  static final FirebaseOptions android = FirebaseOptions(
     apiKey: Envs.firebaseApiKey.android,
-    appId: '1:66571675093:android:4ba80d0aec0d028fda495c',
+    appId: '1:66571675093:android:af31c00116e2a9bcda495c',
     messagingSenderId: '66571675093',
     projectId: 'do-appx',
     storageBucket: 'do-appx.firebasestorage.app',
   );
 
-  static final ios = FirebaseOptions(
+  static final FirebaseOptions ios = FirebaseOptions(
     apiKey: Envs.firebaseApiKey.iOS,
-    appId: '1:66571675093:ios:512255eab7d6526eda495c',
+    appId: '1:66571675093:ios:3ff3dd8d17fe6a20da495c',
     messagingSenderId: '66571675093',
     projectId: 'do-appx',
     storageBucket: 'do-appx.firebasestorage.app',
-    iosBundleId: 'com.momby.doctor',
+    androidClientId: '66571675093-2q8q2tfhbaib00qhmda3reo69h2segu6.apps.googleusercontent.com',
+    iosBundleId: 'vn.dox.app',
   );
 }
