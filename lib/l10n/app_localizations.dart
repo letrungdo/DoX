@@ -189,6 +189,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lost connect internet'**
   String get meNetworkError;
+
+  /// No description provided for @videoTooLargeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Video too large'**
+  String get videoTooLargeTitle;
+
+  /// No description provided for @videoTooLargeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The compressed video is still {size}MB, over Locket\'s 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?'**
+  String videoTooLargeMessage(String size);
+
+  /// No description provided for @shortenVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Shorten it'**
+  String get shortenVideo;
+
+  /// No description provided for @reduceTo480p.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce to 480p'**
+  String get reduceTo480p;
+
+  /// No description provided for @videoStillTooLargeAt480p.
+  ///
+  /// In en, this message translates to:
+  /// **'Still over 6MB at 480p — please shorten the video :('**
+  String get videoStillTooLargeAt480p;
 }
 
 class _AppLocalizationsDelegate

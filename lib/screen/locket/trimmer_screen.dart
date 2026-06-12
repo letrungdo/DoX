@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:easy_video_editor/easy_video_editor.dart';
 import 'package:flutter/material.dart';
@@ -23,8 +24,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   final _isExporting = ValueNotifier<bool>(false);
   final double height = 60;
 
-  late final VideoEditorController _controller = VideoEditorController.file(
-    widget.file,
+  // Locket's storage rules reject videos >= 6 MiB with a 403 on the finalize
+  // upload. Keep a small margin under the hard limit.
+  static const int _maxVideoBytes = 6 * 1024 * 1024;
+
+  late VideoEditorController _controller = _createController(widget.file);
+
+  VideoEditorController _createController(File file) => VideoEditorController.file(
+    file,
     minDuration: const Duration(milliseconds: 500),
     maxDuration: const Duration(seconds: 10),
     trimThumbnailsQuality: 20,
@@ -34,11 +41,41 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   @override
   void initState() {
     super.initState();
-    _controller.initialize(aspectRatio: 1).then((_) => setState(() {})).catchError((error) {
-      // handle minumum duration bigger than video duration error
+    _initController();
+  }
+
+  Future<void> _initController({bool allowNormalize = true}) async {
+    try {
+      await _controller.initialize(aspectRatio: 1);
       if (!mounted) return;
+      setState(() {});
+    } catch (error, stack) {
+      debugPrint('TrimmerScreen initialize failed: $error\n$stack');
+      // Some iPhone-edited/cropped videos can't be read by AVPlayer (err=-12860).
+      // Re-encoding via AVAssetExportSession usually produces a playable file.
+      // VideoMinDurationError means the video is genuinely too short -> can't fix by re-encoding.
+      if (allowNormalize && error is! VideoMinDurationError) {
+        final normalized = await _normalizeVideo(widget.file);
+        if (!mounted) return;
+        if (normalized != null) {
+          await _controller.dispose();
+          _controller = _createController(File(normalized));
+          return _initController(allowNormalize: false);
+        }
+      }
+      if (!mounted) return;
+      _showErrorSnackBar("Can't open this video :(");
       context.pop();
-    });
+    }
+  }
+
+  Future<String?> _normalizeVideo(File file) async {
+    try {
+      return await VideoEditorBuilder(videoPath: file.path).compress(resolution: VideoResolution.p720).export();
+    } catch (e) {
+      debugPrint('TrimmerScreen normalize failed: $e');
+      return null;
+    }
   }
 
   @override
@@ -52,18 +89,6 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   void _showErrorSnackBar(String message) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 1)));
 
-  Rect get cropRect {
-    if (_controller.minCrop <= minOffset && _controller.maxCrop >= maxOffset) {
-      return Rect.zero;
-    }
-    final enddx = _controller.videoWidth * _controller.maxCrop.dx;
-    final enddy = _controller.videoHeight * _controller.maxCrop.dy;
-    final startdx = _controller.videoWidth * _controller.minCrop.dx;
-    final startdy = _controller.videoHeight * _controller.minCrop.dy;
-
-    return Rect.fromLTWH(startdx, startdy, enddx - startdx, enddy - startdy);
-  }
-
   Future<void> _exportVideo() async {
     _exportingProgress.value = 0;
     _isExporting.value = true;
@@ -72,20 +97,65 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     if (videoPath == null || thumbnailData == null) {
       return;
     }
+
+    var path = videoPath as String;
+    // Video still over Locket's 6 MiB limit after the default p720 compress ->
+    // ask the user to downscale to 480p or go back and shorten the clip.
+    if (await File(path).length() > _maxVideoBytes) {
+      final reduced = await _handleOversizeVideo(path);
+      if (reduced == null) return; // user chose to shorten, or re-export failed
+      path = reduced;
+    }
+
     if (!mounted) return;
-    context.pop([videoPath, thumbnailData]);
+    context.pop([path, thumbnailData]);
   }
 
-  Future<String?> _trimVideo() async {
+  /// Returns a path to a video that fits under [_maxVideoBytes], or null if the
+  /// user opted to adjust the trim duration (stay on screen) or it still fails.
+  Future<String?> _handleOversizeVideo(String oversizePath) async {
+    final sizeMb = await File(oversizePath).length() / 1024 / 1024;
+    if (!mounted) return null;
+    final l10n = context.l10n;
+    final downscale = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.videoTooLargeTitle),
+        content: Text(l10n.videoTooLargeMessage(sizeMb.toStringAsFixed(1))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.shortenVideo)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.reduceTo480p)),
+        ],
+      ),
+    );
+    if (downscale != true) return null; // user will adjust the trim slider
+
+    _exportingProgress.value = 0;
+    _isExporting.value = true;
+    final reduced = await _trimVideo(resolution: VideoResolution.p480);
+    _isExporting.value = false;
+    if (reduced == null) return null;
+
+    if (await File(reduced).length() > _maxVideoBytes) {
+      if (!mounted) return null;
+      _showErrorSnackBar(context.l10n.videoStillTooLargeAt480p);
+      return null;
+    }
+    return reduced;
+  }
+
+  Future<String?> _trimVideo({VideoResolution resolution = VideoResolution.p720}) async {
     try {
       final editor = VideoEditorBuilder(videoPath: _controller.file.path).trim(
         startTimeMs: _controller.startTrim.inMilliseconds, //
         endTimeMs: _controller.endTrim.inMilliseconds,
       );
-      // .crop(aspectRatio: VideoAspectRatio.ratio1x1);
-      if (Platform.isAndroid) {
-        editor.compress(resolution: VideoResolution.p720);
-      }
+      // Center-crop to a 1:1 square to match Locket's square format.
+      editor.crop(aspectRatio: VideoAspectRatio.ratio1x1);
+      // Compress on all platforms: iOS-trimmed videos at full resolution can be
+      // large enough to exceed Locket's storage-rule size limit, which surfaces
+      // as a 403 "Permission denied" on the finalize PUT.
+      editor.compress(resolution: resolution);
       return editor.export(
         onProgress: (progress) {
           _exportingProgress.value = progress;
@@ -105,16 +175,25 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         timeMs: _controller.selectedCoverVal?.timeMs ?? _controller.startTrim.inMilliseconds,
         quality: 100,
       );
-      final image = img.decodeJpg(data!);
-      img.Image cropped = img.copyCrop(
-        image!,
-        x: cropRect.left.toInt(),
-        y: cropRect.top.toInt(),
-        width: cropRect.width.toInt(),
-        height: cropRect.height.toInt(),
-      );
+      if (data == null) return null;
+      final image = img.decodeImage(data);
+      if (image == null) return data; // can't crop, fall back to original thumbnail
+
+      // No crop selected -> return the thumbnail as-is.
+      if (_controller.minCrop <= minOffset && _controller.maxCrop >= maxOffset) {
+        return data;
+      }
+
+      // crop fractions (0..1) applied to the ACTUAL decoded image size, clamped to bounds.
+      final x = (image.width * _controller.minCrop.dx).round().clamp(0, image.width - 1);
+      final y = (image.height * _controller.minCrop.dy).round().clamp(0, image.height - 1);
+      final w = (image.width * (_controller.maxCrop.dx - _controller.minCrop.dx)).round().clamp(1, image.width - x);
+      final h = (image.height * (_controller.maxCrop.dy - _controller.minCrop.dy)).round().clamp(1, image.height - y);
+
+      final cropped = img.copyCrop(image, x: x, y: y, width: w, height: h);
       return Uint8List.fromList(img.encodeJpg(cropped));
     } catch (e) {
+      debugPrint('TrimmerScreen getThumbnail failed: $e');
       _showErrorSnackBar("Error on cover exportation :(");
     }
     return null;

@@ -1,0 +1,34 @@
+--- a/ios/easy_video_editor/Sources/easy_video_editor/utils/VideoUtils.swift
++++ b/ios/easy_video_editor/Sources/easy_video_editor/utils/VideoUtils.swift
+@@ -585,11 +585,16 @@
+             throw VideoError.invalidAsset
+         }
+         
+-        // Get video dimensions
+-        let videoSize = videoTrack.naturalSize
++        // Work in DISPLAY space (after applying preferredTransform), not in the
++        // raw naturalSize. iPhone portrait videos are stored landscape with a 90°
++        // preferredTransform; computing the crop on naturalSize and ignoring the
++        // rotation places the content off-centre and leaves a black bar.
++        let preferredTransform = videoTrack.preferredTransform
++        let videoSize = CGRect(origin: .zero, size: videoTrack.naturalSize)
++            .applying(preferredTransform).standardized.size
+         let videoAspectRatio = Float(videoSize.width / videoSize.height)
+-        
+-        // Calculate crop rectangle
++
++        // Calculate crop rectangle (in display space)
+         let cropRect: CGRect
+         if videoAspectRatio > targetAspectRatio {
+             // Video is wider than target, crop sides
+@@ -639,7 +644,9 @@
+         
+         // Create layer instruction
+         let transformer = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
+-        let transform = videoTrack.preferredTransform
++        // Apply the rotation first (natural -> upright display space), then shift so
++        // the crop window's origin maps to (0,0) of the render canvas.
++        let transform = preferredTransform
+             .concatenating(CGAffineTransform(translationX: -cropRect.origin.x, y: -cropRect.origin.y))
+         transformer.setTransform(transform, at: .zero)
+         instruction.layerInstructions = [transformer]

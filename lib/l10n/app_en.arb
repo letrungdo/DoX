@@ -15,5 +15,17 @@
   "anErrorOccurred": "An error occurred.",
   "meSystemMaintenance": "System maintenance!",
   "meRequestTimeout": "Request timeout!",
-  "meNetworkError": "Lost connect internet"
+  "meNetworkError": "Lost connect internet",
+  "videoTooLargeTitle": "Video too large",
+  "videoTooLargeMessage": "The compressed video is still {size}MB, over Locket's 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?",
+  "@videoTooLargeMessage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "shortenVideo": "Shorten it",
+  "reduceTo480p": "Reduce to 480p",
+  "videoStillTooLargeAt480p": "Still over 6MB at 480p — please shorten the video :("
 }

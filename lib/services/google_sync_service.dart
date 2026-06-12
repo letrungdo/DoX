@@ -7,17 +7,28 @@ import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sig
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis/tasks/v1.dart' as tasks;
+import 'package:googleapis_auth/googleapis_auth.dart' as gapis;
 import 'package:intl/intl.dart';
 
 class GoogleSyncService {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: [tasks.TasksApi.tasksScope, drive.DriveApi.driveAppdataScope]);
+  static const List<String> _scopes = [tasks.TasksApi.tasksScope, drive.DriveApi.driveAppdataScope];
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _initialized = false;
 
   GoogleSignInAccount? _currentUser;
   GoogleSignInAccount? get currentUser => _currentUser;
 
+  Future<void> _ensureInitialized() async {
+    if (_initialized) return;
+    await _googleSignIn.initialize();
+    _initialized = true;
+  }
+
   Future<GoogleSignInAccount?> signIn() async {
     try {
-      _currentUser = await _googleSignIn.signIn();
+      await _ensureInitialized();
+      _currentUser = await _googleSignIn.authenticate(scopeHint: _scopes);
       return _currentUser;
     } catch (error) {
       print("Google Sign-In Error: $error");
@@ -26,8 +37,21 @@ class GoogleSyncService {
   }
 
   Future<void> signOut() async {
+    await _ensureInitialized();
     await _googleSignIn.signOut();
     _currentUser = null;
+  }
+
+  /// Authorizes the required scopes for the current user and returns an
+  /// authenticated client for use with the `googleapis` libraries.
+  Future<gapis.AuthClient?> _authorizedClient() async {
+    final user = _currentUser;
+    if (user == null) return null;
+
+    final authorization =
+        await user.authorizationClient.authorizationForScopes(_scopes) ?? await user.authorizationClient.authorizeScopes(_scopes);
+
+    return authorization.authClient(scopes: _scopes);
   }
 
   Future<bool> syncToGoogleTasks(List<ChickenBatch> batches) async {
@@ -36,7 +60,8 @@ class GoogleSyncService {
     }
     if (_currentUser == null) return false;
 
-    final httpClient = (await _googleSignIn.authenticatedClient())!;
+    final httpClient = await _authorizedClient();
+    if (httpClient == null) return false;
     final tasksApi = tasks.TasksApi(httpClient);
 
     final dateFormat = DateFormat('dd/MM/yyyy');
@@ -88,7 +113,7 @@ class GoogleSyncService {
     if (_currentUser == null) return false;
 
     try {
-      final httpClient = (await _googleSignIn.authenticatedClient())!;
+      final httpClient = (await _authorizedClient())!;
       final driveApi = drive.DriveApi(httpClient);
 
       final data = {
@@ -124,7 +149,7 @@ class GoogleSyncService {
     if (_currentUser == null) return null;
 
     try {
-      final httpClient = (await _googleSignIn.authenticatedClient())!;
+      final httpClient = (await _authorizedClient())!;
       final driveApi = drive.DriveApi(httpClient);
 
       final fileList = await driveApi.files.list(spaces: 'appDataFolder', q: "name = 'dox_chicken_backup.json'");
@@ -146,7 +171,7 @@ class GoogleSyncService {
     if (_currentUser == null) return false;
 
     try {
-      final httpClient = (await _googleSignIn.authenticatedClient())!;
+      final httpClient = (await _authorizedClient())!;
       final tasksApi = tasks.TasksApi(httpClient);
 
       final taskLists = await tasksApi.tasklists.list();

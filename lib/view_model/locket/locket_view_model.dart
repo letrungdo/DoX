@@ -200,6 +200,7 @@ class LocketViewModel extends CoreViewModel with LocketOverlays {
   }
 
   Future<String?> _uploadVideo(Uint8List videoCompressed) async {
+    logger.d("upload video size: ${(videoCompressed.lengthInBytes / 1024 / 1024).toStringAsFixed(2)} MB");
     final uploadRes = await _uploadService.uploadVideo(
       data: videoCompressed, //
       user: appData.user!,

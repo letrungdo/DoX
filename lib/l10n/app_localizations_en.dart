@@ -55,4 +55,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get meNetworkError => 'Lost connect internet';
+
+  @override
+  String get videoTooLargeTitle => 'Video too large';
+
+  @override
+  String videoTooLargeMessage(String size) {
+    return 'The compressed video is still ${size}MB, over Locket\'s 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?';
+  }
+
+  @override
+  String get shortenVideo => 'Shorten it';
+
+  @override
+  String get reduceTo480p => 'Reduce to 480p';
+
+  @override
+  String get videoStillTooLargeAt480p =>
+      'Still over 6MB at 480p — please shorten the video :(';
 }
