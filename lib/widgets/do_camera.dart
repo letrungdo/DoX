@@ -106,6 +106,27 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
     return completer.future;
   }
 
+  /// Converts a bgra8888 [CameraImage] (iOS image stream) to an [img.Image].
+  ///
+  /// `plane.bytes` is a view into a larger CVPixelBuffer with its own
+  /// `offsetInBytes`. Passing `plane.bytes.buffer` directly (with a hard-coded
+  /// offset like 28) misaligns the read on devices whose padding differs and
+  /// produces a skewed / "x-ray" looking image. Copying the plane's actual
+  /// bytes into a fresh, contiguous buffer makes the read start at 0 and lets
+  /// `rowStride` handle the per-row padding, regardless of device/resolution.
+  img.Image? _convertImage(CameraImage? cameraImage) {
+    if (cameraImage == null) return null;
+    final plane = cameraImage.planes[0];
+
+    return img.Image.fromBytes(
+      width: cameraImage.width,
+      height: cameraImage.height,
+      bytes: Uint8List.fromList(plane.bytes).buffer,
+      rowStride: plane.bytesPerRow,
+      order: img.ChannelOrder.bgra,
+    );
+  }
+
   Future<void> _initializeCameraController(CameraDescription? cameraDescription) async {
     if (cameraDescription == null) return;
     if (_isRunning || !mounted) {
@@ -266,20 +287,6 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
     controller?.setFocusPoint(offset);
   }
 
-  /// https://stackoverflow.com/questions/57603146/how-to-convert-camera-image-to-image?rq=3
-  img.Image? _convertImage(CameraImage? cameraImage) {
-    if (cameraImage == null) return null;
-    final plane = cameraImage.planes[0];
-
-    return img.Image.fromBytes(
-      width: cameraImage.width,
-      height: cameraImage.height,
-      bytes: plane.bytes.buffer,
-      rowStride: plane.bytesPerRow,
-      bytesOffset: 28,
-      order: img.ChannelOrder.bgra,
-    );
-  }
 
   Future<Uint8List?> takePicture() async {
     if (controller == null) return null;
@@ -294,7 +301,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       if (flashMode == FlashMode.always || kIsWeb || Platform.isAndroid) {
         final xFile = await controller!.takePicture();
         final bytes = await xFile.readAsBytes();
-        image = img.decodeJpg(bytes);
+        image = img.decodeImage(bytes);
         if (_camera?.lensDirection == CameraLensDirection.front && Platform.isIOS) {
           image = img.flipHorizontal(image!);
         }
