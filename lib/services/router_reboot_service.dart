@@ -3,7 +3,8 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:do_x/repository/client/dio_client.dart';
+import 'package:do_x/repository/client/http_client_adapter.dart';
+import 'package:flutter/foundation.dart';
 
 class RouterRebootException implements Exception {
   RouterRebootException(this.message);
@@ -22,7 +23,14 @@ class RouterRebootService {
   static const _fallbackMac = "00:11:22:33:44:55";
   static const _userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DoXRebootUtility";
 
-  final _dio = DioClient.create();
+  // A bare Dio without the app's BaseInterceptor, which force-overrides every
+  // request's Content-Type to application/json — that breaks the router's
+  // form-urlencoded login parsing and makes it return "Invalid token".
+  final Dio _dio = () {
+    final dio = Dio();
+    if (!kIsWeb) dio.httpClientAdapter = httpClientAdapter;
+    return dio;
+  }();
 
   String _sha1(String text) => sha1.convert(utf8.encode(text)).toString();
 
@@ -168,5 +176,46 @@ class RouterRebootService {
 
     onLog("Hoàn tất! Router đang khởi động lại.");
     return "Đã gửi lệnh khởi động lại router thành công!";
+  }
+
+  /// Periodically check if the router is back online after a reboot.
+  Future<void> checkRouterOnline({
+    required String ip,
+    required void Function(String message) onLog,
+    CancelToken? cancelToken,
+  }) async {
+    final baseUrl = cleanIp(ip);
+    onLog("Đang chờ router khởi động lại... (thường mất 1-2 phút)");
+
+    // Give the router some time to actually shut down services before we start polling.
+    await Future.delayed(const Duration(seconds: 20));
+
+    int retryCount = 0;
+    while (true) {
+      if (cancelToken?.isCancelled == true) return;
+      retryCount++;
+
+      try {
+        final response = await _dio.get(
+          "$baseUrl/cgi-bin/luci/web/home",
+          options: Options(
+            receiveTimeout: const Duration(seconds: 3),
+            headers: {"User-Agent": _userAgent},
+          ),
+          cancelToken: cancelToken,
+        );
+
+        if (response.statusCode == 200) {
+          onLog("Router đã phản hồi sau $retryCount lần thử. Đã khởi động xong!");
+          return;
+        }
+      } catch (e) {
+        if (e is DioException && e.type == DioExceptionType.cancel) rethrow;
+        onLog("Lần thử $retryCount: Router chưa sẵn sàng...");
+      }
+
+      // Poll every 5 seconds
+      await Future.delayed(const Duration(seconds: 5));
+    }
   }
 }
