@@ -1,15 +1,12 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/extensions/string_extensions.dart';
-import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/google_sync_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
-import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -37,62 +34,53 @@ class MenuScreen extends StatefulScreen implements AutoRouteWrapper {
 class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, V> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: DoAppBar(title: "Menu"),
+      appBar: DoAppBar(title: l10n.menu),
       bottomNavigationBar: Container(
         height: 40,
         alignment: Alignment.center, //
         child: Text("© letrungdo. Ver ${appInfo.version}"),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20), //
-        child: _buildBody().webConstrainedBox(),
+      body: CustomScrollView(
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+              child: Column(
+                children: [
+                  _buildMainActions(l10n).webConstrainedBox(),
+                  const Spacer(),
+                  _buildBottomActions(l10n).webConstrainedBox(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildMainActions(AppLocalizations l10n) {
     return ElevatedButtonTheme(
-      data: ElevatedButtonThemeData(
-        style: ButtonStyle(
-          shape: WidgetStatePropertyAll(
-            BeveledRectangleBorder(borderRadius: BorderRadius.circular(5)), //
-          ),
-          padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10, vertical: 5)),
-          minimumSize: WidgetStatePropertyAll(Size(double.infinity, 45)),
-          alignment: Alignment.center,
-          textStyle: WidgetStatePropertyAll(TextStyle().size16),
-        ),
-      ),
+      data: _buttonTheme(),
       child: Column(
         spacing: 8,
         children: [
           DoButton(
-            child: Selector<AppViewModel, ThemeMode>(
-              selector: (p0, p1) => p1.themeMode,
-              builder: (context, themeMode, _) {
-                return Row(
-                  spacing: 8,
-                  children: [
-                    SFIcon(switch (themeMode) {
-                      ThemeMode.dark => SFIcons.sf_moon_fill,
-                      ThemeMode.light => SFIcons.sf_sun_min_fill,
-                      ThemeMode.system => context.theme.brightness == Brightness.light ? SFIcons.sf_sun_min_fill : SFIcons.sf_moon_fill,
-                    }),
-                    Text(
-                      "${themeMode.name.toCapitalized} Mode",
-                      style: context.theme.elevatedButtonTheme.style?.textStyle?.resolve({}), //
-                    ), //
-                  ],
-                );
-              },
-            ),
             onPressed: () {
-              context.read<AppViewModel>().toggleThemeMode();
+              context.pushRoute(const SettingsRoute());
             },
+            child: Row(
+              spacing: 8,
+              children: [
+                const Icon(Icons.settings),
+                Text(l10n.settings),
+              ],
+            ),
           ),
-          _buildSupabaseAccountControl(),
-          _buildGoogleSyncControl(),
+          _buildGoogleSyncControl(l10n),
           DoButton(
             onPressed: () {
               context.pushRoute(const RebootRouterRoute());
@@ -101,15 +89,12 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
               spacing: 8,
               children: [
                 SFIcon(SFIcons.sf_wifi),
-                Text(
-                  "Reboot Router Xiaomi",
-                  style: context.theme.elevatedButtonTheme.style?.textStyle?.resolve({}), //
-                ),
+                Text(l10n.rebootRouter),
               ],
             ),
           ),
           DoButton(
-            text: "About",
+            text: l10n.about,
             onPressed: () {
               showAboutDialog(
                 applicationVersion: appInfo.version, //
@@ -123,7 +108,28 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
     );
   }
 
-  Widget _buildSupabaseAccountControl() {
+  Widget _buildBottomActions(AppLocalizations l10n) {
+    return ElevatedButtonTheme(
+      data: _buttonTheme(),
+      child: _buildSupabaseAccountControl(l10n),
+    );
+  }
+
+  ElevatedButtonThemeData _buttonTheme() {
+    return ElevatedButtonThemeData(
+      style: ButtonStyle(
+        shape: WidgetStatePropertyAll(
+          BeveledRectangleBorder(borderRadius: BorderRadius.circular(5)), //
+        ),
+        padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10, vertical: 5)),
+        minimumSize: WidgetStatePropertyAll(Size(double.infinity, 45)),
+        alignment: Alignment.center,
+        textStyle: WidgetStatePropertyAll(const TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+
+  Widget _buildSupabaseAccountControl(AppLocalizations l10n) {
     final user = supabase.auth.currentUser;
     if (user == null) {
       return DoButton(
@@ -131,30 +137,30 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
           await context.pushRoute(const AppLoginRoute());
           setState(() {});
         },
-        child: const Row(
+        child: Row(
           spacing: 8,
-          children: [Icon(Icons.login), Text("Đăng nhập Do X")],
+          children: [const Icon(Icons.login), Text(l10n.loginDoX)],
         ),
       );
     }
     return DoButton(
-      onPressed: _confirmSignOut,
+      onPressed: () => _confirmSignOut(l10n),
       child: Row(
         spacing: 8,
-        children: [const Icon(Icons.logout), Text("Đăng xuất Do X (${user.email})")],
+        children: [const Icon(Icons.logout), Text("${l10n.logoutDoX} (${user.email})")],
       ),
     );
   }
 
-  void _confirmSignOut() async {
+  void _confirmSignOut(AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Đăng xuất"),
-        content: const Text("Bạn có chắc muốn đăng xuất không?"),
+        title: Text(l10n.confirmLogout),
+        content: Text(l10n.confirmLogoutMessage),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Đăng xuất")),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.logout)),
         ],
       ),
     );
@@ -163,7 +169,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
     setState(() {});
   }
 
-  Widget _buildGoogleSyncControl() {
+  Widget _buildGoogleSyncControl(AppLocalizations l10n) {
     return Column(
       spacing: 8,
       children: [
@@ -180,7 +186,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
             spacing: 8,
             children: [
               Icon(googleSyncService.currentUser == null ? Icons.login : Icons.logout),
-              Text(googleSyncService.currentUser == null ? "Đăng nhập Google" : "Đăng xuất (${googleSyncService.currentUser!.email})"),
+              Text(googleSyncService.currentUser == null ? l10n.loginGoogle : "${l10n.logoutGoogle} (${googleSyncService.currentUser!.email})"),
             ],
           ),
         ),
@@ -190,7 +196,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
             builder: (context, autoSyncEnabled, _) {
               return SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                title: const Text("Tự đồng bộ lịch tiêm lên Google Tasks"),
+                title: Text(l10n.autoSyncChickenToGoogleTasks),
                 value: autoSyncEnabled,
                 onChanged: (value) async {
                   final chickenVM = context.read<ChickenViewModel>();

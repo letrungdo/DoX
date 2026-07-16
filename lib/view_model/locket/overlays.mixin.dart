@@ -11,8 +11,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 mixin LocketOverlays on CoreViewModel {
-  LocationService get _locationService => context.read<LocationService>();
-  WeatherService get _weatherService => context.read<WeatherService>();
+  late final LocationService _locationService;
+  late final WeatherService _weatherService;
+
+  @override
+  void initState() {
+    _locationService = context.read<LocationService>();
+    _weatherService = context.read<WeatherService>();
+    super.initState();
+  }
 
   String? _currentLocation;
   String? get currentLocation => _currentLocation;

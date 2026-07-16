@@ -73,4 +73,104 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoStillTooLargeAt480p =>
       'Still over 6MB at 480p — please shorten the video :(';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get showLocketTab => 'Show Locket Tab';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get vietnamese => 'Vietnamese';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get menu => 'Menu';
+
+  @override
+  String get news => 'News';
+
+  @override
+  String get chicken => 'Chicken';
+
+  @override
+  String get locket => 'Locket';
+
+  @override
+  String get rebootRouter => 'Reboot Router Xiaomi';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get loginDoX => 'Login Do X';
+
+  @override
+  String get logoutDoX => 'Logout Do X';
+
+  @override
+  String get loginGoogle => 'Login Google';
+
+  @override
+  String get logoutGoogle => 'Logout Google';
+
+  @override
+  String get autoSyncChickenToGoogleTasks =>
+      'Auto-sync chicken vaccination schedule to Google Tasks';
+
+  @override
+  String get confirmLogout => 'Confirm Logout';
+
+  @override
+  String get confirmLogoutMessage => 'Are you sure you want to log out?';
+
+  @override
+  String get themeMode => 'Theme Mode';
+
+  @override
+  String get light => 'Light';
+
+  @override
+  String get dark => 'Dark';
+
+  @override
+  String get system => 'System';
+
+  @override
+  String get goldPrice => 'Gold Price';
+
+  @override
+  String get index => 'Index';
+
+  @override
+  String get buy => 'Buy';
+
+  @override
+  String get sell => 'Sell';
+
+  @override
+  String get chickenManagement => 'Chicken Management';
+
+  @override
+  String get sellRoosterMeat => 'Sell rooster / meat';
+
+  @override
+  String get profitStatistics => 'Profit statistics';
+
+  @override
+  String get commonExpenses => 'Common expenses (feed, medicine...)';
+
+  @override
+  String get importData => 'Import data (JSON)';
+
+  @override
+  String get noBatchesYet => 'No batches yet. Press + to add.';
+
+  @override
+  String get yearPrefix => 'Year';
 }

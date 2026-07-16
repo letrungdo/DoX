@@ -10,4 +10,6 @@ class StorageKey {
   static const tabIndex = "tabIndex";
   static const routerIp = "routerIp";
   static const chickenAutoSync = "chickenAutoSync";
+  static const locale = "locale";
+  static const showLocketTab = "showLocketTab";
 }

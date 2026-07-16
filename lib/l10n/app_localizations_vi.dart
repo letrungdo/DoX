@@ -1,0 +1,176 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Vietnamese (`vi`).
+class AppLocalizationsVi extends AppLocalizations {
+  AppLocalizationsVi([String locale = 'vi']) : super(locale);
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get cancel => 'Hủy';
+
+  @override
+  String get logout => 'Đăng xuất';
+
+  @override
+  String get login => 'Đăng nhập';
+
+  @override
+  String get close => 'Đóng';
+
+  @override
+  String get retry => 'Thử lại';
+
+  @override
+  String get error => 'Lỗi';
+
+  @override
+  String get crop => 'Cắt';
+
+  @override
+  String get addMessage => 'Thêm tin nhắn';
+
+  @override
+  String get writeReview => 'Viết nhận xét...';
+
+  @override
+  String get pleaseLoginAgain => 'Vui lòng đăng nhập lại!';
+
+  @override
+  String get sessionExpired => 'Hết phiên làm việc';
+
+  @override
+  String get anErrorOccurred => 'Đã có lỗi xảy ra.';
+
+  @override
+  String get meSystemMaintenance => 'Hệ thống đang bảo trì!';
+
+  @override
+  String get meRequestTimeout => 'Yêu cầu hết thời gian!';
+
+  @override
+  String get meNetworkError => 'Mất kết nối internet';
+
+  @override
+  String get videoTooLargeTitle => 'Video quá lớn';
+
+  @override
+  String videoTooLargeMessage(String size) {
+    return 'Video sau khi nén vẫn còn ${size}MB, vượt giới hạn 6MB của Locket.\n\nGiảm chất lượng xuống 480p, hoặc quay lại cắt ngắn video?';
+  }
+
+  @override
+  String get shortenVideo => 'Cắt ngắn';
+
+  @override
+  String get reduceTo480p => 'Giảm xuống 480p';
+
+  @override
+  String get videoStillTooLargeAt480p =>
+      'Vẫn trên 6MB ở 480p — vui lòng cắt ngắn video :(';
+
+  @override
+  String get settings => 'Cài đặt';
+
+  @override
+  String get showLocketTab => 'Hiện tab Locket';
+
+  @override
+  String get language => 'Ngôn ngữ';
+
+  @override
+  String get vietnamese => 'Tiếng Việt';
+
+  @override
+  String get english => 'Tiếng Anh';
+
+  @override
+  String get menu => 'Menu';
+
+  @override
+  String get news => 'Tin tức';
+
+  @override
+  String get chicken => 'Nuôi gà';
+
+  @override
+  String get locket => 'Locket';
+
+  @override
+  String get rebootRouter => 'Khởi động lại Router Xiaomi';
+
+  @override
+  String get about => 'Giới thiệu';
+
+  @override
+  String get loginDoX => 'Đăng nhập Do X';
+
+  @override
+  String get logoutDoX => 'Đăng xuất Do X';
+
+  @override
+  String get loginGoogle => 'Đăng nhập Google';
+
+  @override
+  String get logoutGoogle => 'Đăng xuất Google';
+
+  @override
+  String get autoSyncChickenToGoogleTasks =>
+      'Tự đồng bộ lịch tiêm lên Google Tasks';
+
+  @override
+  String get confirmLogout => 'Đăng xuất';
+
+  @override
+  String get confirmLogoutMessage => 'Bạn có chắc muốn đăng xuất không?';
+
+  @override
+  String get themeMode => 'Giao diện';
+
+  @override
+  String get light => 'Sáng';
+
+  @override
+  String get dark => 'Tối';
+
+  @override
+  String get system => 'Hệ thống';
+
+  @override
+  String get goldPrice => 'Giá vàng';
+
+  @override
+  String get index => 'Chỉ số';
+
+  @override
+  String get buy => 'Mua vào';
+
+  @override
+  String get sell => 'Bán ra';
+
+  @override
+  String get chickenManagement => 'Quản lý gà';
+
+  @override
+  String get sellRoosterMeat => 'Bán gà đá / gà thịt';
+
+  @override
+  String get profitStatistics => 'Thống kê lợi nhuận';
+
+  @override
+  String get commonExpenses => 'Chi phí chung (cám, thuốc...)';
+
+  @override
+  String get importData => 'Nhập dữ liệu (JSON)';
+
+  @override
+  String get noBatchesYet => 'Chưa có lứa gà nào. Nhấn + để thêm.';
+
+  @override
+  String get yearPrefix => 'Năm';
+}

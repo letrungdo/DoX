@@ -44,15 +44,15 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => appVm),
         ChangeNotifierProvider(create: (_) => chickenVm),
       ],
-      child: Selector<AppViewModel, ThemeMode>(
-        selector: (p0, p1) => p1.themeMode,
-        builder: (context, themeMode, _) {
+      child: Selector<AppViewModel, (ThemeMode, Locale?)>(
+        selector: (p0, p1) => (p1.themeMode, p1.locale),
+        builder: (context, data, _) {
           return MaterialApp.router(
             title: 'Do X',
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: themeMode,
-            locale: AppLocalizations.supportedLocales.first,
+            themeMode: data.$1,
+            locale: data.$2 ?? AppLocalizations.supportedLocales.first,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: appRouter.config(navigatorObservers: () => [MyObserver()]),

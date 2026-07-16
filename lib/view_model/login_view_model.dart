@@ -9,7 +9,13 @@ import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:provider/provider.dart';
 
 class LoginViewModel extends CoreViewModel {
-  AuthService get _authService => context.read<AuthService>();
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    _authService = context.read<AuthService>();
+    super.initState();
+  }
 
   String? _username = appData.user?.email;
   String get username => _username ?? "";

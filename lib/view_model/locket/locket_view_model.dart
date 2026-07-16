@@ -23,8 +23,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class LocketViewModel extends CoreViewModel with LocketOverlays {
-  LocketService get _locketService => context.read<LocketService>();
-  UploadService get _uploadService => context.read<UploadService>();
+  late final LocketService _locketService;
+  late final UploadService _uploadService;
+
+  @override
+  void initState() {
+    _locketService = context.read<LocketService>();
+    _uploadService = context.read<UploadService>();
+    super.initState();
+  }
 
   final cameraKey = GlobalKey();
 

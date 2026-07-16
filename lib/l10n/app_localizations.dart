@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_vi.dart';
 
 // ignore_for_file: type=lint
 
@@ -92,7 +93,10 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('vi'),
+  ];
 
   /// No description provided for @ok.
   ///
@@ -219,6 +223,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Still over 6MB at 480p — please shorten the video :('**
   String get videoStillTooLargeAt480p;
+
+  /// No description provided for @settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settings;
+
+  /// No description provided for @showLocketTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Locket Tab'**
+  String get showLocketTab;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @vietnamese.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietnamese'**
+  String get vietnamese;
+
+  /// No description provided for @english.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get english;
+
+  /// No description provided for @menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
+  String get menu;
+
+  /// No description provided for @news.
+  ///
+  /// In en, this message translates to:
+  /// **'News'**
+  String get news;
+
+  /// No description provided for @chicken.
+  ///
+  /// In en, this message translates to:
+  /// **'Chicken'**
+  String get chicken;
+
+  /// No description provided for @locket.
+  ///
+  /// In en, this message translates to:
+  /// **'Locket'**
+  String get locket;
+
+  /// No description provided for @rebootRouter.
+  ///
+  /// In en, this message translates to:
+  /// **'Reboot Router Xiaomi'**
+  String get rebootRouter;
+
+  /// No description provided for @about.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get about;
+
+  /// No description provided for @loginDoX.
+  ///
+  /// In en, this message translates to:
+  /// **'Login Do X'**
+  String get loginDoX;
+
+  /// No description provided for @logoutDoX.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout Do X'**
+  String get logoutDoX;
+
+  /// No description provided for @loginGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Login Google'**
+  String get loginGoogle;
+
+  /// No description provided for @logoutGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout Google'**
+  String get logoutGoogle;
+
+  /// No description provided for @autoSyncChickenToGoogleTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-sync chicken vaccination schedule to Google Tasks'**
+  String get autoSyncChickenToGoogleTasks;
+
+  /// No description provided for @confirmLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Logout'**
+  String get confirmLogout;
+
+  /// No description provided for @confirmLogoutMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get confirmLogoutMessage;
+
+  /// No description provided for @themeMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme Mode'**
+  String get themeMode;
+
+  /// No description provided for @light.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get light;
+
+  /// No description provided for @dark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get dark;
+
+  /// No description provided for @system.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get system;
+
+  /// No description provided for @goldPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold Price'**
+  String get goldPrice;
+
+  /// No description provided for @index.
+  ///
+  /// In en, this message translates to:
+  /// **'Index'**
+  String get index;
+
+  /// No description provided for @buy.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy'**
+  String get buy;
+
+  /// No description provided for @sell.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell'**
+  String get sell;
+
+  /// No description provided for @chickenManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Chicken Management'**
+  String get chickenManagement;
+
+  /// No description provided for @sellRoosterMeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell rooster / meat'**
+  String get sellRoosterMeat;
+
+  /// No description provided for @profitStatistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit statistics'**
+  String get profitStatistics;
+
+  /// No description provided for @commonExpenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Common expenses (feed, medicine...)'**
+  String get commonExpenses;
+
+  /// No description provided for @importData.
+  ///
+  /// In en, this message translates to:
+  /// **'Import data (JSON)'**
+  String get importData;
+
+  /// No description provided for @noBatchesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No batches yet. Press + to add.'**
+  String get noBatchesYet;
+
+  /// No description provided for @yearPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get yearPrefix;
 }
 
 class _AppLocalizationsDelegate
@@ -232,7 +434,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+      <String>['en', 'vi'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -243,6 +445,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'vi':
+      return AppLocalizationsVi();
   }
 
   throw FlutterError(

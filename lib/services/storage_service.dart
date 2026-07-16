@@ -45,6 +45,22 @@ class _StorageService {
   Future<bool> setChickenAutoSync(bool value) {
     return prefs.setBool(StorageKey.chickenAutoSync, value);
   }
+
+  String? getLocale() {
+    return prefs.getString(StorageKey.locale);
+  }
+
+  Future<bool> setLocale(String value) {
+    return prefs.setString(StorageKey.locale, value);
+  }
+
+  bool getShowLocketTab() {
+    return prefs.getBool(StorageKey.showLocketTab) ?? false;
+  }
+
+  Future<bool> setShowLocketTab(bool value) {
+    return prefs.setBool(StorageKey.showLocketTab, value);
+  }
 }
 
 final storageService = _StorageService();

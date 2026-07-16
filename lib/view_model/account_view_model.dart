@@ -8,8 +8,15 @@ import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:provider/provider.dart';
 
 class AccountViewModel extends CoreViewModel {
-  AuthService get _authService => context.read<AuthService>();
-  LocketService get _locketService => context.read<LocketService>();
+  late final AuthService _authService;
+  late final LocketService _locketService;
+
+  @override
+  void initState() {
+    _authService = context.read<AuthService>();
+    _locketService = context.read<LocketService>();
+    super.initState();
+  }
 
   @override
   void initData() {

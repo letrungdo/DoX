@@ -1,9 +1,11 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
+import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -39,10 +41,13 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
 
   /// Route guards don't run for tab routes, so when the app starts directly
   /// on the chicken tab we have to require login here.
-  void _requireLoginForInitialChickenTab(BuildContext context, TabsRouter tabsRouter) {
+  void _requireLoginForInitialChickenTab(BuildContext context, TabsRouter tabsRouter, bool hasLocketTab) {
     if (_checkedInitialAuth) return;
     _checkedInitialAuth = true;
+
+    // Chicken tab index is always 1
     if (tabsRouter.activeIndex != 1 || supabase.auth.currentSession != null) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.pushRoute(const AppLoginRoute());
       if (supabase.auth.currentSession == null) {
@@ -53,47 +58,56 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
 
   @override
   Widget build(BuildContext context) {
-    return AutoTabsRouter(
-      routes: [
-        const NewsRoute(),
-        const ChickenRoute(),
-        const LocketRoute(), //
-        const MenuRoute(),
-      ],
-      transitionBuilder: (context, child, animation) => FadeTransition(
-        opacity: animation,
-        // the passed child is technically our animated selected-tab page
-        child: child,
-      ),
-      builder: (context, child) {
-        final tabsRouter = AutoTabsRouter.of(context);
-        _requireLoginForInitialChickenTab(context, tabsRouter);
-        return Scaffold(
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: tabsRouter.activeIndex,
-            onTap: (value) async {
-              // The chicken tab needs the Supabase account; route guards don't
-              // run on tab switches, so require login here.
-              if (value == 1 && supabase.auth.currentSession == null) {
-                await context.pushRoute(const AppLoginRoute());
-                if (supabase.auth.currentSession == null) return;
-              }
-              tabsRouter.setActiveIndex(value);
-              storageService.setTabIndex(value);
-            },
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: Colors.amber[800],
-            unselectedFontSize: 12,
-            selectedFontSize: 12,
-            enableFeedback: true,
-            items: <BottomNavigationBarItem>[
-              _navItem(Assets.images.newsCute, 'News'),
-              _navItem(Assets.images.chickCute, 'Chicken'),
-              _navItem(Assets.images.heartCute, 'Locket'),
-              _navItem(Assets.images.menuCute, 'Menu'),
-            ],
+    final l10n = AppLocalizations.of(context);
+
+    return Selector<AppViewModel, bool>(
+      selector: (_, vm) => vm.showLocketTab,
+      builder: (context, showLocketTab, _) {
+        final routes = [
+          const NewsRoute(),
+          const ChickenRoute(),
+          if (showLocketTab) const LocketRoute(),
+          const MenuRoute(),
+        ];
+
+        return AutoTabsRouter(
+          key: ValueKey('main-tabs-$showLocketTab'),
+          routes: routes,
+          transitionBuilder: (context, child, animation) => FadeTransition(
+            opacity: animation,
+            child: child,
           ),
-          body: child,
+          builder: (context, child) {
+            final tabsRouter = AutoTabsRouter.of(context);
+            _requireLoginForInitialChickenTab(context, tabsRouter, showLocketTab);
+
+            return Scaffold(
+              bottomNavigationBar: BottomNavigationBar(
+                currentIndex: tabsRouter.activeIndex,
+                onTap: (value) async {
+                  // The chicken tab index is 1.
+                  if (value == 1 && supabase.auth.currentSession == null) {
+                    await context.pushRoute(const AppLoginRoute());
+                    if (supabase.auth.currentSession == null) return;
+                  }
+                  tabsRouter.setActiveIndex(value);
+                  storageService.setTabIndex(value);
+                },
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: Colors.amber[800],
+                unselectedFontSize: 12,
+                selectedFontSize: 12,
+                enableFeedback: true,
+                items: <BottomNavigationBarItem>[
+                  _navItem(Assets.images.newsCute, l10n.news),
+                  _navItem(Assets.images.chickCute, l10n.chicken),
+                  if (showLocketTab) _navItem(Assets.images.heartCute, l10n.locket),
+                  _navItem(Assets.images.menuCute, l10n.menu),
+                ],
+              ),
+              body: child,
+            );
+          },
         );
       },
     );
