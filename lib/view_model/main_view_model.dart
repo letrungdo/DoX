@@ -33,42 +33,86 @@ class MainViewModel extends CoreViewModel {
 
   Future<void> _downloadAndInstall(AppUpdateInfo update) async {
     final progress = ValueNotifier<double?>(null);
-    showDialog(
+    final error = ValueNotifier<Object?>(null);
+    final isDone = ValueNotifier<bool>(false);
+
+    bool isDialogVisible = true;
+
+    Future<void> runDownload() async {
+      try {
+        error.value = null;
+        isDone.value = false;
+        progress.value = null;
+
+        await updateService.downloadAndInstall(
+          update,
+          onReceiveProgress: (received, total) {
+            if (total > 0) progress.value = received / total;
+          },
+        );
+
+        isDone.value = true;
+        await Future.delayed(const Duration(seconds: 1));
+        if (isDialogVisible && context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      } catch (e) {
+        if (isDialogVisible) {
+          error.value = e;
+        }
+      }
+    }
+
+    runDownload();
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text("Đang tải bản cập nhật..."),
-        content: ValueListenableBuilder<double?>(
-          valueListenable: progress,
-          builder: (context, value, _) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LinearProgressIndicator(value: value),
-              const SizedBox(height: 8),
-              Text(value != null ? "${(value * 100).toStringAsFixed(0)}%" : ""),
-            ],
-          ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Cập nhật ứng dụng"),
+        content: ValueListenableBuilder<Object?>(
+          valueListenable: error,
+          builder: (context, errorValue, _) {
+            if (errorValue != null) {
+              return Text("Lỗi tải bản cập nhật: $errorValue", style: const TextStyle(color: Colors.red));
+            }
+            return ValueListenableBuilder<bool>(
+              valueListenable: isDone,
+              builder: (context, done, _) {
+                if (done) {
+                  return const Text("Tải hoàn tất, đang mở trình cài đặt...");
+                }
+                return ValueListenableBuilder<double?>(
+                  valueListenable: progress,
+                  builder: (context, value, _) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text("Đang tải bản cập nhật..."),
+                      const SizedBox(height: 16),
+                      LinearProgressIndicator(value: value),
+                      const SizedBox(height: 8),
+                      Text(value != null ? "${(value * 100).toStringAsFixed(0)}%" : "Đang chuẩn bị..."),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         ),
+        actions: [
+          ValueListenableBuilder<Object?>(
+            valueListenable: error,
+            builder: (context, errorValue, _) => errorValue != null
+                ? TextButton(onPressed: runDownload, child: const Text("Thử lại"))
+                : const SizedBox.shrink(),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
+            child: const Text("Đóng"),
+          ),
+        ],
       ),
     );
-
-    try {
-      await updateService.downloadAndInstall(
-        update,
-        onReceiveProgress: (received, total) {
-          if (total > 0) progress.value = received / total;
-        },
-      );
-      _closeProgressDialog();
-    } catch (e) {
-      _closeProgressDialog();
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi tải bản cập nhật: $e")));
-    }
-  }
-
-  void _closeProgressDialog() {
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
+    isDialogVisible = false;
   }
 }
