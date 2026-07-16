@@ -3,11 +3,14 @@ import 'package:collection/collection.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -82,10 +85,17 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
             ),
             const Divider(),
             _buildRowInfo("Số lượng ban đầu", "${batch.quantity}"),
+            if (batch.sales.isNotEmpty)
+              _buildRowInfo("Đã bán / còn lại", "${batch.soldQuantity} / ${batch.remainingQuantity} con"),
             _buildRowInfo("Ngày ấp", _dateFormat.format(batch.incubationDate)),
-            _buildRowInfo("Dự kiến nở", _dateFormat.format(batch.expectedHatchDate)),
-            if (batch.actualHatchDate != null) _buildRowInfo("Ngày nở thực tế", _dateFormat.format(batch.actualHatchDate!)),
-            _buildRowInfo("Tuổi", "${batch.ageInDays} ngày"),
+            if (batch.actualHatchDate == null)
+              _buildRowInfo("Dự kiến nở", _dateFormat.format(batch.expectedHatchDate))
+            else
+              _buildRowInfo("Ngày nở thực tế", _dateFormat.format(batch.actualHatchDate!)),
+            if (batch.ageInDays >= 0)
+              _buildRowInfo("Tuổi", "${batch.ageInDays} ngày")
+            else
+              _buildRowInfo("Trạng thái", "Chưa nở (còn ${-batch.ageInDays} ngày)", color: Colors.orange),
           ],
         ),
       ),
@@ -131,7 +141,7 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
         if (batch.expenses.isEmpty) const Text("Chưa có chi phí nào."),
         ...batch.expenses.map(
           (e) => ListTile(
-            leading: Icon(_getExpenseIcon(e.type)),
+            leading: _getExpenseSvg(e.type),
             title: Text(_getExpenseLabel(e.type)),
             subtitle: Text("${_dateFormat.format(e.date)}${e.note != null ? ' - ${e.note}' : ''}"),
             trailing: Text("${e.amount.toCurrency()}đ", style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -142,32 +152,55 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
   }
 
   Widget _buildSaleSection(ChickenBatch batch) {
-    final hasSold = batch.saleDate != null;
+    final hasSold = batch.sales.isNotEmpty;
+    final soldOut = hasSold && batch.remainingQuantity <= 0;
     final isDark = context.theme.brightness == Brightness.dark;
 
     // Theme-aware colors
-    final soldColor = isDark ? Colors.green[900]?.withOpacity(0.3) : Colors.green[50];
-    final pendingColor = isDark ? Colors.amber[900]?.withOpacity(0.3) : Colors.amber[50];
+    final soldColor = isDark ? Colors.green[900]?.withValues(alpha: 0.3) : Colors.green[50];
+    final pendingColor = isDark ? Colors.amber[900]?.withValues(alpha: 0.3) : Colors.amber[50];
 
     return Card(
-      color: hasSold ? soldColor : pendingColor,
+      color: soldOut ? soldColor : pendingColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Thanh toán & Lợi nhuận", style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                if (hasSold) IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: () => _showSaleDialog(batch)),
-              ],
+            Text(
+              "Bán gà & Lợi nhuận",
+              style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Divider(),
-            if (hasSold) ...[
-              _buildRowInfo("Ngày bán", _dateFormat.format(batch.saleDate!)),
-              _buildRowInfo("Số lượng bán", "${batch.saleQuantity ?? batch.quantity} con"),
-              _buildRowInfo("Doanh thu", "${batch.totalSaleAmount?.toCurrency()}đ"),
+            if (!hasSold) ...[
+              const Text("Gà chưa bán. Có thể bán một lứa thành nhiều đợt."),
+              const SizedBox(height: 8),
+              _buildRowInfo("Giá gợi ý", "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ/con"),
+            ] else ...[
+              ...batch.sales.map(
+                (sale) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: Assets.images.coinCute.svg(width: 26, height: 26),
+                  title: Text(
+                    "${sale.quantity > 0 ? '${sale.quantity} con' : 'Bán gà'}${sale.note != null ? ' - ${sale.note}' : ''}",
+                  ),
+                  subtitle: Text(_dateFormat.format(sale.date)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("${sale.amount.toCurrency()}đ", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                        onPressed: () => _confirmDeleteSale(batch, sale),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(),
+              _buildRowInfo("Đã bán", "${batch.soldQuantity} con, còn ${batch.remainingQuantity} con"),
+              _buildRowInfo("Tổng doanh thu", "${batch.totalSaleAmount.toCurrency()}đ"),
               _buildRowInfo("Tổng chi phí", "-${batch.totalExpenses.toCurrency()}đ"),
               const Divider(),
               _buildRowInfo(
@@ -176,18 +209,36 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
                 color: batch.profit >= 0 ? Colors.green : Colors.red,
                 isBold: true,
               ),
-            ] else ...[
-              const Text("Gà chưa bán. Nhập thông tin khi bán để tính lợi nhuận."),
-              const SizedBox(height: 8),
-              _buildRowInfo("Giá gợi ý", "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ/con"),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(onPressed: () => _showSaleDialog(batch), child: const Text("Ghi nhận bán gà")),
-              ),
             ],
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(onPressed: () => _showSaleDialog(batch), child: const Text("Ghi nhận đợt bán mới")),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteSale(ChickenBatch batch, BatchSale sale) {
+    showDialog(
+      context: context,
+      builder: (context) => CuteDialog(
+        icon: Assets.images.coinCute,
+        title: "Xóa đợt bán",
+        accent: Colors.red,
+        confirmText: "Xóa",
+        onConfirm: () {
+          vm.deleteBatchSale(batch.id, sale.id);
+          Navigator.pop(context);
+        },
+        children: [
+          Text(
+            "Xóa đợt bán ngày ${_dateFormat.format(sale.date)} (${sale.amount.toCurrency()}đ)?",
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -216,49 +267,44 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text("Thêm chi phí"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<ExpenseType>(
-                initialValue: selectedType,
-                items: ExpenseType.values.map((t) => DropdownMenuItem(value: t, child: Text(_getExpenseLabel(t)))).toList(),
-                onChanged: (val) => setState(() => selectedType = val!),
-                decoration: const InputDecoration(labelText: "Loại chi phí"),
-              ),
-              TextField(
-                controller: amountController,
-                decoration: const InputDecoration(labelText: "Số tiền"),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: noteController,
-                decoration: const InputDecoration(labelText: "Ghi chú"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-            ElevatedButton(
-              onPressed: () {
-                final amount = double.tryParse(amountController.text) ?? 0;
-                if (amount > 0) {
-                  vm.addExpense(
-                    batch.id,
-                    Expense(
-                      id: const Uuid().v4(),
-                      type: selectedType,
-                      amount: amount,
-                      date: DateTime.now(),
-                      note: noteController.text.isEmpty ? null : noteController.text,
-                    ),
-                  );
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Lưu"),
+        builder: (context, setState) => CuteDialog(
+          icon: Assets.images.feedCute,
+          title: "Thêm chi phí",
+          accent: Colors.orange,
+          confirmText: "Lưu",
+          onConfirm: () {
+            final amount = double.tryParse(amountController.text) ?? 0;
+            if (amount > 0) {
+              vm.addExpense(
+                batch.id,
+                Expense(
+                  id: const Uuid().v4(),
+                  type: selectedType,
+                  amount: amount,
+                  date: DateTime.now(),
+                  note: noteController.text.isEmpty ? null : noteController.text,
+                ),
+              );
+              Navigator.pop(context);
+            }
+          },
+          children: [
+            DropdownButtonFormField<ExpenseType>(
+              initialValue: selectedType,
+              items: ExpenseType.values
+                  .map((t) => DropdownMenuItem(value: t, child: Text(_getExpenseLabel(t))))
+                  .toList(),
+              onChanged: (val) => setState(() => selectedType = val!),
+              decoration: cuteInputDecoration(context, "Loại chi phí"),
+              borderRadius: BorderRadius.circular(14),
             ),
+            CuteTextField(
+              controller: amountController,
+              label: "Số tiền",
+              prefixText: "đ ",
+              keyboardType: TextInputType.number,
+            ),
+            CuteTextField(controller: noteController, label: "Ghi chú"),
           ],
         ),
       ),
@@ -266,15 +312,15 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
   }
 
   void _showSaleDialog(ChickenBatch batch) {
-    final isEditing = batch.saleDate != null;
-    final quantity = batch.saleQuantity ?? batch.quantity;
-    final totalAmount = batch.totalSaleAmount ?? (vm.suggestPrice(batch.ageInDays) * quantity);
-    final unitPrice = quantity > 0 ? (totalAmount / quantity) : vm.suggestPrice(batch.ageInDays);
+    final quantity = batch.remainingQuantity > 0 ? batch.remainingQuantity : batch.quantity;
+    final unitPrice = vm.suggestPrice(batch.ageInDays);
+    final totalAmount = unitPrice * quantity;
 
     final unitPriceController = TextEditingController(text: unitPrice.toStringAsFixed(0));
     final qtyController = TextEditingController(text: quantity.toString());
     final totalAmountController = TextEditingController(text: totalAmount.toStringAsFixed(0));
-    DateTime saleDate = batch.saleDate ?? DateTime.now();
+    final noteController = TextEditingController();
+    DateTime saleDate = DateTime.now();
 
     void updateTotal() {
       final unitPrice = double.tryParse(unitPriceController.text) ?? 0;
@@ -285,57 +331,59 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(isEditing ? "Sửa thông tin bán" : "Ghi nhận bán gà"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: qtyController,
-                decoration: const InputDecoration(labelText: "Số lượng bán"),
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(updateTotal),
-              ),
-              TextField(
-                controller: unitPriceController,
-                decoration: const InputDecoration(labelText: "Giá bán 1 con (VNĐ)"),
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(updateTotal),
-              ),
-              TextField(
-                controller: totalAmountController,
-                decoration: const InputDecoration(labelText: "Tổng tiền thu được (tự tính)"),
-                keyboardType: TextInputType.number,
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text("Ngày bán"),
-                subtitle: Text(_dateFormat.format(saleDate)),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: saleDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) setState(() => saleDate = picked);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-            ElevatedButton(
-              onPressed: () {
-                final amount = double.tryParse(totalAmountController.text) ?? 0;
-                final qty = int.tryParse(qtyController.text) ?? 0;
-                if (amount > 0 && qty > 0) {
-                  vm.updateBatch(batch.copyWith(saleDate: saleDate, totalSaleAmount: amount, saleQuantity: qty));
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Xác nhận"),
+        builder: (context, setState) => CuteDialog(
+          icon: Assets.images.coinCute,
+          title: "Ghi nhận đợt bán",
+          accent: Colors.green,
+          confirmText: "Xác nhận",
+          onConfirm: () {
+            final amount = double.tryParse(totalAmountController.text) ?? 0;
+            final qty = int.tryParse(qtyController.text) ?? 0;
+            if (amount > 0 && qty > 0) {
+              vm.addBatchSale(
+                batch.id,
+                BatchSale(
+                  id: const Uuid().v4(),
+                  date: saleDate,
+                  quantity: qty,
+                  amount: amount,
+                  note: noteController.text.isEmpty ? null : noteController.text,
+                ),
+              );
+              Navigator.pop(context);
+            }
+          },
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: CuteTextField(
+                    controller: qtyController,
+                    label: "Số lượng",
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(updateTotal),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CuteTextField(
+                    controller: unitPriceController,
+                    label: "Giá 1 con",
+                    prefixText: "đ ",
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(updateTotal),
+                  ),
+                ),
+              ],
             ),
+            CuteTextField(
+              controller: totalAmountController,
+              label: "Tổng tiền thu được (tự tính)",
+              prefixText: "đ ",
+              keyboardType: TextInputType.number,
+            ),
+            CuteTextField(controller: noteController, label: "Ghi chú (bán cho ai...)"),
+            CuteDateField(label: "Ngày bán", value: saleDate, onChanged: (d) => setState(() => saleDate = d)),
           ],
         ),
       ),
@@ -345,18 +393,20 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
   void _confirmDelete(ChickenBatch batch) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Xóa lứa gà"),
-        content: Text("Bạn có chắc chắn muốn xóa lứa '${batch.name}'? Hành động này không thể hoàn tác."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-          TextButton(
-            onPressed: () {
-              vm.deleteBatch(batch.id);
-              Navigator.pop(context);
-              context.router.back();
-            },
-            child: const Text("Xóa", style: TextStyle(color: Colors.red)),
+      builder: (context) => CuteDialog(
+        icon: Assets.images.henCute,
+        title: "Xóa lứa gà",
+        accent: Colors.red,
+        confirmText: "Xóa",
+        onConfirm: () {
+          vm.deleteBatch(batch.id);
+          Navigator.pop(context);
+          context.router.back();
+        },
+        children: [
+          Text(
+            "Bạn có chắc chắn muốn xóa lứa '${batch.name}'? Hành động này không thể hoàn tác.",
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -367,52 +417,46 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     final nameController = TextEditingController(text: batch.name);
     final quantityController = TextEditingController(text: batch.quantity.toString());
     DateTime incubationDate = batch.incubationDate;
+    DateTime? actualHatchDate = batch.actualHatchDate;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text("Sửa thông tin lứa gà"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Tên lứa gà"),
-              ),
-              TextField(
-                controller: quantityController,
-                decoration: const InputDecoration(labelText: "Số lượng ban đầu"),
-                keyboardType: TextInputType.number,
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text("Ngày ấp trứng"),
-                subtitle: Text(_dateFormat.format(incubationDate)),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: incubationDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) setState(() => incubationDate = picked);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameController.text;
-                final qty = int.tryParse(quantityController.text) ?? 0;
-                if (name.isNotEmpty && qty > 0) {
-                  vm.updateBatch(batch.copyWith(name: name, quantity: qty, incubationDate: incubationDate));
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Lưu"),
+        builder: (context, setState) => CuteDialog(
+          icon: Assets.images.chickCute,
+          title: "Sửa thông tin lứa gà",
+          confirmText: "Lưu",
+          onConfirm: () {
+            final name = nameController.text;
+            final qty = int.tryParse(quantityController.text) ?? 0;
+            if (name.isNotEmpty && qty >= 0) {
+              vm.updateBatch(
+                batch.copyWith(
+                  name: name,
+                  quantity: qty,
+                  incubationDate: incubationDate,
+                  actualHatchDate: actualHatchDate,
+                ),
+              );
+              Navigator.pop(context);
+            }
+          },
+          children: [
+            CuteTextField(controller: nameController, label: "Tên lứa gà"),
+            CuteTextField(
+              controller: quantityController,
+              label: "Số lượng ban đầu",
+              keyboardType: TextInputType.number,
+            ),
+            CuteDateField(
+              label: "Ngày ấp trứng",
+              value: incubationDate,
+              onChanged: (d) => setState(() => incubationDate = d),
+            ),
+            CuteDateField(
+              label: "Ngày nở thực tế",
+              value: actualHatchDate,
+              onChanged: (d) => setState(() => actualHatchDate = d),
             ),
           ],
         ),
@@ -430,13 +474,14 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     };
   }
 
-  IconData _getExpenseIcon(ExpenseType type) {
-    return switch (type) {
-      ExpenseType.feed => Icons.grass,
-      ExpenseType.medicine => Icons.medical_services,
-      ExpenseType.electricity => Icons.wb_incandescent,
-      ExpenseType.water => Icons.water_drop,
-      ExpenseType.other => Icons.more_horiz,
+  Widget _getExpenseSvg(ExpenseType type) {
+    final asset = switch (type) {
+      ExpenseType.feed => Assets.images.feedCute,
+      ExpenseType.medicine => Assets.images.medicineCute,
+      ExpenseType.electricity => Assets.images.lampCute,
+      ExpenseType.water => Assets.images.waterCute,
+      ExpenseType.other => Assets.images.starCute,
     };
+    return asset.svg(width: 30, height: 30);
   }
 }

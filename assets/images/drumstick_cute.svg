@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- bone -->
+  <path d="M41 41 L52 52" stroke="#FFF8E1" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="55" cy="49" r="4.6" fill="#FFF8E1"/>
+  <circle cx="49" cy="55" r="4.6" fill="#FFF8E1"/>
+  <!-- meat -->
+  <path d="M37 7 C50 10 52 28 42 39 C32 50 13 51 8 39 C3 27 11 11 24 7 C29 5.5 32 5.5 37 7 Z" fill="#D7885A" stroke="#C0714A" stroke-width="2"/>
+  <!-- highlight -->
+  <path d="M18 15 Q26 8 35 11" stroke="#F0AF7E" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <!-- happy closed eyes -->
+  <g stroke="#5D3A22" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <path d="M19 26 Q22 22.5 25 26"/>
+    <path d="M31 26 Q34 22.5 37 26"/>
+  </g>
+  <!-- mouth -->
+  <path d="M25 31 Q28 34 31 31" stroke="#5D3A22" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- cheeks -->
+  <ellipse cx="16" cy="31" rx="3.2" ry="2" fill="#FF8A65" opacity="0.75"/>
+  <ellipse cx="39" cy="34" rx="3.2" ry="2" fill="#FF8A65" opacity="0.75"/>
+</svg>

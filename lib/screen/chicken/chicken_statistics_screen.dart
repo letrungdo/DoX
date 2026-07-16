@@ -19,7 +19,8 @@ class ChickenStatisticsScreen extends StatefulScreen implements AutoRouteWrapper
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen, ChickenViewModel> with SingleTickerProviderStateMixin {
+class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen, ChickenViewModel>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedYear = DateTime.now().year;
 
@@ -81,15 +82,28 @@ class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen,
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: 12,
-            itemBuilder: (context, index) {
-              final month = index + 1;
-              final data = stats[month]!;
-              if (data.batchRevenue == 0 && data.cockRevenue == 0 && data.expense == 0) return const SizedBox.shrink();
-
-              return _buildStatCard("Tháng $month", data);
+          child: Builder(
+            builder: (context) {
+              final visibleMonths = stats.entries
+                  .where(
+                    (e) =>
+                        e.value.batchRevenue != 0 ||
+                        e.value.cockRevenue != 0 ||
+                        e.value.meatRevenue != 0 ||
+                        e.value.expense != 0,
+                  )
+                  .toList();
+              if (visibleMonths.isEmpty) {
+                return Center(child: Text("Không có dữ liệu trong năm $_selectedYear."));
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: visibleMonths.length,
+                itemBuilder: (context, index) {
+                  final entry = visibleMonths[index];
+                  return _buildStatCard("Tháng ${entry.key}", entry.value);
+                },
+              );
             },
           ),
         ),
@@ -116,7 +130,7 @@ class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen,
     );
   }
 
-  Widget _buildStatCard(String title, ({double batchRevenue, double cockRevenue, double expense, double profit}) data) {
+  Widget _buildStatCard(String title, ChickenStats data) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -126,10 +140,11 @@ class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen,
           children: [
             Text(title, style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
             const Divider(),
-            _buildStatRow("Doanh thu lứa gà", data.batchRevenue, Colors.green[700]!),
-            _buildStatRow("Doanh thu gà đá", data.cockRevenue, Colors.red[700]!),
+            if (data.batchRevenue != 0) _buildStatRow("Doanh thu lứa gà", data.batchRevenue, Colors.green[700]!),
+            if (data.cockRevenue != 0) _buildStatRow("Doanh thu gà đá", data.cockRevenue, Colors.red[700]!),
+            if (data.meatRevenue != 0) _buildStatRow("Doanh thu gà thịt", data.meatRevenue, Colors.brown),
             const Divider(height: 8),
-            _buildStatRow("Tổng doanh thu", data.batchRevenue + data.cockRevenue, Colors.green),
+            _buildStatRow("Tổng doanh thu", data.batchRevenue + data.cockRevenue + data.meatRevenue, Colors.green),
             _buildStatRow("Tổng chi phí", data.expense, Colors.orange),
             const SizedBox(height: 4),
             _buildStatRow("Lợi nhuận", data.profit, data.profit >= 0 ? Colors.blue : Colors.red, isBold: true),
@@ -148,7 +163,11 @@ class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen,
           Text(label),
           Text(
             "${value.toCurrency()}đ",
-            style: TextStyle(color: color, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 16 : 14),
+            style: TextStyle(
+              color: color,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+            ),
           ),
         ],
       ),

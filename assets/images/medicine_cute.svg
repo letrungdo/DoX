@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- cap -->
+  <rect x="24" y="4" width="16" height="9" rx="2.5" fill="#90A4AE"/>
+  <rect x="26.5" y="13" width="11" height="4" fill="#B0BEC5"/>
+  <!-- bottle -->
+  <rect x="15" y="17" width="34" height="42" rx="9" fill="#E3F2FD" stroke="#B7DDF7" stroke-width="2.5"/>
+  <!-- label with cross -->
+  <circle cx="32" cy="30" r="8" fill="#FFFFFF" stroke="#FFCDD2" stroke-width="1.5"/>
+  <path d="M32 25.5 L32 34.5 M27.5 30 L36.5 30" stroke="#EF5350" stroke-width="3" stroke-linecap="round"/>
+  <!-- happy eyes -->
+  <g stroke="#5B7A8C" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <path d="M22 45 Q25 41.5 28 45"/>
+    <path d="M36 45 Q39 41.5 42 45"/>
+  </g>
+  <!-- mouth -->
+  <path d="M29 50 Q32 53 35 50" stroke="#5B7A8C" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- cheeks -->
+  <ellipse cx="20" cy="50" rx="2.8" ry="1.8" fill="#F48FB1" opacity="0.6"/>
+  <ellipse cx="44" cy="50" rx="2.8" ry="1.8" fill="#F48FB1" opacity="0.6"/>
+</svg>

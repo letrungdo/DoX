@@ -3,13 +3,16 @@ import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
+import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
 @RoutePage()
 class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -30,13 +33,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         title: "Quản lý gà",
         actions: [
           IconButton(
-            icon: Assets.images.rooster.svg(
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(Colors.red, BlendMode.srcIn),
-            ),
+            icon: Assets.images.roosterCute.svg(width: 26, height: 26),
             onPressed: () => context.router.push(const CockSalesRoute()),
-            tooltip: "Bán gà đá",
+            tooltip: "Bán gà đá / gà thịt",
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -44,6 +43,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             tooltip: "Thống kê lợi nhuận",
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddBatchDialog),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              switch (value) {
+                case 'import':
+                  _showImportDialog();
+                case 'expenses':
+                  _showGlobalExpensesSheet();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'expenses', child: Text("Chi phí chung (cám, thuốc...)")),
+              PopupMenuItem(value: 'import', child: Text("Nhập dữ liệu (JSON)")),
+            ],
+          ),
         ],
       ),
       body: Consumer<ChickenViewModel>(
@@ -52,16 +65,37 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             return const Center(child: CircularProgressIndicator());
           }
           if (vm.batches.isEmpty) {
-            return const Center(child: Text("Chưa có lứa gà nào. Nhấn + để thêm."));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Assets.images.chickCute.svg(width: 72, height: 72),
+                  const SizedBox(height: 12),
+                  const Text("Chưa có lứa gà nào. Nhấn + để thêm."),
+                ],
+              ),
+            );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: vm.batches.length,
-            itemBuilder: (context, index) {
-              final batch = vm.batches[index];
-              return _buildBatchCard(batch);
-            },
-          );
+          // Batches are sorted by incubation date desc -> insert a year header on change.
+          final items = <Widget>[];
+          int? currentYear;
+          for (final batch in vm.batches) {
+            final year = (batch.actualHatchDate ?? batch.expectedHatchDate).year;
+            if (year != currentYear) {
+              currentYear = year;
+              items.add(
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 8),
+                  child: Text(
+                    "Năm $year",
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                  ),
+                ),
+              );
+            }
+            items.add(_buildBatchCard(batch));
+          }
+          return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), children: items);
         },
       ).webConstrainedBox(),
     );
@@ -69,23 +103,70 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
   Widget _buildBatchCard(ChickenBatch batch) {
     final dateFormat = DateFormat('dd/MM/yyyy');
+    final hatchDate = batch.actualHatchDate ?? batch.expectedHatchDate;
     final isHatched = batch.actualHatchDate != null || DateTime.now().isAfter(batch.expectedHatchDate);
+    final isSoldOut = batch.sales.isNotEmpty && batch.remainingQuantity <= 0;
+    final hasMoney = batch.sales.isNotEmpty || batch.expenses.isNotEmpty || batch.cockSales.isNotEmpty;
+
+    final (statusText, statusColor) = !isHatched
+        ? ("Chờ nở - ${dateFormat.format(batch.expectedHatchDate)}", Colors.orange)
+        : isSoldOut
+        ? ("Đã bán hết", Colors.grey)
+        : ("${batch.ageInDays} ngày tuổi", Colors.green);
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
+      // Clip so tap/long-press ink follows the rounded corners.
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
-        title: Text(batch.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        leading: CircleAvatar(
+          radius: 22,
+          backgroundColor: statusColor.withValues(alpha: 0.12),
+          child:
+              (!isHatched
+                      ? Assets.images.eggCute
+                      : isSoldOut
+                      ? Assets.images.henCute
+                      : Assets.images.chickCute)
+                  .svg(width: 30, height: 30),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                batch.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                statusText,
+                style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Số lượng: ${batch.quantity}"),
-            Text("Ngày ấp: ${dateFormat.format(batch.incubationDate)}"),
-            Text("Dự kiến nở: ${dateFormat.format(batch.expectedHatchDate)}"),
-            if (isHatched) Text("Tuổi: ${batch.ageInDays} ngày", style: TextStyle(color: Colors.green[700])),
             Text(
-              "Lợi nhuận tạm tính: ${batch.profit.toCurrency()}đ",
-              style: TextStyle(color: batch.profit >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.w600),
+              batch.sales.isEmpty
+                  ? "Số lượng: ${batch.quantity} con · Nở: ${dateFormat.format(hatchDate)}"
+                  : "Đã bán ${batch.soldQuantity}/${batch.quantity} con · Nở: ${dateFormat.format(hatchDate)}",
             ),
+            if (hasMoney)
+              Text(
+                "Thu ${batch.totalSaleAmount + batch.totalCockSales > 0 ? (batch.totalSaleAmount + batch.totalCockSales).toCurrency() : 0}đ"
+                "${batch.totalExpenses > 0 ? ' · Chi ${batch.totalExpenses.toCurrency()}đ' : ''}"
+                " · Lãi ${batch.profit.toCurrency()}đ",
+                style: TextStyle(color: batch.profit >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.w600),
+              ),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -96,6 +177,173 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     );
   }
 
+  void _showImportDialog() {
+    final jsonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => CuteDialog(
+        icon: Assets.images.chickCute,
+        title: "Nhập dữ liệu (JSON)",
+        accent: Colors.teal,
+        confirmText: "Nhập",
+        onConfirm: () async {
+          final text = jsonController.text.trim();
+          if (text.isEmpty) return;
+          Navigator.pop(dialogContext);
+          final messenger = ScaffoldMessenger.of(context);
+          try {
+            final count = await vm.importFromJson(text);
+            messenger.showSnackBar(SnackBar(content: Text("Đã nhập $count bản ghi.")));
+          } catch (e) {
+            messenger.showSnackBar(SnackBar(content: Text("Nhập thất bại: $e"), backgroundColor: Colors.red));
+          }
+        },
+        children: [
+          Text(
+            "Dán nội dung file JSON (batches, cockSales, expenses). Dữ liệu sẽ được thêm vào, không ghi đè.",
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+          ),
+          CuteTextField(
+            controller: jsonController,
+            label: "Nội dung JSON",
+            hint: '{"batches": [...], ...}',
+            maxLines: 8,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGlobalExpensesSheet() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => Consumer<ChickenViewModel>(
+        builder: (context, vm, child) {
+          final expenses = vm.globalExpenses;
+          final total = expenses.fold<double>(0, (sum, e) => sum + e.amount);
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(sheetContext).size.height * 0.7,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Chi phí chung (${total.toCurrency()}đ)",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _showAddGlobalExpenseDialog),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: expenses.isEmpty
+                        ? const Center(child: Text("Chưa có chi phí chung nào."))
+                        : ListView.builder(
+                            itemCount: expenses.length,
+                            itemBuilder: (context, index) {
+                              final e = expenses[index];
+                              return ListTile(
+                                leading: _expenseSvg(e.type),
+                                title: Text(e.note ?? _expenseLabel(e.type)),
+                                subtitle: Text(DateFormat('dd/MM/yyyy').format(e.date)),
+                                trailing: Text(
+                                  "${e.amount.toCurrency()}đ",
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddGlobalExpenseDialog() {
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    ExpenseType selectedType = ExpenseType.feed;
+    DateTime expenseDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => CuteDialog(
+          icon: Assets.images.feedCute,
+          title: "Thêm chi phí chung",
+          accent: Colors.orange,
+          confirmText: "Lưu",
+          onConfirm: () {
+            final amount = double.tryParse(amountController.text) ?? 0;
+            if (amount > 0) {
+              vm.addGlobalExpense(
+                Expense(
+                  id: const Uuid().v4(),
+                  type: selectedType,
+                  amount: amount,
+                  date: expenseDate,
+                  note: noteController.text.isEmpty ? null : noteController.text,
+                ),
+              );
+              Navigator.pop(context);
+            }
+          },
+          children: [
+            DropdownButtonFormField<ExpenseType>(
+              initialValue: selectedType,
+              items: ExpenseType.values.map((t) => DropdownMenuItem(value: t, child: Text(_expenseLabel(t)))).toList(),
+              onChanged: (val) => setState(() => selectedType = val!),
+              decoration: cuteInputDecoration(context, "Loại chi phí"),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            CuteTextField(
+              controller: amountController,
+              label: "Số tiền",
+              prefixText: "đ ",
+              keyboardType: TextInputType.number,
+            ),
+            CuteTextField(controller: noteController, label: "Ghi chú"),
+            CuteDateField(label: "Ngày chi", value: expenseDate, onChanged: (d) => setState(() => expenseDate = d)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _expenseLabel(ExpenseType type) {
+    return switch (type) {
+      ExpenseType.feed => "Cám / thức ăn",
+      ExpenseType.medicine => "Thuốc / vắc xin",
+      ExpenseType.electricity => "Điện sưởi",
+      ExpenseType.water => "Nước",
+      ExpenseType.other => "Khác",
+    };
+  }
+
+  Widget _expenseSvg(ExpenseType type) {
+    final asset = switch (type) {
+      ExpenseType.feed => Assets.images.feedCute,
+      ExpenseType.medicine => Assets.images.medicineCute,
+      ExpenseType.electricity => Assets.images.lampCute,
+      ExpenseType.water => Assets.images.waterCute,
+      ExpenseType.other => Assets.images.starCute,
+    };
+    return asset.svg(width: 30, height: 30);
+  }
+
   void _showAddBatchDialog() {
     final nameController = TextEditingController();
     final quantityController = TextEditingController();
@@ -104,47 +352,29 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text("Thêm lứa gà mới"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Tên lứa gà"),
-              ),
-              TextField(
-                controller: quantityController,
-                decoration: const InputDecoration(labelText: "Số lượng"),
-                keyboardType: TextInputType.number,
-              ),
-              ListTile(
-                title: const Text("Ngày ấp trứng"),
-                subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate)),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) setState(() => selectedDate = picked);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameController.text;
-                final qty = int.tryParse(quantityController.text) ?? 0;
-                if (name.isNotEmpty && qty > 0) {
-                  vm.addBatch(name: name, incubationDate: selectedDate, quantity: qty);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Thêm"),
+        builder: (context, setState) => CuteDialog(
+          icon: Assets.images.eggCute,
+          title: "Thêm lứa gà mới",
+          confirmText: "Thêm",
+          onConfirm: () {
+            final name = nameController.text;
+            final qty = int.tryParse(quantityController.text) ?? 0;
+            if (name.isNotEmpty && qty > 0) {
+              vm.addBatch(name: name, incubationDate: selectedDate, quantity: qty);
+              Navigator.pop(context);
+            }
+          },
+          children: [
+            CuteTextField(controller: nameController, label: "Tên lứa gà", hint: "VD: Bầy 31"),
+            CuteTextField(
+              controller: quantityController,
+              label: "Số lượng trứng/con",
+              keyboardType: TextInputType.number,
+            ),
+            CuteDateField(
+              label: "Ngày ấp trứng",
+              value: selectedDate,
+              onChanged: (d) => setState(() => selectedDate = d),
             ),
           ],
         ),

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- shadow -->
+  <ellipse cx="32" cy="58" rx="16" ry="3.5" fill="#E0E0E0" opacity="0.5"/>
+  <!-- egg -->
+  <path d="M32 5 C44 5 52 21 52 35.5 C52 48 43 57 32 57 C21 57 12 48 12 35.5 C12 21 20 5 32 5 Z" fill="#FFF8E1" stroke="#F0D9A8" stroke-width="2.5"/>
+  <!-- speckles -->
+  <g fill="#F0D9A8">
+    <ellipse cx="22" cy="18" rx="1.8" ry="1.3" transform="rotate(-20 22 18)"/>
+    <ellipse cx="42" cy="15" rx="1.6" ry="1.2" transform="rotate(15 42 15)"/>
+    <ellipse cx="47" cy="42" rx="1.8" ry="1.3" transform="rotate(20 47 42)"/>
+    <ellipse cx="17" cy="44" rx="1.6" ry="1.2" transform="rotate(-15 17 44)"/>
+  </g>
+  <!-- sleeping eyes -->
+  <g stroke="#8D6E63" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <path d="M21 33 Q24 36.5 27 33"/>
+    <path d="M37 33 Q40 36.5 43 33"/>
+  </g>
+  <!-- mouth -->
+  <path d="M30 40 Q32 42 34 40" stroke="#8D6E63" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- cheeks -->
+  <ellipse cx="17.5" cy="38" rx="3.2" ry="2" fill="#FFAB91" opacity="0.7"/>
+  <ellipse cx="46.5" cy="38" rx="3.2" ry="2" fill="#FFAB91" opacity="0.7"/>
+  <!-- zzz -->
+  <g stroke="#B0BEC5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M50 12 L56 12 L50 19 L56 19"/>
+  </g>
+</svg>

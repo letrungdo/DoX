@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- tail feathers -->
+  <g stroke-linecap="round" fill="none">
+    <path d="M13 32 Q2 26 4 14" stroke="#26A69A" stroke-width="5"/>
+    <path d="M14 27 Q7 18 12 8" stroke="#66BB6A" stroke-width="5"/>
+    <path d="M17 23 Q14 13 20 6" stroke="#FFA726" stroke-width="5"/>
+  </g>
+  <!-- comb -->
+  <path d="M26 15 Q23 4 31 4 Q30 9 33 10 Q33 2 40 3 Q38 8 41 10 Q45 6 49 10 Q45 12 45 16 Z" fill="#E53935"/>
+  <!-- body -->
+  <circle cx="34" cy="37" r="20" fill="#FFE0B2" stroke="#FFCC80" stroke-width="2"/>
+  <ellipse cx="34" cy="47" rx="12.5" ry="7.5" fill="#FFECC7"/>
+  <!-- wings -->
+  <ellipse cx="15" cy="40" rx="4.2" ry="7.2" fill="#FFCC80" transform="rotate(14 15 40)"/>
+  <ellipse cx="53" cy="40" rx="4.2" ry="7.2" fill="#FFCC80" transform="rotate(-14 53 40)"/>
+  <!-- beak -->
+  <path d="M29.5 34.5 L34 40 L38.5 34.5 Q34 31.5 29.5 34.5 Z" fill="#FB8C00"/>
+  <!-- wattle -->
+  <path d="M31.5 40 Q34 46 36.5 40 Z" fill="#E53935"/>
+  <!-- eyes (determined) -->
+  <path d="M23 27 L29 29" stroke="#4E342E" stroke-width="2" stroke-linecap="round"/>
+  <path d="M45 27 L39 29" stroke="#4E342E" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="26.5" cy="31" r="2.5" fill="#4E342E"/>
+  <circle cx="41.5" cy="31" r="2.5" fill="#4E342E"/>
+  <circle cx="27.3" cy="30.2" r="0.85" fill="#FFFFFF"/>
+  <circle cx="42.3" cy="30.2" r="0.85" fill="#FFFFFF"/>
+  <!-- cheeks -->
+  <ellipse cx="20" cy="37.5" rx="3.2" ry="2" fill="#FF8A65" opacity="0.7"/>
+  <ellipse cx="48" cy="37.5" rx="3.2" ry="2" fill="#FF8A65" opacity="0.7"/>
+</svg>

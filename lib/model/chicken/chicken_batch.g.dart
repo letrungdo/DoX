@@ -26,14 +26,14 @@ ChickenBatch _$ChickenBatchFromJson(Map<String, dynamic> json) => ChickenBatch(
           ?.map((e) => CockSale.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  sales:
+      (json['sales'] as List<dynamic>?)
+          ?.map((e) => BatchSale.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
   actualHatchDate: json['actualHatchDate'] == null
       ? null
       : DateTime.parse(json['actualHatchDate'] as String),
-  saleDate: json['saleDate'] == null
-      ? null
-      : DateTime.parse(json['saleDate'] as String),
-  totalSaleAmount: (json['totalSaleAmount'] as num?)?.toDouble(),
-  saleQuantity: (json['saleQuantity'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$ChickenBatchToJson(ChickenBatch instance) =>
@@ -45,8 +45,6 @@ Map<String, dynamic> _$ChickenBatchToJson(ChickenBatch instance) =>
       'expenses': instance.expenses,
       'vaccinations': instance.vaccinations,
       'cockSales': instance.cockSales,
+      'sales': instance.sales,
       'actualHatchDate': instance.actualHatchDate?.toIso8601String(),
-      'saleDate': instance.saleDate?.toIso8601String(),
-      'totalSaleAmount': instance.totalSaleAmount,
-      'saleQuantity': instance.saleQuantity,
     };

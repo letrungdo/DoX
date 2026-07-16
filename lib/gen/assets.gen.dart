@@ -37,31 +37,93 @@ class $AssetsImagesGen {
   /// File path: assets/images/btc.png
   AssetGenImage get btc => const AssetGenImage('assets/images/btc.png');
 
+  /// File path: assets/images/chick_cute.svg
+  SvgGenImage get chickCute =>
+      const SvgGenImage('assets/images/chick_cute.svg');
+
   /// File path: assets/images/chicken.svg
   SvgGenImage get chicken => const SvgGenImage('assets/images/chicken.svg');
+
+  /// File path: assets/images/coin_cute.svg
+  SvgGenImage get coinCute => const SvgGenImage('assets/images/coin_cute.svg');
+
+  /// File path: assets/images/drumstick_cute.svg
+  SvgGenImage get drumstickCute =>
+      const SvgGenImage('assets/images/drumstick_cute.svg');
+
+  /// File path: assets/images/egg_cute.svg
+  SvgGenImage get eggCute => const SvgGenImage('assets/images/egg_cute.svg');
 
   /// File path: assets/images/eth.png
   AssetGenImage get eth => const AssetGenImage('assets/images/eth.png');
 
+  /// File path: assets/images/feed_cute.svg
+  SvgGenImage get feedCute => const SvgGenImage('assets/images/feed_cute.svg');
+
   /// File path: assets/images/gold.png
   AssetGenImage get gold => const AssetGenImage('assets/images/gold.png');
+
+  /// File path: assets/images/heart_cute.svg
+  SvgGenImage get heartCute =>
+      const SvgGenImage('assets/images/heart_cute.svg');
+
+  /// File path: assets/images/hen_cute.svg
+  SvgGenImage get henCute => const SvgGenImage('assets/images/hen_cute.svg');
+
+  /// File path: assets/images/lamp_cute.svg
+  SvgGenImage get lampCute => const SvgGenImage('assets/images/lamp_cute.svg');
+
+  /// File path: assets/images/medicine_cute.svg
+  SvgGenImage get medicineCute =>
+      const SvgGenImage('assets/images/medicine_cute.svg');
+
+  /// File path: assets/images/menu_cute.svg
+  SvgGenImage get menuCute => const SvgGenImage('assets/images/menu_cute.svg');
+
+  /// File path: assets/images/news_cute.svg
+  SvgGenImage get newsCute => const SvgGenImage('assets/images/news_cute.svg');
 
   /// File path: assets/images/rooster.svg
   SvgGenImage get rooster => const SvgGenImage('assets/images/rooster.svg');
 
+  /// File path: assets/images/rooster_cute.svg
+  SvgGenImage get roosterCute =>
+      const SvgGenImage('assets/images/rooster_cute.svg');
+
   /// File path: assets/images/silver.png
   AssetGenImage get silver => const AssetGenImage('assets/images/silver.png');
+
+  /// File path: assets/images/star_cute.svg
+  SvgGenImage get starCute => const SvgGenImage('assets/images/star_cute.svg');
+
+  /// File path: assets/images/water_cute.svg
+  SvgGenImage get waterCute =>
+      const SvgGenImage('assets/images/water_cute.svg');
 
   /// List of all assets
   List<dynamic> get values => [
     appIcon,
     bnb,
     btc,
+    chickCute,
     chicken,
+    coinCute,
+    drumstickCute,
+    eggCute,
     eth,
+    feedCute,
     gold,
+    heartCute,
+    henCute,
+    lampCute,
+    medicineCute,
+    menuCute,
+    newsCute,
     rooster,
+    roosterCute,
     silver,
+    starCute,
+    waterCute,
   ];
 }
 
