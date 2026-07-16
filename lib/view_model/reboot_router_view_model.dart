@@ -12,6 +12,7 @@ class RebootRouterViewModel extends CoreViewModel {
     "Mã hóa & Xác thực",
     "Nhận Token (stok)",
     "Khởi động lại",
+    "Chờ khởi động xong",
   ];
 
   String ip = "http://192.168.2.35";
@@ -25,6 +26,16 @@ class RebootRouterViewModel extends CoreViewModel {
   int activeStep = -1;
   String? successMessage;
   String? errorMessage;
+
+  int elapsedSeconds = 0;
+  bool get isWaitingForOnline => activeStep == stepLabels.indexOf("Chờ khởi động xong");
+  bool get isTakingTooLong => elapsedSeconds > 120; // Alert if > 2 minutes
+
+  void skipWaiting() {
+    activeStep = stepLabels.length;
+    successMessage = "Đã bỏ qua bước chờ. Hãy kiểm tra kết nối thủ công.";
+    notifyListenersSafe();
+  }
 
   @override
   void initData() async {
@@ -81,8 +92,30 @@ class RebootRouterViewModel extends CoreViewModel {
         },
         onLog: _log,
       );
+
+      // New step: Wait for router to come back online
+      activeStep = stepLabels.indexOf("Chờ khởi động xong");
+      elapsedSeconds = 0;
+      notifyListenersSafe();
+
+      // Start a timer to track elapsed time while waiting
+      final timer = Stream.periodic(const Duration(seconds: 1), (i) => i + 1).listen((val) {
+        elapsedSeconds = val;
+        notifyListenersSafe();
+      });
+
+      try {
+        await _service.checkRouterOnline(
+          ip: ip,
+          onLog: _log,
+          cancelToken: cancelToken,
+        );
+      } finally {
+        timer.cancel();
+      }
+
       activeStep = stepLabels.length; // Finished all steps
-      successMessage = message;
+      successMessage = "Router đã khởi động lại xong và đang hoạt động! (Tổng thời gian chờ: ${elapsedSeconds}s)";
     } on RouterRebootException catch (e) {
       errorMessage = e.message;
       _log("Lỗi: ${e.message}");

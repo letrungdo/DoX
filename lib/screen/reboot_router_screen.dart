@@ -130,6 +130,55 @@ class _RebootRouterScreenState<V extends RebootRouterViewModel> extends ScreenSt
         Text("Tiến trình thực hiện:", style: context.theme.textTheme.bodySmall),
         for (final (index, label) in RebootRouterViewModel.stepLabels.indexed) //
           _buildStepRow(vm, index, label),
+        if (vm.isWaitingForOnline) ...[
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              // Estimate 90s for a full reboot cycle
+              value: (vm.elapsedSeconds / 90).clamp(0.0, 0.99),
+              minHeight: 6,
+              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                vm.isTakingTooLong ? Colors.orange : context.theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    vm.isTakingTooLong
+                        ? "Vẫn chưa thấy router phản hồi (${vm.elapsedSeconds}s)..."
+                        : "Đang kết nối lại... (Ước tính ~90 giây)",
+                    style: context.theme.textTheme.labelSmall?.copyWith(
+                      color: vm.isTakingTooLong ? Colors.orange : context.theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: vm.skipWaiting,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text("Bỏ qua chờ", style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          if (vm.isTakingTooLong)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                "Lưu ý: Nếu router đã đổi IP hoặc đèn đã báo xanh, bạn có thể bỏ qua bước này.",
+                style: context.theme.textTheme.bodySmall?.copyWith(fontSize: 10, fontStyle: FontStyle.italic),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -162,7 +211,12 @@ class _RebootRouterScreenState<V extends RebootRouterViewModel> extends ScreenSt
                   fontSize: 16,
                 ),
         ),
-        Text("${index + 1}. $label", style: TextStyle(color: color)),
+        Expanded(child: Text("${index + 1}. $label", style: TextStyle(color: color))),
+        if (isRunning && vm.isWaitingForOnline)
+          Text(
+            "${vm.elapsedSeconds}s",
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontFeatures: const [FontFeature.tabularFigures()]),
+          ),
       ],
     );
   }
