@@ -1,3 +1,4 @@
+import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
@@ -11,8 +12,8 @@ class ChickenRepository {
   Future<List<ChickenBatch>> getBatches() async {
     final rows = await _client
         .from('chicken_batches')
-        .select('*, vaccinations(*), expenses(*), cock_sales(*)')
-        .order('created_at', ascending: false);
+        .select('*, vaccinations(*), expenses(*), cock_sales(*), batch_sales(*)')
+        .order('incubation_date', ascending: false);
     return rows.map(_batchFromRow).toList();
   }
 
@@ -27,6 +28,17 @@ class ChickenRepository {
     if (batch.cockSales.isNotEmpty) {
       await _client.from('cock_sales').insert(batch.cockSales.map((s) => _cockSaleToRow(s, batch.id)).toList());
     }
+    if (batch.sales.isNotEmpty) {
+      await _client.from('batch_sales').insert(batch.sales.map((s) => _batchSaleToRow(s, batch.id)).toList());
+    }
+  }
+
+  Future<void> insertBatchSale(String batchId, BatchSale sale) async {
+    await _client.from('batch_sales').insert(_batchSaleToRow(sale, batchId));
+  }
+
+  Future<void> deleteBatchSale(String id) async {
+    await _client.from('batch_sales').delete().eq('id', id);
   }
 
   /// Updates the batch's own fields only. Expenses, vaccinations and cock
@@ -39,8 +51,18 @@ class ChickenRepository {
     await _client.from('chicken_batches').delete().eq('id', id);
   }
 
-  Future<void> insertExpense(String batchId, Expense expense) async {
+  /// [batchId] null means a global expense (not tied to any batch).
+  Future<void> insertExpense(String? batchId, Expense expense) async {
     await _client.from('expenses').insert(_expenseToRow(expense, batchId));
+  }
+
+  Future<List<Expense>> getGlobalExpenses() async {
+    final rows = await _client
+        .from('expenses')
+        .select()
+        .isFilter('batch_id', null)
+        .order('date', ascending: false);
+    return rows.map(_expenseFromRow).toList();
   }
 
   /// [batchId] null means a global cock sale (not tied to any batch).
@@ -59,6 +81,23 @@ class ChickenRepository {
         .isFilter('batch_id', null)
         .order('date', ascending: false);
     return rows.map(_cockSaleFromRow).toList();
+  }
+
+  /// Inserts imported data additively (batches with children, global sales, global expenses).
+  Future<void> importData({
+    List<ChickenBatch> batches = const [],
+    List<CockSale> globalSales = const [],
+    List<Expense> globalExpenses = const [],
+  }) async {
+    for (final batch in batches) {
+      await insertBatch(batch);
+    }
+    if (globalSales.isNotEmpty) {
+      await _client.from('cock_sales').insert(globalSales.map((s) => _cockSaleToRow(s, null)).toList());
+    }
+    if (globalExpenses.isNotEmpty) {
+      await _client.from('expenses').insert(globalExpenses.map((e) => _expenseToRow(e, null)).toList());
+    }
   }
 
   /// Replaces all remote data of the current user (used by Google Drive restore).
@@ -87,9 +126,6 @@ class ChickenRepository {
     'incubation_date': _dateStr(b.incubationDate),
     'quantity': b.quantity,
     'actual_hatch_date': _dateStr(b.actualHatchDate),
-    'sale_date': _dateStr(b.saleDate),
-    'total_sale_amount': b.totalSaleAmount,
-    'sale_quantity': b.saleQuantity,
   };
 
   ChickenBatch _batchFromRow(Map<String, dynamic> row) {
@@ -99,6 +135,8 @@ class ChickenRepository {
       ..sort((a, b) => a.date.compareTo(b.date));
     final cockSales = ((row['cock_sales'] as List?) ?? []).map((e) => _cockSaleFromRow(e)).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
+    final sales = ((row['batch_sales'] as List?) ?? []).map((e) => _batchSaleFromRow(e)).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
     return ChickenBatch(
       id: row['id'],
       name: row['name'],
@@ -107,12 +145,27 @@ class ChickenRepository {
       vaccinations: vaccinations,
       expenses: expenses,
       cockSales: cockSales,
+      sales: sales,
       actualHatchDate: _parseDate(row['actual_hatch_date']),
-      saleDate: _parseDate(row['sale_date']),
-      totalSaleAmount: (row['total_sale_amount'] as num?)?.toDouble(),
-      saleQuantity: row['sale_quantity'],
     );
   }
+
+  Map<String, dynamic> _batchSaleToRow(BatchSale s, String batchId) => {
+    'id': s.id,
+    'batch_id': batchId,
+    'date': _dateStr(s.date),
+    'quantity': s.quantity,
+    'amount': s.amount,
+    'note': s.note,
+  };
+
+  BatchSale _batchSaleFromRow(Map<String, dynamic> row) => BatchSale(
+    id: row['id'],
+    date: _parseDate(row['date'])!,
+    quantity: row['quantity'] ?? 0,
+    amount: (row['amount'] as num).toDouble(),
+    note: row['note'],
+  );
 
   Map<String, dynamic> _vaccinationToRow(Vaccination v, String batchId) => {
     'id': v.id,
@@ -129,7 +182,7 @@ class ChickenRepository {
     isCompleted: row['is_completed'] ?? false,
   );
 
-  Map<String, dynamic> _expenseToRow(Expense e, String batchId) => {
+  Map<String, dynamic> _expenseToRow(Expense e, String? batchId) => {
     'id': e.id,
     'batch_id': batchId,
     'type': e.type.name,
@@ -152,6 +205,7 @@ class ChickenRepository {
     'note': s.note,
     'amount': s.amount,
     'date': _dateStr(s.date),
+    'category': s.category.name,
   };
 
   CockSale _cockSaleFromRow(Map<String, dynamic> row) => CockSale(
@@ -159,5 +213,6 @@ class ChickenRepository {
     note: row['note'] ?? '',
     amount: (row['amount'] as num).toDouble(),
     date: _parseDate(row['date'])!,
+    category: SaleCategory.values.asNameMap()[row['category']] ?? SaleCategory.fighting,
   );
 }

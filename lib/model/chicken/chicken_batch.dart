@@ -1,3 +1,4 @@
+import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
@@ -14,10 +15,8 @@ class ChickenBatch {
   final List<Expense> expenses;
   final List<Vaccination> vaccinations;
   final List<CockSale> cockSales;
+  final List<BatchSale> sales;
   final DateTime? actualHatchDate;
-  final DateTime? saleDate;
-  final double? totalSaleAmount;
-  final int? saleQuantity;
 
   ChickenBatch({
     required this.id,
@@ -27,10 +26,8 @@ class ChickenBatch {
     this.expenses = const [],
     this.vaccinations = const [],
     this.cockSales = const [],
+    this.sales = const [],
     this.actualHatchDate,
-    this.saleDate,
-    this.totalSaleAmount,
-    this.saleQuantity,
   });
 
   factory ChickenBatch.fromJson(Map<String, dynamic> json) => _$ChickenBatchFromJson(json);
@@ -43,13 +40,19 @@ class ChickenBatch {
 
   double get totalCockSales => cockSales.fold(0, (sum, item) => sum + item.amount);
 
-  double get profit {
-    final totalRevenue = (totalSaleAmount ?? 0) + totalCockSales;
-    return totalRevenue - totalExpenses;
-  }
+  double get totalSaleAmount => sales.fold(0, (sum, item) => sum + item.amount);
+
+  int get soldQuantity => sales.fold(0, (sum, item) => sum + item.quantity);
+
+  int get remainingQuantity => quantity - soldQuantity;
+
+  DateTime? get lastSaleDate => sales.isEmpty ? null : sales.map((s) => s.date).reduce((a, b) => a.isAfter(b) ? a : b);
+
+  double get profit => (totalSaleAmount + totalCockSales) - totalExpenses;
 
   int get ageInDays {
-    final referenceDate = saleDate ?? DateTime.now();
+    // Once the batch is sold out, its age freezes at the last sale date.
+    final referenceDate = (remainingQuantity <= 0 ? lastSaleDate : null) ?? DateTime.now();
     final hatchDate = actualHatchDate ?? expectedHatchDate;
     return referenceDate.difference(hatchDate).inDays;
   }
@@ -62,10 +65,8 @@ class ChickenBatch {
     List<Expense>? expenses,
     List<Vaccination>? vaccinations,
     List<CockSale>? cockSales,
+    List<BatchSale>? sales,
     DateTime? actualHatchDate,
-    DateTime? saleDate,
-    double? totalSaleAmount,
-    int? saleQuantity,
   }) {
     return ChickenBatch(
       id: id ?? this.id,
@@ -75,10 +76,8 @@ class ChickenBatch {
       expenses: expenses ?? this.expenses,
       vaccinations: vaccinations ?? this.vaccinations,
       cockSales: cockSales ?? this.cockSales,
+      sales: sales ?? this.sales,
       actualHatchDate: actualHatchDate ?? this.actualHatchDate,
-      saleDate: saleDate ?? this.saleDate,
-      totalSaleAmount: totalSaleAmount ?? this.totalSaleAmount,
-      saleQuantity: saleQuantity ?? this.saleQuantity,
     );
   }
 }

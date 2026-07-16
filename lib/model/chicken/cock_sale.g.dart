@@ -11,6 +11,9 @@ CockSale _$CockSaleFromJson(Map<String, dynamic> json) => CockSale(
   note: json['note'] as String,
   amount: (json['amount'] as num).toDouble(),
   date: DateTime.parse(json['date'] as String),
+  category:
+      $enumDecodeNullable(_$SaleCategoryEnumMap, json['category']) ??
+      SaleCategory.fighting,
 );
 
 Map<String, dynamic> _$CockSaleToJson(CockSale instance) => <String, dynamic>{
@@ -18,4 +21,10 @@ Map<String, dynamic> _$CockSaleToJson(CockSale instance) => <String, dynamic>{
   'note': instance.note,
   'amount': instance.amount,
   'date': instance.date.toIso8601String(),
+  'category': _$SaleCategoryEnumMap[instance.category]!,
+};
+
+const _$SaleCategoryEnumMap = {
+  SaleCategory.fighting: 'fighting',
+  SaleCategory.meat: 'meat',
 };

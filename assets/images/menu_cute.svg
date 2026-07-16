@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 2x2 pastel tiles -->
+  <rect x="8" y="8" width="22" height="22" rx="7" fill="#7FD1AE" stroke="#5FBD96" stroke-width="2"/>
+  <rect x="34" y="8" width="22" height="22" rx="7" fill="#FFB74D" stroke="#FFA726" stroke-width="2"/>
+  <rect x="8" y="34" width="22" height="22" rx="7" fill="#9FA8DA" stroke="#7986CB" stroke-width="2"/>
+  <rect x="34" y="34" width="22" height="22" rx="11" fill="#F9739B" stroke="#EF5380" stroke-width="2"/>
+  <!-- tiny face on one tile -->
+  <g stroke="#8E2447" stroke-width="1.8" stroke-linecap="round" fill="none">
+    <path d="M40 43 Q41.5 41.5 43 43"/>
+    <path d="M47 43 Q48.5 41.5 50 43"/>
+    <path d="M43 47.5 Q45 49.2 47 47.5"/>
+  </g>
+  <!-- sparkles on tiles -->
+  <path d="M19 15 L20 17.4 L22.4 18.4 L20 19.4 L19 21.8 L18 19.4 L15.6 18.4 L18 17.4 Z" fill="#E8F8F0"/>
+  <path d="M45 15 L46 17.4 L48.4 18.4 L46 19.4 L45 21.8 L44 19.4 L41.6 18.4 L44 17.4 Z" fill="#FFF3E0"/>
+  <path d="M19 41 L20 43.4 L22.4 44.4 L20 45.4 L19 47.8 L18 45.4 L15.6 44.4 L18 43.4 Z" fill="#E8EAF6"/>
+</svg>

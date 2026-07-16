@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
+import 'package:do_x/services/chicken_import_service.dart';
 import 'package:do_x/services/google_sync_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
@@ -24,6 +26,9 @@ class ChickenViewModel extends CoreViewModel {
   List<CockSale> _globalCockSales = [];
   List<CockSale> get globalCockSales => _globalCockSales;
 
+  List<Expense> _globalExpenses = [];
+  List<Expense> get globalExpenses => _globalExpenses;
+
   StreamSubscription<AuthState>? _authSub;
 
   @override
@@ -38,6 +43,7 @@ class ChickenViewModel extends CoreViewModel {
         case AuthChangeEvent.signedOut:
           _batches = [];
           _globalCockSales = [];
+          _globalExpenses = [];
           notifyListenersSafe();
         default:
           break;
@@ -63,6 +69,7 @@ class ChickenViewModel extends CoreViewModel {
     try {
       _batches = await _repository.getBatches();
       _globalCockSales = await _repository.getGlobalCockSales();
+      _globalExpenses = await _repository.getGlobalExpenses();
     } catch (e) {
       logger.e("load chicken data failed", error: e);
     } finally {
@@ -79,6 +86,7 @@ class ChickenViewModel extends CoreViewModel {
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
     _batches.insert(0, newBatch);
+    _batches.sort((a, b) => b.incubationDate.compareTo(a.incubationDate));
     await _repository.insertBatch(newBatch);
     notifyListenersSafe();
     _autoSyncGoogleTasks();
@@ -116,6 +124,27 @@ class ChickenViewModel extends CoreViewModel {
     }
   }
 
+  Future<void> addBatchSale(String batchId, BatchSale sale) async {
+    final index = _batches.indexWhere((e) => e.id == batchId);
+    if (index != -1) {
+      final updatedSales = List<BatchSale>.from(_batches[index].sales)..add(sale);
+      updatedSales.sort((a, b) => a.date.compareTo(b.date));
+      _batches[index] = _batches[index].copyWith(sales: updatedSales);
+      await _repository.insertBatchSale(batchId, sale);
+      notifyListenersSafe();
+    }
+  }
+
+  Future<void> deleteBatchSale(String batchId, String saleId) async {
+    final index = _batches.indexWhere((e) => e.id == batchId);
+    if (index != -1) {
+      final updatedSales = _batches[index].sales.where((s) => s.id != saleId).toList();
+      _batches[index] = _batches[index].copyWith(sales: updatedSales);
+      await _repository.deleteBatchSale(saleId);
+      notifyListenersSafe();
+    }
+  }
+
   Future<void> addCockSale(String batchId, CockSale sale) async {
     final index = _batches.indexWhere((e) => e.id == batchId);
     if (index != -1) {
@@ -130,6 +159,25 @@ class ChickenViewModel extends CoreViewModel {
     _globalCockSales.add(sale);
     await _repository.insertCockSale(null, sale);
     notifyListenersSafe();
+  }
+
+  Future<void> addGlobalExpense(Expense expense) async {
+    _globalExpenses.insert(0, expense);
+    await _repository.insertExpense(null, expense);
+    notifyListenersSafe();
+  }
+
+  /// Imports data from the JSON format described in [ChickenImportService].
+  /// Returns the number of imported records, or throws on invalid input.
+  Future<int> importFromJson(String jsonString) async {
+    final data = ChickenImportService.parse(jsonString);
+    await _repository.importData(
+      batches: data.batches,
+      globalSales: data.globalSales,
+      globalExpenses: data.globalExpenses,
+    );
+    await _loadData();
+    return data.totalRecords;
   }
 
   Future<void> toggleVaccination(String batchId, String vaccinationId) async {
@@ -163,11 +211,14 @@ class ChickenViewModel extends CoreViewModel {
     ];
   }
 
+  /// Giá gợi ý theo mặt bằng giá bán thực tế trong sổ (đ/con).
+  /// Tuổi âm (chưa nở) vẫn trả mức thấp nhất để form bán có giá mặc định.
   double suggestPrice(int ageInDays) {
-    if (ageInDays < 30) return 0;
-    if (ageInDays < 60) return 50000;
-    if (ageInDays < 90) return 100000;
-    return 150000;
+    if (ageInDays < 7) return 20000;
+    if (ageInDays < 21) return 25000;
+    if (ageInDays < 30) return 33000;
+    if (ageInDays < 45) return 40000;
+    return 50000;
   }
 
   bool get autoSyncEnabled => storageService.getChickenAutoSync();
@@ -193,127 +244,56 @@ class ChickenViewModel extends CoreViewModel {
     });
   }
 
-  Map<int, ({double batchRevenue, double cockRevenue, double expense, double profit})> getMonthlyStats(int year) {
-    final stats = <int, ({double batchRevenue, double cockRevenue, double expense, double profit})>{};
-    for (int i = 1; i <= 12; i++) {
-      stats[i] = (batchRevenue: 0.0, cockRevenue: 0.0, expense: 0.0, profit: 0.0);
-    }
-
-    for (var batch in _batches) {
-      if (batch.saleDate != null && batch.saleDate!.year == year) {
-        final m = batch.saleDate!.month;
-        final current = stats[m]!;
-        stats[m] = (
-          batchRevenue: current.batchRevenue + (batch.totalSaleAmount ?? 0),
-          cockRevenue: current.cockRevenue,
-          expense: current.expense,
-          profit: 0.0,
-        );
-      }
-      for (var sale in batch.cockSales) {
-        if (sale.date.year == year) {
-          final m = sale.date.month;
-          final current = stats[m]!;
-          stats[m] = (
-            batchRevenue: current.batchRevenue,
-            cockRevenue: current.cockRevenue + sale.amount,
-            expense: current.expense,
-            profit: 0.0,
-          );
-        }
-      }
-      for (var exp in batch.expenses) {
-        if (exp.date.year == year) {
-          final m = exp.date.month;
-          final current = stats[m]!;
-          stats[m] = (
-            batchRevenue: current.batchRevenue,
-            cockRevenue: current.cockRevenue,
-            expense: current.expense + exp.amount,
-            profit: 0.0,
-          );
-        }
-      }
-    }
-    for (var sale in _globalCockSales) {
-      if (sale.date.year == year) {
-        final m = sale.date.month;
-        final current = stats[m]!;
-        stats[m] = (
-          batchRevenue: current.batchRevenue,
-          cockRevenue: current.cockRevenue + sale.amount,
-          expense: current.expense,
-          profit: 0.0,
-        );
-      }
-    }
-    stats.updateAll(
-      (m, val) => (
-        batchRevenue: val.batchRevenue,
-        cockRevenue: val.cockRevenue,
-        expense: val.expense,
-        profit: (val.batchRevenue + val.cockRevenue) - val.expense,
-      ),
-    );
-    return stats;
+  Map<int, ChickenStats> getMonthlyStats(int year) {
+    final stats = <int, _MutableStats>{for (int i = 1; i <= 12; i++) i: _MutableStats()};
+    _accumulateStats((date) => date.year == year ? stats[date.month]! : null);
+    return stats.map((m, val) => MapEntry(m, val.toRecord()));
   }
 
-  Map<int, ({double batchRevenue, double cockRevenue, double expense, double profit})> getYearlyStats() {
-    final stats = <int, ({double batchRevenue, double cockRevenue, double expense, double profit})>{};
-    for (var batch in _batches) {
-      if (batch.saleDate != null) {
-        final y = batch.saleDate!.year;
-        stats.putIfAbsent(y, () => (batchRevenue: 0.0, cockRevenue: 0.0, expense: 0.0, profit: 0.0));
-        final current = stats[y]!;
-        stats[y] = (
-          batchRevenue: current.batchRevenue + (batch.totalSaleAmount ?? 0),
-          cockRevenue: current.cockRevenue,
-          expense: current.expense,
-          profit: 0.0,
-        );
-      }
-      for (var sale in batch.cockSales) {
-        final y = sale.date.year;
-        stats.putIfAbsent(y, () => (batchRevenue: 0.0, cockRevenue: 0.0, expense: 0.0, profit: 0.0));
-        final current = stats[y]!;
-        stats[y] = (
-          batchRevenue: current.batchRevenue,
-          cockRevenue: current.cockRevenue + sale.amount,
-          expense: current.expense,
-          profit: 0.0,
-        );
-      }
-      for (var exp in batch.expenses) {
-        final y = exp.date.year;
-        stats.putIfAbsent(y, () => (batchRevenue: 0.0, cockRevenue: 0.0, expense: 0.0, profit: 0.0));
-        final current = stats[y]!;
-        stats[y] = (
-          batchRevenue: current.batchRevenue,
-          cockRevenue: current.cockRevenue,
-          expense: current.expense + exp.amount,
-          profit: 0.0,
-        );
-      }
-    }
-    for (var sale in _globalCockSales) {
-      final y = sale.date.year;
-      stats.putIfAbsent(y, () => (batchRevenue: 0.0, cockRevenue: 0.0, expense: 0.0, profit: 0.0));
-      final current = stats[y]!;
-      stats[y] = (
-        batchRevenue: current.batchRevenue,
-        cockRevenue: current.cockRevenue + sale.amount,
-        expense: current.expense,
-        profit: 0.0,
-      );
-    }
-    stats.updateAll(
-      (y, val) => (
-        batchRevenue: val.batchRevenue,
-        cockRevenue: val.cockRevenue,
-        expense: val.expense,
-        profit: (val.batchRevenue + val.cockRevenue) - val.expense,
-      ),
-    );
-    return stats;
+  Map<int, ChickenStats> getYearlyStats() {
+    final stats = <int, _MutableStats>{};
+    _accumulateStats((date) => stats.putIfAbsent(date.year, () => _MutableStats()));
+    return stats.map((y, val) => MapEntry(y, val.toRecord()));
   }
+
+  void _accumulateStats(_MutableStats? Function(DateTime date) bucketOf) {
+    void addSale(CockSale sale) {
+      final bucket = bucketOf(sale.date);
+      if (bucket == null) return;
+      if (sale.category == SaleCategory.meat) {
+        bucket.meatRevenue += sale.amount;
+      } else {
+        bucket.cockRevenue += sale.amount;
+      }
+    }
+
+    void addExpense(Expense exp) => bucketOf(exp.date)?.expense += exp.amount;
+
+    for (var batch in _batches) {
+      for (var sale in batch.sales) {
+        bucketOf(sale.date)?.batchRevenue += sale.amount;
+      }
+      batch.cockSales.forEach(addSale);
+      batch.expenses.forEach(addExpense);
+    }
+    _globalCockSales.forEach(addSale);
+    _globalExpenses.forEach(addExpense);
+  }
+}
+
+typedef ChickenStats = ({double batchRevenue, double cockRevenue, double meatRevenue, double expense, double profit});
+
+class _MutableStats {
+  double batchRevenue = 0;
+  double cockRevenue = 0;
+  double meatRevenue = 0;
+  double expense = 0;
+
+  ChickenStats toRecord() => (
+    batchRevenue: batchRevenue,
+    cockRevenue: cockRevenue,
+    meatRevenue: meatRevenue,
+    expense: expense,
+    profit: (batchRevenue + cockRevenue + meatRevenue) - expense,
+  );
 }

@@ -6,7 +6,6 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -27,6 +26,16 @@ class MainScreen extends StatefulScreen implements AutoRouteWrapper {
 
 class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   bool _checkedInitialAuth = false;
+
+  /// Tab icon từ SVG cute: tab đang chọn hiện full màu, tab thường mờ đi.
+  BottomNavigationBarItem _navItem(SvgGenImage asset, String label) {
+    final icon = asset.svg(width: 26, height: 26);
+    return BottomNavigationBarItem(
+      icon: Opacity(opacity: 0.45, child: icon),
+      activeIcon: icon,
+      label: label,
+    );
+  }
 
   /// Route guards don't run for tab routes, so when the app starts directly
   /// on the chicken tab we have to require login here.
@@ -78,19 +87,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             selectedFontSize: 12,
             enableFeedback: true,
             items: <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
-              BottomNavigationBarItem(
-                icon: Builder(
-                  builder: (context) => Assets.images.chicken.svg(
-                    width: 24,
-                    height: 24,
-                    colorFilter: ColorFilter.mode(IconTheme.of(context).color!, BlendMode.srcIn),
-                  ),
-                ),
-                label: 'Chicken',
-              ),
-              BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
-              BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
+              _navItem(Assets.images.newsCute, 'News'),
+              _navItem(Assets.images.chickCute, 'Chicken'),
+              _navItem(Assets.images.heartCute, 'Locket'),
+              _navItem(Assets.images.menuCute, 'Menu'),
             ],
           ),
           body: child,
