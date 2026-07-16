@@ -5,6 +5,8 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/services/google_sync_service.dart';
+import 'package:do_x/services/supabase_service.dart';
+import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -22,10 +24,23 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initData() async {
     super.initData();
+    if (supabase.auth.currentSession == null) return;
     setBusy(true);
-    _batches = await _repository.getBatches();
-    _globalCockSales = await _repository.getCockSales();
-    setBusy(false);
+    try {
+      _batches = await _repository.getBatches();
+      _globalCockSales = await _repository.getGlobalCockSales();
+    } catch (e) {
+      logger.e("load chicken data failed", error: e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  Future<void> signOut() async {
+    await supabase.auth.signOut();
+    _batches = [];
+    _globalCockSales = [];
+    notifyListenersSafe();
   }
 
   Future<void> addBatch({required String name, required DateTime incubationDate, required int quantity}) async {
@@ -37,7 +52,7 @@ class ChickenViewModel extends CoreViewModel {
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
     _batches.add(newBatch);
-    await _repository.saveBatches(_batches);
+    await _repository.insertBatch(newBatch);
     notifyListenersSafe();
   }
 
@@ -45,7 +60,7 @@ class ChickenViewModel extends CoreViewModel {
     final index = _batches.indexWhere((e) => e.id == batch.id);
     if (index != -1) {
       _batches[index] = batch;
-      await _repository.saveBatches(_batches);
+      await _repository.updateBatch(batch);
       notifyListenersSafe();
     }
   }
@@ -57,7 +72,7 @@ class ChickenViewModel extends CoreViewModel {
         googleSyncService.deleteTaskList(batch.name);
       }
       _batches.removeWhere((e) => e.id == id);
-      await _repository.saveBatches(_batches);
+      await _repository.deleteBatch(id);
       notifyListenersSafe();
     }
   }
@@ -67,7 +82,7 @@ class ChickenViewModel extends CoreViewModel {
     if (index != -1) {
       final updatedExpenses = List<Expense>.from(_batches[index].expenses)..add(expense);
       _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
-      await _repository.saveBatches(_batches);
+      await _repository.insertExpense(batchId, expense);
       notifyListenersSafe();
     }
   }
@@ -77,28 +92,32 @@ class ChickenViewModel extends CoreViewModel {
     if (index != -1) {
       final updatedSales = List<CockSale>.from(_batches[index].cockSales)..add(sale);
       _batches[index] = _batches[index].copyWith(cockSales: updatedSales);
-      await _repository.saveBatches(_batches);
+      await _repository.insertCockSale(batchId, sale);
       notifyListenersSafe();
     }
   }
 
   Future<void> addGlobalCockSale(CockSale sale) async {
     _globalCockSales.add(sale);
-    await _repository.saveCockSales(_globalCockSales);
+    await _repository.insertCockSale(null, sale);
     notifyListenersSafe();
   }
 
   Future<void> toggleVaccination(String batchId, String vaccinationId) async {
     final index = _batches.indexWhere((e) => e.id == batchId);
     if (index != -1) {
+      Vaccination? toggled;
       final updatedVaccinations = _batches[index].vaccinations.map((v) {
         if (v.id == vaccinationId) {
-          return v.copyWith(isCompleted: !v.isCompleted);
+          toggled = v.copyWith(isCompleted: !v.isCompleted);
+          return toggled!;
         }
         return v;
       }).toList();
       _batches[index] = _batches[index].copyWith(vaccinations: updatedVaccinations);
-      await _repository.saveBatches(_batches);
+      if (toggled != null) {
+        await _repository.setVaccinationCompleted(vaccinationId, toggled!.isCompleted);
+      }
       notifyListenersSafe();
 
       if (googleSyncService.currentUser != null) {
@@ -150,8 +169,7 @@ class ChickenViewModel extends CoreViewModel {
         final List<dynamic> cockSaleJson = data['cockSales'] ?? [];
         _batches = batchJson.map((e) => ChickenBatch.fromJson(e)).toList();
         _globalCockSales = cockSaleJson.map((e) => CockSale.fromJson(e)).toList();
-        await _repository.saveBatches(_batches);
-        await _repository.saveCockSales(_globalCockSales);
+        await _repository.replaceAll(_batches, _globalCockSales);
         notifyListenersSafe();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã khôi phục dữ liệu")));
       } else {
