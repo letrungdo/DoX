@@ -80,6 +80,7 @@ dependencies:
   toastification: ^3.2.0
   auto_size_text: ^3.0.0
   vector_math: ^2.2.0
+  supabase_flutter: ^2.16.0
 
 dev_dependencies:
   flutter_test:
