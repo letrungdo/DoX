@@ -26,6 +26,22 @@ class MainScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
+  bool _checkedInitialAuth = false;
+
+  /// Route guards don't run for tab routes, so when the app starts directly
+  /// on the chicken tab we have to require login here.
+  void _requireLoginForInitialChickenTab(BuildContext context, TabsRouter tabsRouter) {
+    if (_checkedInitialAuth) return;
+    _checkedInitialAuth = true;
+    if (tabsRouter.activeIndex != 1 || supabase.auth.currentSession != null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.pushRoute(const AppLoginRoute());
+      if (supabase.auth.currentSession == null) {
+        tabsRouter.setActiveIndex(0);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AutoTabsRouter(
@@ -42,6 +58,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       ),
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
+        _requireLoginForInitialChickenTab(context, tabsRouter);
         return Scaffold(
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: tabsRouter.activeIndex,
