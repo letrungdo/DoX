@@ -21,6 +21,7 @@ import 'package:do_x/widgets/text/text_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 @RoutePage()
 class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -42,25 +43,66 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> {
+class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with WidgetsBindingObserver {
   final colsRatio = [40, 30, 30];
+
+  /// The push socket only needs to run while this tab is actually on screen.
+  bool _isVisible = true;
+
+  WebSocketService get _socketService => context.read<WebSocketService>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_isVisible) _socketService.connect(context);
+    } else if (state == AppLifecycleState.paused) {
+      _socketService.disconnect();
+    }
+  }
+
+  void _onVisibilityChanged(VisibilityInfo info) {
+    final visible = info.visibleFraction > 0;
+    if (visible == _isVisible || !mounted) return;
+    _isVisible = visible;
+    if (visible) {
+      _socketService.connect(context);
+    } else {
+      _socketService.disconnect();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: DoAppBar(
-        title: "News", //
-        actions: [
-          IconButton(
-            padding: EdgeInsets.zero,
-            onPressed: vm.onRefresh, //
-            icon: SFIcon(SFIcons.sf_arrow_clockwise),
-          ),
-        ],
-      ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () => vm.onRefresh(), //
-        child: _buildBody(),
+    return VisibilityDetector(
+      key: const Key('news-screen'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: Scaffold(
+        appBar: DoAppBar(
+          title: "News", //
+          actions: [
+            IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: vm.onRefresh, //
+              icon: SFIcon(SFIcons.sf_arrow_clockwise),
+            ),
+          ],
+        ),
+        body: RefreshIndicator.adaptive(
+          onRefresh: () => vm.onRefresh(), //
+          child: _buildBody(),
+        ),
       ),
     );
   }

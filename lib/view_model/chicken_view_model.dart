@@ -78,7 +78,7 @@ class ChickenViewModel extends CoreViewModel {
       quantity: quantity,
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
-    _batches.add(newBatch);
+    _batches.insert(0, newBatch);
     await _repository.insertBatch(newBatch);
     notifyListenersSafe();
     _autoSyncGoogleTasks();
