@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/context_extensions.dart';
@@ -102,10 +103,10 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         children: [
           TableRow(
             children: [
-              Text("Google", style: TextStyle(color: Colors.blue).bold, textAlign: TextAlign.center),
-              Text("Smile", style: TextStyle(color: Colors.green).bold, textAlign: TextAlign.center),
-              Text("MoneyGram", style: TextStyle(color: Colors.redAccent).bold, textAlign: TextAlign.center),
-              Text("Dcom", style: TextStyle(color: Colors.orange).bold, textAlign: TextAlign.center),
+              AutoSizeText("Google", maxLines: 1, style: TextStyle(color: Colors.blue).bold, textAlign: TextAlign.center),
+              AutoSizeText("Smile", maxLines: 1, style: TextStyle(color: Colors.green).bold, textAlign: TextAlign.center),
+              AutoSizeText("MoneyGram", maxLines: 1, style: TextStyle(color: Colors.redAccent).bold, textAlign: TextAlign.center),
+              AutoSizeText("Dcom", maxLines: 1, style: TextStyle(color: Colors.orange).bold, textAlign: TextAlign.center),
             ],
           ),
           TableRow(

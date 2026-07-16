@@ -1,17 +1,13 @@
-import 'dart:convert';
-
 import 'package:collection/collection.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
-import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis/tasks/v1.dart' as tasks;
 import 'package:googleapis_auth/googleapis_auth.dart' as gapis;
 import 'package:intl/intl.dart';
 
 class GoogleSyncService {
-  static const List<String> _scopes = [tasks.TasksApi.tasksScope, drive.DriveApi.driveAppdataScope];
+  static const List<String> _scopes = [tasks.TasksApi.tasksScope];
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   bool _initialized = false;
@@ -106,65 +102,6 @@ class GoogleSyncService {
       }
     }
     return true;
-  }
-
-  Future<bool> backupToDrive(List<ChickenBatch> batches, List<CockSale> cockSales) async {
-    if (_currentUser == null) await signIn();
-    if (_currentUser == null) return false;
-
-    try {
-      final httpClient = (await _authorizedClient())!;
-      final driveApi = drive.DriveApi(httpClient);
-
-      final data = {
-        'batches': batches.map((e) => e.toJson()).toList(),
-        'cockSales': cockSales.map((e) => e.toJson()).toList(),
-        'updatedAt': DateTime.now().toIso8601String(),
-      };
-
-      final jsonContent = jsonEncode(data);
-      final bytes = utf8.encode(jsonContent);
-      final media = drive.Media(Stream.value(bytes), bytes.length);
-
-      final fileList = await driveApi.files.list(spaces: 'appDataFolder', q: "name = 'dox_chicken_backup.json'");
-
-      if (fileList.files != null && fileList.files!.isNotEmpty) {
-        final fileId = fileList.files!.first.id!;
-        await driveApi.files.update(drive.File(), fileId, uploadMedia: media);
-      } else {
-        final fileMetadata = drive.File()
-          ..name = 'dox_chicken_backup.json'
-          ..parents = ['appDataFolder'];
-        await driveApi.files.create(fileMetadata, uploadMedia: media);
-      }
-      return true;
-    } catch (e) {
-      print("Drive Backup Error: $e");
-      return false;
-    }
-  }
-
-  Future<Map<String, dynamic>?> restoreFromDrive() async {
-    if (_currentUser == null) await signIn();
-    if (_currentUser == null) return null;
-
-    try {
-      final httpClient = (await _authorizedClient())!;
-      final driveApi = drive.DriveApi(httpClient);
-
-      final fileList = await driveApi.files.list(spaces: 'appDataFolder', q: "name = 'dox_chicken_backup.json'");
-
-      if (fileList.files == null || fileList.files!.isEmpty) return null;
-
-      final fileId = fileList.files!.first.id!;
-      final response = await driveApi.files.get(fileId, downloadOptions: drive.DownloadOptions.fullMedia) as drive.Media;
-
-      final content = await utf8.decodeStream(response.stream);
-      return jsonDecode(content) as Map<String, dynamic>;
-    } catch (e) {
-      print("Drive Restore Error: $e");
-      return null;
-    }
   }
 
   Future<bool> deleteTaskList(String batchName) async {

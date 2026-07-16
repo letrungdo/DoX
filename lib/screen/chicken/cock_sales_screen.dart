@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -38,7 +39,11 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.ads_click, size: 64, color: Colors.grey[400]),
+                  Assets.images.rooster.svg(
+                    width: 64,
+                    height: 64,
+                    colorFilter: ColorFilter.mode(Colors.grey[400]!, BlendMode.srcIn),
+                  ),
                   const SizedBox(height: 16),
                   Text("Chưa có dữ liệu bán gà đá", style: TextStyle(color: Colors.grey[600])),
                   const SizedBox(height: 16),
@@ -58,9 +63,13 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
               final sale = sortedSales[index];
               return Card(
                 child: ListTile(
-                  leading: const CircleAvatar(
+                  leading: CircleAvatar(
                     backgroundColor: Colors.red,
-                    child: Icon(Icons.ads_click, color: Colors.white),
+                    child: Assets.images.rooster.svg(
+                      width: 22,
+                      height: 22,
+                      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    ),
                   ),
                   title: Text(sale.note, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(_dateFormat.format(sale.date)),

@@ -7,6 +7,7 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/google_sync_service.dart';
+import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -90,6 +91,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
               context.read<AppViewModel>().toggleThemeMode();
             },
           ),
+          _buildSupabaseAccountControl(),
           _buildGoogleSyncControl(),
           DoButton(
             onPressed: () {
@@ -121,6 +123,46 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
     );
   }
 
+  Widget _buildSupabaseAccountControl() {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      return DoButton(
+        onPressed: () async {
+          await context.pushRoute(const AppLoginRoute());
+          setState(() {});
+        },
+        child: const Row(
+          spacing: 8,
+          children: [Icon(Icons.login), Text("Đăng nhập Do X")],
+        ),
+      );
+    }
+    return DoButton(
+      onPressed: _confirmSignOut,
+      child: Row(
+        spacing: 8,
+        children: [const Icon(Icons.logout), Text("Đăng xuất Do X (${user.email})")],
+      ),
+    );
+  }
+
+  void _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Đăng xuất"),
+        content: const Text("Bạn có chắc muốn đăng xuất không?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Đăng xuất")),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await supabase.auth.signOut();
+    setState(() {});
+  }
+
   Widget _buildGoogleSyncControl() {
     return Column(
       spacing: 8,
@@ -143,12 +185,20 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
           ),
         ),
         if (googleSyncService.currentUser != null)
-          DoButton(
-            text: "Khôi phục dữ liệu từ Cloud",
-            onPressed: () {
-              final chickenVM = context.read<ChickenViewModel>();
-              chickenVM.setCurrentContext(context);
-              chickenVM.restoreFromGoogle();
+          Selector<ChickenViewModel, bool>(
+            selector: (p0, p1) => p1.autoSyncEnabled,
+            builder: (context, autoSyncEnabled, _) {
+              return SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                title: const Text("Tự đồng bộ lịch tiêm lên Google Tasks"),
+                value: autoSyncEnabled,
+                onChanged: (value) async {
+                  final chickenVM = context.read<ChickenViewModel>();
+                  chickenVM.setCurrentContext(context);
+                  await chickenVM.setAutoSyncEnabled(value);
+                  setState(() {});
+                },
+              );
             },
           ),
       ],

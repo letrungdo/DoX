@@ -28,6 +28,20 @@ class _SecureStorageService {
     return _secureStorage.write(key: StorageKey.accountInfo, value: encode);
   }
 
+  Future<({String email, String password})?> getSupabaseAccount() async {
+    try {
+      final raw = await _secureStorage.read(key: StorageKey.supabaseAccount);
+      final json = jsonDecode(raw ?? "");
+      return (email: json['email'] as String, password: json['password'] as String);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> saveSupabaseAccount({required String email, required String password}) {
+    return _secureStorage.write(key: StorageKey.supabaseAccount, value: jsonEncode({'email': email, 'password': password}));
+  }
+
   Future<String?> getRouterPassword() {
     return _secureStorage.read(key: StorageKey.routerPassword);
   }
