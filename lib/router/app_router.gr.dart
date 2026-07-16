@@ -12,8 +12,8 @@
 import 'dart:io' as _i16;
 
 import 'package:auto_route/auto_route.dart' as _i14;
-import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart' as _i2;
-import 'package:do_x/screen/chicken/chicken_login_screen.dart' as _i3;
+import 'package:do_x/screen/account/app_login_screen.dart' as _i2;
+import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart' as _i3;
 import 'package:do_x/screen/chicken/chicken_screen.dart' as _i4;
 import 'package:do_x/screen/chicken/chicken_statistics_screen.dart' as _i5;
 import 'package:do_x/screen/chicken/cock_sales_screen.dart' as _i6;
@@ -44,7 +44,23 @@ class AccountRoute extends _i14.PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [_i2.ChickenBatchDetailScreen]
+/// [_i2.AppLoginScreen]
+class AppLoginRoute extends _i14.PageRouteInfo<void> {
+  const AppLoginRoute({List<_i14.PageRouteInfo>? children})
+    : super(AppLoginRoute.name, initialChildren: children);
+
+  static const String name = 'AppLoginRoute';
+
+  static _i14.PageInfo page = _i14.PageInfo(
+    name,
+    builder: (data) {
+      return _i14.WrappedRoute(child: const _i2.AppLoginScreen());
+    },
+  );
+}
+
+/// generated route for
+/// [_i3.ChickenBatchDetailScreen]
 class ChickenBatchDetailRoute
     extends _i14.PageRouteInfo<ChickenBatchDetailRouteArgs> {
   ChickenBatchDetailRoute({
@@ -64,7 +80,7 @@ class ChickenBatchDetailRoute
     builder: (data) {
       final args = data.argsAs<ChickenBatchDetailRouteArgs>();
       return _i14.WrappedRoute(
-        child: _i2.ChickenBatchDetailScreen(
+        child: _i3.ChickenBatchDetailScreen(
           key: args.key,
           batchId: args.batchId,
         ),
@@ -94,22 +110,6 @@ class ChickenBatchDetailRouteArgs {
 
   @override
   int get hashCode => key.hashCode ^ batchId.hashCode;
-}
-
-/// generated route for
-/// [_i3.ChickenLoginScreen]
-class ChickenLoginRoute extends _i14.PageRouteInfo<void> {
-  const ChickenLoginRoute({List<_i14.PageRouteInfo>? children})
-    : super(ChickenLoginRoute.name, initialChildren: children);
-
-  static const String name = 'ChickenLoginRoute';
-
-  static _i14.PageInfo page = _i14.PageInfo(
-    name,
-    builder: (data) {
-      return _i14.WrappedRoute(child: const _i3.ChickenLoginScreen());
-    },
-  );
 }
 
 /// generated route for

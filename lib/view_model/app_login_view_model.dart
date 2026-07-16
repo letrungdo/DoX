@@ -1,16 +1,28 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ChickenLoginViewModel extends CoreViewModel {
+class AppLoginViewModel extends CoreViewModel {
   String _email = '';
   String get email => _email;
 
   String _password = '';
   String get password => _password;
+
+  @override
+  void initState() async {
+    super.initState();
+    final saved = await secureStorage.getSupabaseAccount();
+    if (saved != null) {
+      _email = saved.email;
+      _password = saved.password;
+      notifyListenersSafe();
+    }
+  }
 
   void onEmailChanged(String value) {
     _email = value;
@@ -53,6 +65,7 @@ class ChickenLoginViewModel extends CoreViewModel {
   }
 
   void _onAuthenticated() {
+    secureStorage.saveSupabaseAccount(email: _email.trim(), password: _password);
     if (!context.mounted) return;
     if (context.router.canPop()) {
       context.router.pop();

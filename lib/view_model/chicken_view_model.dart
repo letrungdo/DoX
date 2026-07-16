@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
@@ -5,10 +7,11 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/services/google_sync_service.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 class ChickenViewModel extends CoreViewModel {
@@ -21,10 +24,41 @@ class ChickenViewModel extends CoreViewModel {
   List<CockSale> _globalCockSales = [];
   List<CockSale> get globalCockSales => _globalCockSales;
 
+  StreamSubscription<AuthState>? _authSub;
+
   @override
-  void initData() async {
+  void initState() {
+    super.initState();
+    // Data is (re)loaded on sign-in because this view model lives app-wide:
+    // ChickenScreen may already be built (empty) while the login screen is shown.
+    _authSub = supabase.auth.onAuthStateChange.listen((state) {
+      switch (state.event) {
+        case AuthChangeEvent.signedIn:
+          _loadData();
+        case AuthChangeEvent.signedOut:
+          _batches = [];
+          _globalCockSales = [];
+          notifyListenersSafe();
+        default:
+          break;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void initData() {
     super.initData();
     if (supabase.auth.currentSession == null) return;
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
     setBusy(true);
     try {
       _batches = await _repository.getBatches();
@@ -34,13 +68,6 @@ class ChickenViewModel extends CoreViewModel {
     } finally {
       setBusy(false);
     }
-  }
-
-  Future<void> signOut() async {
-    await supabase.auth.signOut();
-    _batches = [];
-    _globalCockSales = [];
-    notifyListenersSafe();
   }
 
   Future<void> addBatch({required String name, required DateTime incubationDate, required int quantity}) async {
@@ -54,6 +81,7 @@ class ChickenViewModel extends CoreViewModel {
     _batches.add(newBatch);
     await _repository.insertBatch(newBatch);
     notifyListenersSafe();
+    _autoSyncGoogleTasks();
   }
 
   Future<void> updateBatch(ChickenBatch batch) async {
@@ -62,6 +90,7 @@ class ChickenViewModel extends CoreViewModel {
       _batches[index] = batch;
       await _repository.updateBatch(batch);
       notifyListenersSafe();
+      _autoSyncGoogleTasks();
     }
   }
 
@@ -119,10 +148,7 @@ class ChickenViewModel extends CoreViewModel {
         await _repository.setVaccinationCompleted(vaccinationId, toggled!.isCompleted);
       }
       notifyListenersSafe();
-
-      if (googleSyncService.currentUser != null) {
-        syncToGoogle();
-      }
+      _autoSyncGoogleTasks();
     }
   }
 
@@ -144,41 +170,27 @@ class ChickenViewModel extends CoreViewModel {
     return 150000;
   }
 
-  Future<void> syncToGoogle() async {
-    showLoading();
-    try {
-      await googleSyncService.syncToGoogleTasks(_batches);
-      final success = await googleSyncService.backupToDrive(_batches, _globalCockSales);
-      hideLoading();
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã sao lưu lên Google Cloud")));
-      }
-    } catch (e) {
-      hideLoading();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi sao lưu: $e")));
+  bool get autoSyncEnabled => storageService.getChickenAutoSync();
+
+  /// Enables/disables auto sync of vaccination schedules to Google Tasks.
+  /// Returns false when enabling failed (Google sign-in declined).
+  Future<bool> setAutoSyncEnabled(bool enabled) async {
+    if (enabled && googleSyncService.currentUser == null) {
+      final user = await googleSyncService.signIn();
+      if (user == null) return false;
     }
+    await storageService.setChickenAutoSync(enabled);
+    if (enabled) _autoSyncGoogleTasks();
+    notifyListenersSafe();
+    return true;
   }
 
-  Future<void> restoreFromGoogle() async {
-    showLoading();
-    try {
-      final data = await googleSyncService.restoreFromDrive();
-      hideLoading();
-      if (data != null) {
-        final List<dynamic> batchJson = data['batches'] ?? [];
-        final List<dynamic> cockSaleJson = data['cockSales'] ?? [];
-        _batches = batchJson.map((e) => ChickenBatch.fromJson(e)).toList();
-        _globalCockSales = cockSaleJson.map((e) => CockSale.fromJson(e)).toList();
-        await _repository.replaceAll(_batches, _globalCockSales);
-        notifyListenersSafe();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã khôi phục dữ liệu")));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Không tìm thấy bản sao lưu")));
-      }
-    } catch (e) {
-      hideLoading();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi khôi phục: $e")));
-    }
+  void _autoSyncGoogleTasks() {
+    if (!autoSyncEnabled || googleSyncService.currentUser == null) return;
+    googleSyncService.syncToGoogleTasks(_batches).catchError((e) {
+      logger.e("auto sync Google Tasks failed", error: e);
+      return false;
+    });
   }
 
   Map<int, ({double batchRevenue, double cockRevenue, double expense, double profit})> getMonthlyStats(int year) {

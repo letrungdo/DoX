@@ -4,11 +4,13 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/store/app_data.dart';
 
-final _chickenAuthGuard = AutoRouteGuard.simple((resolver, _) {
+/// Requires the shared Supabase account. Apply to any feature route that
+/// reads/writes Supabase data.
+final _supabaseAuthGuard = AutoRouteGuard.simple((resolver, _) {
   if (supabase.auth.currentSession != null) {
     resolver.next();
   } else {
-    resolver.redirectUntil(const ChickenLoginRoute());
+    resolver.redirectUntil(const AppLoginRoute());
   }
 });
 
@@ -29,7 +31,7 @@ class _AppRouter extends RootStackRouter {
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
           AutoRoute(initial: initialTabIndex == 0, path: 'news', page: NewsRoute.page),
-          AutoRoute(initial: initialTabIndex == 1, path: 'chicken', page: ChickenRoute.page, guards: [_chickenAuthGuard]),
+          AutoRoute(initial: initialTabIndex == 1, path: 'chicken', page: ChickenRoute.page, guards: [_supabaseAuthGuard]),
           AutoRoute(
             path: 'locket',
             initial: initialTabIndex == 2,
@@ -56,10 +58,10 @@ class _AppRouter extends RootStackRouter {
           AutoRoute(initial: initialTabIndex == 3, path: 'menu', page: MenuRoute.page),
         ],
       ),
-      AutoRoute(path: '/chicken-login', page: ChickenLoginRoute.page),
-      AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page, guards: [_chickenAuthGuard]),
-      AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page, guards: [_chickenAuthGuard]),
-      AutoRoute(path: '/cock-sales', page: CockSalesRoute.page, guards: [_chickenAuthGuard]),
+      AutoRoute(path: '/login', page: AppLoginRoute.page),
+      AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page, guards: [_supabaseAuthGuard]),
+      AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page, guards: [_supabaseAuthGuard]),
+      AutoRoute(path: '/cock-sales', page: CockSalesRoute.page, guards: [_supabaseAuthGuard]),
       AutoRoute(path: '/reboot-router', page: RebootRouterRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];

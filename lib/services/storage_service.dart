@@ -37,6 +37,14 @@ class _StorageService {
   Future<bool> setRouterIp(String value) {
     return prefs.setString(StorageKey.routerIp, value);
   }
+
+  bool getChickenAutoSync() {
+    return prefs.getBool(StorageKey.chickenAutoSync) ?? false;
+  }
+
+  Future<bool> setChickenAutoSync(bool value) {
+    return prefs.setBool(StorageKey.chickenAutoSync, value);
+  }
 }
 
 final storageService = _StorageService();

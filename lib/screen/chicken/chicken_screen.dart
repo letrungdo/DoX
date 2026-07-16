@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
@@ -29,15 +30,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         title: "Quản lý gà",
         actions: [
           IconButton(
-            icon: const Icon(Icons.sync),
-            onPressed: () {
-              vm.setCurrentContext(context);
-              vm.syncToGoogle();
-            },
-            tooltip: "Đồng bộ Google Tasks",
-          ),
-          IconButton(
-            icon: const Icon(Icons.ads_click, color: Colors.red),
+            icon: Assets.images.rooster.svg(
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(Colors.red, BlendMode.srcIn),
+            ),
             onPressed: () => context.router.push(const CockSalesRoute()),
             tooltip: "Bán gà đá",
           ),
@@ -47,15 +44,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             tooltip: "Thống kê lợi nhuận",
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddBatchDialog),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await vm.signOut();
-              if (!context.mounted) return;
-              context.router.push(const ChickenLoginRoute());
-            },
-            tooltip: "Đăng xuất",
-          ),
         ],
       ),
       body: Consumer<ChickenViewModel>(

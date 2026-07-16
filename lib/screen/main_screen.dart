@@ -1,7 +1,9 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
@@ -43,7 +45,13 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
         return Scaffold(
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: tabsRouter.activeIndex,
-            onTap: (value) {
+            onTap: (value) async {
+              // The chicken tab needs the Supabase account; route guards don't
+              // run on tab switches, so require login here.
+              if (value == 1 && supabase.auth.currentSession == null) {
+                await context.pushRoute(const AppLoginRoute());
+                if (supabase.auth.currentSession == null) return;
+              }
               tabsRouter.setActiveIndex(value);
               storageService.setTabIndex(value);
             },
@@ -54,7 +62,16 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             enableFeedback: true,
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'News'),
-              BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Chicken'),
+              BottomNavigationBarItem(
+                icon: Builder(
+                  builder: (context) => Assets.images.chicken.svg(
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(IconTheme.of(context).color!, BlendMode.srcIn),
+                  ),
+                ),
+                label: 'Chicken',
+              ),
               BottomNavigationBarItem(icon: SFIcon(SFIcons.sf_heart_fill, fontSize: 22), label: 'Locket'),
               BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
             ],
