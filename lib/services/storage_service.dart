@@ -29,6 +29,14 @@ class _StorageService {
   Future<bool> setTabIndex(int index) {
     return prefs.setInt(StorageKey.tabIndex, index);
   }
+
+  String? getRouterIp() {
+    return prefs.getString(StorageKey.routerIp);
+  }
+
+  Future<bool> setRouterIp(String value) {
+    return prefs.setString(StorageKey.routerIp, value);
+  }
 }
 
 final storageService = _StorageService();

@@ -27,6 +27,14 @@ class _SecureStorageService {
     final encode = jsonEncode(value?.toJson());
     return _secureStorage.write(key: StorageKey.accountInfo, value: encode);
   }
+
+  Future<String?> getRouterPassword() {
+    return _secureStorage.read(key: StorageKey.routerPassword);
+  }
+
+  Future<void> saveRouterPassword(String value) {
+    return _secureStorage.write(key: StorageKey.routerPassword, value: value);
+  }
 }
 
 final secureStorage = _SecureStorageService();
