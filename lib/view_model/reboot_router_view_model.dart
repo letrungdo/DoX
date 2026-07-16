@@ -8,7 +8,7 @@ class RebootRouterViewModel extends CoreViewModel {
   final _service = RouterRebootService();
 
   static const stepLabels = [
-    "Kết nối & Quét MAC", //
+    "Kết nối & Lấy deviceId", //
     "Mã hóa & Xác thực",
     "Nhận Token (stok)",
     "Khởi động lại",
