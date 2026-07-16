@@ -17,7 +17,6 @@ class RouterRebootException implements Exception {
 /// scrape MAC -> generate nonce -> sha1 challenge-response login -> stok -> reboot
 class RouterRebootService {
   static const _authKey = "a2ffa5c9be07488bbb04a3a47d3c5f6a";
-  static const _fallbackMac = "00:11:22:33:44:55";
   static const _userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DoXRebootUtility";
 
   final _dio = DioClient.create();
@@ -32,31 +31,44 @@ class RouterRebootService {
     return cleaned.replaceAll(RegExp(r'/+$'), '');
   }
 
-  Future<String> _getRouterMac(String baseUrl, void Function(String) onLog) async {
-    try {
-      final response = await _dio.get(
-        "$baseUrl/cgi-bin/luci/web/home",
-        options: Options(
-          responseType: ResponseType.plain,
-          receiveTimeout: const Duration(milliseconds: 2500),
-          headers: {"User-Agent": _userAgent},
-        ),
-      );
-      final match = RegExp(r'([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}').firstMatch(response.data.toString());
-      if (match != null) {
-        return match.group(0)!;
+  /// The router's deviceId is embedded in the login page as a JS variable
+  /// `var deviceId = '...'`. It is required (and validated) as part of the
+  /// login nonce — a wrong value makes the router reject login with "Invalid token".
+  Future<String> _getDeviceId(String baseUrl, void Function(String) onLog) async {
+    for (final path in ["/cgi-bin/luci/web", "/cgi-bin/luci/web/home"]) {
+      try {
+        final response = await _dio.get(
+          "$baseUrl$path",
+          options: Options(
+            responseType: ResponseType.plain,
+            receiveTimeout: const Duration(milliseconds: 4000),
+            headers: {"User-Agent": _userAgent},
+          ),
+        );
+        final html = response.data.toString();
+        final deviceId = RegExp("deviceId\\s*=\\s*['\"]([^'\"]+)['\"]").firstMatch(html)?.group(1);
+        if (deviceId != null && deviceId.isNotEmpty) {
+          return deviceId;
+        }
+        // Fallback: any MAC-like token on the page (older firmware)
+        final mac = RegExp(r'([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}').firstMatch(html)?.group(0);
+        if (mac != null) {
+          return mac;
+        }
+      } catch (e) {
+        onLog("Không đọc được deviceId từ $path ($e)");
       }
-    } catch (e) {
-      onLog("Không quét được MAC address, dùng MAC mặc định. ($e)");
     }
-    return _fallbackMac;
+    throw RouterRebootException(
+      "Không lấy được deviceId của router. Kiểm tra IP và đảm bảo điện thoại đang kết nối cùng mạng với router.",
+    );
   }
 
-  String _generateNonce(String mac) {
+  String _generateNonce(String deviceId) {
     const miwifiType = 0;
     final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final randomInt = Random().nextInt(10000);
-    return "${miwifiType}_${mac}_${timestamp}_$randomInt";
+    return "${miwifiType}_${deviceId}_${timestamp}_$randomInt";
   }
 
   String _generatePasswordHash(String nonce, String password) {
@@ -76,16 +88,16 @@ class RouterRebootService {
     final baseUrl = cleanIp(ip);
     onLog("Bắt đầu reboot router tại $baseUrl");
 
-    // Step 1: Get MAC address (required for nonce)
+    // Step 1: Get deviceId (required for nonce)
     onStep(0);
-    onLog("Step 1: Đang quét MAC address của router...");
-    final mac = await _getRouterMac(baseUrl, onLog);
-    onLog("MAC Address: $mac");
+    onLog("Step 1: Đang lấy deviceId của router...");
+    final deviceId = await _getDeviceId(baseUrl, onLog);
+    onLog("deviceId: $deviceId");
 
     // Step 2: Generate nonce and hash password
     onStep(1);
     onLog("Step 2: Tạo nonce và mã hóa mật khẩu...");
-    final nonce = _generateNonce(mac);
+    final nonce = _generateNonce(deviceId);
     final passwordHash = _generatePasswordHash(nonce, password);
     onLog("Nonce: $nonce");
 
