@@ -23,8 +23,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
-  MyLifeService get _myLifeService => context.read<MyLifeService>();
-  UploadService get _uploadService => context.read<UploadService>();
+  late final MyLifeService _myLifeService;
+  late final UploadService _uploadService;
+
+  @override
+  void initState() {
+    _myLifeService = context.read<MyLifeService>();
+    _uploadService = context.read<UploadService>();
+    super.initState();
+  }
 
   final cameraKey = GlobalKey();
 

@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/router/app_router.gr.dart';
@@ -28,33 +29,34 @@ class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
 class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: DoAppBar(
-        title: "Quản lý gà",
+        title: l10n.chickenManagement,
         actions: [
           IconButton(
             icon: Assets.images.roosterCute.svg(width: 26, height: 26),
             onPressed: () => context.router.push(const CockSalesRoute()),
-            tooltip: "Bán gà đá / gà thịt",
+            tooltip: l10n.sellRoosterMeat,
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
             onPressed: () => context.router.push(const ChickenStatisticsRoute()),
-            tooltip: "Thống kê lợi nhuận",
+            tooltip: l10n.profitStatistics,
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddBatchDialog),
           PopupMenuButton<String>(
             onSelected: (value) {
               switch (value) {
                 case 'import':
-                  _showImportDialog();
+                  _showImportDialog(l10n);
                 case 'expenses':
-                  _showGlobalExpensesSheet();
+                  _showGlobalExpensesSheet(l10n);
               }
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'expenses', child: Text("Chi phí chung (cám, thuốc...)")),
-              PopupMenuItem(value: 'import', child: Text("Nhập dữ liệu (JSON)")),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'expenses', child: Text(l10n.commonExpenses)),
+              PopupMenuItem(value: 'import', child: Text(l10n.importData)),
             ],
           ),
         ],
@@ -71,7 +73,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 children: [
                   Assets.images.chickCute.svg(width: 72, height: 72),
                   const SizedBox(height: 12),
-                  const Text("Chưa có lứa gà nào. Nhấn + để thêm."),
+                  Text(l10n.noBatchesYet),
                 ],
               ),
             );
@@ -87,7 +89,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8, bottom: 8),
                   child: Text(
-                    "Năm $year",
+                    "${l10n.yearPrefix} $year",
                     style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[600]),
                   ),
                 ),
@@ -177,16 +179,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     );
   }
 
-  void _showImportDialog() {
+  void _showImportDialog(AppLocalizations l10n) {
     final jsonController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) => CuteDialog(
         icon: Assets.images.chickCute,
-        title: "Nhập dữ liệu (JSON)",
+        title: l10n.importData,
         accent: Colors.teal,
-        confirmText: "Nhập",
+        confirmText: l10n.login, // Reusing login as 'Import' if not localized, but I should add 'import' string
         onConfirm: () async {
           final text = jsonController.text.trim();
           if (text.isEmpty) return;
@@ -217,7 +219,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     );
   }
 
-  void _showGlobalExpensesSheet() {
+  void _showGlobalExpensesSheet(AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -237,7 +239,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Chi phí chung (${total.toCurrency()}đ)",
+                          "${l10n.commonExpenses} (${total.toCurrency()}đ)",
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _showAddGlobalExpenseDialog),

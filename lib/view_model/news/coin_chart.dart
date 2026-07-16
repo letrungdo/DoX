@@ -21,22 +21,24 @@ class ChartData {
 }
 
 mixin CoinChartMixin on CoreViewModel {
-  FxRateService get fxRateService => context.read<FxRateService>();
-  WebSocketService get socketService => context.read<WebSocketService>();
+  late FxRateService fxRateService;
+  late WebSocketService socketService;
 
   late StreamSubscription<RatePushModel> _rateSubscription;
 
   @override
   void initState() {
+    fxRateService = context.read<FxRateService>();
+    socketService = context.read<WebSocketService>();
     super.initState();
     _rateSubscription = socketService.rateStream.listen(onRateReceived);
   }
 
   @override
   void dispose() {
-    super.dispose();
     _rateSubscription.cancel();
     realTimeSymbols.clear();
+    super.dispose();
   }
 
   void onRateReceived(RatePushModel data) {

@@ -8,6 +8,7 @@ import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
@@ -85,12 +86,13 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return VisibilityDetector(
       key: const Key('news-screen'),
       onVisibilityChanged: _onVisibilityChanged,
       child: Scaffold(
         appBar: DoAppBar(
-          title: "News", //
+          title: l10n.news, //
           actions: [
             IconButton(
               padding: EdgeInsets.zero,
@@ -101,13 +103,13 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         ),
         body: RefreshIndicator.adaptive(
           onRefresh: () => vm.onRefresh(), //
-          child: _buildBody(),
+          child: _buildBody(l10n),
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     return CustomScrollView(
       physics: AlwaysScrollableScrollPhysics(),
       slivers: [
@@ -121,7 +123,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
             }
             return SliverPadding(
               padding: EdgeInsets.symmetric(vertical: 15, horizontal: horizontalPadding), //
-              sliver: SliverList(delegate: SliverChildListDelegate(_buildPrice())),
+              sliver: SliverList(delegate: SliverChildListDelegate(_buildPrice(l10n))),
             );
           },
         ),
@@ -129,7 +131,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
     );
   }
 
-  List<Widget> _buildPrice() {
+  List<Widget> _buildPrice(AppLocalizations l10n) {
     return [
       Text(
         "JPY/VND",
@@ -199,15 +201,15 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
       ),
       SizedBox(height: 20),
       Text(
-        "Giá vàng",
+        l10n.goldPrice,
         style: context.textTheme.primary.size16.bold, //
       ),
       SizedBox(height: 20),
       Row(
         children: [
-          Text("Chỉ số").expaned(colsRatio[0]), //
-          Text("Mua vào", textAlign: TextAlign.right).expaned(colsRatio[1]),
-          Text("Bán ra", textAlign: TextAlign.right).expaned(colsRatio[2]),
+          Text(l10n.index).expaned(colsRatio[0]), //
+          Text(l10n.buy, textAlign: TextAlign.right).expaned(colsRatio[1]),
+          Text(l10n.sell, textAlign: TextAlign.right).expaned(colsRatio[2]),
         ],
       ),
       Selector<V, List<GoldSymbol>>(

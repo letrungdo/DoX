@@ -6,6 +6,12 @@ class AppViewModel extends CoreViewModel {
   ThemeMode _themeMode = storageService.getThemeMode();
   ThemeMode get themeMode => _themeMode;
 
+  Locale? _locale = storageService.getLocale() != null ? Locale(storageService.getLocale()!) : null;
+  Locale? get locale => _locale;
+
+  bool _showMyLifeTab = storageService.getShowMyLifeTab();
+  bool get showMyLifeTab => _showMyLifeTab;
+
   void toggleThemeMode() {
     switch (themeMode) {
       case ThemeMode.system:
@@ -20,5 +26,23 @@ class AppViewModel extends CoreViewModel {
     }
     notifyListeners();
     storageService.setThemeMode(themeMode);
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
+    notifyListeners();
+    storageService.setThemeMode(mode);
+  }
+
+  void setLocale(Locale locale) {
+    _locale = locale;
+    notifyListeners();
+    storageService.setLocale(locale.languageCode);
+  }
+
+  void setShowMyLifeTab(bool value) {
+    _showMyLifeTab = value;
+    notifyListeners();
+    storageService.setShowMyLifeTab(value);
   }
 }
