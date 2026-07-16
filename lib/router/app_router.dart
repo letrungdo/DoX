@@ -50,6 +50,7 @@ class _AppRouter extends RootStackRouter {
       AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page),
       AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page),
       AutoRoute(path: '/cock-sales', page: CockSalesRoute.page),
+      AutoRoute(path: '/reboot-router', page: RebootRouterRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];
   }

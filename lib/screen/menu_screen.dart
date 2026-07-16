@@ -4,6 +4,7 @@ import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/google_sync_service.dart';
 import 'package:do_x/utils/app_info.dart';
@@ -90,6 +91,21 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
             },
           ),
           _buildGoogleSyncControl(),
+          DoButton(
+            onPressed: () {
+              context.pushRoute(const RebootRouterRoute());
+            },
+            child: Row(
+              spacing: 8,
+              children: [
+                SFIcon(SFIcons.sf_wifi),
+                Text(
+                  "Reboot Router Xiaomi",
+                  style: context.theme.elevatedButtonTheme.style?.textStyle?.resolve({}), //
+                ),
+              ],
+            ),
+          ),
           DoButton(
             text: "About",
             onPressed: () {

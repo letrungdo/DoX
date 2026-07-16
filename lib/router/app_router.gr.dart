@@ -9,9 +9,9 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:io' as _i14;
+import 'dart:io' as _i15;
 
-import 'package:auto_route/auto_route.dart' as _i12;
+import 'package:auto_route/auto_route.dart' as _i13;
 import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart' as _i2;
 import 'package:do_x/screen/chicken/chicken_screen.dart' as _i3;
 import 'package:do_x/screen/chicken/chicken_statistics_screen.dart' as _i4;
@@ -19,24 +19,25 @@ import 'package:do_x/screen/chicken/cock_sales_screen.dart' as _i5;
 import 'package:do_x/screen/locket/account_screen.dart' as _i1;
 import 'package:do_x/screen/locket/locket_screen.dart' as _i6;
 import 'package:do_x/screen/locket/login_screen.dart' as _i7;
-import 'package:do_x/screen/locket/trimmer_screen.dart' as _i11;
+import 'package:do_x/screen/locket/trimmer_screen.dart' as _i12;
 import 'package:do_x/screen/main_screen.dart' as _i8;
 import 'package:do_x/screen/menu_screen.dart' as _i9;
 import 'package:do_x/screen/news_screen.dart' as _i10;
-import 'package:flutter/material.dart' as _i13;
+import 'package:do_x/screen/reboot_router_screen.dart' as _i11;
+import 'package:flutter/material.dart' as _i14;
 
 /// generated route for
 /// [_i1.AccountScreen]
-class AccountRoute extends _i12.PageRouteInfo<void> {
-  const AccountRoute({List<_i12.PageRouteInfo>? children})
+class AccountRoute extends _i13.PageRouteInfo<void> {
+  const AccountRoute({List<_i13.PageRouteInfo>? children})
     : super(AccountRoute.name, initialChildren: children);
 
   static const String name = 'AccountRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i1.AccountScreen());
+      return _i13.WrappedRoute(child: const _i1.AccountScreen());
     },
   );
 }
@@ -44,11 +45,11 @@ class AccountRoute extends _i12.PageRouteInfo<void> {
 /// generated route for
 /// [_i2.ChickenBatchDetailScreen]
 class ChickenBatchDetailRoute
-    extends _i12.PageRouteInfo<ChickenBatchDetailRouteArgs> {
+    extends _i13.PageRouteInfo<ChickenBatchDetailRouteArgs> {
   ChickenBatchDetailRoute({
-    _i13.Key? key,
+    _i14.Key? key,
     required String batchId,
-    List<_i12.PageRouteInfo>? children,
+    List<_i13.PageRouteInfo>? children,
   }) : super(
          ChickenBatchDetailRoute.name,
          args: ChickenBatchDetailRouteArgs(key: key, batchId: batchId),
@@ -57,11 +58,11 @@ class ChickenBatchDetailRoute
 
   static const String name = 'ChickenBatchDetailRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<ChickenBatchDetailRouteArgs>();
-      return _i12.WrappedRoute(
+      return _i13.WrappedRoute(
         child: _i2.ChickenBatchDetailScreen(
           key: args.key,
           batchId: args.batchId,
@@ -74,7 +75,7 @@ class ChickenBatchDetailRoute
 class ChickenBatchDetailRouteArgs {
   const ChickenBatchDetailRouteArgs({this.key, required this.batchId});
 
-  final _i13.Key? key;
+  final _i14.Key? key;
 
   final String batchId;
 
@@ -96,139 +97,155 @@ class ChickenBatchDetailRouteArgs {
 
 /// generated route for
 /// [_i3.ChickenScreen]
-class ChickenRoute extends _i12.PageRouteInfo<void> {
-  const ChickenRoute({List<_i12.PageRouteInfo>? children})
+class ChickenRoute extends _i13.PageRouteInfo<void> {
+  const ChickenRoute({List<_i13.PageRouteInfo>? children})
     : super(ChickenRoute.name, initialChildren: children);
 
   static const String name = 'ChickenRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i3.ChickenScreen());
+      return _i13.WrappedRoute(child: const _i3.ChickenScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i4.ChickenStatisticsScreen]
-class ChickenStatisticsRoute extends _i12.PageRouteInfo<void> {
-  const ChickenStatisticsRoute({List<_i12.PageRouteInfo>? children})
+class ChickenStatisticsRoute extends _i13.PageRouteInfo<void> {
+  const ChickenStatisticsRoute({List<_i13.PageRouteInfo>? children})
     : super(ChickenStatisticsRoute.name, initialChildren: children);
 
   static const String name = 'ChickenStatisticsRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i4.ChickenStatisticsScreen());
+      return _i13.WrappedRoute(child: const _i4.ChickenStatisticsScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i5.CockSalesScreen]
-class CockSalesRoute extends _i12.PageRouteInfo<void> {
-  const CockSalesRoute({List<_i12.PageRouteInfo>? children})
+class CockSalesRoute extends _i13.PageRouteInfo<void> {
+  const CockSalesRoute({List<_i13.PageRouteInfo>? children})
     : super(CockSalesRoute.name, initialChildren: children);
 
   static const String name = 'CockSalesRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i5.CockSalesScreen());
+      return _i13.WrappedRoute(child: const _i5.CockSalesScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i6.LocketScreen]
-class LocketRoute extends _i12.PageRouteInfo<void> {
-  const LocketRoute({List<_i12.PageRouteInfo>? children})
+class LocketRoute extends _i13.PageRouteInfo<void> {
+  const LocketRoute({List<_i13.PageRouteInfo>? children})
     : super(LocketRoute.name, initialChildren: children);
 
   static const String name = 'LocketRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i6.LocketScreen());
+      return _i13.WrappedRoute(child: const _i6.LocketScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i7.LoginScreen]
-class LoginRoute extends _i12.PageRouteInfo<void> {
-  const LoginRoute({List<_i12.PageRouteInfo>? children})
+class LoginRoute extends _i13.PageRouteInfo<void> {
+  const LoginRoute({List<_i13.PageRouteInfo>? children})
     : super(LoginRoute.name, initialChildren: children);
 
   static const String name = 'LoginRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i7.LoginScreen());
+      return _i13.WrappedRoute(child: const _i7.LoginScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i8.MainScreen]
-class MainRoute extends _i12.PageRouteInfo<void> {
-  const MainRoute({List<_i12.PageRouteInfo>? children})
+class MainRoute extends _i13.PageRouteInfo<void> {
+  const MainRoute({List<_i13.PageRouteInfo>? children})
     : super(MainRoute.name, initialChildren: children);
 
   static const String name = 'MainRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i8.MainScreen());
+      return _i13.WrappedRoute(child: const _i8.MainScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i9.MenuScreen]
-class MenuRoute extends _i12.PageRouteInfo<void> {
-  const MenuRoute({List<_i12.PageRouteInfo>? children})
+class MenuRoute extends _i13.PageRouteInfo<void> {
+  const MenuRoute({List<_i13.PageRouteInfo>? children})
     : super(MenuRoute.name, initialChildren: children);
 
   static const String name = 'MenuRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i9.MenuScreen());
+      return _i13.WrappedRoute(child: const _i9.MenuScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i10.NewsScreen]
-class NewsRoute extends _i12.PageRouteInfo<void> {
-  const NewsRoute({List<_i12.PageRouteInfo>? children})
+class NewsRoute extends _i13.PageRouteInfo<void> {
+  const NewsRoute({List<_i13.PageRouteInfo>? children})
     : super(NewsRoute.name, initialChildren: children);
 
   static const String name = 'NewsRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
-      return _i12.WrappedRoute(child: const _i10.NewsScreen());
+      return _i13.WrappedRoute(child: const _i10.NewsScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i11.TrimmerScreen]
-class TrimmerRoute extends _i12.PageRouteInfo<TrimmerRouteArgs> {
+/// [_i11.RebootRouterScreen]
+class RebootRouterRoute extends _i13.PageRouteInfo<void> {
+  const RebootRouterRoute({List<_i13.PageRouteInfo>? children})
+    : super(RebootRouterRoute.name, initialChildren: children);
+
+  static const String name = 'RebootRouterRoute';
+
+  static _i13.PageInfo page = _i13.PageInfo(
+    name,
+    builder: (data) {
+      return _i13.WrappedRoute(child: const _i11.RebootRouterScreen());
+    },
+  );
+}
+
+/// generated route for
+/// [_i12.TrimmerScreen]
+class TrimmerRoute extends _i13.PageRouteInfo<TrimmerRouteArgs> {
   TrimmerRoute({
-    required _i14.File file,
-    _i13.Key? key,
-    List<_i12.PageRouteInfo>? children,
+    required _i15.File file,
+    _i14.Key? key,
+    List<_i13.PageRouteInfo>? children,
   }) : super(
          TrimmerRoute.name,
          args: TrimmerRouteArgs(file: file, key: key),
@@ -237,11 +254,11 @@ class TrimmerRoute extends _i12.PageRouteInfo<TrimmerRouteArgs> {
 
   static const String name = 'TrimmerRoute';
 
-  static _i12.PageInfo page = _i12.PageInfo(
+  static _i13.PageInfo page = _i13.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<TrimmerRouteArgs>();
-      return _i11.TrimmerScreen(args.file, key: args.key);
+      return _i12.TrimmerScreen(args.file, key: args.key);
     },
   );
 }
@@ -249,9 +266,9 @@ class TrimmerRoute extends _i12.PageRouteInfo<TrimmerRouteArgs> {
 class TrimmerRouteArgs {
   const TrimmerRouteArgs({required this.file, this.key});
 
-  final _i14.File file;
+  final _i15.File file;
 
-  final _i13.Key? key;
+  final _i14.Key? key;
 
   @override
   String toString() {
