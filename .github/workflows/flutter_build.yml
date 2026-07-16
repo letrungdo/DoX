@@ -76,6 +76,7 @@ jobs:
       - name: Build APK
         run: |
           flutter build apk --release \
+            --target-platform android-arm64 \
             --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
             --obfuscate --split-debug-info=build/obfuscate
 
