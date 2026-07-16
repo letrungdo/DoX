@@ -14,9 +14,12 @@ class RouterRebootException implements Exception {
 }
 
 /// Reboot Xiaomi Router (R3G / MiWiFi) via web api:
-/// scrape MAC -> generate nonce -> sha1 challenge-response login -> stok -> reboot
+/// scrape MAC from login page -> generate nonce ->
+/// sha1 challenge-response login -> stok -> reboot.
+/// Mirrors the proven web implementation exactly.
 class RouterRebootService {
-  static const _authKey = "a2ffa5c9be07488bbb04a3a47d3c5f6a";
+  static const _key = "a2ffa5c9be07488bbb04a3a47d3c5f6a";
+  static const _fallbackMac = "00:11:22:33:44:55";
   static const _userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DoXRebootUtility";
 
   final _dio = DioClient.create();
@@ -31,48 +34,34 @@ class RouterRebootService {
     return cleaned.replaceAll(RegExp(r'/+$'), '');
   }
 
-  /// The router's deviceId is embedded in the login page as a JS variable
-  /// `var deviceId = '...'`. It is required (and validated) as part of the
-  /// login nonce — a wrong value makes the router reject login with "Invalid token".
-  Future<String> _getDeviceId(String baseUrl, void Function(String) onLog) async {
-    for (final path in ["/cgi-bin/luci/web", "/cgi-bin/luci/web/home"]) {
-      try {
-        final response = await _dio.get(
-          "$baseUrl$path",
-          options: Options(
-            responseType: ResponseType.plain,
-            receiveTimeout: const Duration(milliseconds: 4000),
-            headers: {"User-Agent": _userAgent},
-          ),
-        );
-        final html = response.data.toString();
-        final deviceId = RegExp("deviceId\\s*=\\s*['\"]([^'\"]+)['\"]").firstMatch(html)?.group(1);
-        if (deviceId != null && deviceId.isNotEmpty) {
-          return deviceId;
-        }
-        // Fallback: any MAC-like token on the page (older firmware)
-        final mac = RegExp(r'([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}').firstMatch(html)?.group(0);
-        if (mac != null) {
-          return mac;
-        }
-      } catch (e) {
-        onLog("Không đọc được deviceId từ $path ($e)");
-      }
+  Future<String> _getRouterMac(String baseUrl, void Function(String) onLog) async {
+    try {
+      final response = await _dio.get(
+        "$baseUrl/cgi-bin/luci/web/home",
+        options: Options(
+          responseType: ResponseType.plain,
+          receiveTimeout: const Duration(milliseconds: 2500),
+          headers: {"User-Agent": _userAgent},
+        ),
+      );
+      final match = RegExp(r'([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}').firstMatch(response.data.toString());
+      if (match != null) return match.group(0)!;
+    } catch (e) {
+      onLog("Không quét được MAC, dùng MAC mặc định. ($e)");
     }
-    throw RouterRebootException(
-      "Không lấy được deviceId của router. Kiểm tra IP và đảm bảo điện thoại đang kết nối cùng mạng với router.",
-    );
+    // The nonce identifier is not validated by the router, so a fallback is fine.
+    return _fallbackMac;
   }
 
-  String _generateNonce(String deviceId) {
+  String _generateNonce(String mac) {
     const miwifiType = 0;
     final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final randomInt = Random().nextInt(10000);
-    return "${miwifiType}_${deviceId}_${timestamp}_$randomInt";
+    return "${miwifiType}_${mac}_${timestamp}_$randomInt";
   }
 
   String _generatePasswordHash(String nonce, String password) {
-    return _sha1(nonce + _sha1(password + _authKey));
+    return _sha1(nonce + _sha1(password + _key));
   }
 
   /// Run the full reboot sequence.
@@ -88,47 +77,59 @@ class RouterRebootService {
     final baseUrl = cleanIp(ip);
     onLog("Bắt đầu reboot router tại $baseUrl");
 
-    // Step 1: Get deviceId (required for nonce)
+    if (password.isEmpty) {
+      throw RouterRebootException("Mật khẩu đang trống. Hãy nhập mật khẩu trang quản trị router rồi thử lại.");
+    }
+
+    // Step 1: Get MAC address (used in the login nonce)
     onStep(0);
-    onLog("Step 1: Đang lấy deviceId của router...");
-    final deviceId = await _getDeviceId(baseUrl, onLog);
-    onLog("deviceId: $deviceId");
+    onLog("Step 1: Đang quét MAC address của router...");
+    final mac = await _getRouterMac(baseUrl, onLog);
+    onLog("MAC Address: $mac");
 
     // Step 2: Generate nonce and hash password
     onStep(1);
-    onLog("Step 2: Tạo nonce và mã hóa mật khẩu...");
-    final nonce = _generateNonce(deviceId);
+    onLog("Step 2: Tạo nonce và mã hóa mật khẩu... (mật khẩu dài ${password.length} ký tự)");
+    final nonce = _generateNonce(mac);
     final passwordHash = _generatePasswordHash(nonce, password);
     onLog("Nonce: $nonce");
 
-    // Step 3: Login to retrieve stok
+    // Step 3: Login to retrieve stok.
+    // The form body is encoded by hand to match the browser's URLSearchParams output.
     onStep(2);
     onLog("Step 3: Đăng nhập để lấy session token (stok)...");
     final Map<String, dynamic> loginData;
     try {
-      final loginResponse = await _dio.post(
+      final body = {
+        "username": "admin", //
+        "password": passwordHash,
+        "logtype": "2",
+        "nonce": nonce,
+      }.entries.map((e) => "${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}").join("&");
+
+      final response = await _dio.post(
         "$baseUrl/cgi-bin/luci/api/xqsystem/login",
-        data: {
-          "username": "admin", //
-          "password": passwordHash,
-          "logtype": "2",
-          "nonce": nonce,
-        },
+        data: body,
         options: Options(
-          contentType: Headers.formUrlEncodedContentType,
+          contentType: "application/x-www-form-urlencoded",
           headers: {"User-Agent": _userAgent},
         ),
         cancelToken: cancelToken,
       );
-      final raw = loginResponse.data;
+      final raw = response.data;
       loginData = raw is Map<String, dynamic> ? raw : jsonDecode(raw.toString()) as Map<String, dynamic>;
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) rethrow;
       throw RouterRebootException("Không kết nối được tới router: ${e.message ?? e.type.name}");
     } on FormatException {
       throw RouterRebootException("Router trả về dữ liệu không hợp lệ khi đăng nhập.");
     }
+
     if (loginData["code"] != 0) {
-      throw RouterRebootException("Đăng nhập thất bại (code ${loginData["code"]}): ${loginData["msg"] ?? "Sai mật khẩu."}");
+      final msg = loginData["msg"]?.toString() ?? "sai mật khẩu";
+      throw RouterRebootException(
+        "Đăng nhập thất bại (code ${loginData["code"]}): $msg. Kiểm tra lại mật khẩu trang quản trị router.",
+      );
     }
     final stok = loginData["token"] as String?;
     if (stok == null || stok.isEmpty) {

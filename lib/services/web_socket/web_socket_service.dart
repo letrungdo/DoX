@@ -10,6 +10,8 @@ import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
+  static const _maxRetries = 3;
+
   WebSocketChannel? _channel;
 
   final StreamController<RatePushModel> _rateController = StreamController.broadcast();
@@ -17,15 +19,28 @@ class WebSocketService {
 
   StreamSubscription<dynamic>? _streamSubscription;
 
-  void connect(BuildContext context) async {
+  /// Set while [disconnect] is intentional (tab hidden, app backgrounded) so
+  /// the onDone/onError callbacks don't retry or show an error toast.
+  bool _manuallyClosed = false;
+  int _retryCount = 0;
+  Timer? _retryTimer;
+
+  void connect(BuildContext context) {
+    _retryCount = 0;
+    _connect(context);
+  }
+
+  void _connect(BuildContext context) async {
     final wssUrl = Uri.parse("wss://stream.finpath.vn");
     await disconnect();
+    _manuallyClosed = false;
     _channel = IOWebSocketChannel.connect(
       wssUrl,
       connectTimeout: Duration(seconds: 10), //
     );
     try {
       await _channel!.ready;
+      _retryCount = 0;
 
       _streamSubscription = _channel!.stream.listen(
         (message) {
@@ -35,11 +50,11 @@ class WebSocketService {
         onError: (error) {
           debugPrint('[PUSH][onError] connection is disconnected');
           if (!context.mounted) return;
-          onPushDisconnected(context);
+          _handleDisconnected(context);
         },
         onDone: () {
           if (!context.mounted) return;
-          onPushDisconnected(context);
+          _handleDisconnected(context);
         },
       );
       // sendMessage({
@@ -94,6 +109,22 @@ class WebSocketService {
     } catch (e) {
       debugPrint('Web Socket: connect exception $e');
       if (!context.mounted) return;
+      _handleDisconnected(context);
+    }
+  }
+
+  /// Silently retries up to [_maxRetries] times before surfacing the error.
+  void _handleDisconnected(BuildContext context) {
+    if (_manuallyClosed || !context.mounted) return;
+    if (_retryCount < _maxRetries) {
+      _retryCount++;
+      debugPrint('[PUSH] reconnecting silently, attempt $_retryCount/$_maxRetries');
+      _retryTimer?.cancel();
+      _retryTimer = Timer(Duration(seconds: 2 * _retryCount), () {
+        if (!context.mounted) return;
+        _connect(context);
+      });
+    } else {
       onPushDisconnected(context);
     }
   }
@@ -105,6 +136,9 @@ class WebSocketService {
   }
 
   Future<void> disconnect() async {
+    _manuallyClosed = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
     try {
       _channel?.sink.close();
       _streamSubscription?.cancel();

@@ -12,7 +12,7 @@ class ChickenRepository {
     final rows = await _client
         .from('chicken_batches')
         .select('*, vaccinations(*), expenses(*), cock_sales(*)')
-        .order('incubation_date', ascending: false);
+        .order('created_at', ascending: false);
     return rows.map(_batchFromRow).toList();
   }
 
