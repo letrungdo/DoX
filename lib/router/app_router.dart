@@ -1,7 +1,16 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/store/app_data.dart';
+
+final _chickenAuthGuard = AutoRouteGuard.simple((resolver, _) {
+  if (supabase.auth.currentSession != null) {
+    resolver.next();
+  } else {
+    resolver.redirectUntil(const ChickenLoginRoute());
+  }
+});
 
 @AutoRouterConfig(replaceInRouteName: 'Screen|Page,Route')
 class _AppRouter extends RootStackRouter {
@@ -20,7 +29,7 @@ class _AppRouter extends RootStackRouter {
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
           AutoRoute(initial: initialTabIndex == 0, path: 'news', page: NewsRoute.page),
-          AutoRoute(initial: initialTabIndex == 1, path: 'chicken', page: ChickenRoute.page),
+          AutoRoute(initial: initialTabIndex == 1, path: 'chicken', page: ChickenRoute.page, guards: [_chickenAuthGuard]),
           AutoRoute(
             path: 'locket',
             initial: initialTabIndex == 2,
@@ -47,9 +56,10 @@ class _AppRouter extends RootStackRouter {
           AutoRoute(initial: initialTabIndex == 3, path: 'menu', page: MenuRoute.page),
         ],
       ),
-      AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page),
-      AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page),
-      AutoRoute(path: '/cock-sales', page: CockSalesRoute.page),
+      AutoRoute(path: '/chicken-login', page: ChickenLoginRoute.page),
+      AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page, guards: [_chickenAuthGuard]),
+      AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page, guards: [_chickenAuthGuard]),
+      AutoRoute(path: '/cock-sales', page: CockSalesRoute.page, guards: [_chickenAuthGuard]),
       AutoRoute(path: '/reboot-router', page: RebootRouterRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];

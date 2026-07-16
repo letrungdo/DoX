@@ -47,6 +47,15 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             tooltip: "Thống kê lợi nhuận",
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddBatchDialog),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await vm.signOut();
+              if (!context.mounted) return;
+              context.router.push(const ChickenLoginRoute());
+            },
+            tooltip: "Đăng xuất",
+          ),
         ],
       ),
       body: Consumer<ChickenViewModel>(
