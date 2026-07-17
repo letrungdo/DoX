@@ -114,14 +114,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logoutDoX => 'Logout Do X';
 
   @override
-  String get loginGoogle => 'Login Google';
+  String get vaccinationNotifications => 'Vaccination schedule notifications';
 
   @override
-  String get logoutGoogle => 'Logout Google';
-
-  @override
-  String get autoSyncChickenToGoogleTasks =>
-      'Auto-sync chicken vaccination schedule to Google Tasks';
+  String get notificationPermissionDenied =>
+      'Please allow notifications in the device settings.';
 
   @override
   String get confirmLogout => 'Confirm Logout';

@@ -302,23 +302,17 @@ abstract class AppLocalizations {
   /// **'Logout Do X'**
   String get logoutDoX;
 
-  /// No description provided for @loginGoogle.
+  /// No description provided for @vaccinationNotifications.
   ///
   /// In en, this message translates to:
-  /// **'Login Google'**
-  String get loginGoogle;
+  /// **'Vaccination schedule notifications'**
+  String get vaccinationNotifications;
 
-  /// No description provided for @logoutGoogle.
+  /// No description provided for @notificationPermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Logout Google'**
-  String get logoutGoogle;
-
-  /// No description provided for @autoSyncChickenToGoogleTasks.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-sync chicken vaccination schedule to Google Tasks'**
-  String get autoSyncChickenToGoogleTasks;
+  /// **'Please allow notifications in the device settings.'**
+  String get notificationPermissionDenied;
 
   /// No description provided for @confirmLogout.
   ///

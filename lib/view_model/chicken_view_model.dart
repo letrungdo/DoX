@@ -8,7 +8,7 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/services/chicken_import_service.dart';
-import 'package:do_x/services/google_sync_service.dart';
+import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -51,6 +51,7 @@ class ChickenViewModel extends CoreViewModel {
           _globalCockSales = [];
           _globalExpenses = [];
           notifyListenersSafe();
+          unawaited(_syncVaccinationNotifications());
         default:
           break;
       }
@@ -66,7 +67,12 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initData() {
     super.initData();
-    if (supabase.auth.currentSession == null) return;
+    if (supabase.auth.currentSession == null) {
+      if (vaccinationNotificationsEnabled) {
+        unawaited(notificationService.cancelVaccinationNotifications());
+      }
+      return;
+    }
     _loadData();
   }
 
@@ -76,6 +82,7 @@ class ChickenViewModel extends CoreViewModel {
       _batches = await _repository.getBatches();
       _globalCockSales = await _repository.getGlobalCockSales();
       _globalExpenses = await _repository.getGlobalExpenses();
+      await _syncVaccinationNotifications();
     } catch (e) {
       logger.e("load chicken data failed", error: e);
     } finally {
@@ -89,7 +96,11 @@ class ChickenViewModel extends CoreViewModel {
 
   Future<void> refreshData() => _loadData(showLoading: false);
 
-  Future<void> addBatch({required String name, required DateTime incubationDate, required int quantity}) async {
+  Future<void> addBatch({
+    required String name,
+    required DateTime incubationDate,
+    required int quantity,
+  }) async {
     final newBatch = ChickenBatch(
       id: _uuid.v4(),
       name: name,
@@ -101,7 +112,7 @@ class ChickenViewModel extends CoreViewModel {
     _batches.sort((a, b) => b.incubationDate.compareTo(a.incubationDate));
     await _repository.insertBatch(newBatch);
     notifyListenersSafe();
-    _autoSyncGoogleTasks();
+    await _syncVaccinationNotifications();
   }
 
   Future<void> updateBatch(ChickenBatch batch) async {
@@ -110,26 +121,25 @@ class ChickenViewModel extends CoreViewModel {
       _batches[index] = batch;
       await _repository.updateBatch(batch);
       notifyListenersSafe();
-      _autoSyncGoogleTasks();
+      await _syncVaccinationNotifications();
     }
   }
 
   Future<void> deleteBatch(String id) async {
     final batch = _batches.firstWhereOrNull((e) => e.id == id);
     if (batch != null) {
-      if (googleSyncService.currentUser != null) {
-        googleSyncService.deleteTaskList(batch.name);
-      }
       _batches.removeWhere((e) => e.id == id);
       await _repository.deleteBatch(id);
       notifyListenersSafe();
+      await _syncVaccinationNotifications();
     }
   }
 
   Future<void> addExpense(String batchId, Expense expense) async {
     final index = _batches.indexWhere((e) => e.id == batchId);
     if (index != -1) {
-      final updatedExpenses = List<Expense>.from(_batches[index].expenses)..add(expense);
+      final updatedExpenses = List<Expense>.from(_batches[index].expenses)
+        ..add(expense);
       _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
       await _repository.insertExpense(batchId, expense);
       notifyListenersSafe();
@@ -139,7 +149,8 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> addBatchSale(String batchId, BatchSale sale) async {
     final index = _batches.indexWhere((e) => e.id == batchId);
     if (index != -1) {
-      final updatedSales = List<BatchSale>.from(_batches[index].sales)..add(sale);
+      final updatedSales = List<BatchSale>.from(_batches[index].sales)
+        ..add(sale);
       updatedSales.sort((a, b) => a.date.compareTo(b.date));
       _batches[index] = _batches[index].copyWith(sales: updatedSales);
       await _repository.insertBatchSale(batchId, sale);
@@ -150,7 +161,9 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> deleteBatchSale(String batchId, String saleId) async {
     final index = _batches.indexWhere((e) => e.id == batchId);
     if (index != -1) {
-      final updatedSales = _batches[index].sales.where((s) => s.id != saleId).toList();
+      final updatedSales = _batches[index].sales
+          .where((s) => s.id != saleId)
+          .toList();
       _batches[index] = _batches[index].copyWith(sales: updatedSales);
       await _repository.deleteBatchSale(saleId);
       notifyListenersSafe();
@@ -160,7 +173,8 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> addCockSale(String batchId, CockSale sale) async {
     final index = _batches.indexWhere((e) => e.id == batchId);
     if (index != -1) {
-      final updatedSales = List<CockSale>.from(_batches[index].cockSales)..add(sale);
+      final updatedSales = List<CockSale>.from(_batches[index].cockSales)
+        ..add(sale);
       _batches[index] = _batches[index].copyWith(cockSales: updatedSales);
       await _repository.insertCockSale(batchId, sale);
       notifyListenersSafe();
@@ -231,7 +245,9 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<int> deleteAllData() async {
-    if (supabase.auth.currentUser == null) throw StateError('Bạn cần đăng nhập trước khi xóa dữ liệu.');
+    if (supabase.auth.currentUser == null) {
+      throw StateError('Bạn cần đăng nhập trước khi xóa dữ liệu.');
+    }
 
     final deletedCount = await _repository.deleteAllData();
     await _loadData();
@@ -249,23 +265,48 @@ class ChickenViewModel extends CoreViewModel {
         }
         return v;
       }).toList();
-      _batches[index] = _batches[index].copyWith(vaccinations: updatedVaccinations);
+      _batches[index] = _batches[index].copyWith(
+        vaccinations: updatedVaccinations,
+      );
       if (toggled != null) {
-        await _repository.setVaccinationCompleted(vaccinationId, toggled!.isCompleted);
+        await _repository.setVaccinationCompleted(
+          vaccinationId,
+          toggled!.isCompleted,
+        );
       }
       notifyListenersSafe();
-      _autoSyncGoogleTasks();
+      await _syncVaccinationNotifications();
     }
   }
 
   List<Vaccination> _getDefaultVaccinationSchedule(DateTime incubationDate) {
     final hatchDate = incubationDate.add(const Duration(days: 21));
     return [
-      Vaccination(id: _uuid.v4(), title: 'Gumboro (Lần 1)', scheduledDate: hatchDate.add(const Duration(days: 7))),
-      Vaccination(id: _uuid.v4(), title: 'Newcastle (Lần 1)', scheduledDate: hatchDate.add(const Duration(days: 10))),
-      Vaccination(id: _uuid.v4(), title: 'Gumboro (Lần 2)', scheduledDate: hatchDate.add(const Duration(days: 14))),
-      Vaccination(id: _uuid.v4(), title: 'Newcastle (Lần 2)', scheduledDate: hatchDate.add(const Duration(days: 21))),
-      Vaccination(id: _uuid.v4(), title: 'Tụ huyết trùng', scheduledDate: hatchDate.add(const Duration(days: 45))),
+      Vaccination(
+        id: _uuid.v4(),
+        title: 'Gumboro (Lần 1)',
+        scheduledDate: hatchDate.add(const Duration(days: 7)),
+      ),
+      Vaccination(
+        id: _uuid.v4(),
+        title: 'Newcastle (Lần 1)',
+        scheduledDate: hatchDate.add(const Duration(days: 10)),
+      ),
+      Vaccination(
+        id: _uuid.v4(),
+        title: 'Gumboro (Lần 2)',
+        scheduledDate: hatchDate.add(const Duration(days: 14)),
+      ),
+      Vaccination(
+        id: _uuid.v4(),
+        title: 'Newcastle (Lần 2)',
+        scheduledDate: hatchDate.add(const Duration(days: 21)),
+      ),
+      Vaccination(
+        id: _uuid.v4(),
+        title: 'Tụ huyết trùng',
+        scheduledDate: hatchDate.add(const Duration(days: 45)),
+      ),
     ];
   }
 
@@ -279,38 +320,43 @@ class ChickenViewModel extends CoreViewModel {
     return 50000;
   }
 
-  bool get autoSyncEnabled => storageService.getChickenAutoSync();
+  bool get vaccinationNotificationsEnabled =>
+      storageService.getChickenNotificationsEnabled();
 
-  /// Enables/disables auto sync of vaccination schedules to Google Tasks.
-  /// Returns false when enabling failed (Google sign-in declined).
-  Future<bool> setAutoSyncEnabled(bool enabled) async {
-    if (enabled && googleSyncService.currentUser == null) {
-      final user = await googleSyncService.signIn();
-      if (user == null) return false;
+  Future<bool> setVaccinationNotificationsEnabled(bool enabled) async {
+    if (enabled && !await notificationService.requestPermission()) return false;
+    await storageService.setChickenNotificationsEnabled(enabled);
+    if (enabled) {
+      await notificationService.scheduleVaccinations(_batches);
+    } else {
+      await notificationService.cancelVaccinationNotifications();
     }
-    await storageService.setChickenAutoSync(enabled);
-    if (enabled) _autoSyncGoogleTasks();
     notifyListenersSafe();
     return true;
   }
 
-  void _autoSyncGoogleTasks() {
-    if (!autoSyncEnabled || googleSyncService.currentUser == null) return;
-    googleSyncService.syncToGoogleTasks(_batches).catchError((e) {
-      logger.e("auto sync Google Tasks failed", error: e);
-      return false;
-    });
+  Future<void> _syncVaccinationNotifications() async {
+    if (!vaccinationNotificationsEnabled) return;
+    try {
+      await notificationService.scheduleVaccinations(_batches);
+    } catch (e) {
+      logger.e('schedule vaccination notifications failed', error: e);
+    }
   }
 
   Map<int, ChickenStats> getMonthlyStats(int year) {
-    final stats = <int, _MutableStats>{for (int i = 1; i <= 12; i++) i: _MutableStats()};
+    final stats = <int, _MutableStats>{
+      for (int i = 1; i <= 12; i++) i: _MutableStats(),
+    };
     _accumulateStats((date) => date.year == year ? stats[date.month]! : null);
     return stats.map((m, val) => MapEntry(m, val.toRecord()));
   }
 
   Map<int, ChickenStats> getYearlyStats() {
     final stats = <int, _MutableStats>{};
-    _accumulateStats((date) => stats.putIfAbsent(date.year, () => _MutableStats()));
+    _accumulateStats(
+      (date) => stats.putIfAbsent(date.year, () => _MutableStats()),
+    );
     return stats.map((y, val) => MapEntry(y, val.toRecord()));
   }
 
@@ -339,7 +385,13 @@ class ChickenViewModel extends CoreViewModel {
   }
 }
 
-typedef ChickenStats = ({double batchRevenue, double cockRevenue, double meatRevenue, double expense, double profit});
+typedef ChickenStats = ({
+  double batchRevenue,
+  double cockRevenue,
+  double meatRevenue,
+  double expense,
+  double profit,
+});
 
 class _MutableStats {
   double batchRevenue = 0;
