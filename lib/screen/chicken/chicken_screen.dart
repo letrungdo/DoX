@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
@@ -19,6 +20,7 @@ import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +46,12 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   void initState() {
     _tabReselectHandler = _handleTabReselect;
     super.initState();
+  }
+
+  @override
+  void initData() {
+    super.initData();
+    vm.ensureBatchesLoaded();
   }
 
   @override
@@ -80,7 +88,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         curve: Curves.easeOut,
       );
     }
-    if (mounted) await vm.refreshData();
+    if (mounted) await vm.loadBatches();
   }
 
   @override
@@ -125,7 +133,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          if (vm.isBusy) {
+          if (vm.isBatchesLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -146,10 +154,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                           _selectedYear,
                     )
                     .toList();
-          final totalRevenue = batches.fold<double>(
-            0,
-            (sum, batch) => sum + batch.totalSaleAmount + batch.totalCockSales,
-          );
           final totalProfit = batches.fold<double>(
             0,
             (sum, batch) => sum + batch.profit,
@@ -188,7 +192,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       child: _buildFeatureCard(
                         icon: Assets.images.feedCute.svg(width: 32, height: 32),
                         title: l10n.commonExpenses,
-                        subtitle: l10n.expenseCount(vm.globalExpenses.length),
                         color: Colors.orange,
                         onTap: () =>
                             context.router.push(const GlobalExpensesRoute()),
@@ -201,8 +204,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                           width: 32,
                           height: 32,
                         ),
-                        title: l10n.sellRoosterMeat,
-                        subtitle: l10n.saleCount(vm.globalCockSales.length),
+                        title: l10n.sellGrownChicken,
                         color: Colors.red,
                         onTap: () =>
                             context.router.push(const CockSalesRoute()),
@@ -239,39 +241,33 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              l10n.revenueAmount(
-                                "${totalRevenue.toCurrency()}đ",
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: "${l10n.totalLabel}: ",
+                                style: TextStyle(
+                                  color: context
+                                      .theme
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
                               ),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.green,
+                              TextSpan(
+                                text: "${totalProfit.toCurrency()}đ",
+                                style: TextStyle(
+                                  color: totalProfit >= 0
+                                      ? context.colors.money
+                                      : Colors.red,
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              l10n.profitAmount("${totalProfit.toCurrency()}đ"),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: totalProfit >= 0
-                                    ? Colors.blue
-                                    : Colors.red,
-                              ),
-                            ),
-                          ),
-                        ],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
@@ -279,7 +275,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: vm.refreshData,
+                  onRefresh: vm.loadBatches,
                   child: items.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -325,7 +321,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   Widget _buildFeatureCard({
     required Widget icon,
     required String title,
-    required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
@@ -350,24 +345,14 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               ),
               const SizedBox(width: 9),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -474,7 +459,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   _buildMoneyBadge(
                     l10n.badgeRevenue,
                     batch.totalSaleAmount + batch.totalCockSales,
-                    Colors.green,
+                    context.colors.money,
                   ),
                   if (batch.totalExpenses > 0)
                     _buildMoneyBadge(
@@ -485,7 +470,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   _buildMoneyBadge(
                     l10n.badgeProfit,
                     batch.profit,
-                    batch.profit >= 0 ? Colors.blue : Colors.red,
+                    batch.profit >= 0 ? context.colors.money : Colors.red,
                   ),
                 ],
               ),
@@ -703,6 +688,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     final nameController = TextEditingController(text: suggestedName);
     final quantityController = TextEditingController();
     DateTime selectedDate = DateTime.now();
+    String? nameError;
+    String? qtyError;
 
     showDialog(
       context: context,
@@ -712,27 +699,41 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           title: l10n.addNewBatch,
           confirmText: l10n.add,
           onConfirm: () {
-            final name = nameController.text;
+            final name = nameController.text.trim();
             final qty = int.tryParse(quantityController.text) ?? 0;
-            if (name.isNotEmpty && qty > 0) {
-              vm.addBatch(
-                name: name,
-                incubationDate: selectedDate,
-                quantity: qty,
-              );
-              Navigator.pop(context);
+            if (name.isEmpty || qty <= 0) {
+              setState(() {
+                nameError = name.isEmpty ? l10n.errorEnterBatchName : null;
+                qtyError = qty <= 0 ? l10n.errorEnterQuantity : null;
+              });
+              return;
             }
+            vm.addBatch(
+              name: name,
+              incubationDate: selectedDate,
+              quantity: qty,
+            );
+            Navigator.pop(context);
           },
           children: [
             CuteTextField(
               controller: nameController,
               label: l10n.batchName,
               hint: l10n.batchNameHint,
+              errorText: nameError,
+              onChanged: (_) {
+                if (nameError != null) setState(() => nameError = null);
+              },
             ),
             CuteTextField(
               controller: quantityController,
               label: l10n.eggQuantity,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              errorText: qtyError,
+              onChanged: (_) {
+                if (qtyError != null) setState(() => qtyError = null);
+              },
             ),
             CuteDateField(
               label: l10n.incubationDate,

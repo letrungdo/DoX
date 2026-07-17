@@ -9,6 +9,7 @@ class CuteTextField extends StatelessWidget {
   final String? hint;
   final String? prefixText;
   final String? suffixText;
+  final String? errorText;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final int maxLines;
@@ -22,6 +23,7 @@ class CuteTextField extends StatelessWidget {
     this.hint,
     this.prefixText,
     this.suffixText,
+    this.errorText,
     this.keyboardType,
     this.inputFormatters,
     this.maxLines = 1,
@@ -44,6 +46,7 @@ class CuteTextField extends StatelessWidget {
         hint: hint,
         prefixText: prefixText,
         suffixText: suffixText,
+        errorText: errorText,
       ),
     );
   }

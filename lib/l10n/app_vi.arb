@@ -87,43 +87,11 @@
   "yearPrefix": "Năm",
   "yearLabel": "Năm:",
   "all": "Tất cả",
-  "expenseCount": "{count} khoản chi",
-  "@expenseCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "saleCount": "{count} lượt bán",
   "@saleCount": {
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "revenueAmount": "Doanh thu: {amount}",
-  "@revenueAmount": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "profitAmount": "Lợi nhuận: {amount}",
-  "@profitAmount": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "totalAmount": "Tổng: {amount}",
-  "@totalAmount": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
       }
     }
   },
@@ -484,5 +452,11 @@
   "batchRevenue": "Doanh thu lứa gà",
   "cockRevenue": "Doanh thu gà đá",
   "meatRevenue": "Doanh thu gà thịt",
-  "profitLabel": "Lợi nhuận"
+  "profitLabel": "Lợi nhuận",
+  "errorEnterAmount": "Vui lòng nhập số tiền",
+  "errorEnterQuantity": "Vui lòng nhập số lượng",
+  "errorEnterBatchName": "Vui lòng nhập tên lứa gà",
+  "revenue": "Doanh thu",
+  "totalLabel": "Tổng",
+  "sellGrownChicken": "Bán gà lớn"
 }
