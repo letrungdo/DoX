@@ -16,11 +16,11 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.5.2+9
+version: 1.5.4+11
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
-  flutter: "3.44.2"
+  flutter: "3.44.6"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -112,6 +112,10 @@ flutter_gen:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # Disable Swift Package Manager to avoid Crashlytics script path issues and plugin incompatibilities
+  # See: https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers#turn-off-swiftpm-for-a-single-project
+  config:
+    enable-swift-package-manager: false
   generate: true
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

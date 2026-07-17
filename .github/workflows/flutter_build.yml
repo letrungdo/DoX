@@ -18,7 +18,7 @@ permissions:
   actions: read
 
 env:
-  XCODE_VERSION: "16.4"
+  XCODE_VERSION: "26.3"
   BUILD_ENV: ${{ github.event.inputs.environment || 'dev' }}
 
 jobs:
