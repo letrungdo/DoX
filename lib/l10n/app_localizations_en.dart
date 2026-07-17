@@ -102,7 +102,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locket => 'Locket';
 
   @override
-  String get rebootRouter => 'Reboot Router Xiaomi';
+  String get rebootRouter => 'Wifi Management';
 
   @override
   String get about => 'About';
@@ -140,6 +140,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get system => 'System';
+
+  @override
+  String get wifiManagement => 'Wifi Management';
+
+  @override
+  String get lanSpeed => 'LAN Speed';
+
+  @override
+  String get internetSpeed => 'Internet Speed';
+
+  @override
+  String get routerIpAddress => 'Router IP Address';
+
+  @override
+  String get adminPassword => 'Admin Password';
+
+  @override
+  String get rebootRouterXiaomi => 'Reboot Router Xiaomi';
+
+  @override
+  String get startSpeedTest => 'Start Speed Test';
+
+  @override
+  String get testing => 'Testing...';
+
+  @override
+  String speedMbps(String speed) {
+    return '$speed Mbps';
+  }
 
   @override
   String get goldPrice => 'Gold Price';

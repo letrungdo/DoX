@@ -24,7 +24,7 @@ import 'package:do_x/screen/locket/trimmer_screen.dart' as _i14;
 import 'package:do_x/screen/main_screen.dart' as _i9;
 import 'package:do_x/screen/menu_screen.dart' as _i10;
 import 'package:do_x/screen/news_screen.dart' as _i11;
-import 'package:do_x/screen/reboot_router_screen.dart' as _i12;
+import 'package:do_x/screen/wifi_management_screen.dart' as _i12;
 import 'package:do_x/screen/settings_screen.dart' as _i13;
 import 'package:flutter/material.dart' as _i16;
 
@@ -242,17 +242,17 @@ class NewsRoute extends _i15.PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [_i12.RebootRouterScreen]
-class RebootRouterRoute extends _i15.PageRouteInfo<void> {
-  const RebootRouterRoute({List<_i15.PageRouteInfo>? children})
-    : super(RebootRouterRoute.name, initialChildren: children);
+/// [_i12.WifiManagementScreen]
+class WifiManagementRoute extends _i15.PageRouteInfo<void> {
+  const WifiManagementRoute({List<_i15.PageRouteInfo>? children})
+    : super(WifiManagementRoute.name, initialChildren: children);
 
-  static const String name = 'RebootRouterRoute';
+  static const String name = 'WifiManagementRoute';
 
   static _i15.PageInfo page = _i15.PageInfo(
     name,
     builder: (data) {
-      return _i15.WrappedRoute(child: const _i12.RebootRouterScreen());
+      return _i15.WrappedRoute(child: const _i12.WifiManagementScreen());
     },
   );
 }

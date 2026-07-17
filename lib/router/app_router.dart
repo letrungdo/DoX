@@ -62,7 +62,7 @@ class _AppRouter extends RootStackRouter {
       AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page, guards: [_supabaseAuthGuard]),
       AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page, guards: [_supabaseAuthGuard]),
       AutoRoute(path: '/cock-sales', page: CockSalesRoute.page, guards: [_supabaseAuthGuard]),
-      AutoRoute(path: '/reboot-router', page: RebootRouterRoute.page),
+      AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];

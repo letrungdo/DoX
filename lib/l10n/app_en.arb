@@ -37,7 +37,7 @@
   "news": "News",
   "chicken": "Chicken",
   "locket": "Locket",
-  "rebootRouter": "Reboot Router Xiaomi",
+  "rebootRouter": "Wifi Management",
   "about": "About",
   "loginDoX": "Login Do X",
   "logoutDoX": "Logout Do X",
@@ -50,6 +50,22 @@
   "light": "Light",
   "dark": "Dark",
   "system": "System",
+  "wifiManagement": "Wifi Management",
+  "lanSpeed": "LAN Speed",
+  "internetSpeed": "Internet Speed",
+  "routerIpAddress": "Router IP Address",
+  "adminPassword": "Admin Password",
+  "rebootRouterXiaomi": "Reboot Router Xiaomi",
+  "startSpeedTest": "Start Speed Test",
+  "testing": "Testing...",
+  "speedMbps": "{speed} Mbps",
+  "@speedMbps": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "goldPrice": "Gold Price",
   "index": "Index",
   "buy": "Buy",

@@ -30,7 +30,7 @@
   "news": "Tin tức",
   "chicken": "Nuôi gà",
   "locket": "Locket",
-  "rebootRouter": "Khởi động lại Router Xiaomi",
+  "rebootRouter": "Quản lý Wifi",
   "about": "Giới thiệu",
   "loginDoX": "Đăng nhập Do X",
   "logoutDoX": "Đăng xuất Do X",
@@ -43,6 +43,22 @@
   "light": "Sáng",
   "dark": "Tối",
   "system": "Hệ thống",
+  "wifiManagement": "Quản lý Wifi",
+  "lanSpeed": "Tốc độ LAN",
+  "internetSpeed": "Tốc độ Internet",
+  "routerIpAddress": "Địa chỉ IP Router",
+  "adminPassword": "Mật khẩu Admin",
+  "rebootRouterXiaomi": "Khởi động lại Router Xiaomi",
+  "startSpeedTest": "Đo tốc độ",
+  "testing": "Đang đo...",
+  "speedMbps": "{speed} Mbps",
+  "@speedMbps": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "goldPrice": "Giá vàng",
   "index": "Chỉ số",
   "buy": "Mua vào",

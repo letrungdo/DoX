@@ -102,7 +102,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get locket => 'Locket';
 
   @override
-  String get rebootRouter => 'Khởi động lại Router Xiaomi';
+  String get rebootRouter => 'Quản lý Wifi';
 
   @override
   String get about => 'Giới thiệu';
@@ -140,6 +140,35 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get system => 'Hệ thống';
+
+  @override
+  String get wifiManagement => 'Quản lý Wifi';
+
+  @override
+  String get lanSpeed => 'Tốc độ LAN';
+
+  @override
+  String get internetSpeed => 'Tốc độ Internet';
+
+  @override
+  String get routerIpAddress => 'Địa chỉ IP Router';
+
+  @override
+  String get adminPassword => 'Mật khẩu Admin';
+
+  @override
+  String get rebootRouterXiaomi => 'Khởi động lại Router Xiaomi';
+
+  @override
+  String get startSpeedTest => 'Đo tốc độ';
+
+  @override
+  String get testing => 'Đang đo...';
+
+  @override
+  String speedMbps(String speed) {
+    return '$speed Mbps';
+  }
 
   @override
   String get goldPrice => 'Giá vàng';
