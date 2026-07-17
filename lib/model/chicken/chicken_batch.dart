@@ -30,15 +30,19 @@ class ChickenBatch {
     this.actualHatchDate,
   });
 
-  factory ChickenBatch.fromJson(Map<String, dynamic> json) => _$ChickenBatchFromJson(json);
+  factory ChickenBatch.fromJson(Map<String, dynamic> json) =>
+      _$ChickenBatchFromJson(json);
   Map<String, dynamic> toJson() => _$ChickenBatchToJson(this);
 
   // Helper to calculate expected hatch date (usually 21 days for chickens)
-  DateTime get expectedHatchDate => incubationDate.add(const Duration(days: 21));
+  DateTime get expectedHatchDate =>
+      incubationDate.add(const Duration(days: 21));
 
-  double get totalExpenses => expenses.fold(0, (sum, item) => sum + item.amount);
+  double get totalExpenses =>
+      expenses.fold(0, (sum, item) => sum + item.amount);
 
-  double get totalCockSales => cockSales.fold(0, (sum, item) => sum + item.amount);
+  double get totalCockSales =>
+      cockSales.fold(0, (sum, item) => sum + item.amount);
 
   double get totalSaleAmount => sales.fold(0, (sum, item) => sum + item.amount);
 
@@ -46,13 +50,29 @@ class ChickenBatch {
 
   int get remainingQuantity => quantity - soldQuantity;
 
-  DateTime? get lastSaleDate => sales.isEmpty ? null : sales.map((s) => s.date).reduce((a, b) => a.isAfter(b) ? a : b);
+  DateTime? get lastSaleDate => sales.isEmpty
+      ? null
+      : sales.map((s) => s.date).reduce((a, b) => a.isAfter(b) ? a : b);
 
   double get profit => (totalSaleAmount + totalCockSales) - totalExpenses;
 
+  ChickenBatch shiftVaccinationSchedule(Duration offset) {
+    if (offset == Duration.zero) return this;
+    return copyWith(
+      vaccinations: vaccinations
+          .map(
+            (vaccination) => vaccination.copyWith(
+              scheduledDate: vaccination.scheduledDate.add(offset),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   int get ageInDays {
     // Once the batch is sold out, its age freezes at the last sale date.
-    final referenceDate = (remainingQuantity <= 0 ? lastSaleDate : null) ?? DateTime.now();
+    final referenceDate =
+        (remainingQuantity <= 0 ? lastSaleDate : null) ?? DateTime.now();
     final hatchDate = actualHatchDate ?? expectedHatchDate;
     return referenceDate.difference(hatchDate).inDays;
   }

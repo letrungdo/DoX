@@ -118,8 +118,19 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> updateBatch(ChickenBatch batch) async {
     final index = _batches.indexWhere((e) => e.id == batch.id);
     if (index != -1) {
-      _batches[index] = batch;
-      await _repository.updateBatch(batch);
+      final previousBatch = _batches[index];
+      final incubationDateDelta = batch.incubationDate.difference(
+        previousBatch.incubationDate,
+      );
+      final updatedBatch = incubationDateDelta == Duration.zero
+          ? batch
+          : batch.shiftVaccinationSchedule(incubationDateDelta);
+
+      _batches[index] = updatedBatch;
+      await _repository.updateBatch(updatedBatch);
+      if (incubationDateDelta != Duration.zero) {
+        await _repository.updateVaccinationDates(updatedBatch.vaccinations);
+      }
       notifyListenersSafe();
       await _syncVaccinationNotifications();
     }
@@ -325,14 +336,20 @@ class ChickenViewModel extends CoreViewModel {
 
   Future<bool> setVaccinationNotificationsEnabled(bool enabled) async {
     if (enabled && !await notificationService.requestPermission()) return false;
-    await storageService.setChickenNotificationsEnabled(enabled);
-    if (enabled) {
-      await notificationService.scheduleVaccinations(_batches);
-    } else {
-      await notificationService.cancelVaccinationNotifications();
+    try {
+      if (enabled) {
+        await notificationService.scheduleVaccinations(_batches);
+      } else {
+        await notificationService.cancelVaccinationNotifications();
+      }
+      await storageService.setChickenNotificationsEnabled(enabled);
+      notifyListenersSafe();
+      return true;
+    } catch (e) {
+      logger.e('update vaccination notification setting failed', error: e);
+      notifyListenersSafe();
+      return false;
     }
-    notifyListenersSafe();
-    return true;
   }
 
   Future<void> _syncVaccinationNotifications() async {

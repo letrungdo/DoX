@@ -311,8 +311,20 @@ abstract class AppLocalizations {
   /// No description provided for @notificationPermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Please allow notifications in the device settings.'**
+  /// **'Unable to update the notification schedule. Please check notification permission in the device settings.'**
   String get notificationPermissionDenied;
+
+  /// No description provided for @vaccinationNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vaccination: {vaccination}'**
+  String vaccinationNotificationTitle(String vaccination);
+
+  /// No description provided for @vaccinationNotificationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch {batch} is due for vaccination today.'**
+  String vaccinationNotificationBody(String batch);
 
   /// No description provided for @confirmLogout.
   ///

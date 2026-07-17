@@ -1,29 +1,39 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:do_x/app.dart';
-import 'package:flutter/material.dart';
+import 'package:do_x/model/chicken/chicken_batch.dart';
+import 'package:do_x/model/chicken/vaccination.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('persists vaccination notification setting', () async {
+    SharedPreferences.setMockInitialValues({});
+    await storageService.init();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(storageService.getChickenNotificationsEnabled(), isFalse);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await storageService.setChickenNotificationsEnabled(true);
+    expect(storageService.getChickenNotificationsEnabled(), isTrue);
+  });
+
+  test('shifts vaccination dates with incubation date changes', () {
+    final batch = ChickenBatch(
+      id: 'batch-1',
+      name: 'Lứa 1',
+      incubationDate: DateTime(2026, 7, 1),
+      quantity: 10,
+      vaccinations: [
+        Vaccination(
+          id: 'vaccination-1',
+          title: 'Gumboro',
+          scheduledDate: DateTime(2026, 7, 29),
+        ),
+      ],
+    );
+
+    final shifted = batch.shiftVaccinationSchedule(const Duration(days: 3));
+
+    expect(shifted.vaccinations.single.scheduledDate, DateTime(2026, 8, 1));
   });
 }
