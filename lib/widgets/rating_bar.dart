@@ -229,7 +229,10 @@ class _RatingBarState extends State<RatingBar> {
         alignment: WrapAlignment.start,
         textDirection: textDirection,
         direction: widget.direction,
-        children: List.generate(widget.itemCount, (index) => _buildRating(context, index)),
+        children: List.generate(
+          widget.itemCount,
+          (index) => _buildRating(context, index),
+        ),
       ),
     );
   }
@@ -263,15 +266,15 @@ class _RatingBarState extends State<RatingBar> {
           height: widget.itemSize,
           child: FittedBox(
             fit: BoxFit.contain,
-            child:
-                _isRTL
-                    ? Transform(
-                      transform: Matrix4.identity()..scaleByVector3(Vector3(-1.0, 1.0, 1.0)),
-                      alignment: Alignment.center,
-                      transformHitTests: false,
-                      child: ratingWidget!.half,
-                    )
-                    : ratingWidget!.half,
+            child: _isRTL
+                ? Transform(
+                    transform: Matrix4.identity()
+                      ..scaleByVector3(Vector3(-1.0, 1.0, 1.0)),
+                    alignment: Alignment.center,
+                    transformHitTests: false,
+                    child: ratingWidget!.half,
+                  )
+                : ratingWidget!.half,
           ),
         );
       }
@@ -280,7 +283,10 @@ class _RatingBarState extends State<RatingBar> {
       ratingWidget0 = SizedBox(
         width: widget.itemSize,
         height: widget.itemSize,
-        child: FittedBox(fit: BoxFit.contain, child: ratingWidget?.full ?? item),
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: ratingWidget?.full ?? item,
+        ),
       );
       iconRating += 1.0;
     }
@@ -295,7 +301,9 @@ class _RatingBarState extends State<RatingBar> {
           } else {
             final tappedPosition = details.localPosition.dx;
             final tappedOnFirstHalf = tappedPosition <= widget.itemSize / 2;
-            value = index + (tappedOnFirstHalf && widget.allowHalfRating ? 0.5 : 1.0);
+            value =
+                index +
+                (tappedOnFirstHalf && widget.allowHalfRating ? 0.5 : 1.0);
           }
 
           value = math.max(value, widget.minRating);
@@ -316,13 +324,22 @@ class _RatingBarState extends State<RatingBar> {
             valueListenable: _glow,
             builder: (context, glow, child) {
               if (glow && widget.glow) {
-                final glowColor = widget.glowColor ?? Theme.of(context).colorScheme.secondary;
+                final glowColor =
+                    widget.glowColor ?? Theme.of(context).colorScheme.secondary;
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: glowColor.withAlpha(30), blurRadius: 10, spreadRadius: widget.glowRadius),
-                      BoxShadow(color: glowColor.withAlpha(20), blurRadius: 10, spreadRadius: widget.glowRadius),
+                      BoxShadow(
+                        color: glowColor.withAlpha(30),
+                        blurRadius: 10,
+                        spreadRadius: widget.glowRadius,
+                      ),
+                      BoxShadow(
+                        color: glowColor.withAlpha(20),
+                        blurRadius: 10,
+                        spreadRadius: widget.glowRadius,
+                      ),
                     ],
                   ),
                   child: child,
@@ -399,19 +416,29 @@ class _HalfRatingWidget extends StatelessWidget {
     return SizedBox(
       height: size,
       width: size,
-      child:
-          enableMask
-              ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.contain,
-                    child: _NoRatingWidget(size: size, unratedColor: unratedColor, enableMask: enableMask, child: child),
+      child: enableMask
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                FittedBox(
+                  fit: BoxFit.contain,
+                  child: _NoRatingWidget(
+                    size: size,
+                    unratedColor: unratedColor,
+                    enableMask: enableMask,
+                    child: child,
                   ),
-                  FittedBox(fit: BoxFit.contain, child: ClipRect(clipper: _HalfClipper(rtlMode: rtlMode), child: child)),
-                ],
-              )
-              : FittedBox(fit: BoxFit.contain, child: child),
+                ),
+                FittedBox(
+                  fit: BoxFit.contain,
+                  child: ClipRect(
+                    clipper: _HalfClipper(rtlMode: rtlMode),
+                    child: child,
+                  ),
+                ),
+              ],
+            )
+          : FittedBox(fit: BoxFit.contain, child: child),
     );
   }
 }
@@ -422,15 +449,21 @@ class _HalfClipper extends CustomClipper<Rect> {
   final bool rtlMode;
 
   @override
-  Rect getClip(Size size) =>
-      rtlMode ? Rect.fromLTRB(size.width / 2, 0.0, size.width, size.height) : Rect.fromLTRB(0.0, 0.0, size.width / 2, size.height);
+  Rect getClip(Size size) => rtlMode
+      ? Rect.fromLTRB(size.width / 2, 0.0, size.width, size.height)
+      : Rect.fromLTRB(0.0, 0.0, size.width / 2, size.height);
 
   @override
   bool shouldReclip(CustomClipper<Rect> oldClipper) => true;
 }
 
 class _NoRatingWidget extends StatelessWidget {
-  const _NoRatingWidget({required this.size, required this.child, required this.enableMask, required this.unratedColor});
+  const _NoRatingWidget({
+    required this.size,
+    required this.child,
+    required this.enableMask,
+    required this.unratedColor,
+  });
 
   final double size;
   final Widget child;
@@ -444,7 +477,12 @@ class _NoRatingWidget extends StatelessWidget {
       width: size,
       child: FittedBox(
         fit: BoxFit.contain,
-        child: enableMask ? ColorFiltered(colorFilter: ColorFilter.mode(unratedColor, BlendMode.srcIn), child: child) : child,
+        child: enableMask
+            ? ColorFiltered(
+                colorFilter: ColorFilter.mode(unratedColor, BlendMode.srcIn),
+                child: child,
+              )
+            : child,
       ),
     );
   }

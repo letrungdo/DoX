@@ -8,25 +8,17 @@ abstract class DialogFactory {
 
   Widget progress();
 
-  Widget custom(
-    Widget child, {
-    required Map<String, double?>? position,
-  });
+  Widget custom(Widget child, {required Map<String, double?>? position});
 }
 
 class _CupertinoDialogFactory implements DialogFactory {
   @override
   Widget progress() {
-    return const Center(
-      child: CupertinoActivityIndicator(animating: true),
-    );
+    return const Center(child: CupertinoActivityIndicator(animating: true));
   }
 
   @override
-  Widget custom(
-    Widget child, {
-    required Map<String, double?>? position,
-  }) {
+  Widget custom(Widget child, {required Map<String, double?>? position}) {
     if (position != null) {
       return Stack(
         children: [
@@ -36,12 +28,10 @@ class _CupertinoDialogFactory implements DialogFactory {
             bottom: position['bottom'],
             right: position['right'],
             child: child,
-          )
+          ),
         ],
       );
     }
-    return Center(
-      child: child,
-    );
+    return Center(child: child);
   }
 }

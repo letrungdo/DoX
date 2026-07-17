@@ -10,6 +10,10 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_date_field.dart';
+import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -184,11 +188,7 @@ class _GlobalExpensesScreenState
     final l10n = AppLocalizations.of(context);
     final isEditing = expense != null;
     final amountController = TextEditingController(
-      text: expense == null
-          ? ''
-          : expense.amount == expense.amount.truncateToDouble()
-          ? expense.amount.toStringAsFixed(0)
-          : expense.amount.toString(),
+      text: expense == null ? '' : expense.amount.toCurrency(),
     );
     final noteController = TextEditingController(text: expense?.note ?? '');
     var selectedType = expense?.type ?? ExpenseType.feed;
@@ -202,7 +202,7 @@ class _GlobalExpensesScreenState
           title: isEditing ? l10n.editCommonExpense : l10n.addCommonExpense,
           accent: Colors.orange,
           confirmText: isEditing ? l10n.update : l10n.save,
-          destructiveText: isEditing ? l10n.deleteCommonExpense : null,
+          destructiveText: isEditing ? l10n.delete : null,
           onDestructive: isEditing
               ? () {
                   Navigator.pop(context);
@@ -210,7 +210,7 @@ class _GlobalExpensesScreenState
                 }
               : null,
           onConfirm: () async {
-            final amount = double.tryParse(amountController.text) ?? 0;
+            final amount = amountController.text.toMoney() ?? 0;
             if (amount <= 0) return;
             try {
               final updatedExpense = Expense(
@@ -254,11 +254,9 @@ class _GlobalExpensesScreenState
               decoration: cuteInputDecoration(context, l10n.expenseType),
               borderRadius: BorderRadius.circular(14),
             ),
-            CuteTextField(
+            CuteMoneyField(
               controller: amountController,
               label: l10n.amountLabel,
-              prefixText: "đ ",
-              keyboardType: TextInputType.number,
             ),
             CuteTextField(controller: noteController, label: l10n.noteLabel),
             CuteDateField(

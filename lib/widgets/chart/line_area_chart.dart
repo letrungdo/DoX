@@ -10,19 +10,35 @@ class LineAreaChart extends StatelessWidget {
   final double strokeWidth;
   final bool showArea;
 
-  const LineAreaChart({super.key, required this.data, this.lineColor, this.areaColor, this.strokeWidth = 2.0, this.showArea = true});
+  const LineAreaChart({
+    super.key,
+    required this.data,
+    this.lineColor,
+    this.areaColor,
+    this.strokeWidth = 2.0,
+    this.showArea = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
       return Container(
-        decoration: BoxDecoration(border: Border.all(color: Colors.grey.withValues(alpha: 0.3)), borderRadius: BorderRadius.circular(4)),
-        child: const Center(child: Text('No data', style: TextStyle(color: Colors.grey, fontSize: 12))),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: const Center(
+          child: Text(
+            'No data',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        ),
       );
     }
 
     final effectiveLineColor = lineColor ?? Theme.of(context).primaryColor;
-    final effectiveAreaColor = areaColor ?? effectiveLineColor.withValues(alpha: 0.1);
+    final effectiveAreaColor =
+        areaColor ?? effectiveLineColor.withValues(alpha: 0.1);
 
     return ClipRect(
       child: CustomPaint(
@@ -61,11 +77,10 @@ class _LineAreaChartPainter extends CustomPainter {
     if (data.length == 1) {
       // Draw a single point as a horizontal line
       final y = size.height / 2;
-      final paint =
-          Paint()
-            ..color = lineColor
-            ..strokeWidth = strokeWidth
-            ..style = PaintingStyle.stroke;
+      final paint = Paint()
+        ..color = lineColor
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke;
 
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
       return;
@@ -83,17 +98,18 @@ class _LineAreaChartPainter extends CustomPainter {
 
     if (valueRange == 0) {
       final y = size.height / 2;
-      final paint =
-          Paint()
-            ..color = lineColor
-            ..strokeWidth = strokeWidth
-            ..style = PaintingStyle.stroke;
+      final paint = Paint()
+        ..color = lineColor
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke;
 
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
       return;
     }
 
-    final double xStep = validData.length > 1 ? size.width / (validData.length - 1) : 0;
+    final double xStep = validData.length > 1
+        ? size.width / (validData.length - 1)
+        : 0;
     final Path linePath = Path();
     final Path areaPath = Path();
 
@@ -137,21 +153,19 @@ class _LineAreaChartPainter extends CustomPainter {
         [0.0, 1.0],
       );
 
-      final areaPaint =
-          Paint()
-            ..shader = gradient
-            ..style = PaintingStyle.fill;
+      final areaPaint = Paint()
+        ..shader = gradient
+        ..style = PaintingStyle.fill;
 
       canvas.drawPath(areaPath, areaPaint);
     }
 
-    final linePaint =
-        Paint()
-          ..color = lineColor
-          ..strokeWidth = strokeWidth
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round;
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     canvas.drawPath(linePath, linePaint);
   }

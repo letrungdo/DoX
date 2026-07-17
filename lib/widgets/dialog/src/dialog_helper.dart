@@ -70,7 +70,14 @@ class DialogHelper {
         ],
       ),
     );
-    currentOverlay.add(IndexedData<OverlayEntry>(id: id, data: overlayEntry, controller: controller, isWindowDialog: isWindowDialog));
+    currentOverlay.add(
+      IndexedData<OverlayEntry>(
+        id: id,
+        data: overlayEntry,
+        controller: controller,
+        isWindowDialog: isWindowDialog,
+      ),
+    );
 
     overlayState.insert(overlayEntry);
     FocusScope.of(context).requestFocus(overlayFocusNode);
@@ -78,8 +85,14 @@ class DialogHelper {
   }
 
   // Hide opened dialog with animation
-  Future<void> hide(BuildContext context, {String? id, required bool rootOverlay}) {
-    currentOverlay.where((e) => e.id == id || id == null).forEach((e) => e.controller.add(0.0));
+  Future<void> hide(
+    BuildContext context, {
+    String? id,
+    required bool rootOverlay,
+  }) {
+    currentOverlay
+        .where((e) => e.id == id || id == null)
+        .forEach((e) => e.controller.add(0.0));
 
     return Future.delayed(defaultDuration)
         .then(
@@ -105,10 +118,20 @@ class DialogHelper {
     bool excludeLoading = false,
     bool isMainWindow = false,
   }) {
-    _hide(context, id, rootOverlay: rootOverlay, excludeLoading: excludeLoading);
+    _hide(
+      context,
+      id,
+      rootOverlay: rootOverlay,
+      excludeLoading: excludeLoading,
+    );
   }
 
-  void _hide(BuildContext context, String? id, {required bool rootOverlay, bool excludeLoading = false}) async {
+  void _hide(
+    BuildContext context,
+    String? id, {
+    required bool rootOverlay,
+    bool excludeLoading = false,
+  }) async {
     currentOverlay.removeWhere((overlay) {
       if (excludeLoading && overlay.id.isLoadingDialog()) {
         return false;
@@ -138,5 +161,10 @@ class IndexedData<T> {
   final bool? isWindowDialog;
   final StreamController<double> controller;
 
-  const IndexedData({required this.controller, this.id, required this.data, this.isWindowDialog});
+  const IndexedData({
+    required this.controller,
+    this.id,
+    required this.data,
+    this.isWindowDialog,
+  });
 }

@@ -4,6 +4,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/expense.dart';
@@ -11,6 +12,10 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_date_field.dart';
+import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -36,17 +41,16 @@ class _ChickenBatchDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: DoAppBar(title: "Chi tiết lứa gà"),
+      appBar: DoAppBar(title: l10n.batchDetailTitle),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
           final batch = vm.batches.firstWhereOrNull(
             (e) => e.id == widget.batchId,
           );
           if (batch == null) {
-            return const Center(
-              child: Text("Không tìm thấy thông tin lứa gà."),
-            );
+            return Center(child: Text(l10n.batchNotFound));
           }
 
           return SingleChildScrollView(
@@ -65,9 +69,9 @@ class _ChickenBatchDetailScreenState
                 Center(
                   child: TextButton(
                     onPressed: () => _confirmDelete(batch),
-                    child: const Text(
-                      "Xóa lứa gà này",
-                      style: TextStyle(color: Colors.red),
+                    child: Text(
+                      l10n.deleteThisBatch,
+                      style: const TextStyle(color: Colors.red),
                     ),
                   ),
                 ),
@@ -80,6 +84,7 @@ class _ChickenBatchDetailScreenState
   }
 
   Widget _buildInfoSection(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -102,29 +107,35 @@ class _ChickenBatchDetailScreenState
               ],
             ),
             const Divider(),
-            _buildRowInfo("Số lượng ban đầu", "${batch.quantity}"),
+            _buildRowInfo(l10n.initialQuantity, "${batch.quantity}"),
             if (batch.sales.isNotEmpty)
               _buildRowInfo(
-                "Đã bán / còn lại",
-                "${batch.soldQuantity} / ${batch.remainingQuantity} con",
+                l10n.soldRemainingLabel,
+                l10n.soldRemainingValue(
+                  batch.soldQuantity,
+                  batch.remainingQuantity,
+                ),
               ),
-            _buildRowInfo("Ngày ấp", _dateFormat.format(batch.incubationDate)),
+            _buildRowInfo(
+              l10n.incubationDay,
+              _dateFormat.format(batch.incubationDate),
+            ),
             if (batch.actualHatchDate == null)
               _buildRowInfo(
-                "Dự kiến nở",
+                l10n.expectedHatch,
                 _dateFormat.format(batch.expectedHatchDate),
               )
             else
               _buildRowInfo(
-                "Ngày nở thực tế",
+                l10n.actualHatchDateLabel,
                 _dateFormat.format(batch.actualHatchDate!),
               ),
             if (batch.ageInDays >= 0)
-              _buildRowInfo("Tuổi", "${batch.ageInDays} ngày")
+              _buildRowInfo(l10n.ageLabel, l10n.daysCount(batch.ageInDays))
             else
               _buildRowInfo(
-                "Trạng thái",
-                "Chưa nở (còn ${-batch.ageInDays} ngày)",
+                l10n.statusLabel,
+                l10n.notHatchedYet(-batch.ageInDays),
                 color: Colors.orange,
               ),
           ],
@@ -134,11 +145,12 @@ class _ChickenBatchDetailScreenState
   }
 
   Widget _buildVaccinationSection(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Lịch tiêm phòng",
+          l10n.vaccinationSchedule,
           style: context.theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -147,7 +159,7 @@ class _ChickenBatchDetailScreenState
         ...batch.vaccinations.map(
           (v) => CheckboxListTile(
             title: Text(v.title),
-            subtitle: Text("Ngày: ${_dateFormat.format(v.scheduledDate)}"),
+            subtitle: Text(l10n.dateValue(_dateFormat.format(v.scheduledDate))),
             value: v.isCompleted,
             onChanged: (val) {
               vm.setCurrentContext(context);
@@ -160,6 +172,7 @@ class _ChickenBatchDetailScreenState
   }
 
   Widget _buildExpenseSection(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -167,7 +180,7 @@ class _ChickenBatchDetailScreenState
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Chi phí (Tổng: ${batch.totalExpenses.toCurrency()}đ)",
+              l10n.expensesSectionTitle("${batch.totalExpenses.toCurrency()}đ"),
               style: context.theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -179,7 +192,7 @@ class _ChickenBatchDetailScreenState
           ],
         ),
         const SizedBox(height: 8),
-        if (batch.expenses.isEmpty) const Text("Chưa có chi phí nào."),
+        if (batch.expenses.isEmpty) Text(l10n.noExpensesYet),
         ...batch.expenses.map(
           (e) => ListTile(
             leading: _getExpenseSvg(e.type),
@@ -198,6 +211,7 @@ class _ChickenBatchDetailScreenState
   }
 
   Widget _buildSaleSection(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     final hasSold = batch.sales.isNotEmpty;
     final soldOut = hasSold && batch.remainingQuantity <= 0;
     final isDark = context.theme.brightness == Brightness.dark;
@@ -218,18 +232,20 @@ class _ChickenBatchDetailScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Bán gà & Lợi nhuận",
+              l10n.saleAndProfit,
               style: context.theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const Divider(),
             if (!hasSold) ...[
-              const Text("Gà chưa bán. Có thể bán một lứa thành nhiều đợt."),
+              Text(l10n.notSoldHint),
               const SizedBox(height: 8),
               _buildRowInfo(
-                "Giá gợi ý",
-                "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ/con",
+                l10n.suggestedPrice,
+                l10n.pricePerChicken(
+                  "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ",
+                ),
               ),
             ] else ...[
               ...batch.sales.map(
@@ -238,7 +254,7 @@ class _ChickenBatchDetailScreenState
                   dense: true,
                   leading: Assets.images.coinCute.svg(width: 26, height: 26),
                   title: Text(
-                    "${sale.quantity > 0 ? '${sale.quantity} con' : 'Bán gà'}${sale.note != null ? ' - ${sale.note}' : ''}",
+                    "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
                   ),
                   subtitle: Text(_dateFormat.format(sale.date)),
                   trailing: Row(
@@ -262,20 +278,23 @@ class _ChickenBatchDetailScreenState
               ),
               const Divider(),
               _buildRowInfo(
-                "Đã bán",
-                "${batch.soldQuantity} con, còn ${batch.remainingQuantity} con",
+                l10n.soldLabel,
+                l10n.soldAndRemaining(
+                  batch.soldQuantity,
+                  batch.remainingQuantity,
+                ),
               ),
               _buildRowInfo(
-                "Tổng doanh thu",
+                l10n.totalRevenueLabel,
                 "${batch.totalSaleAmount.toCurrency()}đ",
               ),
               _buildRowInfo(
-                "Tổng chi phí",
+                l10n.totalExpensesLabel,
                 "-${batch.totalExpenses.toCurrency()}đ",
               ),
               const Divider(),
               _buildRowInfo(
-                "LỢI NHUẬN",
+                l10n.profitUpper,
                 "${batch.profit.toCurrency()}đ",
                 color: batch.profit >= 0 ? Colors.green : Colors.red,
                 isBold: true,
@@ -286,7 +305,7 @@ class _ChickenBatchDetailScreenState
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => _showSaleDialog(batch),
-                child: const Text("Ghi nhận đợt bán mới"),
+                child: Text(l10n.recordNewSale),
               ),
             ),
           ],
@@ -296,13 +315,14 @@ class _ChickenBatchDetailScreenState
   }
 
   void _confirmDeleteSale(ChickenBatch batch, BatchSale sale) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => CuteDialog(
         icon: Assets.images.coinCute,
-        title: "Xóa đợt bán",
+        title: l10n.deleteSaleRound,
         accent: Colors.red,
-        confirmText: "Xóa",
+        confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
           vm.deleteBatchSale(batch.id, sale.id);
@@ -310,7 +330,10 @@ class _ChickenBatchDetailScreenState
         },
         children: [
           Text(
-            "Xóa đợt bán ngày ${_dateFormat.format(sale.date)} (${sale.amount.toCurrency()}đ)?",
+            l10n.confirmDeleteSaleRound(
+              _dateFormat.format(sale.date),
+              "${sale.amount.toCurrency()}đ",
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -343,6 +366,7 @@ class _ChickenBatchDetailScreenState
   }
 
   void _showAddExpenseDialog(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     final amountController = TextEditingController();
     final noteController = TextEditingController();
     ExpenseType selectedType = ExpenseType.feed;
@@ -352,11 +376,11 @@ class _ChickenBatchDetailScreenState
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.feedCute,
-          title: "Thêm chi phí",
+          title: l10n.addExpense,
           accent: Colors.orange,
-          confirmText: "Lưu",
+          confirmText: l10n.save,
           onConfirm: () {
-            final amount = double.tryParse(amountController.text) ?? 0;
+            final amount = amountController.text.toMoney() ?? 0;
             if (amount > 0) {
               vm.addExpense(
                 batch.id,
@@ -385,16 +409,14 @@ class _ChickenBatchDetailScreenState
                   )
                   .toList(),
               onChanged: (val) => setState(() => selectedType = val!),
-              decoration: cuteInputDecoration(context, "Loại chi phí"),
+              decoration: cuteInputDecoration(context, l10n.expenseType),
               borderRadius: BorderRadius.circular(14),
             ),
-            CuteTextField(
+            CuteMoneyField(
               controller: amountController,
-              label: "Số tiền",
-              prefixText: "đ ",
-              keyboardType: TextInputType.number,
+              label: l10n.amountLabel,
             ),
-            CuteTextField(controller: noteController, label: "Ghi chú"),
+            CuteTextField(controller: noteController, label: l10n.noteLabel),
           ],
         ),
       ),
@@ -402,6 +424,7 @@ class _ChickenBatchDetailScreenState
   }
 
   void _showSaleDialog(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     final quantity = batch.remainingQuantity > 0
         ? batch.remainingQuantity
         : batch.quantity;
@@ -409,19 +432,19 @@ class _ChickenBatchDetailScreenState
     final totalAmount = unitPrice * quantity;
 
     final unitPriceController = TextEditingController(
-      text: unitPrice.toStringAsFixed(0),
+      text: unitPrice.toCurrency(),
     );
     final qtyController = TextEditingController(text: quantity.toString());
     final totalAmountController = TextEditingController(
-      text: totalAmount.toStringAsFixed(0),
+      text: totalAmount.toCurrency(),
     );
     final noteController = TextEditingController();
     DateTime saleDate = DateTime.now();
 
     void updateTotal() {
-      final unitPrice = double.tryParse(unitPriceController.text) ?? 0;
+      final unitPrice = unitPriceController.text.toMoney() ?? 0;
       final qty = int.tryParse(qtyController.text) ?? 0;
-      totalAmountController.text = (unitPrice * qty).toStringAsFixed(0);
+      totalAmountController.text = (unitPrice * qty).toCurrency();
     }
 
     showDialog(
@@ -429,11 +452,11 @@ class _ChickenBatchDetailScreenState
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.coinCute,
-          title: "Ghi nhận đợt bán",
+          title: l10n.recordSale,
           accent: Colors.green,
-          confirmText: "Xác nhận",
+          confirmText: l10n.confirm,
           onConfirm: () {
-            final amount = double.tryParse(totalAmountController.text) ?? 0;
+            final amount = totalAmountController.text.toMoney() ?? 0;
             final qty = int.tryParse(qtyController.text) ?? 0;
             if (amount > 0 && qty > 0) {
               vm.addBatchSale(
@@ -457,35 +480,28 @@ class _ChickenBatchDetailScreenState
                 Expanded(
                   child: CuteTextField(
                     controller: qtyController,
-                    label: "Số lượng",
+                    label: l10n.quantityLabel,
                     keyboardType: TextInputType.number,
                     onChanged: (_) => setState(updateTotal),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: CuteTextField(
+                  child: CuteMoneyField(
                     controller: unitPriceController,
-                    label: "Giá 1 con",
-                    prefixText: "đ ",
-                    keyboardType: TextInputType.number,
+                    label: l10n.pricePerUnit,
                     onChanged: (_) => setState(updateTotal),
                   ),
                 ),
               ],
             ),
-            CuteTextField(
+            CuteMoneyField(
               controller: totalAmountController,
-              label: "Tổng tiền thu được (tự tính)",
-              prefixText: "đ ",
-              keyboardType: TextInputType.number,
+              label: l10n.totalAutoCalculated,
             ),
-            CuteTextField(
-              controller: noteController,
-              label: "Ghi chú (bán cho ai...)",
-            ),
+            CuteTextField(controller: noteController, label: l10n.saleNoteHint),
             CuteDateField(
-              label: "Ngày bán",
+              label: l10n.saleDate,
               value: saleDate,
               onChanged: (d) => setState(() => saleDate = d),
             ),
@@ -496,13 +512,14 @@ class _ChickenBatchDetailScreenState
   }
 
   void _confirmDelete(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => CuteDialog(
         icon: Assets.images.henCute,
-        title: "Xóa lứa gà",
+        title: l10n.deleteBatch,
         accent: Colors.red,
-        confirmText: "Xóa",
+        confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
           vm.deleteBatch(batch.id);
@@ -511,7 +528,7 @@ class _ChickenBatchDetailScreenState
         },
         children: [
           Text(
-            "Bạn có chắc chắn muốn xóa lứa '${batch.name}'? Hành động này không thể hoàn tác.",
+            l10n.confirmDeleteBatch(batch.name),
             textAlign: TextAlign.center,
           ),
         ],
@@ -520,6 +537,7 @@ class _ChickenBatchDetailScreenState
   }
 
   void _showEditInfoDialog(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: batch.name);
     final quantityController = TextEditingController(
       text: batch.quantity.toString(),
@@ -532,8 +550,8 @@ class _ChickenBatchDetailScreenState
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.chickCute,
-          title: "Sửa thông tin lứa gà",
-          confirmText: "Lưu",
+          title: l10n.editBatchInfo,
+          confirmText: l10n.save,
           onConfirm: () {
             final name = nameController.text;
             final qty = int.tryParse(quantityController.text) ?? 0;
@@ -550,19 +568,19 @@ class _ChickenBatchDetailScreenState
             }
           },
           children: [
-            CuteTextField(controller: nameController, label: "Tên lứa gà"),
+            CuteTextField(controller: nameController, label: l10n.batchName),
             CuteTextField(
               controller: quantityController,
-              label: "Số lượng ban đầu",
+              label: l10n.initialQuantity,
               keyboardType: TextInputType.number,
             ),
             CuteDateField(
-              label: "Ngày ấp trứng",
+              label: l10n.incubationDate,
               value: incubationDate,
               onChanged: (d) => setState(() => incubationDate = d),
             ),
             CuteDateField(
-              label: "Ngày nở thực tế",
+              label: l10n.actualHatchDateLabel,
               value: actualHatchDate,
               onChanged: (d) => setState(() => actualHatchDate = d),
             ),
@@ -573,12 +591,13 @@ class _ChickenBatchDetailScreenState
   }
 
   String _getExpenseLabel(ExpenseType type) {
+    final l10n = AppLocalizations.of(context);
     return switch (type) {
-      ExpenseType.feed => "Cám",
-      ExpenseType.medicine => "Thuốc",
-      ExpenseType.electricity => "Điện sưởi",
-      ExpenseType.water => "Nước",
-      ExpenseType.other => "Khác",
+      ExpenseType.feed => l10n.expenseFeed,
+      ExpenseType.medicine => l10n.expenseMedicine,
+      ExpenseType.electricity => l10n.expenseElectricity,
+      ExpenseType.water => l10n.expenseWater,
+      ExpenseType.other => l10n.expenseOther,
     };
   }
 

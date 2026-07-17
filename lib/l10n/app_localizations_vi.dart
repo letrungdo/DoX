@@ -350,4 +350,338 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get downloadErrorNotFound =>
       'Không tìm thấy file cập nhật trên máy chủ.';
+
+  @override
+  String get add => 'Thêm';
+
+  @override
+  String get confirm => 'Xác nhận';
+
+  @override
+  String get pleaseWait => 'Vui lòng chờ...';
+
+  @override
+  String get deleteAllChickenData => 'Xóa toàn bộ dữ liệu gà';
+
+  @override
+  String statusWaitingHatch(String date) {
+    return 'Chờ nở - $date';
+  }
+
+  @override
+  String get statusSoldOut => 'Đã bán hết';
+
+  @override
+  String statusDaysOld(int days) {
+    return '$days ngày tuổi';
+  }
+
+  @override
+  String chickenQuantity(int count) {
+    return '$count con';
+  }
+
+  @override
+  String soldOfTotal(int sold, int total) {
+    return 'Đã bán $sold/$total con';
+  }
+
+  @override
+  String hatchedOnDate(String date) {
+    return 'Nở $date';
+  }
+
+  @override
+  String get badgeRevenue => 'Thu';
+
+  @override
+  String get badgeExpense => 'Chi';
+
+  @override
+  String get badgeProfit => 'Lãi';
+
+  @override
+  String importedRecords(int count, String file) {
+    return 'Đã nhập $count bản ghi từ $file.';
+  }
+
+  @override
+  String importFileFailed(String error) {
+    return 'Nhập file thất bại: $error';
+  }
+
+  @override
+  String get importingData => 'Đang import dữ liệu';
+
+  @override
+  String get confirmDeleteAllChickenData => 'Xóa toàn bộ dữ liệu gà?';
+
+  @override
+  String get deleteData => 'Xóa dữ liệu';
+
+  @override
+  String get deleteAllChickenDataWarning =>
+      'Tất cả lứa gà, doanh thu và chi phí của tài khoản hiện tại sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.';
+
+  @override
+  String get deletingData => 'Đang xóa dữ liệu';
+
+  @override
+  String get noDataToDelete => 'Không có dữ liệu để xóa.';
+
+  @override
+  String deletedAllData(int count) {
+    return 'Đã xóa toàn bộ dữ liệu ($count bản ghi chính).';
+  }
+
+  @override
+  String deleteDataFailed(String error) {
+    return 'Xóa dữ liệu thất bại: $error';
+  }
+
+  @override
+  String get addNewBatch => 'Thêm lứa gà mới';
+
+  @override
+  String get batchName => 'Tên lứa gà';
+
+  @override
+  String get batchNameHint => 'VD: Bầy 31';
+
+  @override
+  String batchNamePrefill(int number) {
+    return 'Bầy $number';
+  }
+
+  @override
+  String get eggQuantity => 'Số lượng trứng/con';
+
+  @override
+  String get incubationDate => 'Ngày ấp trứng';
+
+  @override
+  String get batchDetailTitle => 'Chi tiết lứa gà';
+
+  @override
+  String get batchNotFound => 'Không tìm thấy thông tin lứa gà.';
+
+  @override
+  String get deleteThisBatch => 'Xóa lứa gà này';
+
+  @override
+  String get initialQuantity => 'Số lượng ban đầu';
+
+  @override
+  String get soldRemainingLabel => 'Đã bán / còn lại';
+
+  @override
+  String soldRemainingValue(int sold, int remaining) {
+    return '$sold / $remaining con';
+  }
+
+  @override
+  String get incubationDay => 'Ngày ấp';
+
+  @override
+  String get expectedHatch => 'Dự kiến nở';
+
+  @override
+  String get actualHatchDateLabel => 'Ngày nở thực tế';
+
+  @override
+  String get ageLabel => 'Tuổi';
+
+  @override
+  String daysCount(int days) {
+    return '$days ngày';
+  }
+
+  @override
+  String get statusLabel => 'Trạng thái';
+
+  @override
+  String notHatchedYet(int days) {
+    return 'Chưa nở (còn $days ngày)';
+  }
+
+  @override
+  String get vaccinationSchedule => 'Lịch tiêm phòng';
+
+  @override
+  String dateValue(String date) {
+    return 'Ngày: $date';
+  }
+
+  @override
+  String expensesSectionTitle(String amount) {
+    return 'Chi phí (Tổng: $amount)';
+  }
+
+  @override
+  String get noExpensesYet => 'Chưa có chi phí nào.';
+
+  @override
+  String get saleAndProfit => 'Bán gà & Lợi nhuận';
+
+  @override
+  String get notSoldHint => 'Gà chưa bán. Có thể bán một lứa thành nhiều đợt.';
+
+  @override
+  String get suggestedPrice => 'Giá gợi ý';
+
+  @override
+  String pricePerChicken(String amount) {
+    return '$amount/con';
+  }
+
+  @override
+  String get chickenSale => 'Bán gà';
+
+  @override
+  String get soldLabel => 'Đã bán';
+
+  @override
+  String soldAndRemaining(int sold, int remaining) {
+    return '$sold con, còn $remaining con';
+  }
+
+  @override
+  String get totalRevenueLabel => 'Tổng doanh thu';
+
+  @override
+  String get totalExpensesLabel => 'Tổng chi phí';
+
+  @override
+  String get profitUpper => 'LỢI NHUẬN';
+
+  @override
+  String get recordNewSale => 'Ghi nhận đợt bán mới';
+
+  @override
+  String get deleteSaleRound => 'Xóa đợt bán';
+
+  @override
+  String confirmDeleteSaleRound(String date, String amount) {
+    return 'Xóa đợt bán ngày $date ($amount)?';
+  }
+
+  @override
+  String get addExpense => 'Thêm chi phí';
+
+  @override
+  String get recordSale => 'Ghi nhận đợt bán';
+
+  @override
+  String get quantityLabel => 'Số lượng';
+
+  @override
+  String get pricePerUnit => 'Giá 1 con';
+
+  @override
+  String get totalAutoCalculated => 'Tổng tiền thu được (tự tính)';
+
+  @override
+  String get saleNoteHint => 'Ghi chú (bán cho ai...)';
+
+  @override
+  String get saleDate => 'Ngày bán';
+
+  @override
+  String get deleteBatch => 'Xóa lứa gà';
+
+  @override
+  String confirmDeleteBatch(String name) {
+    return 'Bạn có chắc chắn muốn xóa lứa \'$name\'? Hành động này không thể hoàn tác.';
+  }
+
+  @override
+  String get editBatchInfo => 'Sửa thông tin lứa gà';
+
+  @override
+  String get fightingChicken => 'Gà đá';
+
+  @override
+  String get meatChicken => 'Gà thịt';
+
+  @override
+  String get noCockSalesData => 'Chưa có dữ liệu bán gà';
+
+  @override
+  String get noMatchingSales => 'Không có lượt bán phù hợp.';
+
+  @override
+  String noSalesInYear(int year) {
+    return 'Không có lượt bán trong năm $year.';
+  }
+
+  @override
+  String get enterFirstSale => 'Nhập bán con đầu tiên';
+
+  @override
+  String get editSale => 'Chỉnh sửa lượt bán';
+
+  @override
+  String get enterCockSale => 'Nhập bán gà';
+
+  @override
+  String get soldMeatChickenNote => 'Bán gà thịt';
+
+  @override
+  String get soldFightingChickenNote => 'Bán gà đá';
+
+  @override
+  String saveFailed(String error) {
+    return 'Lưu thất bại: $error';
+  }
+
+  @override
+  String get fightingChickenFull => 'Gà đá / gà nòi';
+
+  @override
+  String get salePrice => 'Giá bán';
+
+  @override
+  String get cockSaleNoteHint => 'Ghi chú (con gà số mấy, trạng gà...)';
+
+  @override
+  String get deleteSaleRecord => 'Xóa lượt bán';
+
+  @override
+  String confirmDeleteSaleRecord(String date, String amount) {
+    return 'Xóa lượt bán ngày $date ($amount)?';
+  }
+
+  @override
+  String deleteFailed(String error) {
+    return 'Xóa thất bại: $error';
+  }
+
+  @override
+  String get byMonth => 'Theo tháng';
+
+  @override
+  String get byYear => 'Theo năm';
+
+  @override
+  String noDataInYear(int year) {
+    return 'Không có dữ liệu trong năm $year.';
+  }
+
+  @override
+  String get monthPrefix => 'Tháng';
+
+  @override
+  String get noStatsData => 'Chưa có dữ liệu thống kê.';
+
+  @override
+  String get batchRevenue => 'Doanh thu lứa gà';
+
+  @override
+  String get cockRevenue => 'Doanh thu gà đá';
+
+  @override
+  String get meatRevenue => 'Doanh thu gà thịt';
+
+  @override
+  String get profitLabel => 'Lợi nhuận';
 }

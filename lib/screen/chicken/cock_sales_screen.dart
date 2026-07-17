@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -9,6 +10,9 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -33,9 +37,10 @@ class _CockSalesScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: DoAppBar(
-        title: "Bán gà đá / gà thịt",
+        title: l10n.sellRoosterMeat,
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.roosterCute),
@@ -68,15 +73,15 @@ class _CockSalesScreenState
                   children: [
                     const Icon(Icons.filter_alt_outlined, size: 20),
                     const SizedBox(width: 8),
-                    const Text(
-                      "Năm:",
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    Text(
+                      l10n.yearLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(width: 12),
                     DropdownButton<int>(
                       value: _selectedYear,
                       items: [
-                        const DropdownMenuItem(value: 0, child: Text("Tất cả")),
+                        DropdownMenuItem(value: 0, child: Text(l10n.all)),
                         ...years.map(
                           (year) => DropdownMenuItem(
                             value: year,
@@ -96,20 +101,20 @@ class _CockSalesScreenState
                 child: Row(
                   children: [
                     ChoiceChip(
-                      label: const Text("Tất cả"),
+                      label: Text(l10n.all),
                       selected: _filter == null,
                       onSelected: (_) => setState(() => _filter = null),
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
-                      label: const Text("Gà đá"),
+                      label: Text(l10n.fightingChicken),
                       selected: _filter == SaleCategory.fighting,
                       onSelected: (_) =>
                           setState(() => _filter = SaleCategory.fighting),
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
-                      label: const Text("Gà thịt"),
+                      label: Text(l10n.meatChicken),
                       selected: _filter == SaleCategory.meat,
                       onSelected: (_) =>
                           setState(() => _filter = SaleCategory.meat),
@@ -123,11 +128,11 @@ class _CockSalesScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "${sortedSales.length} lượt bán",
+                      l10n.saleCount(sortedSales.length),
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                     Text(
-                      "Tổng: ${total.toCurrency()}đ",
+                      l10n.totalAmount("${total.toCurrency()}đ"),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
@@ -156,19 +161,17 @@ class _CockSalesScreenState
                                     const SizedBox(height: 16),
                                     Text(
                                       vm.globalCockSales.isEmpty
-                                          ? "Chưa có dữ liệu bán gà"
+                                          ? l10n.noCockSalesData
                                           : _selectedYear == 0
-                                          ? "Không có lượt bán phù hợp."
-                                          : "Không có lượt bán trong năm $_selectedYear.",
+                                          ? l10n.noMatchingSales
+                                          : l10n.noSalesInYear(_selectedYear),
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
                                     if (vm.globalCockSales.isEmpty) ...[
                                       const SizedBox(height: 16),
                                       ElevatedButton(
                                         onPressed: () => _showSaleDialog(),
-                                        child: const Text(
-                                          "Nhập bán con đầu tiên",
-                                        ),
+                                        child: Text(l10n.enterFirstSale),
                                       ),
                                     ],
                                   ],
@@ -205,7 +208,7 @@ class _CockSalesScreenState
                                 ),
                               ),
                               subtitle: Text(
-                                "${_dateFormat.format(sale.date)} · ${isMeat ? 'Gà thịt' : 'Gà đá'}",
+                                "${_dateFormat.format(sale.date)} · ${isMeat ? l10n.meatChicken : l10n.fightingChicken}",
                               ),
                               trailing: Text(
                                 "${sale.amount.toCurrency()}đ",
@@ -228,13 +231,10 @@ class _CockSalesScreenState
   }
 
   Future<void> _showSaleDialog([CockSale? sale]) async {
+    final l10n = AppLocalizations.of(context);
     final isEditing = sale != null;
     final amountController = TextEditingController(
-      text: sale == null
-          ? ''
-          : sale.amount == sale.amount.truncateToDouble()
-          ? sale.amount.toStringAsFixed(0)
-          : sale.amount.toString(),
+      text: sale == null ? '' : sale.amount.toCurrency(),
     );
     final noteController = TextEditingController(text: sale?.note ?? '');
     DateTime saleDate = sale?.date ?? DateTime.now();
@@ -247,10 +247,10 @@ class _CockSalesScreenState
           icon: category == SaleCategory.meat
               ? Assets.images.drumstickCute
               : Assets.images.roosterCute,
-          title: isEditing ? "Chỉnh sửa lượt bán" : "Nhập bán gà",
+          title: isEditing ? l10n.editSale : l10n.enterCockSale,
           accent: category == SaleCategory.meat ? Colors.brown : Colors.red,
-          confirmText: isEditing ? "Cập nhật" : "Lưu",
-          destructiveText: isEditing ? "Xóa lượt bán" : null,
+          confirmText: isEditing ? l10n.update : l10n.save,
+          destructiveText: isEditing ? l10n.delete : null,
           onDestructive: isEditing
               ? () {
                   Navigator.pop(context);
@@ -258,7 +258,7 @@ class _CockSalesScreenState
                 }
               : null,
           onConfirm: () async {
-            final amount = double.tryParse(amountController.text) ?? 0;
+            final amount = amountController.text.toMoney() ?? 0;
             if (amount > 0) {
               final updatedSale = CockSale(
                 id: sale?.id ?? const Uuid().v4(),
@@ -266,8 +266,8 @@ class _CockSalesScreenState
                 date: saleDate,
                 note: noteController.text.trim().isEmpty
                     ? (category == SaleCategory.meat
-                          ? "Bán gà thịt"
-                          : "Bán gà đá")
+                          ? l10n.soldMeatChickenNote
+                          : l10n.soldFightingChickenNote)
                     : noteController.text.trim(),
                 category: category,
               );
@@ -281,41 +281,41 @@ class _CockSalesScreenState
               } catch (error) {
                 if (mounted) {
                   ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(content: Text("Lưu thất bại: $error")),
+                    SnackBar(content: Text(l10n.saveFailed(error.toString()))),
                   );
                 }
               }
             }
           },
           children: [
-            DropdownButtonFormField<SaleCategory>(
-              initialValue: category,
-              decoration: cuteInputDecoration(context, "Loại gà"),
-              borderRadius: BorderRadius.circular(14),
-              items: const [
-                DropdownMenuItem(
+            SegmentedButton<SaleCategory>(
+              segments: [
+                ButtonSegment(
                   value: SaleCategory.fighting,
-                  child: Text("Gà đá / gà nòi"),
+                  label: Text(l10n.fightingChickenFull),
                 ),
-                DropdownMenuItem(
+                ButtonSegment(
                   value: SaleCategory.meat,
-                  child: Text("Gà thịt"),
+                  label: Text(l10n.meatChicken),
                 ),
               ],
-              onChanged: (val) => setState(() => category = val!),
+              selected: {category},
+              onSelectionChanged: (selection) =>
+                  setState(() => category = selection.first),
+              showSelectedIcon: false,
+              style: SegmentedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
             ),
-            CuteTextField(
-              controller: amountController,
-              label: "Giá bán",
-              prefixText: "đ ",
-              keyboardType: TextInputType.number,
-            ),
+            CuteMoneyField(controller: amountController, label: l10n.salePrice),
             CuteTextField(
               controller: noteController,
-              label: "Ghi chú (con gà số mấy, trạng gà...)",
+              label: l10n.cockSaleNoteHint,
             ),
             CuteDateField(
-              label: "Ngày bán",
+              label: l10n.saleDate,
               value: saleDate,
               onChanged: (d) => setState(() => saleDate = d),
             ),
@@ -328,20 +328,24 @@ class _CockSalesScreenState
   }
 
   Future<void> _confirmDeleteSale(CockSale sale) async {
+    final l10n = AppLocalizations.of(context);
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => CuteDialog(
         icon: sale.category == SaleCategory.meat
             ? Assets.images.drumstickCute
             : Assets.images.roosterCute,
-        title: "Xóa lượt bán",
+        title: l10n.deleteSaleRecord,
         accent: Colors.red,
-        confirmText: "Xóa",
+        confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),
         children: [
           Text(
-            "Xóa lượt bán ngày ${_dateFormat.format(sale.date)} (${sale.amount.toCurrency()}đ)?",
+            l10n.confirmDeleteSaleRecord(
+              _dateFormat.format(sale.date),
+              "${sale.amount.toCurrency()}đ",
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -353,9 +357,9 @@ class _CockSalesScreenState
       await vm.deleteGlobalCockSale(sale.id);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Xóa thất bại: $error")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.deleteFailed(error.toString()))),
+        );
       }
     }
   }
