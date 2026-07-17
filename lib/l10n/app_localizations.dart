@@ -281,7 +281,7 @@ abstract class AppLocalizations {
   /// No description provided for @rebootRouter.
   ///
   /// In en, this message translates to:
-  /// **'Reboot Router Xiaomi'**
+  /// **'Wifi Management'**
   String get rebootRouter;
 
   /// No description provided for @about.
@@ -355,6 +355,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'System'**
   String get system;
+
+  /// No description provided for @wifiManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Wifi Management'**
+  String get wifiManagement;
+
+  /// No description provided for @lanSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'LAN Speed'**
+  String get lanSpeed;
+
+  /// No description provided for @internetSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet Speed'**
+  String get internetSpeed;
+
+  /// No description provided for @routerIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Router IP Address'**
+  String get routerIpAddress;
+
+  /// No description provided for @adminPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Password'**
+  String get adminPassword;
+
+  /// No description provided for @rebootRouterXiaomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Reboot Router Xiaomi'**
+  String get rebootRouterXiaomi;
+
+  /// No description provided for @startSpeedTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Speed Test'**
+  String get startSpeedTest;
+
+  /// No description provided for @testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get testing;
+
+  /// No description provided for @speedMbps.
+  ///
+  /// In en, this message translates to:
+  /// **'{speed} Mbps'**
+  String speedMbps(String speed);
 
   /// No description provided for @goldPrice.
   ///

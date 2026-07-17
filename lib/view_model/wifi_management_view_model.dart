@@ -1,11 +1,17 @@
+import 'dart:async';
+import 'package:do_x/services/location_service.dart';
 import 'package:do_x/services/router_reboot_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:provider/provider.dart';
 
-class RebootRouterViewModel extends CoreViewModel {
-  final _service = RouterRebootService();
+class WifiManagementViewModel extends CoreViewModel {
+  final _rebootService = RouterRebootService();
+  final _speedTestService = SpeedTestService();
+  late final LocationService _locationService;
 
   static const stepLabels = [
     "Kết nối & Quét MAC", //
@@ -30,6 +36,31 @@ class RebootRouterViewModel extends CoreViewModel {
   int elapsedSeconds = 0;
   bool get isWaitingForOnline => activeStep == stepLabels.indexOf("Chờ khởi động xong");
   bool get isTakingTooLong => elapsedSeconds > 120; // Alert if > 2 minutes
+
+  double? lanSpeed;
+  int? lanLatency;
+  double? internetSpeed;
+  int? internetLatency;
+
+  bool isTestingLan = false;
+  bool isTestingInternet = false;
+
+  SpeedTestServer selectedServer = SpeedTestServer.internetServers.first;
+
+  StreamSubscription? _speedSubscription;
+
+  @override
+  void initState() {
+    _locationService = context.read<LocationService>();
+    super.initState();
+    _pickNearestServer();
+  }
+
+  @override
+  void dispose() {
+    _speedSubscription?.cancel();
+    super.dispose();
+  }
 
   void skipWaiting() {
     activeStep = stepLabels.length;
@@ -68,6 +99,18 @@ class RebootRouterViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
+  Future<void> _pickNearestServer() async {
+    try {
+      final position = await _locationService.getCurrentPosition();
+      if (position != null) {
+        selectedServer = SpeedTestServer.findNearest(position);
+        notifyListenersSafe();
+      }
+    } catch (e) {
+      logger.e("Failed to pick nearest server", error: e);
+    }
+  }
+
   Future<void> reboot() async {
     if (isBusy) return;
     setBusy(true);
@@ -82,7 +125,7 @@ class RebootRouterViewModel extends CoreViewModel {
     secureStorage.saveRouterPassword(password);
 
     try {
-      final message = await _service.reboot(
+      final message = await _rebootService.reboot(
         ip: ip,
         password: password,
         cancelToken: cancelToken,
@@ -105,7 +148,7 @@ class RebootRouterViewModel extends CoreViewModel {
       });
 
       try {
-        await _service.checkRouterOnline(
+        await _rebootService.checkRouterOnline(
           ip: ip,
           onLog: _log,
           cancelToken: cancelToken,
@@ -126,5 +169,81 @@ class RebootRouterViewModel extends CoreViewModel {
     } finally {
       setBusy(false);
     }
+  }
+
+  void stopTests() {
+    _speedSubscription?.cancel();
+    _speedSubscription = null;
+    isTestingLan = false;
+    isTestingInternet = false;
+    notifyListenersSafe();
+  }
+
+  Future<void> testLanSpeed() async {
+    if (isTestingLan) {
+      stopTests();
+      return;
+    }
+    stopTests(); // Stop any other test
+    isTestingLan = true;
+    lanSpeed = 0;
+    lanLatency = null;
+    notifyListenersSafe();
+
+    final baseUrl = _rebootService.cleanIp(ip);
+
+    _speedSubscription = _speedTestService.testLanSpeed(baseUrl, cancelToken: cancelToken).listen(
+      (update) {
+        lanSpeed = update.currentMbps;
+        lanLatency = update.latencyMs;
+        notifyListenersSafe();
+      },
+      onError: (e) {
+        logger.e("LAN Speed test failed", error: e);
+        isTestingLan = false;
+        notifyListenersSafe();
+      },
+      onDone: () {
+        isTestingLan = false;
+        notifyListenersSafe();
+      },
+    );
+  }
+
+  void setSelectedServer(SpeedTestServer server) {
+    selectedServer = server;
+    notifyListenersSafe();
+  }
+
+  Future<void> testInternetSpeed() async {
+    if (isTestingInternet) {
+      stopTests();
+      return;
+    }
+    stopTests(); // Stop any other test
+    isTestingInternet = true;
+    internetSpeed = 0;
+    internetLatency = null;
+    notifyListenersSafe();
+
+    // Re-check nearest server before starting just in case
+    await _pickNearestServer();
+
+    _speedSubscription = _speedTestService.testInternetSpeed(selectedServer, cancelToken: cancelToken).listen(
+      (update) {
+        internetSpeed = update.currentMbps;
+        internetLatency = update.latencyMs;
+        notifyListenersSafe();
+      },
+      onError: (e) {
+        logger.e("Internet Speed test failed", error: e);
+        isTestingInternet = false;
+        notifyListenersSafe();
+      },
+      onDone: () {
+        isTestingInternet = false;
+        notifyListenersSafe();
+      },
+    );
   }
 }

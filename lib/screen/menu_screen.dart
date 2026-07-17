@@ -83,13 +83,13 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
           _buildGoogleSyncControl(l10n),
           DoButton(
             onPressed: () {
-              context.pushRoute(const RebootRouterRoute());
+              context.pushRoute(const WifiManagementRoute());
             },
             child: Row(
               spacing: 8,
               children: [
                 SFIcon(SFIcons.sf_wifi),
-                Text(l10n.rebootRouter),
+                Text(l10n.wifiManagement),
               ],
             ),
           ),
