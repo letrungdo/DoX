@@ -123,6 +123,11 @@ jobs:
       - name: Setup FlutterFire
         run: dart pub global activate flutterfire_cli
 
+      - name: Prepare iOS dependencies
+        run: |
+          flutter pub get
+          bash scripts/patch-easy-video-editor.sh
+
       # Build an unsigned iOS app and package it as an IPA.
       # This artifact must be signed later before it can be installed on a device
       # or distributed through the App Store.
