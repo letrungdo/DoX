@@ -37,11 +37,11 @@ target 'Runner' do
 end
 
 post_install do |installer|
-  # Apply the easy_video_editor iOS square-crop fix to the pub-cache source that
-  # CocoaPods compiles. Idempotent; see scripts/patch-easy-video-editor.sh.
+  # Apply the easy_video_editor iOS fixes to the pub-cache source that CocoaPods
+  # compiles. Idempotent; see scripts/patch-easy-video-editor.sh.
   patch_script = File.expand_path(File.join('..', '..', 'scripts', 'patch-easy-video-editor.sh'), __FILE__)
   unless system('bash', patch_script)
-    puts "\n[Podfile] WARNING: easy_video_editor crop patch failed to apply — square crop may show a black bar on portrait videos. See scripts/patch-easy-video-editor.sh\n"
+    puts "\n[Podfile] WARNING: easy_video_editor iOS patches failed to apply. See scripts/patch-easy-video-editor.sh\n"
   end
 
   installer.pods_project.targets.each do |target|
