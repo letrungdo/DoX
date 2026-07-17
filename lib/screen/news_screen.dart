@@ -10,11 +10,13 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/news/coin_chart.dart';
 import 'package:do_x/view_model/news/news_view_model.dart';
+import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
@@ -46,6 +48,9 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
 
 class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with WidgetsBindingObserver {
   final colsRatio = [40, 30, 30];
+  final _scrollController = ScrollController();
+  MainViewModel? _mainViewModel;
+  late final Future<void> Function() _tabReselectHandler;
 
   /// The push socket only needs to run while this tab is actually on screen.
   bool _isVisible = true;
@@ -54,14 +59,34 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
 
   @override
   void initState() {
+    _tabReselectHandler = _handleTabReselect;
     super.initState();
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mainViewModel = context.read<MainViewModel>();
+    if (identical(_mainViewModel, mainViewModel)) return;
+    _mainViewModel?.unregisterTabReselectHandler(NewsRoute.name, _tabReselectHandler);
+    _mainViewModel = mainViewModel;
+    mainViewModel.registerTabReselectHandler(NewsRoute.name, _tabReselectHandler);
+  }
+
+  @override
   void dispose() {
+    _mainViewModel?.unregisterTabReselectHandler(NewsRoute.name, _tabReselectHandler);
+    _scrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> _handleTabReselect() async {
+    if (_scrollController.hasClients) {
+      await _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+    if (mounted) await vm.onRefresh();
   }
 
   @override
@@ -111,6 +136,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
 
   Widget _buildBody(AppLocalizations l10n) {
     return CustomScrollView(
+      controller: _scrollController,
       physics: AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverLayoutBuilder(
@@ -147,10 +173,30 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         children: [
           TableRow(
             children: [
-              AutoSizeText("Google", maxLines: 1, style: TextStyle(color: Colors.blue).bold, textAlign: TextAlign.center),
-              AutoSizeText("Smile", maxLines: 1, style: TextStyle(color: Colors.green).bold, textAlign: TextAlign.center),
-              AutoSizeText("MoneyGram", maxLines: 1, style: TextStyle(color: Colors.redAccent).bold, textAlign: TextAlign.center),
-              AutoSizeText("Dcom", maxLines: 1, style: TextStyle(color: Colors.orange).bold, textAlign: TextAlign.center),
+              AutoSizeText(
+                "Google",
+                maxLines: 1,
+                style: TextStyle(color: Colors.blue).bold,
+                textAlign: TextAlign.center,
+              ),
+              AutoSizeText(
+                "Smile",
+                maxLines: 1,
+                style: TextStyle(color: Colors.green).bold,
+                textAlign: TextAlign.center,
+              ),
+              AutoSizeText(
+                "MoneyGram",
+                maxLines: 1,
+                style: TextStyle(color: Colors.redAccent).bold,
+                textAlign: TextAlign.center,
+              ),
+              AutoSizeText(
+                "Dcom",
+                maxLines: 1,
+                style: TextStyle(color: Colors.orange).bold,
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
           TableRow(
@@ -216,10 +262,9 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         selector: (p0, p1) => p1.goldPrices,
         builder: (context, data, _) {
           return Column(
-            children:
-                data.map((item) {
-                  return _buildGoldPriceItem(item);
-                }).toList(),
+            children: data.map((item) {
+              return _buildGoldPriceItem(item);
+            }).toList(),
           );
         },
       ),
@@ -229,59 +274,57 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         builder: (context, codes, _) {
           return Column(
             spacing: 16,
-            children:
-                codes.map((code) {
-                  return Selector<V, ChartData?>(
-                    selector: (p0, p1) => p1.coinChartMap[code],
-                    builder: (context, data, _) {
-                      return SizedBox(
-                        height: 60,
-                        child: Row(
-                          spacing: 4,
-                          children: [
-                            SizedBox(
-                              width: 123,
-                              child: Row(
-                                spacing: 6,
-                                children: [
-                                  _buildCurrencyIcon(code),
-                                  Expanded(
-                                    child: TextAutoScaleWidget(
-                                      code.getName(),
-                                      style: context.textTheme.primary.bold,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+            children: codes.map((code) {
+              return Selector<V, ChartData?>(
+                selector: (p0, p1) => p1.coinChartMap[code],
+                builder: (context, data, _) {
+                  return SizedBox(
+                    height: 60,
+                    child: Row(
+                      spacing: 4,
+                      children: [
+                        SizedBox(
+                          width: 123,
+                          child: Row(
+                            spacing: 6,
+                            children: [
+                              _buildCurrencyIcon(code),
+                              Expanded(
+                                child: TextAutoScaleWidget(
+                                  code.getName(),
+                                  style: context.textTheme.primary.bold,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 60,
-                              child:
-                                  data == null
-                                      ? SizedBox.shrink()
-                                      : LineAreaChart(
-                                        data: data.chartData,
-                                        lineColor: data.color ?? Colors.blue,
-                                        areaColor: (data.color ?? Colors.blue).withValues(alpha: 0.1),
-                                        strokeWidth: 2.0,
-                                        showArea: true,
-                                      ),
-                            ),
-                            Expanded(
-                              flex: 40,
-                              child: TextAutoScaleWidget(
-                                (data?.price).formatUnit(digit: 3),
-                                style: context.textTheme.primary.bold.copyWith(color: data?.color),
-                                textAlign: TextAlign.right,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      );
-                    },
+                        Expanded(
+                          flex: 60,
+                          child: data == null
+                              ? SizedBox.shrink()
+                              : LineAreaChart(
+                                  data: data.chartData,
+                                  lineColor: data.color ?? Colors.blue,
+                                  areaColor: (data.color ?? Colors.blue).withValues(alpha: 0.1),
+                                  strokeWidth: 2.0,
+                                  showArea: true,
+                                ),
+                        ),
+                        Expanded(
+                          flex: 40,
+                          child: TextAutoScaleWidget(
+                            (data?.price).formatUnit(digit: 3),
+                            style: context.textTheme.primary.bold.copyWith(color: data?.color),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
-                }).toList(),
+                },
+              );
+            }).toList(),
           );
         },
       ),

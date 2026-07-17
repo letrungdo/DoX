@@ -84,15 +84,17 @@ class _ChickenStatisticsScreenState extends ScreenState<ChickenStatisticsScreen,
         Expanded(
           child: Builder(
             builder: (context) {
-              final visibleMonths = stats.entries
-                  .where(
-                    (e) =>
-                        e.value.batchRevenue != 0 ||
-                        e.value.cockRevenue != 0 ||
-                        e.value.meatRevenue != 0 ||
-                        e.value.expense != 0,
-                  )
-                  .toList();
+              final visibleMonths =
+                  stats.entries
+                      .where(
+                        (e) =>
+                            e.value.batchRevenue != 0 ||
+                            e.value.cockRevenue != 0 ||
+                            e.value.meatRevenue != 0 ||
+                            e.value.expense != 0,
+                      )
+                      .toList()
+                    ..sort((a, b) => b.key.compareTo(a.key));
               if (visibleMonths.isEmpty) {
                 return Center(child: Text("Không có dữ liệu trong năm $_selectedYear."));
               }

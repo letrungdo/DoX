@@ -3,6 +3,28 @@ import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 
 class MainViewModel extends CoreViewModel {
+  final Map<String, Future<void> Function()> _tabReselectHandlers = {};
+  final Set<String> _tabsBeingReselected = {};
+
+  void registerTabReselectHandler(String routeName, Future<void> Function() handler) {
+    _tabReselectHandlers[routeName] = handler;
+  }
+
+  void unregisterTabReselectHandler(String routeName, Future<void> Function() handler) {
+    if (identical(_tabReselectHandlers[routeName], handler)) {
+      _tabReselectHandlers.remove(routeName);
+    }
+  }
+
+  Future<void> handleTabReselect(String routeName) async {
+    if (!_tabsBeingReselected.add(routeName)) return;
+    try {
+      await _tabReselectHandlers[routeName]?.call();
+    } finally {
+      _tabsBeingReselected.remove(routeName);
+    }
+  }
+
   @override
   void initData() {
     super.initData();

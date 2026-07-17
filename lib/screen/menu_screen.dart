@@ -72,26 +72,14 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
             onPressed: () {
               context.pushRoute(const SettingsRoute());
             },
-            child: Row(
-              spacing: 8,
-              children: [
-                const Icon(Icons.settings),
-                Text(l10n.settings),
-              ],
-            ),
+            child: Row(spacing: 8, children: [const Icon(Icons.settings), Text(l10n.settings)]),
           ),
           _buildGoogleSyncControl(l10n),
           DoButton(
             onPressed: () {
               context.pushRoute(const WifiManagementRoute());
             },
-            child: Row(
-              spacing: 8,
-              children: [
-                SFIcon(SFIcons.sf_wifi),
-                Text(l10n.wifiManagement),
-              ],
-            ),
+            child: Row(spacing: 8, children: [SFIcon(SFIcons.sf_wifi), Text(l10n.wifiManagement)]),
           ),
           DoButton(
             text: l10n.about,
@@ -109,10 +97,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
   }
 
   Widget _buildBottomActions(AppLocalizations l10n) {
-    return ElevatedButtonTheme(
-      data: _buttonTheme(),
-      child: _buildSupabaseAccountControl(l10n),
-    );
+    return ElevatedButtonTheme(data: _buttonTheme(), child: _buildSupabaseAccountControl(l10n));
   }
 
   ElevatedButtonThemeData _buttonTheme() {
@@ -137,18 +122,12 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
           await context.pushRoute(const AppLoginRoute());
           setState(() {});
         },
-        child: Row(
-          spacing: 8,
-          children: [const Icon(Icons.login), Text(l10n.loginDoX)],
-        ),
+        child: Row(spacing: 8, children: [const Icon(Icons.login), Text(l10n.loginDoX)]),
       );
     }
     return DoButton(
       onPressed: () => _confirmSignOut(l10n),
-      child: Row(
-        spacing: 8,
-        children: [const Icon(Icons.logout), Text("${l10n.logoutDoX} (${user.email})")],
-      ),
+      child: Row(spacing: 8, children: [const Icon(Icons.logout), Text("${l10n.logoutDoX} (${user.email})")]),
     );
   }
 
@@ -186,7 +165,11 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
             spacing: 8,
             children: [
               Icon(googleSyncService.currentUser == null ? Icons.login : Icons.logout),
-              Text(googleSyncService.currentUser == null ? l10n.loginGoogle : "${l10n.logoutGoogle} (${googleSyncService.currentUser!.email})"),
+              Text(
+                googleSyncService.currentUser == null
+                    ? l10n.loginGoogle
+                    : "${l10n.logoutGoogle} (${googleSyncService.currentUser!.email})",
+              ),
             ],
           ),
         ),
