@@ -29,6 +29,12 @@ class ChickenViewModel extends CoreViewModel {
   List<Expense> _globalExpenses = [];
   List<Expense> get globalExpenses => _globalExpenses;
 
+  bool _isImporting = false;
+  bool get isImporting => _isImporting;
+
+  double _importProgress = 0;
+  double get importProgress => _importProgress;
+
   StreamSubscription<AuthState>? _authSub;
 
   @override
@@ -171,13 +177,37 @@ class ChickenViewModel extends CoreViewModel {
   /// Returns the number of imported records, or throws on invalid input.
   Future<int> importFromJson(String jsonString) async {
     final data = ChickenImportService.parse(jsonString);
-    await _repository.importData(
-      batches: data.batches,
-      globalSales: data.globalSales,
-      globalExpenses: data.globalExpenses,
-    );
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) throw StateError('Bạn cần đăng nhập trước khi import.');
+
+    _isImporting = true;
+    _importProgress = 0;
+    notifyListenersSafe();
+
+    try {
+      await _repository.importData(
+        batches: data.batches,
+        globalSales: data.globalSales,
+        globalExpenses: data.globalExpenses,
+        onProgress: (completed, total) {
+          _importProgress = total == 0 ? 1 : completed / total;
+          notifyListenersSafe();
+        },
+      );
+      await _loadData();
+      return data.totalRecords;
+    } finally {
+      _isImporting = false;
+      notifyListenersSafe();
+    }
+  }
+
+  Future<int> deleteAllData() async {
+    if (supabase.auth.currentUser == null) throw StateError('Bạn cần đăng nhập trước khi xóa dữ liệu.');
+
+    final deletedCount = await _repository.deleteAllData();
     await _loadData();
-    return data.totalRecords;
+    return deletedCount;
   }
 
   Future<void> toggleVaccination(String batchId, String vaccinationId) async {

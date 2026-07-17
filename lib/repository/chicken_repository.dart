@@ -17,19 +17,24 @@ class ChickenRepository {
     return rows.map(_batchFromRow).toList();
   }
 
-  Future<void> insertBatch(ChickenBatch batch) async {
+  Future<void> insertBatch(ChickenBatch batch, {void Function(int count)? onInserted}) async {
     await _client.from('chicken_batches').insert(_batchToRow(batch));
+    onInserted?.call(1);
     if (batch.vaccinations.isNotEmpty) {
       await _client.from('vaccinations').insert(batch.vaccinations.map((v) => _vaccinationToRow(v, batch.id)).toList());
+      onInserted?.call(batch.vaccinations.length);
     }
     if (batch.expenses.isNotEmpty) {
       await _client.from('expenses').insert(batch.expenses.map((e) => _expenseToRow(e, batch.id)).toList());
+      onInserted?.call(batch.expenses.length);
     }
     if (batch.cockSales.isNotEmpty) {
       await _client.from('cock_sales').insert(batch.cockSales.map((s) => _cockSaleToRow(s, batch.id)).toList());
+      onInserted?.call(batch.cockSales.length);
     }
     if (batch.sales.isNotEmpty) {
       await _client.from('batch_sales').insert(batch.sales.map((s) => _batchSaleToRow(s, batch.id)).toList());
+      onInserted?.call(batch.sales.length);
     }
   }
 
@@ -57,11 +62,7 @@ class ChickenRepository {
   }
 
   Future<List<Expense>> getGlobalExpenses() async {
-    final rows = await _client
-        .from('expenses')
-        .select()
-        .isFilter('batch_id', null)
-        .order('date', ascending: false);
+    final rows = await _client.from('expenses').select().isFilter('batch_id', null).order('date', ascending: false);
     return rows.map(_expenseFromRow).toList();
   }
 
@@ -75,11 +76,7 @@ class ChickenRepository {
   }
 
   Future<List<CockSale>> getGlobalCockSales() async {
-    final rows = await _client
-        .from('cock_sales')
-        .select()
-        .isFilter('batch_id', null)
-        .order('date', ascending: false);
+    final rows = await _client.from('cock_sales').select().isFilter('batch_id', null).order('date', ascending: false);
     return rows.map(_cockSaleFromRow).toList();
   }
 
@@ -88,16 +85,52 @@ class ChickenRepository {
     List<ChickenBatch> batches = const [],
     List<CockSale> globalSales = const [],
     List<Expense> globalExpenses = const [],
+    void Function(int completed, int total)? onProgress,
   }) async {
+    final total =
+        batches.length +
+        globalSales.length +
+        globalExpenses.length +
+        batches.fold<int>(
+          0,
+          (sum, batch) =>
+              sum + batch.sales.length + batch.vaccinations.length + batch.expenses.length + batch.cockSales.length,
+        );
+    var completed = 0;
+
+    void reportProgress(int count) {
+      completed += count;
+      onProgress?.call(completed, total);
+    }
+
     for (final batch in batches) {
-      await insertBatch(batch);
+      await insertBatch(batch, onInserted: reportProgress);
     }
     if (globalSales.isNotEmpty) {
       await _client.from('cock_sales').insert(globalSales.map((s) => _cockSaleToRow(s, null)).toList());
+      reportProgress(globalSales.length);
     }
     if (globalExpenses.isNotEmpty) {
       await _client.from('expenses').insert(globalExpenses.map((e) => _expenseToRow(e, null)).toList());
+      reportProgress(globalExpenses.length);
     }
+  }
+
+  Future<int> deleteAllData() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return 0;
+
+    var deletedCount = 0;
+
+    Future<void> deleteRows(String table) async {
+      final deleted = await _client.from(table).delete().eq('user_id', userId).select('id');
+      deletedCount += deleted.length;
+    }
+
+    await deleteRows('cock_sales');
+    await deleteRows('expenses');
+    await deleteRows('chicken_batches');
+    return deletedCount;
   }
 
   /// Replaces all remote data of the current user (used by Google Drive restore).
