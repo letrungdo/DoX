@@ -12,6 +12,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:file_selector/file_selector.dart';
@@ -79,7 +80,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             onPressed: () => context.router.push(const ChickenStatisticsRoute()),
             tooltip: l10n.profitStatistics,
           ),
-          IconButton(icon: const Icon(Icons.add), onPressed: _showAddBatchDialog),
+          IconButton(
+            icon: ChickenAddIcon(icon: Assets.images.chickCute),
+            onPressed: _showAddBatchDialog,
+          ),
           if (kDebugMode)
             PopupMenuButton<String>(
               onSelected: (value) {
@@ -143,7 +147,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(
                   children: [
                     Expanded(
@@ -269,7 +273,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             children: [
               Container(
@@ -320,7 +324,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: CircleAvatar(
         radius: 22,
         backgroundColor: statusColor.withValues(alpha: 0.12),

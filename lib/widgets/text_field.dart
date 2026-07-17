@@ -19,6 +19,7 @@ class DoTextField extends StatefulWidget {
     this.maxLength,
     this.textInputAction,
     this.style,
+    this.suffixIcon,
   });
   final void Function(String value)? onChanged;
   final String? value;
@@ -35,6 +36,7 @@ class DoTextField extends StatefulWidget {
   final int? maxLength;
   final TextInputAction? textInputAction;
   final TextStyle? style;
+  final Widget? suffixIcon;
 
   @override
   State<DoTextField> createState() => _DoTextFieldState();
@@ -46,7 +48,8 @@ class _DoTextFieldState extends State<DoTextField> {
   @override
   void initState() {
     super.initState();
-    _controller = (widget.controller ?? TextEditingController())..text = widget.value ?? "";
+    _controller = (widget.controller ?? TextEditingController())
+      ..text = widget.value ?? "";
   }
 
   @override
@@ -76,6 +79,7 @@ class _DoTextFieldState extends State<DoTextField> {
           InputDecoration(
             labelText: widget.labelText,
             hintText: widget.placeholder,
+            suffixIcon: widget.suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20), //
             ), //

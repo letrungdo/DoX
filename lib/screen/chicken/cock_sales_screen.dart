@@ -6,6 +6,7 @@ import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,12 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
     return Scaffold(
       appBar: DoAppBar(
         title: "Bán gà đá / gà thịt",
-        actions: [IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => _showSaleDialog())],
+        actions: [
+          IconButton(
+            icon: ChickenAddIcon(icon: Assets.images.roosterCute),
+            onPressed: () => _showSaleDialog(),
+          ),
+        ],
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
@@ -51,7 +57,7 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(
                   children: [
                     const Icon(Icons.filter_alt_outlined, size: 20),

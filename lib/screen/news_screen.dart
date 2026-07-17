@@ -22,7 +22,6 @@ import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/text/text_loading.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -120,9 +119,8 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           title: l10n.news, //
           actions: [
             IconButton(
-              padding: EdgeInsets.zero,
               onPressed: vm.onRefresh, //
-              icon: SFIcon(SFIcons.sf_arrow_clockwise),
+              icon: const Icon(Icons.refresh_rounded, size: 27),
             ),
           ],
         ),
