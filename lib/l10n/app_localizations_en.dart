@@ -118,7 +118,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationPermissionDenied =>
-      'Please allow notifications in the device settings.';
+      'Unable to update the notification schedule. Please check notification permission in the device settings.';
+
+  @override
+  String vaccinationNotificationTitle(String vaccination) {
+    return 'Vaccination: $vaccination';
+  }
+
+  @override
+  String vaccinationNotificationBody(String batch) {
+    return 'Batch $batch is due for vaccination today.';
+  }
 
   @override
   String get confirmLogout => 'Confirm Logout';

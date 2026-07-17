@@ -118,7 +118,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notificationPermissionDenied =>
-      'Vui lòng cho phép thông báo trong cài đặt thiết bị.';
+      'Không thể cập nhật lịch thông báo. Vui lòng kiểm tra quyền thông báo trong cài đặt thiết bị.';
+
+  @override
+  String vaccinationNotificationTitle(String vaccination) {
+    return 'Lịch tiêm: $vaccination';
+  }
+
+  @override
+  String vaccinationNotificationBody(String batch) {
+    return 'Lứa $batch đến lịch tiêm phòng hôm nay.';
+  }
 
   @override
   String get confirmLogout => 'Đăng xuất';

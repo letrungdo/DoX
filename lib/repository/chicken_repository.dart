@@ -12,28 +12,51 @@ class ChickenRepository {
   Future<List<ChickenBatch>> getBatches() async {
     final rows = await _client
         .from('chicken_batches')
-        .select('*, vaccinations(*), expenses(*), cock_sales(*), batch_sales(*)')
+        .select(
+          '*, vaccinations(*), expenses(*), cock_sales(*), batch_sales(*)',
+        )
         .order('incubation_date', ascending: false);
     return rows.map(_batchFromRow).toList();
   }
 
-  Future<void> insertBatch(ChickenBatch batch, {void Function(int count)? onInserted}) async {
+  Future<void> insertBatch(
+    ChickenBatch batch, {
+    void Function(int count)? onInserted,
+  }) async {
     await _client.from('chicken_batches').insert(_batchToRow(batch));
     onInserted?.call(1);
     if (batch.vaccinations.isNotEmpty) {
-      await _client.from('vaccinations').insert(batch.vaccinations.map((v) => _vaccinationToRow(v, batch.id)).toList());
+      await _client
+          .from('vaccinations')
+          .insert(
+            batch.vaccinations
+                .map((v) => _vaccinationToRow(v, batch.id))
+                .toList(),
+          );
       onInserted?.call(batch.vaccinations.length);
     }
     if (batch.expenses.isNotEmpty) {
-      await _client.from('expenses').insert(batch.expenses.map((e) => _expenseToRow(e, batch.id)).toList());
+      await _client
+          .from('expenses')
+          .insert(
+            batch.expenses.map((e) => _expenseToRow(e, batch.id)).toList(),
+          );
       onInserted?.call(batch.expenses.length);
     }
     if (batch.cockSales.isNotEmpty) {
-      await _client.from('cock_sales').insert(batch.cockSales.map((s) => _cockSaleToRow(s, batch.id)).toList());
+      await _client
+          .from('cock_sales')
+          .insert(
+            batch.cockSales.map((s) => _cockSaleToRow(s, batch.id)).toList(),
+          );
       onInserted?.call(batch.cockSales.length);
     }
     if (batch.sales.isNotEmpty) {
-      await _client.from('batch_sales').insert(batch.sales.map((s) => _batchSaleToRow(s, batch.id)).toList());
+      await _client
+          .from('batch_sales')
+          .insert(
+            batch.sales.map((s) => _batchSaleToRow(s, batch.id)).toList(),
+          );
       onInserted?.call(batch.sales.length);
     }
   }
@@ -49,7 +72,19 @@ class ChickenRepository {
   /// Updates the batch's own fields only. Expenses, vaccinations and cock
   /// sales are managed through their dedicated methods.
   Future<void> updateBatch(ChickenBatch batch) async {
-    await _client.from('chicken_batches').update(_batchToRow(batch)).eq('id', batch.id);
+    await _client
+        .from('chicken_batches')
+        .update(_batchToRow(batch))
+        .eq('id', batch.id);
+  }
+
+  Future<void> updateVaccinationDates(List<Vaccination> vaccinations) async {
+    for (final vaccination in vaccinations) {
+      await _client
+          .from('vaccinations')
+          .update({'scheduled_date': _dateStr(vaccination.scheduledDate)})
+          .eq('id', vaccination.id);
+    }
   }
 
   Future<void> deleteBatch(String id) async {
@@ -77,11 +112,17 @@ class ChickenRepository {
         .isFilter('batch_id', null)
         .select('id')
         .maybeSingle();
-    if (updated == null) throw StateError('Không tìm thấy chi phí để cập nhật.');
+    if (updated == null) {
+      throw StateError('Không tìm thấy chi phí để cập nhật.');
+    }
   }
 
   Future<List<Expense>> getGlobalExpenses() async {
-    final rows = await _client.from('expenses').select().isFilter('batch_id', null).order('date', ascending: false);
+    final rows = await _client
+        .from('expenses')
+        .select()
+        .isFilter('batch_id', null)
+        .order('date', ascending: false);
     return rows.map(_expenseFromRow).toList();
   }
 
@@ -95,13 +136,20 @@ class ChickenRepository {
     if (userId == null) throw StateError('Bạn cần đăng nhập để sửa lượt bán.');
     final updated = await _client
         .from('cock_sales')
-        .update({'note': sale.note, 'amount': sale.amount, 'date': _dateStr(sale.date), 'category': sale.category.name})
+        .update({
+          'note': sale.note,
+          'amount': sale.amount,
+          'date': _dateStr(sale.date),
+          'category': sale.category.name,
+        })
         .eq('id', sale.id)
         .eq('user_id', userId)
         .isFilter('batch_id', null)
         .select('id')
         .maybeSingle();
-    if (updated == null) throw StateError('Không tìm thấy lượt bán để cập nhật.');
+    if (updated == null) {
+      throw StateError('Không tìm thấy lượt bán để cập nhật.');
+    }
   }
 
   Future<void> deleteGlobalCockSale(String id) async {
@@ -119,11 +167,18 @@ class ChickenRepository {
   }
 
   Future<void> setVaccinationCompleted(String id, bool isCompleted) async {
-    await _client.from('vaccinations').update({'is_completed': isCompleted}).eq('id', id);
+    await _client
+        .from('vaccinations')
+        .update({'is_completed': isCompleted})
+        .eq('id', id);
   }
 
   Future<List<CockSale>> getGlobalCockSales() async {
-    final rows = await _client.from('cock_sales').select().isFilter('batch_id', null).order('date', ascending: false);
+    final rows = await _client
+        .from('cock_sales')
+        .select()
+        .isFilter('batch_id', null)
+        .order('date', ascending: false);
     return rows.map(_cockSaleFromRow).toList();
   }
 
@@ -141,7 +196,11 @@ class ChickenRepository {
         batches.fold<int>(
           0,
           (sum, batch) =>
-              sum + batch.sales.length + batch.vaccinations.length + batch.expenses.length + batch.cockSales.length,
+              sum +
+              batch.sales.length +
+              batch.vaccinations.length +
+              batch.expenses.length +
+              batch.cockSales.length,
         );
     var completed = 0;
 
@@ -154,11 +213,15 @@ class ChickenRepository {
       await insertBatch(batch, onInserted: reportProgress);
     }
     if (globalSales.isNotEmpty) {
-      await _client.from('cock_sales').insert(globalSales.map((s) => _cockSaleToRow(s, null)).toList());
+      await _client
+          .from('cock_sales')
+          .insert(globalSales.map((s) => _cockSaleToRow(s, null)).toList());
       reportProgress(globalSales.length);
     }
     if (globalExpenses.isNotEmpty) {
-      await _client.from('expenses').insert(globalExpenses.map((e) => _expenseToRow(e, null)).toList());
+      await _client
+          .from('expenses')
+          .insert(globalExpenses.map((e) => _expenseToRow(e, null)).toList());
       reportProgress(globalExpenses.length);
     }
   }
@@ -170,7 +233,11 @@ class ChickenRepository {
     var deletedCount = 0;
 
     Future<void> deleteRows(String table) async {
-      final deleted = await _client.from(table).delete().eq('user_id', userId).select('id');
+      final deleted = await _client
+          .from(table)
+          .delete()
+          .eq('user_id', userId)
+          .select('id');
       deletedCount += deleted.length;
     }
 
@@ -181,7 +248,10 @@ class ChickenRepository {
   }
 
   /// Replaces all remote data of the current user (used by Google Drive restore).
-  Future<void> replaceAll(List<ChickenBatch> batches, List<CockSale> globalSales) async {
+  Future<void> replaceAll(
+    List<ChickenBatch> batches,
+    List<CockSale> globalSales,
+  ) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
     await _client.from('cock_sales').delete().eq('user_id', userId);
@@ -196,9 +266,11 @@ class ChickenRepository {
 
   // ---- Row mapping (Supabase snake_case <-> app models) ----
 
-  static String? _dateStr(DateTime? date) => date?.toIso8601String().substring(0, 10);
+  static String? _dateStr(DateTime? date) =>
+      date?.toIso8601String().substring(0, 10);
 
-  static DateTime? _parseDate(dynamic value) => value == null ? null : DateTime.parse(value as String);
+  static DateTime? _parseDate(dynamic value) =>
+      value == null ? null : DateTime.parse(value as String);
 
   Map<String, dynamic> _batchToRow(ChickenBatch b) => {
     'id': b.id,
@@ -209,14 +281,26 @@ class ChickenRepository {
   };
 
   ChickenBatch _batchFromRow(Map<String, dynamic> row) {
-    final vaccinations = ((row['vaccinations'] as List?) ?? []).map((e) => _vaccinationFromRow(e)).toList()
-      ..sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
-    final expenses = ((row['expenses'] as List?) ?? []).map((e) => _expenseFromRow(e)).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final cockSales = ((row['cock_sales'] as List?) ?? []).map((e) => _cockSaleFromRow(e)).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final sales = ((row['batch_sales'] as List?) ?? []).map((e) => _batchSaleFromRow(e)).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final vaccinations =
+        ((row['vaccinations'] as List?) ?? [])
+            .map((e) => _vaccinationFromRow(e))
+            .toList()
+          ..sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
+    final expenses =
+        ((row['expenses'] as List?) ?? [])
+            .map((e) => _expenseFromRow(e))
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    final cockSales =
+        ((row['cock_sales'] as List?) ?? [])
+            .map((e) => _cockSaleFromRow(e))
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    final sales =
+        ((row['batch_sales'] as List?) ?? [])
+            .map((e) => _batchSaleFromRow(e))
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     return ChickenBatch(
       id: row['id'],
       name: row['name'],
@@ -293,6 +377,8 @@ class ChickenRepository {
     note: row['note'] ?? '',
     amount: (row['amount'] as num).toDouble(),
     date: _parseDate(row['date'])!,
-    category: SaleCategory.values.asNameMap()[row['category']] ?? SaleCategory.fighting,
+    category:
+        SaleCategory.values.asNameMap()[row['category']] ??
+        SaleCategory.fighting,
   );
 }

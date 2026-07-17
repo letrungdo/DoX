@@ -1,4 +1,6 @@
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -85,6 +87,7 @@ class NotificationService {
     await _plugin.cancelAllPendingNotifications();
 
     final now = tz.TZDateTime.now(tz.local);
+    final l10n = _localizations();
     final reminders =
         [
           for (final batch in batches)
@@ -113,8 +116,8 @@ class NotificationService {
 
       await _plugin.zonedSchedule(
         id: _stableId(reminder.vaccination.id),
-        title: 'Lịch tiêm: ${reminder.vaccination.title}',
-        body: 'Lứa ${reminder.batch.name} đến lịch tiêm phòng hôm nay.',
+        title: l10n.vaccinationNotificationTitle(reminder.vaccination.title),
+        body: l10n.vaccinationNotificationBody(reminder.batch.name),
         scheduledDate: scheduledDate,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -148,6 +151,17 @@ class NotificationService {
       hash = (hash * 0x01000193) & 0x7fffffff;
     }
     return hash;
+  }
+
+  AppLocalizations _localizations() {
+    final languageCode =
+        storageService.getLocale() ??
+        PlatformDispatcher.instance.locale.languageCode;
+    final locale = AppLocalizations.supportedLocales.firstWhere(
+      (item) => item.languageCode == languageCode,
+      orElse: () => AppLocalizations.supportedLocales.first,
+    );
+    return lookupAppLocalizations(locale);
   }
 }
 

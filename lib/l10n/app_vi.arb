@@ -35,7 +35,19 @@
   "loginDoX": "Đăng nhập Do X",
   "logoutDoX": "Đăng xuất Do X",
   "vaccinationNotifications": "Thông báo lịch tiêm phòng",
-  "notificationPermissionDenied": "Vui lòng cho phép thông báo trong cài đặt thiết bị.",
+  "notificationPermissionDenied": "Không thể cập nhật lịch thông báo. Vui lòng kiểm tra quyền thông báo trong cài đặt thiết bị.",
+  "vaccinationNotificationTitle": "Lịch tiêm: {vaccination}",
+  "@vaccinationNotificationTitle": {
+    "placeholders": {
+      "vaccination": { "type": "String" }
+    }
+  },
+  "vaccinationNotificationBody": "Lứa {batch} đến lịch tiêm phòng hôm nay.",
+  "@vaccinationNotificationBody": {
+    "placeholders": {
+      "batch": { "type": "String" }
+    }
+  },
   "confirmLogout": "Đăng xuất",
   "confirmLogoutMessage": "Bạn có chắc muốn đăng xuất không?",
   "themeMode": "Giao diện",
