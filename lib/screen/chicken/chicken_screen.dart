@@ -445,7 +445,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               children: [
                 Expanded(
                   child: _buildBatchInfo(
-                    Icons.numbers_rounded,
+                    null,
                     batch.sales.isEmpty
                         ? "${batch.quantity} con"
                         : "Đã bán ${batch.soldQuantity}/${batch.quantity} con",
@@ -493,7 +493,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }
 
   Widget _buildBatchInfo(
-    IconData icon,
+    IconData? icon,
     String text, {
     MainAxisAlignment alignment = MainAxisAlignment.start,
     bool highlighted = false,
@@ -504,8 +504,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return Row(
       mainAxisAlignment: alignment,
       children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 5),
+        if (icon != null) ...[
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 5),
+        ],
         Flexible(
           child: Text(
             text,

@@ -124,5 +124,20 @@
   "expenseMedicine": "Thuốc / vắc xin",
   "expenseElectricity": "Điện sưởi",
   "expenseWater": "Nước",
-  "expenseOther": "Khác"
+  "expenseOther": "Khác",
+  "newUpdateAvailable": "Có bản cập nhật mới v{version}",
+  "@newUpdateAvailable": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "later": "Để sau",
+  "appUpdate": "Cập nhật ứng dụng",
+  "downloadingUpdate": "Đang tải bản cập nhật...",
+  "downloadComplete": "Tải hoàn tất, đang mở trình cài đặt...",
+  "preparing": "Đang chuẩn bị...",
+  "resumeDownload": "Tiếp tục tải",
+  "downloadErrorGeneric": "Không thể tải bản cập nhật. Vui lòng kiểm tra kết nối mạng.",
+  "downloadErrorTimeout": "Kết nối quá hạn. Vui lòng thử lại.",
+  "downloadErrorNotFound": "Không tìm thấy file cập nhật trên máy chủ."
 }

@@ -118,12 +118,6 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                   tabsRouter.setActiveIndex(value);
                   storageService.setTabIndex(value);
                 },
-                type: BottomNavigationBarType.fixed,
-                selectedItemColor: Colors.amber[800],
-                unselectedItemColor: unselectedColor,
-                unselectedFontSize: 12,
-                selectedFontSize: 12,
-                enableFeedback: true,
                 items: <BottomNavigationBarItem>[
                   _navItem(Assets.images.newsCute, l10n.news),
                   _navItem(Assets.images.chickCute, l10n.chicken),

@@ -655,6 +655,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get expenseOther;
+
+  /// No description provided for @newUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'New update available v{version}'**
+  String newUpdateAvailable(String version);
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @appUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'App Update'**
+  String get appUpdate;
+
+  /// No description provided for @downloadingUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading update...'**
+  String get downloadingUpdate;
+
+  /// No description provided for @downloadComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Download complete, opening installer...'**
+  String get downloadComplete;
+
+  /// No description provided for @preparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing...'**
+  String get preparing;
+
+  /// No description provided for @resumeDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume download'**
+  String get resumeDownload;
+
+  /// No description provided for @downloadErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not download update. Please check your internet connection.'**
+  String get downloadErrorGeneric;
+
+  /// No description provided for @downloadErrorTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection timeout. Please try again.'**
+  String get downloadErrorTimeout;
+
+  /// No description provided for @downloadErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Update file not found on server.'**
+  String get downloadErrorNotFound;
 }
 
 class _AppLocalizationsDelegate
