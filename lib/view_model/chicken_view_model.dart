@@ -226,6 +226,12 @@ class ChickenViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
+  Future<void> deleteGlobalExpense(String id) async {
+    await _repository.deleteGlobalExpense(id);
+    _globalExpenses.removeWhere((expense) => expense.id == id);
+    notifyListenersSafe();
+  }
+
   /// Imports data from the JSON format described in [ChickenImportService].
   /// Returns the number of imported records, or throws on invalid input.
   Future<int> importFromJson(String jsonString) async {

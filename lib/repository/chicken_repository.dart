@@ -117,6 +117,20 @@ class ChickenRepository {
     }
   }
 
+  Future<void> deleteGlobalExpense(String id) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw StateError('Bạn cần đăng nhập để xóa chi phí.');
+    final deleted = await _client
+        .from('expenses')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+        .isFilter('batch_id', null)
+        .select('id')
+        .maybeSingle();
+    if (deleted == null) throw StateError('Không tìm thấy chi phí để xóa.');
+  }
+
   Future<List<Expense>> getGlobalExpenses() async {
     final rows = await _client
         .from('expenses')

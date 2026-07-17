@@ -602,6 +602,30 @@ abstract class AppLocalizations {
   /// **'Could not save expense: {error}'**
   String saveCommonExpenseFailed(String error);
 
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @deleteCommonExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete expense'**
+  String get deleteCommonExpense;
+
+  /// No description provided for @confirmDeleteCommonExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the expense dated {date} ({amount})?'**
+  String confirmDeleteCommonExpense(String date, String amount);
+
+  /// No description provided for @deleteCommonExpenseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete expense: {error}'**
+  String deleteCommonExpenseFailed(String error);
+
   /// No description provided for @expenseFeed.
   ///
   /// In en, this message translates to:

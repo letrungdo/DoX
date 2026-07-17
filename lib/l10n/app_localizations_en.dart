@@ -287,6 +287,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteCommonExpense => 'Delete expense';
+
+  @override
+  String confirmDeleteCommonExpense(String date, String amount) {
+    return 'Delete the expense dated $date ($amount)?';
+  }
+
+  @override
+  String deleteCommonExpenseFailed(String error) {
+    return 'Could not delete expense: $error';
+  }
+
+  @override
   String get expenseFeed => 'Feed';
 
   @override

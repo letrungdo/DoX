@@ -26,7 +26,8 @@ class GlobalExpensesScreen extends StatefulScreen implements AutoRouteWrapper {
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
+class _GlobalExpensesScreenState
+    extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
   int _selectedYear = DateTime.now().year;
 
@@ -45,12 +46,17 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final years = {DateTime.now().year, ...vm.globalExpenses.map((expense) => expense.date.year)}.toList()
-            ..sort((a, b) => b.compareTo(a));
+          final years = {
+            DateTime.now().year,
+            ...vm.globalExpenses.map((expense) => expense.date.year),
+          }.toList()..sort((a, b) => b.compareTo(a));
           final expenses = vm.globalExpenses.where((expense) {
             return _selectedYear == 0 || expense.date.year == _selectedYear;
           }).toList()..sort((a, b) => b.date.compareTo(a.date));
-          final total = expenses.fold<double>(0, (sum, expense) => sum + expense.amount);
+          final total = expenses.fold<double>(
+            0,
+            (sum, expense) => sum + expense.amount,
+          );
 
           return Column(
             children: [
@@ -60,13 +66,21 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                   children: [
                     const Icon(Icons.filter_alt_outlined, size: 20),
                     const SizedBox(width: 8),
-                    Text(l10n.yearLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(
+                      l10n.yearLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(width: 12),
                     DropdownButton<int>(
                       value: _selectedYear,
                       items: [
                         DropdownMenuItem(value: 0, child: Text(l10n.all)),
-                        ...years.map((year) => DropdownMenuItem(value: year, child: Text("$year"))),
+                        ...years.map(
+                          (year) => DropdownMenuItem(
+                            value: year,
+                            child: Text("$year"),
+                          ),
+                        ),
                       ],
                       onChanged: (year) {
                         if (year != null) setState(() => _selectedYear = year);
@@ -79,7 +93,10 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                         alignment: Alignment.centerRight,
                         child: Text(
                           l10n.totalAmount("${total.toCurrency()}đ"),
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
                         ),
                       ),
                     ),
@@ -99,12 +116,17 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Assets.images.feedCute.svg(width: 72, height: 72),
+                                    Assets.images.feedCute.svg(
+                                      width: 72,
+                                      height: 72,
+                                    ),
                                     const SizedBox(height: 16),
                                     Text(
                                       vm.globalExpenses.isEmpty
                                           ? l10n.noCommonExpenses
-                                          : l10n.noCommonExpensesInYear(_selectedYear),
+                                          : l10n.noCommonExpensesInYear(
+                                              _selectedYear,
+                                            ),
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
                                     if (vm.globalExpenses.isEmpty) ...[
@@ -132,12 +154,19 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                               leading: _expenseSvg(expense.type),
                               title: Text(
                                 expense.note ?? _expenseLabel(expense.type),
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              subtitle: Text("${_dateFormat.format(expense.date)} · ${_expenseLabel(expense.type)}"),
+                              subtitle: Text(
+                                "${_dateFormat.format(expense.date)} · ${_expenseLabel(expense.type)}",
+                              ),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
                               ),
                             );
                           },
@@ -182,7 +211,9 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                 type: selectedType,
                 amount: amount,
                 date: expenseDate,
-                note: noteController.text.trim().isEmpty ? null : noteController.text.trim(),
+                note: noteController.text.trim().isEmpty
+                    ? null
+                    : noteController.text.trim(),
               );
               if (isEditing) {
                 await vm.updateGlobalExpense(updatedExpense);
@@ -193,7 +224,12 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
             } catch (error) {
               if (mounted) {
                 ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(content: Text(l10n.saveCommonExpenseFailed(error.toString())), backgroundColor: Colors.red),
+                  SnackBar(
+                    content: Text(
+                      l10n.saveCommonExpenseFailed(error.toString()),
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             }
@@ -202,7 +238,10 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
             DropdownButtonFormField<ExpenseType>(
               initialValue: selectedType,
               items: ExpenseType.values.map((type) {
-                return DropdownMenuItem(value: type, child: Text(_expenseLabel(type)));
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(_expenseLabel(type)),
+                );
               }).toList(),
               onChanged: (value) => setState(() => selectedType = value!),
               decoration: cuteInputDecoration(context, l10n.expenseType),
@@ -220,10 +259,57 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
               value: expenseDate,
               onChanged: (date) => setState(() => expenseDate = date),
             ),
+            if (isEditing)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _confirmDeleteExpense(expense);
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.deleteCommonExpense),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteExpense(Expense expense) async {
+    final l10n = AppLocalizations.of(context);
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => CuteDialog(
+        icon: Assets.images.feedCute,
+        title: l10n.deleteCommonExpense,
+        accent: Colors.red,
+        confirmText: l10n.delete,
+        onConfirm: () => Navigator.pop(context, true),
+        children: [
+          Text(
+            l10n.confirmDeleteCommonExpense(
+              _dateFormat.format(expense.date),
+              '${expense.amount.toCurrency()}đ',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true) return;
+
+    try {
+      await vm.deleteGlobalExpense(expense.id);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.deleteCommonExpenseFailed(error.toString())),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   String _expenseLabel(ExpenseType type) {

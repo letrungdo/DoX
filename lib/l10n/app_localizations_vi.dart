@@ -287,6 +287,22 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get delete => 'Xóa';
+
+  @override
+  String get deleteCommonExpense => 'Xóa khoản chi';
+
+  @override
+  String confirmDeleteCommonExpense(String date, String amount) {
+    return 'Xóa khoản chi ngày $date ($amount)?';
+  }
+
+  @override
+  String deleteCommonExpenseFailed(String error) {
+    return 'Xóa chi phí thất bại: $error';
+  }
+
+  @override
   String get expenseFeed => 'Cám / thức ăn';
 
   @override

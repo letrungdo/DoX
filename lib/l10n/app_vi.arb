@@ -109,6 +109,17 @@
   "expenseDate": "Ngày chi",
   "saveCommonExpenseFailed": "Lưu chi phí thất bại: {error}",
   "@saveCommonExpenseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "delete": "Xóa",
+  "deleteCommonExpense": "Xóa khoản chi",
+  "confirmDeleteCommonExpense": "Xóa khoản chi ngày {date} ({amount})?",
+  "@confirmDeleteCommonExpense": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "deleteCommonExpenseFailed": "Xóa chi phí thất bại: {error}",
+  "@deleteCommonExpenseFailed": {"placeholders": {"error": {"type": "String"}}},
   "expenseFeed": "Cám / thức ăn",
   "expenseMedicine": "Thuốc / vắc xin",
   "expenseElectricity": "Điện sưởi",
