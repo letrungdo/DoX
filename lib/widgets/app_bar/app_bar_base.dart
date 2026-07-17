@@ -33,7 +33,10 @@ class _DoAppBarState extends State<DoAppBar> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: widget.backgroundColor,
+      backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
       title: widget.title != null ? Text(widget.title!) : null,
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,

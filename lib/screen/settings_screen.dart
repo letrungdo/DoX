@@ -1,5 +1,4 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -18,56 +17,86 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: DoAppBar(title: l10n.settings),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          ListTile(
+          _buildSettingCard(
+            icon: Icons.palette_outlined,
+            color: Colors.deepPurple,
             title: Text(l10n.themeMode),
-            trailing: DropdownButton<ThemeMode>(
-              value: appVm.themeMode,
-              onChanged: (ThemeMode? newMode) {
-                if (newMode != null) {
-                  // We can update the AppViewModel to support setting theme directly or just toggle until it matches.
-                  // But it's better to add a setThemeMode method.
-                  appVm.setThemeMode(newMode);
-                }
-              },
-              items: [
-                DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.system)),
-                DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.light)),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.dark)),
-              ],
+            trailing: DropdownButtonHideUnderline(
+              child: DropdownButton<ThemeMode>(
+                value: appVm.themeMode,
+                isDense: true,
+                borderRadius: BorderRadius.circular(14),
+                onChanged: (newMode) {
+                  if (newMode != null) appVm.setThemeMode(newMode);
+                },
+                items: [
+                  DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.system)),
+                  DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.light)),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.dark)),
+                ],
+              ),
             ),
           ),
-          const Divider(),
-          SwitchListTile(
+          const SizedBox(height: 10),
+          _buildSettingCard(
+            icon: Icons.favorite_outline_rounded,
+            color: Colors.pink,
             title: Text(l10n.showLocketTab),
-            value: appVm.showLocketTab,
-            onChanged: (value) {
-              appVm.setShowLocketTab(value);
-            },
+            trailing: Switch.adaptive(value: appVm.showLocketTab, onChanged: appVm.setShowLocketTab),
+            onTap: () => appVm.setShowLocketTab(!appVm.showLocketTab),
           ),
-          const Divider(),
-          ListTile(
+          const SizedBox(height: 10),
+          _buildSettingCard(
+            icon: Icons.language_rounded,
+            color: Colors.blue,
             title: Text(l10n.language),
-            trailing: DropdownButton<Locale>(
-              value: appVm.locale ?? AppLocalizations.supportedLocales.first,
-              onChanged: (Locale? newLocale) {
-                if (newLocale != null) {
-                  appVm.setLocale(newLocale);
-                }
-              },
-              items: [
-                DropdownMenuItem(
-                  value: const Locale('en'),
-                  child: Text(l10n.english),
-                ),
-                DropdownMenuItem(
-                  value: const Locale('vi'),
-                  child: Text(l10n.vietnamese),
-                ),
-              ],
+            trailing: DropdownButtonHideUnderline(
+              child: DropdownButton<Locale>(
+                value: appVm.locale ?? AppLocalizations.supportedLocales.first,
+                isDense: true,
+                borderRadius: BorderRadius.circular(14),
+                onChanged: (newLocale) {
+                  if (newLocale != null) appVm.setLocale(newLocale);
+                },
+                items: [
+                  DropdownMenuItem(value: const Locale('en'), child: Text(l10n.english)),
+                  DropdownMenuItem(value: const Locale('vi'), child: Text(l10n.vietnamese)),
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSettingCard({
+    required IconData icon,
+    required Color color,
+    required Widget title,
+    required Widget trailing,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        onTap: onTap,
+        leading: Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color),
+        ),
+        title: DefaultTextStyle.merge(
+          style: const TextStyle(fontWeight: FontWeight.w600),
+          child: title,
+        ),
+        trailing: trailing,
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
@@ -12,8 +14,8 @@ import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 @RoutePage()
 class MenuScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -31,12 +33,38 @@ class MenuScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, V> {
+class _MenuScreenState<V extends MenuViewModel>
+    extends ScreenState<MenuScreen, V> {
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = supabase.auth.onAuthStateChange.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: DoAppBar(title: l10n.menu),
+      appBar: DoAppBar(
+        title: l10n.menu,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            tooltip: l10n.settings,
+            onPressed: () => context.pushRoute(const SettingsRoute()),
+          ),
+        ],
+      ),
       bottomNavigationBar: Container(
         height: 40,
         alignment: Alignment.center, //
@@ -68,21 +96,14 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
       child: Column(
         spacing: 8,
         children: [
-          DoButton(
-            onPressed: () {
-              context.pushRoute(const SettingsRoute());
-            },
-            child: Row(spacing: 8, children: [const Icon(Icons.settings), Text(l10n.settings)]),
-          ),
           _buildGoogleSyncControl(l10n),
           DoButton(
             onPressed: () {
               context.pushRoute(const WifiManagementRoute());
             },
-            child: Row(spacing: 8, children: [SFIcon(SFIcons.sf_wifi), Text(l10n.wifiManagement)]),
+            child: _buildMenuAction(Icons.wifi_rounded, l10n.wifiManagement),
           ),
           DoButton(
-            text: l10n.about,
             onPressed: () {
               showAboutDialog(
                 applicationVersion: appInfo.version, //
@@ -90,6 +111,7 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
                 context: context,
               );
             },
+            child: _buildMenuAction(Icons.info_outline_rounded, l10n.about),
           ),
         ],
       ),
@@ -97,7 +119,10 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
   }
 
   Widget _buildBottomActions(AppLocalizations l10n) {
-    return ElevatedButtonTheme(data: _buttonTheme(), child: _buildSupabaseAccountControl(l10n));
+    return ElevatedButtonTheme(
+      data: _buttonTheme(),
+      child: _buildSupabaseAccountControl(l10n),
+    );
   }
 
   ElevatedButtonThemeData _buttonTheme() {
@@ -106,7 +131,9 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
         shape: WidgetStatePropertyAll(
           BeveledRectangleBorder(borderRadius: BorderRadius.circular(5)), //
         ),
-        padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10, vertical: 5)),
+        padding: WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        ),
         minimumSize: WidgetStatePropertyAll(Size(double.infinity, 45)),
         alignment: Alignment.center,
         textStyle: WidgetStatePropertyAll(const TextStyle(fontSize: 16)),
@@ -118,16 +145,16 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
     final user = supabase.auth.currentUser;
     if (user == null) {
       return DoButton(
-        onPressed: () async {
-          await context.pushRoute(const AppLoginRoute());
-          setState(() {});
-        },
-        child: Row(spacing: 8, children: [const Icon(Icons.login), Text(l10n.loginDoX)]),
+        onPressed: () => context.pushRoute(const AppLoginRoute()),
+        child: _buildMenuAction(Icons.login_rounded, l10n.loginDoX),
       );
     }
     return DoButton(
       onPressed: () => _confirmSignOut(l10n),
-      child: Row(spacing: 8, children: [const Icon(Icons.logout), Text("${l10n.logoutDoX} (${user.email})")]),
+      child: _buildMenuAction(
+        Icons.logout_rounded,
+        "${l10n.logout} (${user.email})",
+      ),
     );
   }
 
@@ -138,14 +165,19 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
         title: Text(l10n.confirmLogout),
         content: Text(l10n.confirmLogoutMessage),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.logout)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.logout),
+          ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
     await supabase.auth.signOut();
-    setState(() {});
   }
 
   Widget _buildGoogleSyncControl(AppLocalizations l10n) {
@@ -161,16 +193,13 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
             }
             setState(() {});
           },
-          child: Row(
-            spacing: 8,
-            children: [
-              Icon(googleSyncService.currentUser == null ? Icons.login : Icons.logout),
-              Text(
-                googleSyncService.currentUser == null
-                    ? l10n.loginGoogle
-                    : "${l10n.logoutGoogle} (${googleSyncService.currentUser!.email})",
-              ),
-            ],
+          child: _buildMenuAction(
+            googleSyncService.currentUser == null
+                ? Icons.login_rounded
+                : Icons.logout_rounded,
+            googleSyncService.currentUser == null
+                ? l10n.loginGoogle
+                : "${l10n.logoutGoogle} (${googleSyncService.currentUser!.email})",
           ),
         ),
         if (googleSyncService.currentUser != null)
@@ -190,6 +219,21 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
               );
             },
           ),
+      ],
+    );
+  }
+
+  Widget _buildMenuAction(IconData icon, String label) {
+    return Row(
+      children: [
+        SizedBox.square(
+          dimension: 32,
+          child: Center(child: Icon(icon, size: 26)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
     );
   }

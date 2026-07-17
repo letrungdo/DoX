@@ -33,6 +33,8 @@ class ChickenListTileCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: contentPadding,
+        minVerticalPadding: 4,
+        visualDensity: const VisualDensity(vertical: -1),
         leading: leading,
         title: title,
         subtitle: subtitle,

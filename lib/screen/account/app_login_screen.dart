@@ -26,8 +26,10 @@ class AppLoginScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _AppLoginScreenState extends ScreenState<AppLoginScreen, AppLoginViewModel> {
+class _AppLoginScreenState
+    extends ScreenState<AppLoginScreen, AppLoginViewModel> {
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +83,10 @@ class _AppLoginScreenState extends ScreenState<AppLoginScreen, AppLoginViewModel
                 return DoTextField(
                   value: email,
                   labelText: "Email",
-                  autofillHints: const [AutofillHints.username, AutofillHints.email],
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email,
+                  ],
                   keyboardType: TextInputType.emailAddress,
                   onChanged: (value) => vm.onEmailChanged(value),
                   validator: (value) {
@@ -102,7 +107,18 @@ class _AppLoginScreenState extends ScreenState<AppLoginScreen, AppLoginViewModel
                   labelText: "Mật khẩu",
                   autofillHints: const [AutofillHints.password],
                   keyboardType: TextInputType.visiblePassword,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                  ),
                   onChanged: (value) => vm.onPasswordChanged(value),
                   validator: (value) {
                     if (value == null || value.trim().length < 6) {
@@ -113,7 +129,19 @@ class _AppLoginScreenState extends ScreenState<AppLoginScreen, AppLoginViewModel
                 );
               },
             ),
-            const SizedBox(height: 50),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Selector<AppLoginViewModel, bool>(
+                selector: (p0, p1) => p1.isBusy,
+                builder: (context, isBusy, _) {
+                  return TextButton(
+                    onPressed: isBusy ? null : vm.onForgotPassword,
+                    child: const Text('Quên mật khẩu?'),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 25),
             Selector<AppLoginViewModel, bool>(
               selector: (p0, p1) => p1.isBusy,
               builder: (context, isBusy, _) {

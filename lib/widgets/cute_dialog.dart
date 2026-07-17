@@ -2,7 +2,7 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Dialog bo góc lớn với icon SVG cute ở đầu, dùng chung cho các form nhập liệu.
+/// Dialog bo góc lớn với icon SVG cute cạnh tiêu đề, dùng chung cho các form nhập liệu.
 class CuteDialog extends StatelessWidget {
   final SvgGenImage? icon;
   final String title;
@@ -46,21 +46,29 @@ class CuteDialog extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (icon != null) ...[
-                        Center(
-                          child: CircleAvatar(
-                            radius: 26,
-                            backgroundColor: accent.withValues(alpha: 0.12),
-                            child: icon!.svg(width: 32, height: 32),
-                          ),
+                      if (icon != null)
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: accent.withValues(alpha: 0.12),
+                              child: icon!.svg(width: 28, height: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
                       const SizedBox(height: 16),
                       for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(height: 12), children[i]],
                     ],

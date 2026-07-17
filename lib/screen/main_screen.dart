@@ -29,12 +29,35 @@ class MainScreen extends StatefulScreen implements AutoRouteWrapper {
 class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   bool _checkedInitialAuth = false;
 
-  /// Tab icon từ SVG cute: tab đang chọn hiện full màu, tab thường mờ đi.
+  static const _inactiveIconFilter = ColorFilter.matrix([
+    0.138,
+    0.465,
+    0.047,
+    0,
+    0,
+    0.138,
+    0.465,
+    0.047,
+    0,
+    0,
+    0.138,
+    0.465,
+    0.047,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+  ]);
+
+  /// Selected tabs keep full color; inactive SVGs become dark grayscale while
+  /// preserving the original light and dark details.
   BottomNavigationBarItem _navItem(SvgGenImage asset, String label) {
-    final icon = asset.svg(width: 26, height: 26);
     return BottomNavigationBarItem(
-      icon: Opacity(opacity: 0.45, child: icon),
-      activeIcon: icon,
+      icon: asset.svg(width: 26, height: 26, colorFilter: _inactiveIconFilter),
+      activeIcon: asset.svg(width: 26, height: 26),
       label: label,
     );
   }
@@ -76,6 +99,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
           transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
           builder: (context, child) {
             final tabsRouter = AutoTabsRouter.of(context);
+            final unselectedColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.65);
             _requireLoginForInitialChickenTab(context, tabsRouter, showLocketTab);
 
             return Scaffold(
@@ -96,6 +120,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                 },
                 type: BottomNavigationBarType.fixed,
                 selectedItemColor: Colors.amber[800],
+                unselectedItemColor: unselectedColor,
                 unselectedFontSize: 12,
                 selectedFontSize: 12,
                 enableFeedback: true,
