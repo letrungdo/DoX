@@ -20,6 +20,7 @@ env:
 
 build-apk:
 	fvm flutter build apk --release \
+		--target-platform android-arm64 \
 		--dart-define-from-file envs/dev/dart-define.env \
 		--obfuscate --split-debug-info=build/obfuscate
 

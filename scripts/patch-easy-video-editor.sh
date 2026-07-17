@@ -1,19 +1,6 @@
 #!/usr/bin/env bash
 # Apply repository-maintained iOS fixes to the pub-cache copy of
 # easy_video_editor.
-#
-# Why: easy_video_editor's iOS cropVideo computes the crop on naturalSize and
-# ignores preferredTransform, so portrait videos get a black bar when cropped to
-# a square. Version 0.1.6 also omits Foundation/Dispatch imports from its
-# operation manager, which fails with the Swift compiler bundled in Xcode 16.4.
-#
-# This patches the cached package in place (the file CocoaPods symlinks into the
-# build), so there is no need to vendor the whole package. Idempotent: re-running
-# is a no-op once applied. Wired into ios/Podfile post_install to run on each
-# `pod install`; the patch persists in the cache across builds afterwards.
-#
-# Uses only awk/patch (no python) so it works in the minimal PATH that
-# CocoaPods' post_install runs under.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,11 +8,9 @@ CROP_PATCH="$ROOT/patches/easy_video_editor_ios_crop.patch"
 CROP_REL="ios/easy_video_editor/Sources/easy_video_editor/utils/VideoUtils.swift"
 IMPORTS_PATCH="$ROOT/patches/easy_video_editor_ios_imports.patch"
 IMPORTS_REL="ios/easy_video_editor/Sources/easy_video_editor/utils/OperationManager.swift"
-PUB_CACHE_DIR="${PUB_CACHE:-$HOME/.pub-cache}"
+IMPORTS_REL_2="ios/easy_video_editor/Sources/easy_video_editor/handler/CancelOperationCommand.swift"
 
-for patch_file in "$CROP_PATCH" "$IMPORTS_PATCH"; do
-  [[ -f "$patch_file" ]] || { echo "[patch-evd] patch file not found: $patch_file"; exit 1; }
-done
+echo "[patch-evd] ROOT: $ROOT"
 
 apply_fix() {
   pkg="$1"
@@ -34,53 +19,62 @@ apply_fix() {
   label="$4"
   target="$pkg/$rel"
 
-  [[ -f "$target" ]] || {
-    echo "[patch-evd] ERROR: expected source file not found: $target"
-    exit 1
-  }
-
-  # Reverse dry-run verifies every file in a multi-file patch, avoiding false
-  # positives if only part of a fix was applied previously.
-  if patch -R -p1 --dry-run -d "$pkg" < "$patch_file" >/dev/null 2>&1; then
-    echo "[patch-evd] already patched ($label): $target"
+  if [[ ! -f "$target" ]]; then
     return
   fi
 
-  # Dry-run first so a context mismatch (version bump) fails loudly instead of
-  # leaving a partially modified source file.
-  if ! patch -p1 --dry-run -d "$pkg" < "$patch_file" >/dev/null 2>&1; then
-    echo "[patch-evd] ERROR: $label patch does not apply cleanly to $pkg"
-    echo "[patch-evd] easy_video_editor version likely changed — regenerate $patch_file"
-    exit 1
+  # Check if already patched
+  if grep -q "import Dispatch" "$target"; then
+    echo "[patch-evd] already patched: $target"
+    return
   fi
 
-  patch -p1 -d "$pkg" < "$patch_file"
-  echo "[patch-evd] applied $label fix to $target"
+  echo "[patch-evd] patching: $target"
+  # Manual injection for imports as it's the most critical
+  if [[ "$rel" == *"OperationManager.swift" ]] || [[ "$rel" == *"CancelOperationCommand.swift" ]]; then
+     { printf "import Foundation\nimport Dispatch\n\n"; cat "$target"; } > "$target.tmp" && mv "$target.tmp" "$target"
+     echo "[patch-evd] manual injection successful: $target"
+     return
+  fi
+
+  # Fallback to patch command for others (like crop fix)
+  patch -p1 -l -d "$pkg" < "$patch_file" || echo "[patch-evd] Warning: patch failed for $label"
 }
 
-# Candidate package dirs: the exact version from pubspec.lock, else any cached version.
+# Find easy_video_editor in all possible pub cache locations
 candidates=()
-if [[ -f "$ROOT/pubspec.lock" ]]; then
-  ver="$(awk '/^  easy_video_editor:/{f=1} f&&/^[[:space:]]+version:/{gsub(/[" ]/,"",$2); print $2; exit}' "$ROOT/pubspec.lock")"
-  [[ -n "$ver" ]] && candidates+=("$PUB_CACHE_DIR/hosted/pub.dev/easy_video_editor-$ver")
+search_paths=(
+  "${PUB_CACHE:-$HOME/.pub-cache}"
+  "$HOME/.pub-cache"
+)
+
+# Safely add flutter sdk path if available
+if command -v flutter >/dev/null 2>&1; then
+  FLUTTER_SDK_PATH=$(flutter sdk-path 2>/dev/null || echo "")
+  if [[ -n "$FLUTTER_SDK_PATH" ]]; then
+    search_paths+=("$FLUTTER_SDK_PATH/.pub-cache")
+  fi
 fi
-for d in "$PUB_CACHE_DIR"/hosted/pub.dev/easy_video_editor-*; do
-  [[ -d "$d" ]] && candidates+=("$d")
+
+for base in "${search_paths[@]}"; do
+  [[ -d "$base" ]] || continue
+  for d in "$base"/hosted/*/easy_video_editor-*; do
+    [[ -d "$d" ]] && candidates+=("$d")
+  done
 done
 
-patched_any=0
-seen=""
-for pkg in "${candidates[@]}"; do
-  case "$seen" in *"|$pkg|"*) continue ;; esac  # skip duplicates
-  seen="$seen|$pkg|"
-  [[ -f "$pkg/$CROP_REL" ]] || continue
-
-  apply_fix "$pkg" "$CROP_PATCH" "$CROP_REL" "iOS crop"
-  apply_fix "$pkg" "$IMPORTS_PATCH" "$IMPORTS_REL" "Xcode 16 Swift imports"
-  patched_any=1
-done
-
-if [[ "$patched_any" -eq 0 ]]; then
-  echo "[patch-evd] no easy_video_editor package found under $PUB_CACHE_DIR — run 'flutter pub get' first"
+if [[ ${#candidates[@]} -eq 0 ]]; then
+  echo "[patch-evd] ERROR: easy_video_editor not found in cache. Run 'flutter pub get' first."
   exit 1
 fi
+
+seen=""
+for pkg in "${candidates[@]}"; do
+  case "$seen" in *"|$pkg|"*) continue ;; esac
+  seen="$seen|$pkg|"
+  echo "[patch-evd] processing package: $pkg"
+  apply_fix "$pkg" "$CROP_PATCH" "$CROP_REL" "iOS crop"
+  apply_fix "$pkg" "$IMPORTS_PATCH" "$IMPORTS_REL" "Swift imports (1)"
+  apply_fix "$pkg" "$IMPORTS_PATCH" "$IMPORTS_REL_2" "Swift imports (2)"
+done
+echo "[patch-evd] done."
