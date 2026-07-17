@@ -73,10 +73,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
         return AutoTabsRouter(
           key: ValueKey('main-tabs-$showLocketTab'),
           routes: routes,
-          transitionBuilder: (context, child, animation) => FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
           builder: (context, child) {
             final tabsRouter = AutoTabsRouter.of(context);
             _requireLoginForInitialChickenTab(context, tabsRouter, showLocketTab);
@@ -89,6 +86,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                   if (value == 1 && supabase.auth.currentSession == null) {
                     await context.pushRoute(const AppLoginRoute());
                     if (supabase.auth.currentSession == null) return;
+                  }
+                  if (value == tabsRouter.activeIndex) {
+                    await vm.handleTabReselect(routes[value].routeName);
+                    return;
                   }
                   tabsRouter.setActiveIndex(value);
                   storageService.setTabIndex(value);

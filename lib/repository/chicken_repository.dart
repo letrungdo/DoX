@@ -61,6 +61,25 @@ class ChickenRepository {
     await _client.from('expenses').insert(_expenseToRow(expense, batchId));
   }
 
+  Future<void> updateGlobalExpense(Expense expense) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw StateError('Bạn cần đăng nhập để sửa chi phí.');
+    final updated = await _client
+        .from('expenses')
+        .update({
+          'type': expense.type.name,
+          'amount': expense.amount,
+          'date': _dateStr(expense.date),
+          'note': expense.note,
+        })
+        .eq('id', expense.id)
+        .eq('user_id', userId)
+        .isFilter('batch_id', null)
+        .select('id')
+        .maybeSingle();
+    if (updated == null) throw StateError('Không tìm thấy chi phí để cập nhật.');
+  }
+
   Future<List<Expense>> getGlobalExpenses() async {
     final rows = await _client.from('expenses').select().isFilter('batch_id', null).order('date', ascending: false);
     return rows.map(_expenseFromRow).toList();
@@ -69,6 +88,34 @@ class ChickenRepository {
   /// [batchId] null means a global cock sale (not tied to any batch).
   Future<void> insertCockSale(String? batchId, CockSale sale) async {
     await _client.from('cock_sales').insert(_cockSaleToRow(sale, batchId));
+  }
+
+  Future<void> updateGlobalCockSale(CockSale sale) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw StateError('Bạn cần đăng nhập để sửa lượt bán.');
+    final updated = await _client
+        .from('cock_sales')
+        .update({'note': sale.note, 'amount': sale.amount, 'date': _dateStr(sale.date), 'category': sale.category.name})
+        .eq('id', sale.id)
+        .eq('user_id', userId)
+        .isFilter('batch_id', null)
+        .select('id')
+        .maybeSingle();
+    if (updated == null) throw StateError('Không tìm thấy lượt bán để cập nhật.');
+  }
+
+  Future<void> deleteGlobalCockSale(String id) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw StateError('Bạn cần đăng nhập để xóa lượt bán.');
+    final deleted = await _client
+        .from('cock_sales')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+        .isFilter('batch_id', null)
+        .select('id')
+        .maybeSingle();
+    if (deleted == null) throw StateError('Không tìm thấy lượt bán để xóa.');
   }
 
   Future<void> setVaccinationCompleted(String id, bool isCompleted) async {

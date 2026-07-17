@@ -70,8 +70,8 @@ class ChickenViewModel extends CoreViewModel {
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    setBusy(true);
+  Future<void> _loadData({bool showLoading = true}) async {
+    if (showLoading) setBusy(true);
     try {
       _batches = await _repository.getBatches();
       _globalCockSales = await _repository.getGlobalCockSales();
@@ -79,9 +79,15 @@ class ChickenViewModel extends CoreViewModel {
     } catch (e) {
       logger.e("load chicken data failed", error: e);
     } finally {
-      setBusy(false);
+      if (showLoading) {
+        setBusy(false);
+      } else {
+        notifyListenersSafe();
+      }
     }
   }
+
+  Future<void> refreshData() => _loadData(showLoading: false);
 
   Future<void> addBatch({required String name, required DateTime incubationDate, required int quantity}) async {
     final newBatch = ChickenBatch(
@@ -167,9 +173,31 @@ class ChickenViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
+  Future<void> updateGlobalCockSale(CockSale sale) async {
+    final index = _globalCockSales.indexWhere((item) => item.id == sale.id);
+    if (index == -1) return;
+    await _repository.updateGlobalCockSale(sale);
+    _globalCockSales[index] = sale;
+    notifyListenersSafe();
+  }
+
+  Future<void> deleteGlobalCockSale(String id) async {
+    await _repository.deleteGlobalCockSale(id);
+    _globalCockSales.removeWhere((sale) => sale.id == id);
+    notifyListenersSafe();
+  }
+
   Future<void> addGlobalExpense(Expense expense) async {
-    _globalExpenses.insert(0, expense);
     await _repository.insertExpense(null, expense);
+    _globalExpenses.insert(0, expense);
+    notifyListenersSafe();
+  }
+
+  Future<void> updateGlobalExpense(Expense expense) async {
+    final index = _globalExpenses.indexWhere((item) => item.id == expense.id);
+    if (index == -1) return;
+    await _repository.updateGlobalExpense(expense);
+    _globalExpenses[index] = expense;
     notifyListenersSafe();
   }
 

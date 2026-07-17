@@ -192,7 +192,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profitStatistics => 'Thống kê lợi nhuận';
 
   @override
-  String get commonExpenses => 'Chi phí chung (cám, thuốc...)';
+  String get commonExpenses => 'Chi phí chung';
 
   @override
   String get importData => 'Nhập dữ liệu (JSON)';
@@ -202,4 +202,95 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get yearPrefix => 'Năm';
+
+  @override
+  String get yearLabel => 'Năm:';
+
+  @override
+  String get all => 'Tất cả';
+
+  @override
+  String expenseCount(int count) {
+    return '$count khoản chi';
+  }
+
+  @override
+  String saleCount(int count) {
+    return '$count lượt bán';
+  }
+
+  @override
+  String revenueAmount(String amount) {
+    return 'Doanh thu: $amount';
+  }
+
+  @override
+  String profitAmount(String amount) {
+    return 'Lợi nhuận: $amount';
+  }
+
+  @override
+  String totalAmount(String amount) {
+    return 'Tổng: $amount';
+  }
+
+  @override
+  String noBatchesInYear(int year) {
+    return 'Không có lứa gà trong năm $year.';
+  }
+
+  @override
+  String get noCommonExpenses => 'Chưa có chi phí chung nào.';
+
+  @override
+  String noCommonExpensesInYear(int year) {
+    return 'Không có chi phí chung trong năm $year.';
+  }
+
+  @override
+  String get addFirstExpense => 'Thêm chi phí đầu tiên';
+
+  @override
+  String get addCommonExpense => 'Thêm chi phí chung';
+
+  @override
+  String get editCommonExpense => 'Chỉnh sửa chi phí chung';
+
+  @override
+  String get update => 'Cập nhật';
+
+  @override
+  String get save => 'Lưu';
+
+  @override
+  String get expenseType => 'Loại chi phí';
+
+  @override
+  String get amountLabel => 'Số tiền';
+
+  @override
+  String get noteLabel => 'Ghi chú';
+
+  @override
+  String get expenseDate => 'Ngày chi';
+
+  @override
+  String saveCommonExpenseFailed(String error) {
+    return 'Lưu chi phí thất bại: $error';
+  }
+
+  @override
+  String get expenseFeed => 'Cám / thức ăn';
+
+  @override
+  String get expenseMedicine => 'Thuốc / vắc xin';
+
+  @override
+  String get expenseElectricity => 'Điện sưởi';
+
+  @override
+  String get expenseWater => 'Nước';
+
+  @override
+  String get expenseOther => 'Khác';
 }

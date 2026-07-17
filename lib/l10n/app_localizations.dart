@@ -455,7 +455,7 @@ abstract class AppLocalizations {
   /// No description provided for @commonExpenses.
   ///
   /// In en, this message translates to:
-  /// **'Common expenses (feed, medicine...)'**
+  /// **'Common expenses'**
   String get commonExpenses;
 
   /// No description provided for @importData.
@@ -475,6 +475,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Year'**
   String get yearPrefix;
+
+  /// No description provided for @yearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Year:'**
+  String get yearLabel;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @expenseCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} expenses'**
+  String expenseCount(int count);
+
+  /// No description provided for @saleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sales'**
+  String saleCount(int count);
+
+  /// No description provided for @revenueAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue: {amount}'**
+  String revenueAmount(String amount);
+
+  /// No description provided for @profitAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit: {amount}'**
+  String profitAmount(String amount);
+
+  /// No description provided for @totalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Total: {amount}'**
+  String totalAmount(String amount);
+
+  /// No description provided for @noBatchesInYear.
+  ///
+  /// In en, this message translates to:
+  /// **'No chicken batches in {year}.'**
+  String noBatchesInYear(int year);
+
+  /// No description provided for @noCommonExpenses.
+  ///
+  /// In en, this message translates to:
+  /// **'No common expenses yet.'**
+  String get noCommonExpenses;
+
+  /// No description provided for @noCommonExpensesInYear.
+  ///
+  /// In en, this message translates to:
+  /// **'No common expenses in {year}.'**
+  String noCommonExpensesInYear(int year);
+
+  /// No description provided for @addFirstExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the first expense'**
+  String get addFirstExpense;
+
+  /// No description provided for @addCommonExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Add common expense'**
+  String get addCommonExpense;
+
+  /// No description provided for @editCommonExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit common expense'**
+  String get editCommonExpense;
+
+  /// No description provided for @update.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get update;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @expenseType.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense type'**
+  String get expenseType;
+
+  /// No description provided for @amountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get amountLabel;
+
+  /// No description provided for @noteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get noteLabel;
+
+  /// No description provided for @expenseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense date'**
+  String get expenseDate;
+
+  /// No description provided for @saveCommonExpenseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save expense: {error}'**
+  String saveCommonExpenseFailed(String error);
+
+  /// No description provided for @expenseFeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Feed'**
+  String get expenseFeed;
+
+  /// No description provided for @expenseMedicine.
+  ///
+  /// In en, this message translates to:
+  /// **'Medicine / vaccine'**
+  String get expenseMedicine;
+
+  /// No description provided for @expenseElectricity.
+  ///
+  /// In en, this message translates to:
+  /// **'Heating electricity'**
+  String get expenseElectricity;
+
+  /// No description provided for @expenseWater.
+  ///
+  /// In en, this message translates to:
+  /// **'Water'**
+  String get expenseWater;
+
+  /// No description provided for @expenseOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get expenseOther;
 }
 
 class _AppLocalizationsDelegate

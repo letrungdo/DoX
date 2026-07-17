@@ -234,17 +234,16 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                 color: context.theme.colorScheme.primaryContainer, //
                 borderRadius: BorderRadius.circular(40),
               ),
-              child:
-                  isCameraMode
-                      ? Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: context.colors.iconColor.withAlpha(250), //
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      )
-                      : SFIcon(SFIcons.sf_paperplane, fontSize: 35),
+              child: isCameraMode
+                  ? Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: context.colors.iconColor.withAlpha(250), //
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                    )
+                  : SFIcon(SFIcons.sf_paperplane, fontSize: 35),
             ),
           ),
           Material(

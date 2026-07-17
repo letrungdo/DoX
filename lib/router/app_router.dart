@@ -31,7 +31,12 @@ class _AppRouter extends RootStackRouter {
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
           AutoRoute(initial: initialTabIndex == 0, path: 'news', page: NewsRoute.page),
-          AutoRoute(initial: initialTabIndex == 1, path: 'chicken', page: ChickenRoute.page, guards: [_supabaseAuthGuard]),
+          AutoRoute(
+            initial: initialTabIndex == 1,
+            path: 'chicken',
+            page: ChickenRoute.page,
+            guards: [_supabaseAuthGuard],
+          ),
           AutoRoute(
             path: 'locket',
             initial: initialTabIndex == 2,
@@ -62,6 +67,7 @@ class _AppRouter extends RootStackRouter {
       AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page, guards: [_supabaseAuthGuard]),
       AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page, guards: [_supabaseAuthGuard]),
       AutoRoute(path: '/cock-sales', page: CockSalesRoute.page, guards: [_supabaseAuthGuard]),
+      AutoRoute(path: '/global-expenses', page: GlobalExpensesRoute.page, guards: [_supabaseAuthGuard]),
       AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),

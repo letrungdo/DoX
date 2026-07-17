@@ -192,7 +192,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profitStatistics => 'Profit statistics';
 
   @override
-  String get commonExpenses => 'Common expenses (feed, medicine...)';
+  String get commonExpenses => 'Common expenses';
 
   @override
   String get importData => 'Import data (JSON)';
@@ -202,4 +202,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yearPrefix => 'Year';
+
+  @override
+  String get yearLabel => 'Year:';
+
+  @override
+  String get all => 'All';
+
+  @override
+  String expenseCount(int count) {
+    return '$count expenses';
+  }
+
+  @override
+  String saleCount(int count) {
+    return '$count sales';
+  }
+
+  @override
+  String revenueAmount(String amount) {
+    return 'Revenue: $amount';
+  }
+
+  @override
+  String profitAmount(String amount) {
+    return 'Profit: $amount';
+  }
+
+  @override
+  String totalAmount(String amount) {
+    return 'Total: $amount';
+  }
+
+  @override
+  String noBatchesInYear(int year) {
+    return 'No chicken batches in $year.';
+  }
+
+  @override
+  String get noCommonExpenses => 'No common expenses yet.';
+
+  @override
+  String noCommonExpensesInYear(int year) {
+    return 'No common expenses in $year.';
+  }
+
+  @override
+  String get addFirstExpense => 'Add the first expense';
+
+  @override
+  String get addCommonExpense => 'Add common expense';
+
+  @override
+  String get editCommonExpense => 'Edit common expense';
+
+  @override
+  String get update => 'Update';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get expenseType => 'Expense type';
+
+  @override
+  String get amountLabel => 'Amount';
+
+  @override
+  String get noteLabel => 'Note';
+
+  @override
+  String get expenseDate => 'Expense date';
+
+  @override
+  String saveCommonExpenseFailed(String error) {
+    return 'Could not save expense: $error';
+  }
+
+  @override
+  String get expenseFeed => 'Feed';
+
+  @override
+  String get expenseMedicine => 'Medicine / vaccine';
+
+  @override
+  String get expenseElectricity => 'Heating electricity';
+
+  @override
+  String get expenseWater => 'Water';
+
+  @override
+  String get expenseOther => 'Other';
 }

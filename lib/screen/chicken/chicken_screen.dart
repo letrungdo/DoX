@@ -7,18 +7,18 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
-import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
+import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 
 @RoutePage()
 class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -32,6 +32,41 @@ class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
+  int _selectedYear = DateTime.now().year;
+  final _scrollController = ScrollController();
+  MainViewModel? _mainViewModel;
+  late final Future<void> Function() _tabReselectHandler;
+
+  @override
+  void initState() {
+    _tabReselectHandler = _handleTabReselect;
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mainViewModel = context.read<MainViewModel>();
+    if (identical(_mainViewModel, mainViewModel)) return;
+    _mainViewModel?.unregisterTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    _mainViewModel = mainViewModel;
+    mainViewModel.registerTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+  }
+
+  @override
+  void dispose() {
+    _mainViewModel?.unregisterTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTabReselect() async {
+    if (_scrollController.hasClients) {
+      await _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+    if (mounted) await vm.refreshData();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -40,38 +75,29 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         title: l10n.chickenManagement,
         actions: [
           IconButton(
-            icon: Assets.images.roosterCute.svg(width: 26, height: 26),
-            onPressed: () => context.router.push(const CockSalesRoute()),
-            tooltip: l10n.sellRoosterMeat,
-          ),
-          IconButton(
             icon: const Icon(Icons.bar_chart),
             onPressed: () => context.router.push(const ChickenStatisticsRoute()),
             tooltip: l10n.profitStatistics,
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddBatchDialog),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
-                case 'import':
-                  _importFromJsonFile();
-                case 'delete_all':
-                  _showDeleteAllDataDialog();
-                case 'expenses':
-                  _showGlobalExpensesSheet(l10n);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(value: 'expenses', child: Text(l10n.commonExpenses)),
-              if (kDebugMode) ...[
+          if (kDebugMode)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case 'import':
+                    _importFromJsonFile();
+                  case 'delete_all':
+                    _showDeleteAllDataDialog();
+                }
+              },
+              itemBuilder: (context) => [
                 PopupMenuItem(value: 'import', child: Text(l10n.importData)),
                 const PopupMenuItem(
                   value: 'delete_all',
                   child: Text("Xóa toàn bộ dữ liệu gà", style: TextStyle(color: Colors.red)),
                 ),
               ],
-            ],
-          ),
+            ),
         ],
       ),
       body: Consumer<ChickenViewModel>(
@@ -79,24 +105,27 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           if (vm.isBusy) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (vm.batches.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Assets.images.chickCute.svg(width: 72, height: 72),
-                  const SizedBox(height: 12),
-                  Text(l10n.noBatchesYet),
-                ],
-              ),
-            );
-          }
-          // Batches are sorted by incubation date desc -> insert a year header on change.
+
+          final years = {
+            DateTime.now().year,
+            ...vm.batches.map((batch) => (batch.actualHatchDate ?? batch.expectedHatchDate).year),
+          }.toList()..sort((a, b) => b.compareTo(a));
+          final batches = _selectedYear == 0
+              ? vm.batches
+              : vm.batches
+                    .where((batch) => (batch.actualHatchDate ?? batch.expectedHatchDate).year == _selectedYear)
+                    .toList();
+          final totalRevenue = batches.fold<double>(
+            0,
+            (sum, batch) => sum + batch.totalSaleAmount + batch.totalCockSales,
+          );
+          final totalProfit = batches.fold<double>(0, (sum, batch) => sum + batch.profit);
+
           final items = <Widget>[];
           int? currentYear;
-          for (final batch in vm.batches) {
+          for (final batch in batches) {
             final year = (batch.actualHatchDate ?? batch.expectedHatchDate).year;
-            if (year != currentYear) {
+            if (_selectedYear == 0 && year != currentYear) {
               currentYear = year;
               items.add(
                 Padding(
@@ -110,9 +139,169 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             }
             items.add(_buildBatchCard(batch));
           }
-          return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), children: items);
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildFeatureCard(
+                        icon: Assets.images.feedCute.svg(width: 32, height: 32),
+                        title: l10n.commonExpenses,
+                        subtitle: l10n.expenseCount(vm.globalExpenses.length),
+                        color: Colors.orange,
+                        onTap: () => context.router.push(const GlobalExpensesRoute()),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildFeatureCard(
+                        icon: Assets.images.roosterCute.svg(width: 32, height: 32),
+                        title: l10n.sellRoosterMeat,
+                        subtitle: l10n.saleCount(vm.globalCockSales.length),
+                        color: Colors.red,
+                        onTap: () => context.router.push(const CockSalesRoute()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_alt_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.yearLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    DropdownButton<int>(
+                      value: _selectedYear,
+                      items: [
+                        DropdownMenuItem(value: 0, child: Text(l10n.all)),
+                        ...years.map((year) => DropdownMenuItem(value: year, child: Text("$year"))),
+                      ],
+                      onChanged: (year) {
+                        if (year != null) setState(() => _selectedYear = year);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              l10n.revenueAmount("${totalRevenue.toCurrency()}đ"),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              l10n.profitAmount("${totalProfit.toCurrency()}đ"),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: totalProfit >= 0 ? Colors.blue : Colors.red,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: vm.refreshData,
+                  child: items.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraints) => ListView(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Assets.images.chickCute.svg(width: 72, height: 72),
+                                    const SizedBox(height: 12),
+                                    Text(_selectedYear == 0 ? l10n.noBatchesYet : l10n.noBatchesInYear(_selectedYear)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          children: items,
+                        ),
+                ),
+              ),
+            ],
+          );
         },
       ).webConstrainedBox(),
+    );
+  }
+
+  Widget _buildFeatureCard({
+    required Widget icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: icon,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -129,65 +318,120 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         ? ("Đã bán hết", Colors.grey)
         : ("${batch.ageInDays} ngày tuổi", Colors.green);
 
-    return Card(
+    return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
-      // Clip so tap/long-press ink follows the rounded corners.
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 22,
-          backgroundColor: statusColor.withValues(alpha: 0.12),
-          child:
-              (!isHatched
-                      ? Assets.images.eggCute
-                      : isSoldOut
-                      ? Assets.images.henCute
-                      : Assets.images.chickCute)
-                  .svg(width: 30, height: 30),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                batch.name,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      leading: CircleAvatar(
+        radius: 22,
+        backgroundColor: statusColor.withValues(alpha: 0.12),
+        child:
+            (!isHatched
+                    ? Assets.images.eggCute
+                    : isSoldOut
+                    ? Assets.images.henCute
+                    : Assets.images.chickCute)
+                .svg(width: 30, height: 30),
+      ),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              batch.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                statusText,
-                style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
-              ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-        subtitle: Column(
+            child: Text(
+              statusText,
+              style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              batch.sales.isEmpty
-                  ? "Số lượng: ${batch.quantity} con · Nở: ${dateFormat.format(hatchDate)}"
-                  : "Đã bán ${batch.soldQuantity}/${batch.quantity} con · Nở: ${dateFormat.format(hatchDate)}",
+            Row(
+              children: [
+                Expanded(
+                  child: _buildBatchInfo(
+                    Icons.numbers_rounded,
+                    batch.sales.isEmpty
+                        ? "${batch.quantity} con"
+                        : "Đã bán ${batch.soldQuantity}/${batch.quantity} con",
+                    highlighted: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildBatchInfo(
+                    Icons.calendar_today_rounded,
+                    "Nở ${dateFormat.format(hatchDate)}",
+                    alignment: MainAxisAlignment.end,
+                  ),
+                ),
+              ],
             ),
-            if (hasMoney)
-              Text(
-                "Thu ${batch.totalSaleAmount + batch.totalCockSales > 0 ? (batch.totalSaleAmount + batch.totalCockSales).toCurrency() : 0}đ"
-                "${batch.totalExpenses > 0 ? ' · Chi ${batch.totalExpenses.toCurrency()}đ' : ''}"
-                " · Lãi ${batch.profit.toCurrency()}đ",
-                style: TextStyle(color: batch.profit >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.w600),
+            if (hasMoney) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildMoneyBadge("Thu", batch.totalSaleAmount + batch.totalCockSales, Colors.green),
+                  if (batch.totalExpenses > 0) _buildMoneyBadge("Chi", batch.totalExpenses, Colors.orange),
+                  _buildMoneyBadge("Lãi", batch.profit, batch.profit >= 0 ? Colors.blue : Colors.red),
+                ],
               ),
+            ],
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          context.router.push(ChickenBatchDetailRoute(batchId: batch.id));
-        },
+      ),
+      onTap: () {
+        context.router.push(ChickenBatchDetailRoute(batchId: batch.id));
+      },
+    );
+  }
+
+  Widget _buildBatchInfo(
+    IconData icon,
+    String text, {
+    MainAxisAlignment alignment = MainAxisAlignment.start,
+    bool highlighted = false,
+  }) {
+    final color = highlighted ? Theme.of(context).colorScheme.primary : Colors.grey[700];
+    return Row(
+      mainAxisAlignment: alignment,
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13, color: color, fontWeight: highlighted ? FontWeight.w700 : FontWeight.normal),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMoneyBadge(String label, double amount, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+      child: Text(
+        "$label ${amount.toCurrency()}đ",
+        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -315,133 +559,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         context,
       ).showSnackBar(SnackBar(content: Text("Xóa dữ liệu thất bại: $e"), backgroundColor: Colors.red));
     }
-  }
-
-  void _showGlobalExpensesSheet(AppLocalizations l10n) {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => Consumer<ChickenViewModel>(
-        builder: (context, vm, child) {
-          final expenses = vm.globalExpenses;
-          final total = expenses.fold<double>(0, (sum, e) => sum + e.amount);
-          return SafeArea(
-            child: SizedBox(
-              height: MediaQuery.of(sheetContext).size.height * 0.7,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "${l10n.commonExpenses} (${total.toCurrency()}đ)",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _showAddGlobalExpenseDialog),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: expenses.isEmpty
-                        ? const Center(child: Text("Chưa có chi phí chung nào."))
-                        : ListView.builder(
-                            itemCount: expenses.length,
-                            itemBuilder: (context, index) {
-                              final e = expenses[index];
-                              return ListTile(
-                                leading: _expenseSvg(e.type),
-                                title: Text(e.note ?? _expenseLabel(e.type)),
-                                subtitle: Text(DateFormat('dd/MM/yyyy').format(e.date)),
-                                trailing: Text(
-                                  "${e.amount.toCurrency()}đ",
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showAddGlobalExpenseDialog() {
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-    ExpenseType selectedType = ExpenseType.feed;
-    DateTime expenseDate = DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
-          icon: Assets.images.feedCute,
-          title: "Thêm chi phí chung",
-          accent: Colors.orange,
-          confirmText: "Lưu",
-          onConfirm: () {
-            final amount = double.tryParse(amountController.text) ?? 0;
-            if (amount > 0) {
-              vm.addGlobalExpense(
-                Expense(
-                  id: const Uuid().v4(),
-                  type: selectedType,
-                  amount: amount,
-                  date: expenseDate,
-                  note: noteController.text.isEmpty ? null : noteController.text,
-                ),
-              );
-              Navigator.pop(context);
-            }
-          },
-          children: [
-            DropdownButtonFormField<ExpenseType>(
-              initialValue: selectedType,
-              items: ExpenseType.values.map((t) => DropdownMenuItem(value: t, child: Text(_expenseLabel(t)))).toList(),
-              onChanged: (val) => setState(() => selectedType = val!),
-              decoration: cuteInputDecoration(context, "Loại chi phí"),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            CuteTextField(
-              controller: amountController,
-              label: "Số tiền",
-              prefixText: "đ ",
-              keyboardType: TextInputType.number,
-            ),
-            CuteTextField(controller: noteController, label: "Ghi chú"),
-            CuteDateField(label: "Ngày chi", value: expenseDate, onChanged: (d) => setState(() => expenseDate = d)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _expenseLabel(ExpenseType type) {
-    return switch (type) {
-      ExpenseType.feed => "Cám / thức ăn",
-      ExpenseType.medicine => "Thuốc / vắc xin",
-      ExpenseType.electricity => "Điện sưởi",
-      ExpenseType.water => "Nước",
-      ExpenseType.other => "Khác",
-    };
-  }
-
-  Widget _expenseSvg(ExpenseType type) {
-    final asset = switch (type) {
-      ExpenseType.feed => Assets.images.feedCute,
-      ExpenseType.medicine => Assets.images.medicineCute,
-      ExpenseType.electricity => Assets.images.lampCute,
-      ExpenseType.water => Assets.images.waterCute,
-      ExpenseType.other => Assets.images.starCute,
-    };
-    return asset.svg(width: 30, height: 30);
   }
 
   void _showAddBatchDialog() {
