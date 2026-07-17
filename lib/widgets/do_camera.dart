@@ -127,7 +127,9 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _initializeCameraController(CameraDescription? cameraDescription) async {
+  Future<void> _initializeCameraController(
+    CameraDescription? cameraDescription,
+  ) async {
     if (cameraDescription == null) return;
     if (_isRunning || !mounted) {
       return;
@@ -138,7 +140,9 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       cameraDescription,
       ResolutionPreset.veryHigh, //
       enableAudio: false,
-      imageFormatGroup: Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
+      imageFormatGroup: Platform.isIOS
+          ? ImageFormatGroup.bgra8888
+          : ImageFormatGroup.yuv420,
     );
     try {
       await controller!.initialize();
@@ -149,8 +153,12 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
         await controller!.lockCaptureOrientation();
         controller!.setFlashMode(flashMode);
         await Future.wait(<Future<Object?>>[
-          controller!.getMaxZoomLevel().then((double value) => _maxAvailableZoom = value),
-          controller!.getMinZoomLevel().then((double value) => _minAvailableZoom = value),
+          controller!.getMaxZoomLevel().then(
+            (double value) => _maxAvailableZoom = value,
+          ),
+          controller!.getMinZoomLevel().then(
+            (double value) => _minAvailableZoom = value,
+          ),
         ]);
       }
     } on CameraException catch (e) {
@@ -190,7 +198,9 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   }
 
   void showInSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -227,16 +237,17 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
         child: SizedBox(
           width: size.width,
           height: size.width,
-          child:
-              widget.imgData == null
-                  ? FittedBox(
-                    fit: size.width > widget.parentSize ? BoxFit.fitHeight : BoxFit.fitWidth,
-                    child: SizedBox(
-                      width: size.width, //
-                      child: _buildCameraPreview(),
-                    ),
-                  )
-                  : Image.memory(widget.imgData!, fit: BoxFit.fitWidth),
+          child: widget.imgData == null
+              ? FittedBox(
+                  fit: size.width > widget.parentSize
+                      ? BoxFit.fitHeight
+                      : BoxFit.fitWidth,
+                  child: SizedBox(
+                    width: size.width, //
+                    child: _buildCameraPreview(),
+                  ),
+                )
+              : Image.memory(widget.imgData!, fit: BoxFit.fitWidth),
         ),
       ),
     );
@@ -247,22 +258,23 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
 
     return controller?.value.isInitialized == true && !_isDispose
         ? Listener(
-          onPointerDown: (_) => _pointers++,
-          onPointerUp: (_) => _pointers--,
-          child: CameraPreview(
-            controller!,
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onScaleStart: _handleScaleStart,
-                  onScaleUpdate: _handleScaleUpdate,
-                  onTapDown: (TapDownDetails details) => onViewFinderTap(details, constraints),
-                );
-              },
+            onPointerDown: (_) => _pointers++,
+            onPointerUp: (_) => _pointers--,
+            child: CameraPreview(
+              controller!,
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onScaleStart: _handleScaleStart,
+                    onScaleUpdate: _handleScaleUpdate,
+                    onTapDown: (TapDownDetails details) =>
+                        onViewFinderTap(details, constraints),
+                  );
+                },
+              ),
             ),
-          ),
-        )
+          )
         : SizedBox.shrink();
   }
 
@@ -276,17 +288,22 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       return;
     }
 
-    _currentScale = (_baseScale * details.scale).clamp(_minAvailableZoom, _maxAvailableZoom);
+    _currentScale = (_baseScale * details.scale).clamp(
+      _minAvailableZoom,
+      _maxAvailableZoom,
+    );
 
     await controller?.setZoomLevel(_currentScale);
   }
 
   void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
-    final offset = Offset(details.localPosition.dx / constraints.maxWidth, details.localPosition.dy / constraints.maxHeight);
+    final offset = Offset(
+      details.localPosition.dx / constraints.maxWidth,
+      details.localPosition.dy / constraints.maxHeight,
+    );
     controller?.setExposurePoint(offset);
     controller?.setFocusPoint(offset);
   }
-
 
   Future<Uint8List?> takePicture() async {
     if (controller == null) return null;
@@ -302,7 +319,8 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
         final xFile = await controller!.takePicture();
         final bytes = await xFile.readAsBytes();
         image = img.decodeImage(bytes);
-        if (_camera?.lensDirection == CameraLensDirection.front && Platform.isIOS) {
+        if (_camera?.lensDirection == CameraLensDirection.front &&
+            Platform.isIOS) {
           image = img.flipHorizontal(image!);
         }
       } else {
@@ -313,7 +331,10 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
       if (image == null) {
         return null;
       }
-      final [x, y, width, height] = img.findTrim(image, mode: img.TrimMode.transparent);
+      final [x, y, width, height] = img.findTrim(
+        image,
+        mode: img.TrimMode.transparent,
+      );
       final minSize = [width, height].min;
       int x1, y1;
       if (width > height) {
@@ -323,7 +344,13 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
         x1 = 0;
         y1 = ((height - width) / 2).toInt();
       }
-      img.Image cropped = img.copyCrop(image, x: x1, y: y1, width: minSize, height: minSize);
+      img.Image cropped = img.copyCrop(
+        image,
+        x: x1,
+        y: y1,
+        width: minSize,
+        height: minSize,
+      );
 
       return Uint8List.fromList(img.encodeJpg(cropped));
       // return file;

@@ -27,9 +27,9 @@ class DoButton extends StatelessWidget {
           child ??
           (text != null
               ? Text(
-                text!,
-                style: style0?.textStyle?.resolve({}), //
-              )
+                  text!,
+                  style: style0?.textStyle?.resolve({}), //
+                )
               : SizedBox.shrink()),
     );
     if (isBusy) {

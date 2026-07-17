@@ -26,26 +26,28 @@ class UserAvatar extends StatelessWidget {
         children: [
           profilePicture == null
               ? Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey, //
-                  borderRadius: radius,
-                ),
-              )
+                  decoration: BoxDecoration(
+                    color: Colors.grey, //
+                    borderRadius: radius,
+                  ),
+                )
               : CachedNetworkImage(
-                imageUrl: profilePicture.withProxy(),
-                fadeInDuration: Durations.medium1,
-                imageBuilder:
-                    (context, imageProvider) => Container(
-                      decoration: BoxDecoration(
-                        borderRadius: radius,
-                        border: Border.all(color: context.theme.primaryColor, width: 4),
-                        image: DecorationImage(
-                          image: imageProvider, //
-                          fit: BoxFit.cover,
-                        ),
+                  imageUrl: profilePicture.withProxy(),
+                  fadeInDuration: Durations.medium1,
+                  imageBuilder: (context, imageProvider) => Container(
+                    decoration: BoxDecoration(
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: context.theme.primaryColor,
+                        width: 4,
+                      ),
+                      image: DecorationImage(
+                        image: imageProvider, //
+                        fit: BoxFit.cover,
                       ),
                     ),
-              ),
+                  ),
+                ),
           Material(
             color: Colors.transparent,
             child: InkWell(

@@ -7,10 +7,7 @@ import 'package:flutter/widgets.dart';
 // Supported animation type
 // opacity creates fade in / out effect
 // blur makes background blurred
-enum AppearStyle {
-  opacity,
-  blur,
-}
+enum AppearStyle { opacity, blur }
 
 // Uses to animate dialog appearance
 class AppearWidget extends StatefulWidget {
@@ -25,16 +22,17 @@ class AppearWidget extends StatefulWidget {
     required progress,
     required Duration duration,
     AppearStyle style = AppearStyle.opacity,
-  })  : _child = child,
-        _progress = progress,
-        _duration = duration,
-        _style = style;
+  }) : _child = child,
+       _progress = progress,
+       _duration = duration,
+       _style = style;
 
   @override
   State<AppearWidget> createState() => _AppearMaterialState();
 }
 
-class _AppearMaterialState extends State<AppearWidget> with SingleTickerProviderStateMixin {
+class _AppearMaterialState extends State<AppearWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late StreamSubscription _subscription;
 
@@ -42,10 +40,7 @@ class _AppearMaterialState extends State<AppearWidget> with SingleTickerProvider
   void initState() {
     super.initState();
 
-    _controller = AnimationController(
-      duration: widget._duration,
-      vsync: this,
-    );
+    _controller = AnimationController(duration: widget._duration, vsync: this);
 
     _subscription = widget._progress.listen((progress) {
       _controller.animateTo(progress);
@@ -71,10 +66,7 @@ class _AppearMaterialState extends State<AppearWidget> with SingleTickerProvider
   Widget _getWidget(Widget? child, double progress) {
     switch (widget._style) {
       case AppearStyle.opacity:
-        return Opacity(
-          opacity: progress,
-          child: child,
-        );
+        return Opacity(opacity: progress, child: child);
 
       case AppearStyle.blur:
         return Stack(
@@ -85,14 +77,9 @@ class _AppearMaterialState extends State<AppearWidget> with SingleTickerProvider
                 sigmaX: progress * 2,
                 sigmaY: progress * 2,
               ),
-              child: Container(
-                color: const Color(0x00000000),
-              ),
+              child: Container(color: const Color(0x00000000)),
             ),
-            Opacity(
-              opacity: progress,
-              child: child,
-            ),
+            Opacity(opacity: progress, child: child),
           ],
         );
     }

@@ -46,13 +46,17 @@
   "vaccinationNotificationTitle": "Vaccination: {vaccination}",
   "@vaccinationNotificationTitle": {
     "placeholders": {
-      "vaccination": { "type": "String" }
+      "vaccination": {
+        "type": "String"
+      }
     }
   },
   "vaccinationNotificationBody": "Batch {batch} is due for vaccination today.",
   "@vaccinationNotificationBody": {
     "placeholders": {
-      "batch": { "type": "String" }
+      "batch": {
+        "type": "String"
+      }
     }
   },
   "confirmLogout": "Confirm Logout",
@@ -91,20 +95,62 @@
   "yearLabel": "Year:",
   "all": "All",
   "expenseCount": "{count} expenses",
-  "@expenseCount": {"placeholders": {"count": {"type": "int"}}},
+  "@expenseCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saleCount": "{count} sales",
-  "@saleCount": {"placeholders": {"count": {"type": "int"}}},
+  "@saleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "revenueAmount": "Revenue: {amount}",
-  "@revenueAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@revenueAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "profitAmount": "Profit: {amount}",
-  "@profitAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@profitAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "totalAmount": "Total: {amount}",
-  "@totalAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@totalAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "noBatchesInYear": "No chicken batches in {year}.",
-  "@noBatchesInYear": {"placeholders": {"year": {"type": "int"}}},
+  "@noBatchesInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "noCommonExpenses": "No common expenses yet.",
   "noCommonExpensesInYear": "No common expenses in {year}.",
-  "@noCommonExpensesInYear": {"placeholders": {"year": {"type": "int"}}},
+  "@noCommonExpensesInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "addFirstExpense": "Add the first expense",
   "addCommonExpense": "Add common expense",
   "editCommonExpense": "Edit common expense",
@@ -115,18 +161,34 @@
   "noteLabel": "Note",
   "expenseDate": "Expense date",
   "saveCommonExpenseFailed": "Could not save expense: {error}",
-  "@saveCommonExpenseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@saveCommonExpenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "delete": "Delete",
   "deleteCommonExpense": "Delete expense",
   "confirmDeleteCommonExpense": "Delete the expense dated {date} ({amount})?",
   "@confirmDeleteCommonExpense": {
     "placeholders": {
-      "date": {"type": "String"},
-      "amount": {"type": "String"}
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "deleteCommonExpenseFailed": "Could not delete expense: {error}",
-  "@deleteCommonExpenseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@deleteCommonExpenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "expenseFeed": "Feed",
   "expenseMedicine": "Medicine / vaccine",
   "expenseElectricity": "Heating electricity",
@@ -135,7 +197,9 @@
   "newUpdateAvailable": "New update available v{version}",
   "@newUpdateAvailable": {
     "placeholders": {
-      "version": {"type": "String"}
+      "version": {
+        "type": "String"
+      }
     }
   },
   "later": "Later",
@@ -146,5 +210,286 @@
   "resumeDownload": "Resume download",
   "downloadErrorGeneric": "Could not download update. Please check your internet connection.",
   "downloadErrorTimeout": "Connection timeout. Please try again.",
-  "downloadErrorNotFound": "Update file not found on server."
+  "downloadErrorNotFound": "Update file not found on server.",
+  "add": "Add",
+  "confirm": "Confirm",
+  "pleaseWait": "Please wait...",
+  "deleteAllChickenData": "Delete all chicken data",
+  "statusWaitingHatch": "Hatching - {date}",
+  "@statusWaitingHatch": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "statusSoldOut": "Sold out",
+  "statusDaysOld": "{days} days old",
+  "@statusDaysOld": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "chickenQuantity": "{count} chickens",
+  "@chickenQuantity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "soldOfTotal": "Sold {sold}/{total}",
+  "@soldOfTotal": {
+    "placeholders": {
+      "sold": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "hatchedOnDate": "Hatched {date}",
+  "@hatchedOnDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeRevenue": "Revenue",
+  "badgeExpense": "Expense",
+  "badgeProfit": "Profit",
+  "importedRecords": "Imported {count} records from {file}.",
+  "@importedRecords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "importFileFailed": "Import failed: {error}",
+  "@importFileFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importingData": "Importing data",
+  "confirmDeleteAllChickenData": "Delete all chicken data?",
+  "deleteData": "Delete data",
+  "deleteAllChickenDataWarning": "All batches, revenue and expenses of the current account will be permanently deleted. This action cannot be undone.",
+  "deletingData": "Deleting data",
+  "noDataToDelete": "No data to delete.",
+  "deletedAllData": "Deleted all data ({count} main records).",
+  "@deletedAllData": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteDataFailed": "Delete failed: {error}",
+  "@deleteDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "addNewBatch": "Add new batch",
+  "batchName": "Batch name",
+  "batchNameHint": "e.g. Flock 31",
+  "batchNamePrefill": "Flock {number}",
+  "@batchNamePrefill": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "eggQuantity": "Number of eggs/chicks",
+  "incubationDate": "Incubation date",
+  "batchDetailTitle": "Batch details",
+  "batchNotFound": "Batch not found.",
+  "deleteThisBatch": "Delete this batch",
+  "initialQuantity": "Initial quantity",
+  "soldRemainingLabel": "Sold / remaining",
+  "soldRemainingValue": "{sold} / {remaining}",
+  "@soldRemainingValue": {
+    "placeholders": {
+      "sold": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "incubationDay": "Incubation date",
+  "expectedHatch": "Expected hatch",
+  "actualHatchDateLabel": "Actual hatch date",
+  "ageLabel": "Age",
+  "daysCount": "{days} days",
+  "@daysCount": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLabel": "Status",
+  "notHatchedYet": "Not hatched ({days} days left)",
+  "@notHatchedYet": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "vaccinationSchedule": "Vaccination schedule",
+  "dateValue": "Date: {date}",
+  "@dateValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesSectionTitle": "Expenses (Total: {amount})",
+  "@expensesSectionTitle": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noExpensesYet": "No expenses yet.",
+  "saleAndProfit": "Sales & Profit",
+  "notSoldHint": "Not sold yet. A batch can be sold in multiple rounds.",
+  "suggestedPrice": "Suggested price",
+  "pricePerChicken": "{amount}/chicken",
+  "@pricePerChicken": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chickenSale": "Chicken sale",
+  "soldLabel": "Sold",
+  "soldAndRemaining": "{sold} sold, {remaining} remaining",
+  "@soldAndRemaining": {
+    "placeholders": {
+      "sold": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "totalRevenueLabel": "Total revenue",
+  "totalExpensesLabel": "Total expenses",
+  "profitUpper": "PROFIT",
+  "recordNewSale": "Record new sale",
+  "deleteSaleRound": "Delete sale",
+  "confirmDeleteSaleRound": "Delete the sale on {date} ({amount})?",
+  "@confirmDeleteSaleRound": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "addExpense": "Add expense",
+  "recordSale": "Record sale",
+  "quantityLabel": "Quantity",
+  "pricePerUnit": "Price each",
+  "totalAutoCalculated": "Total received (auto)",
+  "saleNoteHint": "Note (sold to whom...)",
+  "saleDate": "Sale date",
+  "deleteBatch": "Delete batch",
+  "confirmDeleteBatch": "Are you sure you want to delete batch '{name}'? This action cannot be undone.",
+  "@confirmDeleteBatch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "editBatchInfo": "Edit batch info",
+  "fightingChicken": "Fighting rooster",
+  "meatChicken": "Meat chicken",
+  "noCockSalesData": "No sales data yet",
+  "noMatchingSales": "No matching sales.",
+  "noSalesInYear": "No sales in {year}.",
+  "@noSalesInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "enterFirstSale": "Record your first sale",
+  "editSale": "Edit sale",
+  "enterCockSale": "Record chicken sale",
+  "soldMeatChickenNote": "Meat chicken sale",
+  "soldFightingChickenNote": "Fighting rooster sale",
+  "saveFailed": "Save failed: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "fightingChickenFull": "Fighting rooster",
+  "salePrice": "Sale price",
+  "cockSaleNoteHint": "Note (which chicken, condition...)",
+  "deleteSaleRecord": "Delete sale",
+  "confirmDeleteSaleRecord": "Delete the sale on {date} ({amount})?",
+  "@confirmDeleteSaleRecord": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Delete failed: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "byMonth": "Monthly",
+  "byYear": "Yearly",
+  "noDataInYear": "No data in {year}.",
+  "@noDataInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "monthPrefix": "Month",
+  "noStatsData": "No statistics yet.",
+  "batchRevenue": "Batch revenue",
+  "cockRevenue": "Fighting rooster revenue",
+  "meatRevenue": "Meat chicken revenue",
+  "profitLabel": "Profit"
 }

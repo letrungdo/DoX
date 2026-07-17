@@ -15,6 +15,8 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -110,11 +112,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               },
               itemBuilder: (context) => [
                 PopupMenuItem(value: 'import', child: Text(l10n.importData)),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete_all',
                   child: Text(
-                    "Xóa toàn bộ dữ liệu gà",
-                    style: TextStyle(color: Colors.red),
+                    l10n.deleteAllChickenData,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ),
               ],
@@ -376,6 +378,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }
 
   Widget _buildBatchCard(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
     final dateFormat = DateFormat('dd/MM/yyyy');
     final hatchDate = batch.actualHatchDate ?? batch.expectedHatchDate;
     final isHatched =
@@ -389,12 +392,12 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
     final (statusText, statusColor) = !isHatched
         ? (
-            "Chờ nở - ${dateFormat.format(batch.expectedHatchDate)}",
+            l10n.statusWaitingHatch(dateFormat.format(batch.expectedHatchDate)),
             Colors.orange,
           )
         : isSoldOut
-        ? ("Đã bán hết", Colors.grey)
-        : ("${batch.ageInDays} ngày tuổi", Colors.green);
+        ? (l10n.statusSoldOut, Colors.grey)
+        : (l10n.statusDaysOld(batch.ageInDays), Colors.green);
 
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
@@ -447,8 +450,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   child: _buildBatchInfo(
                     null,
                     batch.sales.isEmpty
-                        ? "${batch.quantity} con"
-                        : "Đã bán ${batch.soldQuantity}/${batch.quantity} con",
+                        ? l10n.chickenQuantity(batch.quantity)
+                        : l10n.soldOfTotal(batch.soldQuantity, batch.quantity),
                     highlighted: true,
                   ),
                 ),
@@ -456,7 +459,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 Expanded(
                   child: _buildBatchInfo(
                     Icons.calendar_today_rounded,
-                    "Nở ${dateFormat.format(hatchDate)}",
+                    l10n.hatchedOnDate(dateFormat.format(hatchDate)),
                     alignment: MainAxisAlignment.end,
                   ),
                 ),
@@ -469,14 +472,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 runSpacing: 8,
                 children: [
                   _buildMoneyBadge(
-                    "Thu",
+                    l10n.badgeRevenue,
                     batch.totalSaleAmount + batch.totalCockSales,
                     Colors.green,
                   ),
                   if (batch.totalExpenses > 0)
-                    _buildMoneyBadge("Chi", batch.totalExpenses, Colors.orange),
+                    _buildMoneyBadge(
+                      l10n.badgeExpense,
+                      batch.totalExpenses,
+                      Colors.orange,
+                    ),
                   _buildMoneyBadge(
-                    "Lãi",
+                    l10n.badgeProfit,
                     batch.profit,
                     batch.profit >= 0 ? Colors.blue : Colors.red,
                   ),
@@ -543,6 +550,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }
 
   Future<void> _importFromJsonFile() async {
+    final l10n = AppLocalizations.of(context);
     const jsonTypeGroup = XTypeGroup(
       label: 'JSON',
       extensions: ['json'],
@@ -565,7 +573,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       if (progressDialogContext.mounted) Navigator.pop(progressDialogContext);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Đã nhập $count bản ghi từ ${file.name}.")),
+        SnackBar(content: Text(l10n.importedRecords(count, file.name))),
       );
     } catch (e) {
       final dialogContext = progressDialogContext;
@@ -575,7 +583,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Nhập file thất bại: $e"),
+          content: Text(l10n.importFileFailed(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -595,7 +603,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             builder: (context, vm, child) {
               final percent = (vm.importProgress * 100).round();
               return AlertDialog(
-                title: const Text("Đang import dữ liệu"),
+                title: Text(AppLocalizations.of(context).importingData),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -614,44 +622,42 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }
 
   void _showDeleteAllDataDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => CuteDialog(
-        title: "Xóa toàn bộ dữ liệu gà?",
+        title: l10n.confirmDeleteAllChickenData,
         accent: Colors.red,
-        confirmText: "Xóa dữ liệu",
+        confirmText: l10n.deleteData,
         isDestructive: true,
         onConfirm: () {
           Navigator.pop(dialogContext);
           _deleteAllData();
         },
-        children: const [
-          Text(
-            "Tất cả lứa gà, doanh thu và chi phí của tài khoản hiện tại sẽ bị xóa vĩnh viễn. "
-            "Thao tác này không thể hoàn tác.",
-            textAlign: TextAlign.center,
-          ),
+        children: [
+          Text(l10n.deleteAllChickenDataWarning, textAlign: TextAlign.center),
         ],
       ),
     );
   }
 
   Future<void> _deleteAllData() async {
+    final l10n = AppLocalizations.of(context);
     final shown = Completer<BuildContext>();
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
         if (!shown.isCompleted) shown.complete(dialogContext);
-        return const PopScope(
+        return PopScope(
           canPop: false,
           child: AlertDialog(
-            title: Text("Đang xóa dữ liệu"),
+            title: Text(l10n.deletingData),
             content: Row(
               children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 20),
-                Expanded(child: Text("Vui lòng chờ...")),
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
+                Expanded(child: Text(l10n.pleaseWait)),
               ],
             ),
           ),
@@ -665,8 +671,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
       final message = count == 0
-          ? "Không có dữ liệu để xóa."
-          : "Đã xóa toàn bộ dữ liệu ($count bản ghi chính).";
+          ? l10n.noDataToDelete
+          : l10n.deletedAllData(count);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -675,7 +681,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Xóa dữ liệu thất bại: $e"),
+          content: Text(l10n.deleteDataFailed(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -683,7 +689,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }
 
   void _showAddBatchDialog() {
-    final nameController = TextEditingController();
+    final l10n = AppLocalizations.of(context);
+    // Prefill "Bầy xx" continuing the latest batch's number (if its name ends with one).
+    var suggestedName = '';
+    if (vm.batches.isNotEmpty) {
+      final match = RegExp(
+        r'(\d+)\s*$',
+      ).firstMatch(vm.batches.first.name.trim());
+      if (match != null) {
+        suggestedName = l10n.batchNamePrefill(int.parse(match.group(1)!) + 1);
+      }
+    }
+    final nameController = TextEditingController(text: suggestedName);
     final quantityController = TextEditingController();
     DateTime selectedDate = DateTime.now();
 
@@ -692,8 +709,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.eggCute,
-          title: "Thêm lứa gà mới",
-          confirmText: "Thêm",
+          title: l10n.addNewBatch,
+          confirmText: l10n.add,
           onConfirm: () {
             final name = nameController.text;
             final qty = int.tryParse(quantityController.text) ?? 0;
@@ -709,16 +726,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           children: [
             CuteTextField(
               controller: nameController,
-              label: "Tên lứa gà",
-              hint: "VD: Bầy 31",
+              label: l10n.batchName,
+              hint: l10n.batchNameHint,
             ),
             CuteTextField(
               controller: quantityController,
-              label: "Số lượng trứng/con",
+              label: l10n.eggQuantity,
               keyboardType: TextInputType.number,
             ),
             CuteDateField(
-              label: "Ngày ấp trứng",
+              label: l10n.incubationDate,
               value: selectedDate,
               onChanged: (d) => setState(() => selectedDate = d),
             ),

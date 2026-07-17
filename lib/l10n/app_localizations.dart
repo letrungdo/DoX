@@ -715,6 +715,576 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update file not found on server.'**
   String get downloadErrorNotFound;
+
+  /// No description provided for @add.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @pleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait...'**
+  String get pleaseWait;
+
+  /// No description provided for @deleteAllChickenData.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all chicken data'**
+  String get deleteAllChickenData;
+
+  /// No description provided for @statusWaitingHatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Hatching - {date}'**
+  String statusWaitingHatch(String date);
+
+  /// No description provided for @statusSoldOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold out'**
+  String get statusSoldOut;
+
+  /// No description provided for @statusDaysOld.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days old'**
+  String statusDaysOld(int days);
+
+  /// No description provided for @chickenQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} chickens'**
+  String chickenQuantity(int count);
+
+  /// No description provided for @soldOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold {sold}/{total}'**
+  String soldOfTotal(int sold, int total);
+
+  /// No description provided for @hatchedOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Hatched {date}'**
+  String hatchedOnDate(String date);
+
+  /// No description provided for @badgeRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue'**
+  String get badgeRevenue;
+
+  /// No description provided for @badgeExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense'**
+  String get badgeExpense;
+
+  /// No description provided for @badgeProfit.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit'**
+  String get badgeProfit;
+
+  /// No description provided for @importedRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} records from {file}.'**
+  String importedRecords(int count, String file);
+
+  /// No description provided for @importFileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String importFileFailed(String error);
+
+  /// No description provided for @importingData.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing data'**
+  String get importingData;
+
+  /// No description provided for @confirmDeleteAllChickenData.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all chicken data?'**
+  String get confirmDeleteAllChickenData;
+
+  /// No description provided for @deleteData.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete data'**
+  String get deleteData;
+
+  /// No description provided for @deleteAllChickenDataWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'All batches, revenue and expenses of the current account will be permanently deleted. This action cannot be undone.'**
+  String get deleteAllChickenDataWarning;
+
+  /// No description provided for @deletingData.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting data'**
+  String get deletingData;
+
+  /// No description provided for @noDataToDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'No data to delete.'**
+  String get noDataToDelete;
+
+  /// No description provided for @deletedAllData.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted all data ({count} main records).'**
+  String deletedAllData(int count);
+
+  /// No description provided for @deleteDataFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {error}'**
+  String deleteDataFailed(String error);
+
+  /// No description provided for @addNewBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Add new batch'**
+  String get addNewBatch;
+
+  /// No description provided for @batchName.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch name'**
+  String get batchName;
+
+  /// No description provided for @batchNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Flock 31'**
+  String get batchNameHint;
+
+  /// No description provided for @batchNamePrefill.
+  ///
+  /// In en, this message translates to:
+  /// **'Flock {number}'**
+  String batchNamePrefill(int number);
+
+  /// No description provided for @eggQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of eggs/chicks'**
+  String get eggQuantity;
+
+  /// No description provided for @incubationDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Incubation date'**
+  String get incubationDate;
+
+  /// No description provided for @batchDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch details'**
+  String get batchDetailTitle;
+
+  /// No description provided for @batchNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch not found.'**
+  String get batchNotFound;
+
+  /// No description provided for @deleteThisBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this batch'**
+  String get deleteThisBatch;
+
+  /// No description provided for @initialQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial quantity'**
+  String get initialQuantity;
+
+  /// No description provided for @soldRemainingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold / remaining'**
+  String get soldRemainingLabel;
+
+  /// No description provided for @soldRemainingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{sold} / {remaining}'**
+  String soldRemainingValue(int sold, int remaining);
+
+  /// No description provided for @incubationDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Incubation date'**
+  String get incubationDay;
+
+  /// No description provided for @expectedHatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected hatch'**
+  String get expectedHatch;
+
+  /// No description provided for @actualHatchDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual hatch date'**
+  String get actualHatchDateLabel;
+
+  /// No description provided for @ageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get ageLabel;
+
+  /// No description provided for @daysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String daysCount(int days);
+
+  /// No description provided for @statusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get statusLabel;
+
+  /// No description provided for @notHatchedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not hatched ({days} days left)'**
+  String notHatchedYet(int days);
+
+  /// No description provided for @vaccinationSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Vaccination schedule'**
+  String get vaccinationSchedule;
+
+  /// No description provided for @dateValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Date: {date}'**
+  String dateValue(String date);
+
+  /// No description provided for @expensesSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses (Total: {amount})'**
+  String expensesSectionTitle(String amount);
+
+  /// No description provided for @noExpensesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No expenses yet.'**
+  String get noExpensesYet;
+
+  /// No description provided for @saleAndProfit.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales & Profit'**
+  String get saleAndProfit;
+
+  /// No description provided for @notSoldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sold yet. A batch can be sold in multiple rounds.'**
+  String get notSoldHint;
+
+  /// No description provided for @suggestedPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested price'**
+  String get suggestedPrice;
+
+  /// No description provided for @pricePerChicken.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount}/chicken'**
+  String pricePerChicken(String amount);
+
+  /// No description provided for @chickenSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Chicken sale'**
+  String get chickenSale;
+
+  /// No description provided for @soldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get soldLabel;
+
+  /// No description provided for @soldAndRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{sold} sold, {remaining} remaining'**
+  String soldAndRemaining(int sold, int remaining);
+
+  /// No description provided for @totalRevenueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total revenue'**
+  String get totalRevenueLabel;
+
+  /// No description provided for @totalExpensesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total expenses'**
+  String get totalExpensesLabel;
+
+  /// No description provided for @profitUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'PROFIT'**
+  String get profitUpper;
+
+  /// No description provided for @recordNewSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Record new sale'**
+  String get recordNewSale;
+
+  /// No description provided for @deleteSaleRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete sale'**
+  String get deleteSaleRound;
+
+  /// No description provided for @confirmDeleteSaleRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the sale on {date} ({amount})?'**
+  String confirmDeleteSaleRound(String date, String amount);
+
+  /// No description provided for @addExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Add expense'**
+  String get addExpense;
+
+  /// No description provided for @recordSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Record sale'**
+  String get recordSale;
+
+  /// No description provided for @quantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantityLabel;
+
+  /// No description provided for @pricePerUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Price each'**
+  String get pricePerUnit;
+
+  /// No description provided for @totalAutoCalculated.
+  ///
+  /// In en, this message translates to:
+  /// **'Total received (auto)'**
+  String get totalAutoCalculated;
+
+  /// No description provided for @saleNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (sold to whom...)'**
+  String get saleNoteHint;
+
+  /// No description provided for @saleDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale date'**
+  String get saleDate;
+
+  /// No description provided for @deleteBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete batch'**
+  String get deleteBatch;
+
+  /// No description provided for @confirmDeleteBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete batch \'{name}\'? This action cannot be undone.'**
+  String confirmDeleteBatch(String name);
+
+  /// No description provided for @editBatchInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit batch info'**
+  String get editBatchInfo;
+
+  /// No description provided for @fightingChicken.
+  ///
+  /// In en, this message translates to:
+  /// **'Fighting rooster'**
+  String get fightingChicken;
+
+  /// No description provided for @meatChicken.
+  ///
+  /// In en, this message translates to:
+  /// **'Meat chicken'**
+  String get meatChicken;
+
+  /// No description provided for @noCockSalesData.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales data yet'**
+  String get noCockSalesData;
+
+  /// No description provided for @noMatchingSales.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching sales.'**
+  String get noMatchingSales;
+
+  /// No description provided for @noSalesInYear.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales in {year}.'**
+  String noSalesInYear(int year);
+
+  /// No description provided for @enterFirstSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Record your first sale'**
+  String get enterFirstSale;
+
+  /// No description provided for @editSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit sale'**
+  String get editSale;
+
+  /// No description provided for @enterCockSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Record chicken sale'**
+  String get enterCockSale;
+
+  /// No description provided for @soldMeatChickenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Meat chicken sale'**
+  String get soldMeatChickenNote;
+
+  /// No description provided for @soldFightingChickenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Fighting rooster sale'**
+  String get soldFightingChickenNote;
+
+  /// No description provided for @saveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed: {error}'**
+  String saveFailed(String error);
+
+  /// No description provided for @fightingChickenFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Fighting rooster'**
+  String get fightingChickenFull;
+
+  /// No description provided for @salePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale price'**
+  String get salePrice;
+
+  /// No description provided for @cockSaleNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (which chicken, condition...)'**
+  String get cockSaleNoteHint;
+
+  /// No description provided for @deleteSaleRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete sale'**
+  String get deleteSaleRecord;
+
+  /// No description provided for @confirmDeleteSaleRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the sale on {date} ({amount})?'**
+  String confirmDeleteSaleRecord(String date, String amount);
+
+  /// No description provided for @deleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {error}'**
+  String deleteFailed(String error);
+
+  /// No description provided for @byMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get byMonth;
+
+  /// No description provided for @byYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get byYear;
+
+  /// No description provided for @noDataInYear.
+  ///
+  /// In en, this message translates to:
+  /// **'No data in {year}.'**
+  String noDataInYear(int year);
+
+  /// No description provided for @monthPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get monthPrefix;
+
+  /// No description provided for @noStatsData.
+  ///
+  /// In en, this message translates to:
+  /// **'No statistics yet.'**
+  String get noStatsData;
+
+  /// No description provided for @batchRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch revenue'**
+  String get batchRevenue;
+
+  /// No description provided for @cockRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Fighting rooster revenue'**
+  String get cockRevenue;
+
+  /// No description provided for @meatRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Meat chicken revenue'**
+  String get meatRevenue;
+
+  /// No description provided for @profitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit'**
+  String get profitLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -39,13 +39,17 @@
   "vaccinationNotificationTitle": "Lịch tiêm: {vaccination}",
   "@vaccinationNotificationTitle": {
     "placeholders": {
-      "vaccination": { "type": "String" }
+      "vaccination": {
+        "type": "String"
+      }
     }
   },
   "vaccinationNotificationBody": "Lứa {batch} đến lịch tiêm phòng hôm nay.",
   "@vaccinationNotificationBody": {
     "placeholders": {
-      "batch": { "type": "String" }
+      "batch": {
+        "type": "String"
+      }
     }
   },
   "confirmLogout": "Đăng xuất",
@@ -84,20 +88,62 @@
   "yearLabel": "Năm:",
   "all": "Tất cả",
   "expenseCount": "{count} khoản chi",
-  "@expenseCount": {"placeholders": {"count": {"type": "int"}}},
+  "@expenseCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saleCount": "{count} lượt bán",
-  "@saleCount": {"placeholders": {"count": {"type": "int"}}},
+  "@saleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "revenueAmount": "Doanh thu: {amount}",
-  "@revenueAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@revenueAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "profitAmount": "Lợi nhuận: {amount}",
-  "@profitAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@profitAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "totalAmount": "Tổng: {amount}",
-  "@totalAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@totalAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "noBatchesInYear": "Không có lứa gà trong năm {year}.",
-  "@noBatchesInYear": {"placeholders": {"year": {"type": "int"}}},
+  "@noBatchesInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "noCommonExpenses": "Chưa có chi phí chung nào.",
   "noCommonExpensesInYear": "Không có chi phí chung trong năm {year}.",
-  "@noCommonExpensesInYear": {"placeholders": {"year": {"type": "int"}}},
+  "@noCommonExpensesInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "addFirstExpense": "Thêm chi phí đầu tiên",
   "addCommonExpense": "Thêm chi phí chung",
   "editCommonExpense": "Chỉnh sửa chi phí chung",
@@ -108,18 +154,34 @@
   "noteLabel": "Ghi chú",
   "expenseDate": "Ngày chi",
   "saveCommonExpenseFailed": "Lưu chi phí thất bại: {error}",
-  "@saveCommonExpenseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@saveCommonExpenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "delete": "Xóa",
   "deleteCommonExpense": "Xóa khoản chi",
   "confirmDeleteCommonExpense": "Xóa khoản chi ngày {date} ({amount})?",
   "@confirmDeleteCommonExpense": {
     "placeholders": {
-      "date": {"type": "String"},
-      "amount": {"type": "String"}
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "deleteCommonExpenseFailed": "Xóa chi phí thất bại: {error}",
-  "@deleteCommonExpenseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@deleteCommonExpenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "expenseFeed": "Cám / thức ăn",
   "expenseMedicine": "Thuốc / vắc xin",
   "expenseElectricity": "Điện sưởi",
@@ -128,7 +190,9 @@
   "newUpdateAvailable": "Có bản cập nhật mới v{version}",
   "@newUpdateAvailable": {
     "placeholders": {
-      "version": {"type": "String"}
+      "version": {
+        "type": "String"
+      }
     }
   },
   "later": "Để sau",
@@ -139,5 +203,286 @@
   "resumeDownload": "Tiếp tục tải",
   "downloadErrorGeneric": "Không thể tải bản cập nhật. Vui lòng kiểm tra kết nối mạng.",
   "downloadErrorTimeout": "Kết nối quá hạn. Vui lòng thử lại.",
-  "downloadErrorNotFound": "Không tìm thấy file cập nhật trên máy chủ."
+  "downloadErrorNotFound": "Không tìm thấy file cập nhật trên máy chủ.",
+  "add": "Thêm",
+  "confirm": "Xác nhận",
+  "pleaseWait": "Vui lòng chờ...",
+  "deleteAllChickenData": "Xóa toàn bộ dữ liệu gà",
+  "statusWaitingHatch": "Chờ nở - {date}",
+  "@statusWaitingHatch": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "statusSoldOut": "Đã bán hết",
+  "statusDaysOld": "{days} ngày tuổi",
+  "@statusDaysOld": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "chickenQuantity": "{count} con",
+  "@chickenQuantity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "soldOfTotal": "Đã bán {sold}/{total} con",
+  "@soldOfTotal": {
+    "placeholders": {
+      "sold": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "hatchedOnDate": "Nở {date}",
+  "@hatchedOnDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeRevenue": "Thu",
+  "badgeExpense": "Chi",
+  "badgeProfit": "Lãi",
+  "importedRecords": "Đã nhập {count} bản ghi từ {file}.",
+  "@importedRecords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "importFileFailed": "Nhập file thất bại: {error}",
+  "@importFileFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importingData": "Đang import dữ liệu",
+  "confirmDeleteAllChickenData": "Xóa toàn bộ dữ liệu gà?",
+  "deleteData": "Xóa dữ liệu",
+  "deleteAllChickenDataWarning": "Tất cả lứa gà, doanh thu và chi phí của tài khoản hiện tại sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.",
+  "deletingData": "Đang xóa dữ liệu",
+  "noDataToDelete": "Không có dữ liệu để xóa.",
+  "deletedAllData": "Đã xóa toàn bộ dữ liệu ({count} bản ghi chính).",
+  "@deletedAllData": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteDataFailed": "Xóa dữ liệu thất bại: {error}",
+  "@deleteDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "addNewBatch": "Thêm lứa gà mới",
+  "batchName": "Tên lứa gà",
+  "batchNameHint": "VD: Bầy 31",
+  "batchNamePrefill": "Bầy {number}",
+  "@batchNamePrefill": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "eggQuantity": "Số lượng trứng/con",
+  "incubationDate": "Ngày ấp trứng",
+  "batchDetailTitle": "Chi tiết lứa gà",
+  "batchNotFound": "Không tìm thấy thông tin lứa gà.",
+  "deleteThisBatch": "Xóa lứa gà này",
+  "initialQuantity": "Số lượng ban đầu",
+  "soldRemainingLabel": "Đã bán / còn lại",
+  "soldRemainingValue": "{sold} / {remaining} con",
+  "@soldRemainingValue": {
+    "placeholders": {
+      "sold": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "incubationDay": "Ngày ấp",
+  "expectedHatch": "Dự kiến nở",
+  "actualHatchDateLabel": "Ngày nở thực tế",
+  "ageLabel": "Tuổi",
+  "daysCount": "{days} ngày",
+  "@daysCount": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLabel": "Trạng thái",
+  "notHatchedYet": "Chưa nở (còn {days} ngày)",
+  "@notHatchedYet": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "vaccinationSchedule": "Lịch tiêm phòng",
+  "dateValue": "Ngày: {date}",
+  "@dateValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesSectionTitle": "Chi phí (Tổng: {amount})",
+  "@expensesSectionTitle": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "noExpensesYet": "Chưa có chi phí nào.",
+  "saleAndProfit": "Bán gà & Lợi nhuận",
+  "notSoldHint": "Gà chưa bán. Có thể bán một lứa thành nhiều đợt.",
+  "suggestedPrice": "Giá gợi ý",
+  "pricePerChicken": "{amount}/con",
+  "@pricePerChicken": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chickenSale": "Bán gà",
+  "soldLabel": "Đã bán",
+  "soldAndRemaining": "{sold} con, còn {remaining} con",
+  "@soldAndRemaining": {
+    "placeholders": {
+      "sold": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "totalRevenueLabel": "Tổng doanh thu",
+  "totalExpensesLabel": "Tổng chi phí",
+  "profitUpper": "LỢI NHUẬN",
+  "recordNewSale": "Ghi nhận đợt bán mới",
+  "deleteSaleRound": "Xóa đợt bán",
+  "confirmDeleteSaleRound": "Xóa đợt bán ngày {date} ({amount})?",
+  "@confirmDeleteSaleRound": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "addExpense": "Thêm chi phí",
+  "recordSale": "Ghi nhận đợt bán",
+  "quantityLabel": "Số lượng",
+  "pricePerUnit": "Giá 1 con",
+  "totalAutoCalculated": "Tổng tiền thu được (tự tính)",
+  "saleNoteHint": "Ghi chú (bán cho ai...)",
+  "saleDate": "Ngày bán",
+  "deleteBatch": "Xóa lứa gà",
+  "confirmDeleteBatch": "Bạn có chắc chắn muốn xóa lứa '{name}'? Hành động này không thể hoàn tác.",
+  "@confirmDeleteBatch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "editBatchInfo": "Sửa thông tin lứa gà",
+  "fightingChicken": "Gà đá",
+  "meatChicken": "Gà thịt",
+  "noCockSalesData": "Chưa có dữ liệu bán gà",
+  "noMatchingSales": "Không có lượt bán phù hợp.",
+  "noSalesInYear": "Không có lượt bán trong năm {year}.",
+  "@noSalesInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "enterFirstSale": "Nhập bán con đầu tiên",
+  "editSale": "Chỉnh sửa lượt bán",
+  "enterCockSale": "Nhập bán gà",
+  "soldMeatChickenNote": "Bán gà thịt",
+  "soldFightingChickenNote": "Bán gà đá",
+  "saveFailed": "Lưu thất bại: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "fightingChickenFull": "Gà đá / gà nòi",
+  "salePrice": "Giá bán",
+  "cockSaleNoteHint": "Ghi chú (con gà số mấy, trạng gà...)",
+  "deleteSaleRecord": "Xóa lượt bán",
+  "confirmDeleteSaleRecord": "Xóa lượt bán ngày {date} ({amount})?",
+  "@confirmDeleteSaleRecord": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "Xóa thất bại: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "byMonth": "Theo tháng",
+  "byYear": "Theo năm",
+  "noDataInYear": "Không có dữ liệu trong năm {year}.",
+  "@noDataInYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "monthPrefix": "Tháng",
+  "noStatsData": "Chưa có dữ liệu thống kê.",
+  "batchRevenue": "Doanh thu lứa gà",
+  "cockRevenue": "Doanh thu gà đá",
+  "meatRevenue": "Doanh thu gà thịt",
+  "profitLabel": "Lợi nhuận"
 }
