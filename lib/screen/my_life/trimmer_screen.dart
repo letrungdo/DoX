@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:easy_video_editor/easy_video_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -30,13 +31,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
 
   late VideoEditorController _controller = _createController(widget.file);
 
-  VideoEditorController _createController(File file) => VideoEditorController.file(
-    file,
-    minDuration: const Duration(milliseconds: 500),
-    maxDuration: const Duration(seconds: 10),
-    trimThumbnailsQuality: 20,
-    coverThumbnailsQuality: 20,
-  );
+  VideoEditorController _createController(File file) =>
+      VideoEditorController.file(
+        file,
+        minDuration: const Duration(milliseconds: 500),
+        maxDuration: const Duration(seconds: 10),
+        trimThumbnailsQuality: 20,
+        coverThumbnailsQuality: 20,
+      );
 
   @override
   void initState() {
@@ -71,7 +73,9 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
 
   Future<String?> _normalizeVideo(File file) async {
     try {
-      return await VideoEditorBuilder(videoPath: file.path).compress(resolution: VideoResolution.p720).export();
+      return await VideoEditorBuilder(
+        videoPath: file.path,
+      ).compress(resolution: VideoResolution.p720).export();
     } catch (e) {
       debugPrint('TrimmerScreen normalize failed: $e');
       return null;
@@ -87,12 +91,17 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   }
 
   void _showErrorSnackBar(String message) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 1)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+      );
 
   Future<void> _exportVideo() async {
     _exportingProgress.value = 0;
     _isExporting.value = true;
-    final [videoPath, thumbnailData] = await Future.wait([_trimVideo(), _getThumbnail()]);
+    final [videoPath, thumbnailData] = await Future.wait([
+      _trimVideo(),
+      _getThumbnail(),
+    ]);
     _isExporting.value = false;
     if (videoPath == null || thumbnailData == null) {
       return;
@@ -123,8 +132,15 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         title: Text(l10n.videoTooLargeTitle),
         content: Text(l10n.videoTooLargeMessage(sizeMb.toStringAsFixed(1))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.shortenVideo)),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.reduceTo480p)),
+          DialogActionButton(
+            text: l10n.shortenVideo,
+            kind: DialogActionKind.cancel,
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          DialogActionButton(
+            text: l10n.reduceTo480p,
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
         ],
       ),
     );
@@ -144,7 +160,9 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     return reduced;
   }
 
-  Future<String?> _trimVideo({VideoResolution resolution = VideoResolution.p720}) async {
+  Future<String?> _trimVideo({
+    VideoResolution resolution = VideoResolution.p720,
+  }) async {
     try {
       final editor = VideoEditorBuilder(videoPath: _controller.file.path).trim(
         startTimeMs: _controller.startTrim.inMilliseconds, //
@@ -172,23 +190,40 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
       final data = await VideoThumbnail.thumbnailData(
         video: _controller.file.path,
         imageFormat: ImageFormat.JPEG,
-        timeMs: _controller.selectedCoverVal?.timeMs ?? _controller.startTrim.inMilliseconds,
+        timeMs:
+            _controller.selectedCoverVal?.timeMs ??
+            _controller.startTrim.inMilliseconds,
         quality: 100,
       );
       if (data == null) return null;
       final image = img.decodeImage(data);
-      if (image == null) return data; // can't crop, fall back to original thumbnail
+      if (image == null) {
+        return data; // can't crop, fall back to original thumbnail
+      }
 
       // No crop selected -> return the thumbnail as-is.
-      if (_controller.minCrop <= minOffset && _controller.maxCrop >= maxOffset) {
+      if (_controller.minCrop <= minOffset &&
+          _controller.maxCrop >= maxOffset) {
         return data;
       }
 
       // crop fractions (0..1) applied to the ACTUAL decoded image size, clamped to bounds.
-      final x = (image.width * _controller.minCrop.dx).round().clamp(0, image.width - 1);
-      final y = (image.height * _controller.minCrop.dy).round().clamp(0, image.height - 1);
-      final w = (image.width * (_controller.maxCrop.dx - _controller.minCrop.dx)).round().clamp(1, image.width - x);
-      final h = (image.height * (_controller.maxCrop.dy - _controller.minCrop.dy)).round().clamp(1, image.height - y);
+      final x = (image.width * _controller.minCrop.dx).round().clamp(
+        0,
+        image.width - 1,
+      );
+      final y = (image.height * _controller.minCrop.dy).round().clamp(
+        0,
+        image.height - 1,
+      );
+      final w =
+          (image.width * (_controller.maxCrop.dx - _controller.minCrop.dx))
+              .round()
+              .clamp(1, image.width - x);
+      final h =
+          (image.height * (_controller.maxCrop.dy - _controller.minCrop.dy))
+              .round()
+              .clamp(1, image.height - y);
 
       final cropped = img.copyCrop(image, x: x, y: y, width: w, height: h);
       return Uint8List.fromList(img.encodeJpg(cropped));
@@ -212,12 +247,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         appBar: DoAppBar(
           actions: [
             IconButton(
-              onPressed: () => _controller.rotate90Degrees(RotateDirection.left),
+              onPressed: () =>
+                  _controller.rotate90Degrees(RotateDirection.left),
               icon: const Icon(Icons.rotate_left),
               tooltip: 'Rotate unclockwise',
             ),
             IconButton(
-              onPressed: () => _controller.rotate90Degrees(RotateDirection.right),
+              onPressed: () =>
+                  _controller.rotate90Degrees(RotateDirection.right),
               icon: const Icon(Icons.rotate_right),
               tooltip: 'Rotate clockwise',
             ),
@@ -225,7 +262,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
             ValueListenableBuilder(
               valueListenable: _isExporting,
               builder: (context, value, _) {
-                return IconButton(onPressed: value ? null : _exportVideo, icon: const Icon(Icons.save));
+                return IconButton(
+                  onPressed: value ? null : _exportVideo,
+                  icon: const Icon(Icons.save),
+                );
               },
             ),
           ],
@@ -238,80 +278,108 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   Widget _buildBody() {
     return _controller.initialized
         ? DefaultTabController(
-          length: 2,
-          child: Column(
-            children: [
-              Expanded(
-                child: TabBarView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CropGridViewer.preview(controller: _controller),
-                        AnimatedBuilder(
-                          animation: _controller.video,
-                          builder:
-                              (_, _) => AnimatedOpacity(
-                                opacity: _controller.isPlaying ? 0 : 1,
-                                duration: kThemeAnimationDuration,
-                                child: GestureDetector(
-                                  onTap: _controller.video.play,
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                    child: const Icon(Icons.play_arrow, color: Colors.black),
+            length: 2,
+            child: Column(
+              children: [
+                Expanded(
+                  child: TabBarView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CropGridViewer.preview(controller: _controller),
+                          AnimatedBuilder(
+                            animation: _controller.video,
+                            builder: (_, _) => AnimatedOpacity(
+                              opacity: _controller.isPlaying ? 0 : 1,
+                              duration: kThemeAnimationDuration,
+                              child: GestureDetector(
+                                onTap: _controller.video.play,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),
-                        ),
-                      ],
-                    ),
-                    CoverViewer(controller: _controller),
-                  ],
-                ),
-              ),
-              Container(
-                height: 200,
-                margin: const EdgeInsets.only(top: 10),
-                child: Column(
-                  children: [
-                    TabBar(
-                      tabs: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [Padding(padding: EdgeInsets.all(5), child: Icon(Icons.content_cut)), Text('Trim')],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [Padding(padding: EdgeInsets.all(5), child: Icon(Icons.video_label)), Text('Cover')],
-                        ),
-                      ],
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [Column(mainAxisAlignment: MainAxisAlignment.center, children: _trimSlider()), _coverSelection()],
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              ValueListenableBuilder(
-                valueListenable: _isExporting,
-                builder: (_, bool export, Widget? child) => AnimatedSize(duration: kThemeAnimationDuration, child: export ? child : null),
-                child: AlertDialog(
-                  title: ValueListenableBuilder(
-                    valueListenable: _exportingProgress,
-                    builder:
-                        (_, double value, _) => Text("Exporting video ${(value * 100).ceil()}%", style: const TextStyle(fontSize: 12)),
+                      CoverViewer(controller: _controller),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        )
+                Container(
+                  height: 200,
+                  margin: const EdgeInsets.only(top: 10),
+                  child: Column(
+                    children: [
+                      TabBar(
+                        tabs: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Padding(
+                                padding: EdgeInsets.all(5),
+                                child: Icon(Icons.content_cut),
+                              ),
+                              Text('Trim'),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Padding(
+                                padding: EdgeInsets.all(5),
+                                child: Icon(Icons.video_label),
+                              ),
+                              Text('Cover'),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Expanded(
+                        child: TabBarView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: _trimSlider(),
+                            ),
+                            _coverSelection(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ValueListenableBuilder(
+                  valueListenable: _isExporting,
+                  builder: (_, bool export, Widget? child) => AnimatedSize(
+                    duration: kThemeAnimationDuration,
+                    child: export ? child : null,
+                  ),
+                  child: AlertDialog(
+                    title: ValueListenableBuilder(
+                      valueListenable: _exportingProgress,
+                      builder: (_, double value, _) => Text(
+                        "Exporting video ${(value * 100).ceil()}%",
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
         : const Center(child: CircularProgressIndicator());
   }
 
@@ -341,7 +409,8 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(formatter(_controller.startTrim)), //
-                      const SizedBox(width: 10), Text(formatter(_controller.endTrim)),
+                      const SizedBox(width: 10),
+                      Text(formatter(_controller.endTrim)),
                     ],
                   ),
                 ),
@@ -357,7 +426,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
           controller: _controller,
           height: height,
           horizontalMargin: height / 4,
-          child: TrimTimeline(controller: _controller, padding: const EdgeInsets.only(top: 10)),
+          child: TrimTimeline(
+            controller: _controller,
+            padding: const EdgeInsets.only(top: 10),
+          ),
         ),
       ),
     ];
@@ -375,7 +447,13 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
             selectedCoverBuilder: (cover, size) {
               return Stack(
                 alignment: Alignment.center,
-                children: [cover, Icon(Icons.check_circle, color: const CoverSelectionStyle().selectedBorderColor)],
+                children: [
+                  cover,
+                  Icon(
+                    Icons.check_circle,
+                    color: const CoverSelectionStyle().selectedBorderColor,
+                  ),
+                ],
               );
             },
           ),

@@ -12,6 +12,7 @@ import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button/button.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -126,16 +127,12 @@ class _MenuScreenState<V extends MenuViewModel>
 
   ElevatedButtonThemeData _buttonTheme() {
     return ElevatedButtonThemeData(
-      style: ButtonStyle(
-        shape: WidgetStatePropertyAll(
-          BeveledRectangleBorder(borderRadius: BorderRadius.circular(5)), //
-        ),
-        padding: WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        ),
-        minimumSize: WidgetStatePropertyAll(Size(double.infinity, 45)),
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 52),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         alignment: Alignment.center,
-        textStyle: WidgetStatePropertyAll(const TextStyle(fontSize: 16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -164,13 +161,14 @@ class _MenuScreenState<V extends MenuViewModel>
         title: Text(l10n.confirmLogout),
         content: Text(l10n.confirmLogoutMessage),
         actions: [
-          TextButton(
+          DialogActionButton(
+            text: l10n.cancel,
+            kind: DialogActionKind.cancel,
             onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
           ),
-          ElevatedButton(
+          DialogActionButton(
+            text: l10n.logout,
             onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.logout),
           ),
         ],
       ),

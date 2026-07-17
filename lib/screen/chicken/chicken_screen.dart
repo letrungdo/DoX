@@ -49,21 +49,34 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     super.didChangeDependencies();
     final mainViewModel = context.read<MainViewModel>();
     if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      ChickenRoute.name,
+      _tabReselectHandler,
+    );
     _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    mainViewModel.registerTabReselectHandler(
+      ChickenRoute.name,
+      _tabReselectHandler,
+    );
   }
 
   @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      ChickenRoute.name,
+      _tabReselectHandler,
+    );
     _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _handleTabReselect() async {
     if (_scrollController.hasClients) {
-      await _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
     if (mounted) await vm.refreshData();
   }
@@ -77,7 +90,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
-            onPressed: () => context.router.push(const ChickenStatisticsRoute()),
+            onPressed: () =>
+                context.router.push(const ChickenStatisticsRoute()),
             tooltip: l10n.profitStatistics,
           ),
           IconButton(
@@ -98,7 +112,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 PopupMenuItem(value: 'import', child: Text(l10n.importData)),
                 const PopupMenuItem(
                   value: 'delete_all',
-                  child: Text("Xóa toàn bộ dữ liệu gà", style: TextStyle(color: Colors.red)),
+                  child: Text(
+                    "Xóa toàn bộ dữ liệu gà",
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ],
             ),
@@ -112,23 +129,35 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
           final years = {
             DateTime.now().year,
-            ...vm.batches.map((batch) => (batch.actualHatchDate ?? batch.expectedHatchDate).year),
+            ...vm.batches.map(
+              (batch) =>
+                  (batch.actualHatchDate ?? batch.expectedHatchDate).year,
+            ),
           }.toList()..sort((a, b) => b.compareTo(a));
           final batches = _selectedYear == 0
               ? vm.batches
               : vm.batches
-                    .where((batch) => (batch.actualHatchDate ?? batch.expectedHatchDate).year == _selectedYear)
+                    .where(
+                      (batch) =>
+                          (batch.actualHatchDate ?? batch.expectedHatchDate)
+                              .year ==
+                          _selectedYear,
+                    )
                     .toList();
           final totalRevenue = batches.fold<double>(
             0,
             (sum, batch) => sum + batch.totalSaleAmount + batch.totalCockSales,
           );
-          final totalProfit = batches.fold<double>(0, (sum, batch) => sum + batch.profit);
+          final totalProfit = batches.fold<double>(
+            0,
+            (sum, batch) => sum + batch.profit,
+          );
 
           final items = <Widget>[];
           int? currentYear;
           for (final batch in batches) {
-            final year = (batch.actualHatchDate ?? batch.expectedHatchDate).year;
+            final year =
+                (batch.actualHatchDate ?? batch.expectedHatchDate).year;
             if (_selectedYear == 0 && year != currentYear) {
               currentYear = year;
               items.add(
@@ -136,7 +165,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   padding: const EdgeInsets.only(top: 8, bottom: 8),
                   child: Text(
                     "${l10n.yearPrefix} $year",
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ),
               );
@@ -156,17 +188,22 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                         title: l10n.commonExpenses,
                         subtitle: l10n.expenseCount(vm.globalExpenses.length),
                         color: Colors.orange,
-                        onTap: () => context.router.push(const GlobalExpensesRoute()),
+                        onTap: () =>
+                            context.router.push(const GlobalExpensesRoute()),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildFeatureCard(
-                        icon: Assets.images.roosterCute.svg(width: 32, height: 32),
+                        icon: Assets.images.roosterCute.svg(
+                          width: 32,
+                          height: 32,
+                        ),
                         title: l10n.sellRoosterMeat,
                         subtitle: l10n.saleCount(vm.globalCockSales.length),
                         color: Colors.red,
-                        onTap: () => context.router.push(const CockSalesRoute()),
+                        onTap: () =>
+                            context.router.push(const CockSalesRoute()),
                       ),
                     ),
                   ],
@@ -178,13 +215,21 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   children: [
                     const Icon(Icons.filter_alt_outlined, size: 20),
                     const SizedBox(width: 8),
-                    Text(l10n.yearLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(
+                      l10n.yearLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(width: 12),
                     DropdownButton<int>(
                       value: _selectedYear,
                       items: [
                         DropdownMenuItem(value: 0, child: Text(l10n.all)),
-                        ...years.map((year) => DropdownMenuItem(value: year, child: Text("$year"))),
+                        ...years.map(
+                          (year) => DropdownMenuItem(
+                            value: year,
+                            child: Text("$year"),
+                          ),
+                        ),
                       ],
                       onChanged: (year) {
                         if (year != null) setState(() => _selectedYear = year);
@@ -199,8 +244,14 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerRight,
                             child: Text(
-                              l10n.revenueAmount("${totalRevenue.toCurrency()}đ"),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green),
+                              l10n.revenueAmount(
+                                "${totalRevenue.toCurrency()}đ",
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -212,7 +263,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: totalProfit >= 0 ? Colors.blue : Colors.red,
+                                color: totalProfit >= 0
+                                    ? Colors.blue
+                                    : Colors.red,
                               ),
                             ),
                           ),
@@ -236,9 +289,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Assets.images.chickCute.svg(width: 72, height: 72),
+                                    Assets.images.chickCute.svg(
+                                      width: 72,
+                                      height: 72,
+                                    ),
                                     const SizedBox(height: 12),
-                                    Text(_selectedYear == 0 ? l10n.noBatchesYet : l10n.noBatchesInYear(_selectedYear)),
+                                    Text(
+                                      _selectedYear == 0
+                                          ? l10n.noBatchesYet
+                                          : l10n.noBatchesInYear(_selectedYear),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -295,10 +355,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
                   ],
                 ),
               ),
@@ -312,12 +378,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   Widget _buildBatchCard(ChickenBatch batch) {
     final dateFormat = DateFormat('dd/MM/yyyy');
     final hatchDate = batch.actualHatchDate ?? batch.expectedHatchDate;
-    final isHatched = batch.actualHatchDate != null || DateTime.now().isAfter(batch.expectedHatchDate);
+    final isHatched =
+        batch.actualHatchDate != null ||
+        DateTime.now().isAfter(batch.expectedHatchDate);
     final isSoldOut = batch.sales.isNotEmpty && batch.remainingQuantity <= 0;
-    final hasMoney = batch.sales.isNotEmpty || batch.expenses.isNotEmpty || batch.cockSales.isNotEmpty;
+    final hasMoney =
+        batch.sales.isNotEmpty ||
+        batch.expenses.isNotEmpty ||
+        batch.cockSales.isNotEmpty;
 
     final (statusText, statusColor) = !isHatched
-        ? ("Chờ nở - ${dateFormat.format(batch.expectedHatchDate)}", Colors.orange)
+        ? (
+            "Chờ nở - ${dateFormat.format(batch.expectedHatchDate)}",
+            Colors.orange,
+          )
         : isSoldOut
         ? ("Đã bán hết", Colors.grey)
         : ("${batch.ageInDays} ngày tuổi", Colors.green);
@@ -353,7 +427,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             ),
             child: Text(
               statusText,
-              style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 11,
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -390,9 +468,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildMoneyBadge("Thu", batch.totalSaleAmount + batch.totalCockSales, Colors.green),
-                  if (batch.totalExpenses > 0) _buildMoneyBadge("Chi", batch.totalExpenses, Colors.orange),
-                  _buildMoneyBadge("Lãi", batch.profit, batch.profit >= 0 ? Colors.blue : Colors.red),
+                  _buildMoneyBadge(
+                    "Thu",
+                    batch.totalSaleAmount + batch.totalCockSales,
+                    Colors.green,
+                  ),
+                  if (batch.totalExpenses > 0)
+                    _buildMoneyBadge("Chi", batch.totalExpenses, Colors.orange),
+                  _buildMoneyBadge(
+                    "Lãi",
+                    batch.profit,
+                    batch.profit >= 0 ? Colors.blue : Colors.red,
+                  ),
                 ],
               ),
             ],
@@ -411,7 +498,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     MainAxisAlignment alignment = MainAxisAlignment.start,
     bool highlighted = false,
   }) {
-    final color = highlighted ? Theme.of(context).colorScheme.primary : Colors.grey[700];
+    final color = highlighted
+        ? Theme.of(context).colorScheme.primary
+        : Colors.grey[700];
     return Row(
       mainAxisAlignment: alignment,
       children: [
@@ -422,7 +511,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13, color: color, fontWeight: highlighted ? FontWeight.w700 : FontWeight.normal),
+            style: TextStyle(
+              fontSize: 13,
+              color: color,
+              fontWeight: highlighted ? FontWeight.w700 : FontWeight.normal,
+            ),
           ),
         ),
       ],
@@ -432,10 +525,17 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   Widget _buildMoneyBadge(String label, double amount, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Text(
         "$label ${amount.toCurrency()}đ",
-        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -462,14 +562,21 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       final count = await vm.importFromJson(jsonString);
       if (progressDialogContext.mounted) Navigator.pop(progressDialogContext);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Đã nhập $count bản ghi từ ${file.name}.")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Đã nhập $count bản ghi từ ${file.name}.")),
+      );
     } catch (e) {
       final dialogContext = progressDialogContext;
-      if (dialogContext != null && dialogContext.mounted) Navigator.pop(dialogContext);
+      if (dialogContext != null && dialogContext.mounted) {
+        Navigator.pop(dialogContext);
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Nhập file thất bại: $e"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Nhập file thất bại: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -511,6 +618,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         title: "Xóa toàn bộ dữ liệu gà?",
         accent: Colors.red,
         confirmText: "Xóa dữ liệu",
+        isDestructive: true,
         onConfirm: () {
           Navigator.pop(dialogContext);
           _deleteAllData();
@@ -554,14 +662,21 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       final count = await vm.deleteAllData();
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
-      final message = count == 0 ? "Không có dữ liệu để xóa." : "Đã xóa toàn bộ dữ liệu ($count bản ghi chính).";
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      final message = count == 0
+          ? "Không có dữ liệu để xóa."
+          : "Đã xóa toàn bộ dữ liệu ($count bản ghi chính).";
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Xóa dữ liệu thất bại: $e"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Xóa dữ liệu thất bại: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -581,12 +696,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             final name = nameController.text;
             final qty = int.tryParse(quantityController.text) ?? 0;
             if (name.isNotEmpty && qty > 0) {
-              vm.addBatch(name: name, incubationDate: selectedDate, quantity: qty);
+              vm.addBatch(
+                name: name,
+                incubationDate: selectedDate,
+                quantity: qty,
+              );
               Navigator.pop(context);
             }
           },
           children: [
-            CuteTextField(controller: nameController, label: "Tên lứa gà", hint: "VD: Bầy 31"),
+            CuteTextField(
+              controller: nameController,
+              label: "Tên lứa gà",
+              hint: "VD: Bầy 31",
+            ),
             CuteTextField(
               controller: quantityController,
               label: "Số lượng trứng/con",

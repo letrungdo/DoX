@@ -20,6 +20,7 @@ class ApiDialog {
         onClose?.call(error.type);
       },
       text: context.l10n.close,
+      type: ActionButtonType.cancel,
     );
     List<ActionProps> genActions({bool alwayShowRetry = true}) {
       return [
@@ -72,7 +73,8 @@ class ApiDialog {
       case ApiErrorType.other:
       default:
         title = context.l10n.error;
-        message = (error.message ?? context.l10n.anErrorOccurred).withStatusCode(error.statusCode);
+        message = (error.message ?? context.l10n.anErrorOccurred)
+            .withStatusCode(error.statusCode);
         actions = [closeAction];
         break;
     }

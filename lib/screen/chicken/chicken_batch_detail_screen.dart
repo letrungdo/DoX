@@ -17,18 +17,21 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 @RoutePage()
-class ChickenBatchDetailScreen extends StatefulScreen implements AutoRouteWrapper {
+class ChickenBatchDetailScreen extends StatefulScreen
+    implements AutoRouteWrapper {
   final String batchId;
   const ChickenBatchDetailScreen({super.key, required this.batchId});
 
   @override
-  State<ChickenBatchDetailScreen> createState() => _ChickenBatchDetailScreenState();
+  State<ChickenBatchDetailScreen> createState() =>
+      _ChickenBatchDetailScreenState();
 
   @override
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScreen, ChickenViewModel> {
+class _ChickenBatchDetailScreenState
+    extends ScreenState<ChickenBatchDetailScreen, ChickenViewModel> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
@@ -37,9 +40,13 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
       appBar: DoAppBar(title: "Chi tiết lứa gà"),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final batch = vm.batches.firstWhereOrNull((e) => e.id == widget.batchId);
+          final batch = vm.batches.firstWhereOrNull(
+            (e) => e.id == widget.batchId,
+          );
           if (batch == null) {
-            return const Center(child: Text("Không tìm thấy thông tin lứa gà."));
+            return const Center(
+              child: Text("Không tìm thấy thông tin lứa gà."),
+            );
           }
 
           return SingleChildScrollView(
@@ -58,7 +65,10 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
                 Center(
                   child: TextButton(
                     onPressed: () => _confirmDelete(batch),
-                    child: const Text("Xóa lứa gà này", style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      "Xóa lứa gà này",
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               ],
@@ -79,23 +89,44 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(batch.name, style: context.theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: () => _showEditInfoDialog(batch)),
+                Text(
+                  batch.name,
+                  style: context.theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: () => _showEditInfoDialog(batch),
+                ),
               ],
             ),
             const Divider(),
             _buildRowInfo("Số lượng ban đầu", "${batch.quantity}"),
             if (batch.sales.isNotEmpty)
-              _buildRowInfo("Đã bán / còn lại", "${batch.soldQuantity} / ${batch.remainingQuantity} con"),
+              _buildRowInfo(
+                "Đã bán / còn lại",
+                "${batch.soldQuantity} / ${batch.remainingQuantity} con",
+              ),
             _buildRowInfo("Ngày ấp", _dateFormat.format(batch.incubationDate)),
             if (batch.actualHatchDate == null)
-              _buildRowInfo("Dự kiến nở", _dateFormat.format(batch.expectedHatchDate))
+              _buildRowInfo(
+                "Dự kiến nở",
+                _dateFormat.format(batch.expectedHatchDate),
+              )
             else
-              _buildRowInfo("Ngày nở thực tế", _dateFormat.format(batch.actualHatchDate!)),
+              _buildRowInfo(
+                "Ngày nở thực tế",
+                _dateFormat.format(batch.actualHatchDate!),
+              ),
             if (batch.ageInDays >= 0)
               _buildRowInfo("Tuổi", "${batch.ageInDays} ngày")
             else
-              _buildRowInfo("Trạng thái", "Chưa nở (còn ${-batch.ageInDays} ngày)", color: Colors.orange),
+              _buildRowInfo(
+                "Trạng thái",
+                "Chưa nở (còn ${-batch.ageInDays} ngày)",
+                color: Colors.orange,
+              ),
           ],
         ),
       ),
@@ -106,7 +137,12 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Lịch tiêm phòng", style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          "Lịch tiêm phòng",
+          style: context.theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         ...batch.vaccinations.map(
           (v) => CheckboxListTile(
@@ -132,9 +168,14 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
           children: [
             Text(
               "Chi phí (Tổng: ${batch.totalExpenses.toCurrency()}đ)",
-              style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: context.theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => _showAddExpenseDialog(batch)),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () => _showAddExpenseDialog(batch),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -143,8 +184,13 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
           (e) => ListTile(
             leading: _getExpenseSvg(e.type),
             title: Text(_getExpenseLabel(e.type)),
-            subtitle: Text("${_dateFormat.format(e.date)}${e.note != null ? ' - ${e.note}' : ''}"),
-            trailing: Text("${e.amount.toCurrency()}đ", style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              "${_dateFormat.format(e.date)}${e.note != null ? ' - ${e.note}' : ''}",
+            ),
+            trailing: Text(
+              "${e.amount.toCurrency()}đ",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],
@@ -157,8 +203,12 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     final isDark = context.theme.brightness == Brightness.dark;
 
     // Theme-aware colors
-    final soldColor = isDark ? Colors.green[900]?.withValues(alpha: 0.3) : Colors.green[50];
-    final pendingColor = isDark ? Colors.amber[900]?.withValues(alpha: 0.3) : Colors.amber[50];
+    final soldColor = isDark
+        ? Colors.green[900]?.withValues(alpha: 0.3)
+        : Colors.green[50];
+    final pendingColor = isDark
+        ? Colors.amber[900]?.withValues(alpha: 0.3)
+        : Colors.amber[50];
 
     return Card(
       color: soldOut ? soldColor : pendingColor,
@@ -169,13 +219,18 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
           children: [
             Text(
               "Bán gà & Lợi nhuận",
-              style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: context.theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const Divider(),
             if (!hasSold) ...[
               const Text("Gà chưa bán. Có thể bán một lứa thành nhiều đợt."),
               const SizedBox(height: 8),
-              _buildRowInfo("Giá gợi ý", "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ/con"),
+              _buildRowInfo(
+                "Giá gợi ý",
+                "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ/con",
+              ),
             ] else ...[
               ...batch.sales.map(
                 (sale) => ListTile(
@@ -189,9 +244,16 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("${sale.amount.toCurrency()}đ", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        "${sale.amount.toCurrency()}đ",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _confirmDeleteSale(batch, sale),
                       ),
                     ],
@@ -199,9 +261,18 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
                 ),
               ),
               const Divider(),
-              _buildRowInfo("Đã bán", "${batch.soldQuantity} con, còn ${batch.remainingQuantity} con"),
-              _buildRowInfo("Tổng doanh thu", "${batch.totalSaleAmount.toCurrency()}đ"),
-              _buildRowInfo("Tổng chi phí", "-${batch.totalExpenses.toCurrency()}đ"),
+              _buildRowInfo(
+                "Đã bán",
+                "${batch.soldQuantity} con, còn ${batch.remainingQuantity} con",
+              ),
+              _buildRowInfo(
+                "Tổng doanh thu",
+                "${batch.totalSaleAmount.toCurrency()}đ",
+              ),
+              _buildRowInfo(
+                "Tổng chi phí",
+                "-${batch.totalExpenses.toCurrency()}đ",
+              ),
               const Divider(),
               _buildRowInfo(
                 "LỢI NHUẬN",
@@ -213,7 +284,10 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(onPressed: () => _showSaleDialog(batch), child: const Text("Ghi nhận đợt bán mới")),
+              child: ElevatedButton(
+                onPressed: () => _showSaleDialog(batch),
+                child: const Text("Ghi nhận đợt bán mới"),
+              ),
             ),
           ],
         ),
@@ -229,6 +303,7 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
         title: "Xóa đợt bán",
         accent: Colors.red,
         confirmText: "Xóa",
+        isDestructive: true,
         onConfirm: () {
           vm.deleteBatchSale(batch.id, sale.id);
           Navigator.pop(context);
@@ -243,7 +318,12 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
     );
   }
 
-  Widget _buildRowInfo(String label, String value, {Color? color, bool isBold = false}) {
+  Widget _buildRowInfo(
+    String label,
+    String value, {
+    Color? color,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -252,7 +332,10 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
           Text(label),
           Text(
             value,
-            style: TextStyle(color: color, fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+            style: TextStyle(
+              color: color,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ],
       ),
@@ -282,7 +365,9 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
                   type: selectedType,
                   amount: amount,
                   date: DateTime.now(),
-                  note: noteController.text.isEmpty ? null : noteController.text,
+                  note: noteController.text.isEmpty
+                      ? null
+                      : noteController.text,
                 ),
               );
               Navigator.pop(context);
@@ -292,7 +377,12 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
             DropdownButtonFormField<ExpenseType>(
               initialValue: selectedType,
               items: ExpenseType.values
-                  .map((t) => DropdownMenuItem(value: t, child: Text(_getExpenseLabel(t))))
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(_getExpenseLabel(t)),
+                    ),
+                  )
                   .toList(),
               onChanged: (val) => setState(() => selectedType = val!),
               decoration: cuteInputDecoration(context, "Loại chi phí"),
@@ -312,13 +402,19 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
   }
 
   void _showSaleDialog(ChickenBatch batch) {
-    final quantity = batch.remainingQuantity > 0 ? batch.remainingQuantity : batch.quantity;
+    final quantity = batch.remainingQuantity > 0
+        ? batch.remainingQuantity
+        : batch.quantity;
     final unitPrice = vm.suggestPrice(batch.ageInDays);
     final totalAmount = unitPrice * quantity;
 
-    final unitPriceController = TextEditingController(text: unitPrice.toStringAsFixed(0));
+    final unitPriceController = TextEditingController(
+      text: unitPrice.toStringAsFixed(0),
+    );
     final qtyController = TextEditingController(text: quantity.toString());
-    final totalAmountController = TextEditingController(text: totalAmount.toStringAsFixed(0));
+    final totalAmountController = TextEditingController(
+      text: totalAmount.toStringAsFixed(0),
+    );
     final noteController = TextEditingController();
     DateTime saleDate = DateTime.now();
 
@@ -347,7 +443,9 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
                   date: saleDate,
                   quantity: qty,
                   amount: amount,
-                  note: noteController.text.isEmpty ? null : noteController.text,
+                  note: noteController.text.isEmpty
+                      ? null
+                      : noteController.text,
                 ),
               );
               Navigator.pop(context);
@@ -382,8 +480,15 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
               prefixText: "đ ",
               keyboardType: TextInputType.number,
             ),
-            CuteTextField(controller: noteController, label: "Ghi chú (bán cho ai...)"),
-            CuteDateField(label: "Ngày bán", value: saleDate, onChanged: (d) => setState(() => saleDate = d)),
+            CuteTextField(
+              controller: noteController,
+              label: "Ghi chú (bán cho ai...)",
+            ),
+            CuteDateField(
+              label: "Ngày bán",
+              value: saleDate,
+              onChanged: (d) => setState(() => saleDate = d),
+            ),
           ],
         ),
       ),
@@ -398,6 +503,7 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
         title: "Xóa lứa gà",
         accent: Colors.red,
         confirmText: "Xóa",
+        isDestructive: true,
         onConfirm: () {
           vm.deleteBatch(batch.id);
           Navigator.pop(context);
@@ -415,7 +521,9 @@ class _ChickenBatchDetailScreenState extends ScreenState<ChickenBatchDetailScree
 
   void _showEditInfoDialog(ChickenBatch batch) {
     final nameController = TextEditingController(text: batch.name);
-    final quantityController = TextEditingController(text: batch.quantity.toString());
+    final quantityController = TextEditingController(
+      text: batch.quantity.toString(),
+    );
     DateTime incubationDate = batch.incubationDate;
     DateTime? actualHatchDate = batch.actualHatchDate;
 
