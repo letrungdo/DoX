@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:do_x/app.dart';
 import 'package:do_x/firebase_options.dart';
+import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
@@ -39,6 +40,7 @@ void main() {
         ),
         secureStorage.getAccount(),
         initSupabase(),
+        notificationService.init(),
       ]);
 
       runApp(const MyApp());

@@ -114,14 +114,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get logoutDoX => 'Đăng xuất Do X';
 
   @override
-  String get loginGoogle => 'Đăng nhập Google';
+  String get vaccinationNotifications => 'Thông báo lịch tiêm phòng';
 
   @override
-  String get logoutGoogle => 'Đăng xuất Google';
-
-  @override
-  String get autoSyncChickenToGoogleTasks =>
-      'Tự đồng bộ lịch tiêm lên Google Tasks';
+  String get notificationPermissionDenied =>
+      'Vui lòng cho phép thông báo trong cài đặt thiết bị.';
 
   @override
   String get confirmLogout => 'Đăng xuất';

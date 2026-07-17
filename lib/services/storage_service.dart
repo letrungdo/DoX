@@ -38,12 +38,12 @@ class _StorageService {
     return prefs.setString(StorageKey.routerIp, value);
   }
 
-  bool getChickenAutoSync() {
-    return prefs.getBool(StorageKey.chickenAutoSync) ?? false;
+  bool getChickenNotificationsEnabled() {
+    return prefs.getBool(StorageKey.chickenNotifications) ?? false;
   }
 
-  Future<bool> setChickenAutoSync(bool value) {
-    return prefs.setBool(StorageKey.chickenAutoSync, value);
+  Future<bool> setChickenNotificationsEnabled(bool value) {
+    return prefs.setBool(StorageKey.chickenNotifications, value);
   }
 
   String? getLocale() {
