@@ -1,17 +1,15 @@
 import 'dart:async';
-import 'package:do_x/services/location_service.dart';
+import 'package:dio/dio.dart';
 import 'package:do_x/services/router_reboot_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:provider/provider.dart';
 
 class WifiManagementViewModel extends CoreViewModel {
   final _rebootService = RouterRebootService();
   final _speedTestService = SpeedTestService();
-  late final LocationService _locationService;
 
   static const stepLabels = [
     "Kết nối & Quét MAC", //
@@ -48,16 +46,11 @@ class WifiManagementViewModel extends CoreViewModel {
   SpeedTestServer selectedServer = SpeedTestServer.internetServers.first;
 
   StreamSubscription? _speedSubscription;
-
-  @override
-  void initState() {
-    _locationService = context.read<LocationService>();
-    super.initState();
-    _pickNearestServer();
-  }
+  CancelToken? _speedCancelToken;
 
   @override
   void dispose() {
+    _speedCancelToken?.cancel("Wifi management disposed");
     _speedSubscription?.cancel();
     super.dispose();
   }
@@ -99,18 +92,6 @@ class WifiManagementViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
-  Future<void> _pickNearestServer() async {
-    try {
-      final position = await _locationService.getCurrentPosition();
-      if (position != null) {
-        selectedServer = SpeedTestServer.findNearest(position);
-        notifyListenersSafe();
-      }
-    } catch (e) {
-      logger.e("Failed to pick nearest server", error: e);
-    }
-  }
-
   Future<void> reboot() async {
     if (isBusy) return;
     setBusy(true);
@@ -125,7 +106,7 @@ class WifiManagementViewModel extends CoreViewModel {
     secureStorage.saveRouterPassword(password);
 
     try {
-      final message = await _rebootService.reboot(
+      await _rebootService.reboot(
         ip: ip,
         password: password,
         cancelToken: cancelToken,
@@ -148,11 +129,7 @@ class WifiManagementViewModel extends CoreViewModel {
       });
 
       try {
-        await _rebootService.checkRouterOnline(
-          ip: ip,
-          onLog: _log,
-          cancelToken: cancelToken,
-        );
+        await _rebootService.checkRouterOnline(ip: ip, onLog: _log, cancelToken: cancelToken);
       } finally {
         timer.cancel();
       }
@@ -172,6 +149,8 @@ class WifiManagementViewModel extends CoreViewModel {
   }
 
   void stopTests() {
+    _speedCancelToken?.cancel("Speed test stopped");
+    _speedCancelToken = null;
     _speedSubscription?.cancel();
     _speedSubscription = null;
     isTestingLan = false;
@@ -191,23 +170,26 @@ class WifiManagementViewModel extends CoreViewModel {
     notifyListenersSafe();
 
     final baseUrl = _rebootService.cleanIp(ip);
+    _speedCancelToken = CancelToken();
 
-    _speedSubscription = _speedTestService.testLanSpeed(baseUrl, cancelToken: cancelToken).listen(
-      (update) {
-        lanSpeed = update.currentMbps;
-        lanLatency = update.latencyMs;
-        notifyListenersSafe();
-      },
-      onError: (e) {
-        logger.e("LAN Speed test failed", error: e);
-        isTestingLan = false;
-        notifyListenersSafe();
-      },
-      onDone: () {
-        isTestingLan = false;
-        notifyListenersSafe();
-      },
-    );
+    _speedSubscription = _speedTestService
+        .testLanSpeed(baseUrl, cancelToken: _speedCancelToken)
+        .listen(
+          (update) {
+            lanSpeed = update.currentMbps;
+            lanLatency = update.latencyMs;
+            notifyListenersSafe();
+          },
+          onError: (e) {
+            logger.e("LAN Speed test failed", error: e);
+            isTestingLan = false;
+            notifyListenersSafe();
+          },
+          onDone: () {
+            isTestingLan = false;
+            notifyListenersSafe();
+          },
+        );
   }
 
   void setSelectedServer(SpeedTestServer server) {
@@ -226,24 +208,25 @@ class WifiManagementViewModel extends CoreViewModel {
     internetLatency = null;
     notifyListenersSafe();
 
-    // Re-check nearest server before starting just in case
-    await _pickNearestServer();
+    _speedCancelToken = CancelToken();
 
-    _speedSubscription = _speedTestService.testInternetSpeed(selectedServer, cancelToken: cancelToken).listen(
-      (update) {
-        internetSpeed = update.currentMbps;
-        internetLatency = update.latencyMs;
-        notifyListenersSafe();
-      },
-      onError: (e) {
-        logger.e("Internet Speed test failed", error: e);
-        isTestingInternet = false;
-        notifyListenersSafe();
-      },
-      onDone: () {
-        isTestingInternet = false;
-        notifyListenersSafe();
-      },
-    );
+    _speedSubscription = _speedTestService
+        .testInternetSpeed(selectedServer, cancelToken: _speedCancelToken)
+        .listen(
+          (update) {
+            internetSpeed = update.currentMbps;
+            internetLatency = update.latencyMs;
+            notifyListenersSafe();
+          },
+          onError: (e) {
+            logger.e("Internet Speed test failed", error: e);
+            isTestingInternet = false;
+            notifyListenersSafe();
+          },
+          onDone: () {
+            isTestingInternet = false;
+            notifyListenersSafe();
+          },
+        );
   }
 }

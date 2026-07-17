@@ -109,7 +109,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text("Kiểm tra tốc độ kết nối", style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            _buildServerPicker(vm),
+            if (SpeedTestServer.internetServers.length > 1) _buildServerPicker(vm),
           ],
         ),
         Row(
@@ -257,7 +257,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                   ),
                   if (latency != null)
                     Text(
-                      "Ping: ${latency}ms",
+                      "TTFB: ${latency}ms",
                       style: TextStyle(fontSize: 11, color: context.theme.colorScheme.onSurfaceVariant),
                     ),
                 ],
