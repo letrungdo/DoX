@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
@@ -10,6 +13,8 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -49,14 +54,22 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             onSelected: (value) {
               switch (value) {
                 case 'import':
-                  _showImportDialog(l10n);
+                  _importFromJsonFile();
+                case 'delete_all':
+                  _showDeleteAllDataDialog();
                 case 'expenses':
                   _showGlobalExpensesSheet(l10n);
               }
             },
             itemBuilder: (context) => [
               PopupMenuItem(value: 'expenses', child: Text(l10n.commonExpenses)),
-              PopupMenuItem(value: 'import', child: Text(l10n.importData)),
+              if (kDebugMode) ...[
+                PopupMenuItem(value: 'import', child: Text(l10n.importData)),
+                const PopupMenuItem(
+                  value: 'delete_all',
+                  child: Text("Xóa toàn bộ dữ liệu gà", style: TextStyle(color: Colors.red)),
+                ),
+              ],
             ],
           ),
         ],
@@ -179,44 +192,129 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     );
   }
 
-  void _showImportDialog(AppLocalizations l10n) {
-    final jsonController = TextEditingController();
+  Future<void> _importFromJsonFile() async {
+    const jsonTypeGroup = XTypeGroup(
+      label: 'JSON',
+      extensions: ['json'],
+      mimeTypes: ['application/json'],
+      uniformTypeIdentifiers: ['public.json'],
+    );
 
-    showDialog(
+    BuildContext? progressDialogContext;
+    try {
+      final file = await openFile(acceptedTypeGroups: [jsonTypeGroup]);
+      if (file == null) return;
+
+      var jsonString = utf8.decode(await file.readAsBytes());
+      if (jsonString.startsWith('\uFEFF')) {
+        jsonString = jsonString.substring(1);
+      }
+
+      progressDialogContext = await _showImportProgressDialog();
+      final count = await vm.importFromJson(jsonString);
+      if (progressDialogContext.mounted) Navigator.pop(progressDialogContext);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Đã nhập $count bản ghi từ ${file.name}.")));
+    } catch (e) {
+      final dialogContext = progressDialogContext;
+      if (dialogContext != null && dialogContext.mounted) Navigator.pop(dialogContext);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Nhập file thất bại: $e"), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<BuildContext> _showImportProgressDialog() {
+    final shown = Completer<BuildContext>();
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        if (!shown.isCompleted) shown.complete(dialogContext);
+        return PopScope(
+          canPop: false,
+          child: Consumer<ChickenViewModel>(
+            builder: (context, vm, child) {
+              final percent = (vm.importProgress * 100).round();
+              return AlertDialog(
+                title: const Text("Đang import dữ liệu"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LinearProgressIndicator(value: vm.importProgress),
+                    const SizedBox(height: 12),
+                    Text("$percent%"),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+    return shown.future;
+  }
+
+  void _showDeleteAllDataDialog() {
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => CuteDialog(
-        icon: Assets.images.chickCute,
-        title: l10n.importData,
-        accent: Colors.teal,
-        confirmText: l10n.login, // Reusing login as 'Import' if not localized, but I should add 'import' string
-        onConfirm: () async {
-          final text = jsonController.text.trim();
-          if (text.isEmpty) return;
+        title: "Xóa toàn bộ dữ liệu gà?",
+        accent: Colors.red,
+        confirmText: "Xóa dữ liệu",
+        onConfirm: () {
           Navigator.pop(dialogContext);
-          final messenger = ScaffoldMessenger.of(context);
-          try {
-            final count = await vm.importFromJson(text);
-            messenger.showSnackBar(SnackBar(content: Text("Đã nhập $count bản ghi.")));
-          } catch (e) {
-            messenger.showSnackBar(SnackBar(content: Text("Nhập thất bại: $e"), backgroundColor: Colors.red));
-          }
+          _deleteAllData();
         },
-        children: [
+        children: const [
           Text(
-            "Dán nội dung file JSON (batches, cockSales, expenses). Dữ liệu sẽ được thêm vào, không ghi đè.",
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            "Tất cả lứa gà, doanh thu và chi phí của tài khoản hiện tại sẽ bị xóa vĩnh viễn. "
+            "Thao tác này không thể hoàn tác.",
             textAlign: TextAlign.center,
-          ),
-          CuteTextField(
-            controller: jsonController,
-            label: "Nội dung JSON",
-            hint: '{"batches": [...], ...}',
-            maxLines: 8,
-            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAllData() async {
+    final shown = Completer<BuildContext>();
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        if (!shown.isCompleted) shown.complete(dialogContext);
+        return const PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: Text("Đang xóa dữ liệu"),
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Expanded(child: Text("Vui lòng chờ...")),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    final dialogContext = await shown.future;
+
+    try {
+      final count = await vm.deleteAllData();
+      if (dialogContext.mounted) Navigator.pop(dialogContext);
+      if (!mounted) return;
+      final message = count == 0 ? "Không có dữ liệu để xóa." : "Đã xóa toàn bộ dữ liệu ($count bản ghi chính).";
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (dialogContext.mounted) Navigator.pop(dialogContext);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Xóa dữ liệu thất bại: $e"), backgroundColor: Colors.red));
+    }
   }
 
   void _showGlobalExpensesSheet(AppLocalizations l10n) {
