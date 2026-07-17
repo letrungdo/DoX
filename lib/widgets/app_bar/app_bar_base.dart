@@ -26,23 +26,21 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<DoAppBar> createState() => _DoAppBarState();
 
   @override
-  Size get preferredSize => Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
+  Size get preferredSize =>
+      Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
 }
 
 class _DoAppBarState extends State<DoAppBar> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      surfaceTintColor: Colors.transparent,
+      backgroundColor: widget.backgroundColor,
       title: widget.title != null ? Text(widget.title!) : null,
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,
       actions: widget.actions,
       toolbarHeight: widget.height,
-      actionsPadding: EdgeInsets.only(right: 10),
+      actionsPadding: const EdgeInsets.only(right: 10),
       bottom: widget.bottom,
     );
   }

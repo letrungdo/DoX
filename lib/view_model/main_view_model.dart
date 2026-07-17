@@ -1,16 +1,23 @@
 import 'package:do_x/services/update_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flutter/material.dart';
 
 class MainViewModel extends CoreViewModel {
   final Map<String, Future<void> Function()> _tabReselectHandlers = {};
   final Set<String> _tabsBeingReselected = {};
 
-  void registerTabReselectHandler(String routeName, Future<void> Function() handler) {
+  void registerTabReselectHandler(
+    String routeName,
+    Future<void> Function() handler,
+  ) {
     _tabReselectHandlers[routeName] = handler;
   }
 
-  void unregisterTabReselectHandler(String routeName, Future<void> Function() handler) {
+  void unregisterTabReselectHandler(
+    String routeName,
+    Future<void> Function() handler,
+  ) {
     if (identical(_tabReselectHandlers[routeName], handler)) {
       _tabReselectHandlers.remove(routeName);
     }
@@ -43,8 +50,15 @@ class MainViewModel extends CoreViewModel {
             ? SingleChildScrollView(child: Text(update.releaseNotes!))
             : null,
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Để sau")),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Cập nhật")),
+          DialogActionButton(
+            text: "Để sau",
+            kind: DialogActionKind.cancel,
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          DialogActionButton(
+            text: "Cập nhật",
+            onPressed: () => Navigator.pop(context, true),
+          ),
         ],
       ),
     );
@@ -96,7 +110,10 @@ class MainViewModel extends CoreViewModel {
           valueListenable: error,
           builder: (context, errorValue, _) {
             if (errorValue != null) {
-              return Text("Lỗi tải bản cập nhật: $errorValue", style: const TextStyle(color: Colors.red));
+              return Text(
+                "Lỗi tải bản cập nhật: $errorValue",
+                style: const TextStyle(color: Colors.red),
+              );
             }
             return ValueListenableBuilder<bool>(
               valueListenable: isDone,
@@ -113,7 +130,11 @@ class MainViewModel extends CoreViewModel {
                       const SizedBox(height: 16),
                       LinearProgressIndicator(value: value),
                       const SizedBox(height: 8),
-                      Text(value != null ? "${(value * 100).toStringAsFixed(0)}%" : "Đang chuẩn bị..."),
+                      Text(
+                        value != null
+                            ? "${(value * 100).toStringAsFixed(0)}%"
+                            : "Đang chuẩn bị...",
+                      ),
                     ],
                   ),
                 );
@@ -125,12 +146,14 @@ class MainViewModel extends CoreViewModel {
           ValueListenableBuilder<Object?>(
             valueListenable: error,
             builder: (context, errorValue, _) => errorValue != null
-                ? TextButton(onPressed: runDownload, child: const Text("Thử lại"))
+                ? DialogActionButton(text: "Thử lại", onPressed: runDownload)
                 : const SizedBox.shrink(),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
-            child: const Text("Đóng"),
+          DialogActionButton(
+            text: "Đóng",
+            kind: DialogActionKind.cancel,
+            onPressed: () =>
+                Navigator.of(dialogContext, rootNavigator: true).pop(),
           ),
         ],
       ),

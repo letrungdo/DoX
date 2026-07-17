@@ -21,7 +21,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           _buildSettingCard(
             icon: Icons.palette_outlined,
-            color: Colors.deepPurple,
+            color: Theme.of(context).colorScheme.primary,
             title: Text(l10n.themeMode),
             trailing: DropdownButtonHideUnderline(
               child: DropdownButton<ThemeMode>(
@@ -32,9 +32,18 @@ class SettingsScreen extends StatelessWidget {
                   if (newMode != null) appVm.setThemeMode(newMode);
                 },
                 items: [
-                  DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.system)),
-                  DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.light)),
-                  DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.dark)),
+                  DropdownMenuItem(
+                    value: ThemeMode.system,
+                    child: Text(l10n.system),
+                  ),
+                  DropdownMenuItem(
+                    value: ThemeMode.light,
+                    child: Text(l10n.light),
+                  ),
+                  DropdownMenuItem(
+                    value: ThemeMode.dark,
+                    child: Text(l10n.dark),
+                  ),
                 ],
               ),
             ),
@@ -44,7 +53,10 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.favorite_outline_rounded,
             color: Colors.pink,
             title: Text(l10n.showLocketTab),
-            trailing: Switch.adaptive(value: appVm.showLocketTab, onChanged: appVm.setShowLocketTab),
+            trailing: Switch.adaptive(
+              value: appVm.showLocketTab,
+              onChanged: appVm.setShowLocketTab,
+            ),
             onTap: () => appVm.setShowLocketTab(!appVm.showLocketTab),
           ),
           const SizedBox(height: 10),
@@ -61,8 +73,14 @@ class SettingsScreen extends StatelessWidget {
                   if (newLocale != null) appVm.setLocale(newLocale);
                 },
                 items: [
-                  DropdownMenuItem(value: const Locale('en'), child: Text(l10n.english)),
-                  DropdownMenuItem(value: const Locale('vi'), child: Text(l10n.vietnamese)),
+                  DropdownMenuItem(
+                    value: const Locale('en'),
+                    child: Text(l10n.english),
+                  ),
+                  DropdownMenuItem(
+                    value: const Locale('vi'),
+                    child: Text(l10n.vietnamese),
+                  ),
                 ],
               ),
             ),
@@ -89,7 +107,10 @@ class SettingsScreen extends StatelessWidget {
           width: 42,
           height: 42,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Icon(icon, color: color),
         ),
         title: DefaultTextStyle.merge(

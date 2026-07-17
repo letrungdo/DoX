@@ -202,6 +202,13 @@ class _GlobalExpensesScreenState
           title: isEditing ? l10n.editCommonExpense : l10n.addCommonExpense,
           accent: Colors.orange,
           confirmText: isEditing ? l10n.update : l10n.save,
+          destructiveText: isEditing ? l10n.deleteCommonExpense : null,
+          onDestructive: isEditing
+              ? () {
+                  Navigator.pop(context);
+                  _confirmDeleteExpense(expense);
+                }
+              : null,
           onConfirm: () async {
             final amount = double.tryParse(amountController.text) ?? 0;
             if (amount <= 0) return;
@@ -259,16 +266,6 @@ class _GlobalExpensesScreenState
               value: expenseDate,
               onChanged: (date) => setState(() => expenseDate = date),
             ),
-            if (isEditing)
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _confirmDeleteExpense(expense);
-                },
-                icon: const Icon(Icons.delete_outline),
-                label: Text(l10n.deleteCommonExpense),
-              ),
           ],
         ),
       ),
@@ -284,6 +281,7 @@ class _GlobalExpensesScreenState
         title: l10n.deleteCommonExpense,
         accent: Colors.red,
         confirmText: l10n.delete,
+        isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),
         children: [
           Text(

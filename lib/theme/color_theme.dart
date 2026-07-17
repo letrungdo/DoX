@@ -13,14 +13,14 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
 
   static final light = ColorTheme(
     buttonBg: Colors.white, //
-    disabled: const Color(0xFFCFCFDD),
-    iconColor: Colors.grey[800]!,
+    disabled: const Color(0xFFBFC9C5),
+    iconColor: const Color(0xFF435A55),
   );
 
   static final dark = ColorTheme(
-    buttonBg: Colors.black, //
-    disabled: Colors.white.withValues(alpha: 0.3),
-    iconColor: Colors.white,
+    buttonBg: const Color(0xFF19211F), //
+    disabled: const Color(0xFF3F4946),
+    iconColor: const Color(0xFFDDE5E1),
   );
 
   @override

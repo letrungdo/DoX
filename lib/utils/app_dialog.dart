@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flutter/material.dart';
 
 enum ActionButtonType { cancel, ok }
@@ -37,20 +38,23 @@ Future<ActionButtonType?> showAppDialog(
       return AlertDialog(
         title: Text(title ?? ""),
         content: Text(message ?? ""),
-        actions:
-            actions
-                ?.map(
-                  (e) => ElevatedButton(
-                    onPressed: () {
-                      e.onPressed?.call(context);
-                      if (e.autoClose) {
-                        context.pop(e.type);
-                      }
-                    }, //
-                    child: Text(e.text, style: e.textStyle),
-                  ),
-                )
-                .toList(),
+        actions: actions
+            ?.map(
+              (e) => DialogActionButton(
+                text: e.text,
+                textStyle: e.textStyle,
+                kind: e.type == ActionButtonType.cancel
+                    ? DialogActionKind.cancel
+                    : DialogActionKind.primary,
+                onPressed: () {
+                  e.onPressed?.call(context);
+                  if (e.autoClose) {
+                    context.pop(e.type);
+                  }
+                }, //
+              ),
+            )
+            .toList(),
       );
     },
   );

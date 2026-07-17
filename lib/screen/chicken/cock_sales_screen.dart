@@ -25,7 +25,8 @@ class CockSalesScreen extends StatefulScreen implements AutoRouteWrapper {
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewModel> {
+class _CockSalesScreenState
+    extends ScreenState<CockSalesScreen, ChickenViewModel> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
   SaleCategory? _filter;
   int _selectedYear = DateTime.now().year;
@@ -44,11 +45,16 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final years = {DateTime.now().year, ...vm.globalCockSales.map((sale) => sale.date.year)}.toList()
-            ..sort((a, b) => b.compareTo(a));
+          final years = {
+            DateTime.now().year,
+            ...vm.globalCockSales.map((sale) => sale.date.year),
+          }.toList()..sort((a, b) => b.compareTo(a));
           final sortedSales =
               vm.globalCockSales
-                  .where((sale) => _selectedYear == 0 || sale.date.year == _selectedYear)
+                  .where(
+                    (sale) =>
+                        _selectedYear == 0 || sale.date.year == _selectedYear,
+                  )
                   .where((sale) => _filter == null || sale.category == _filter)
                   .toList()
                 ..sort((a, b) => b.date.compareTo(a.date));
@@ -62,13 +68,21 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                   children: [
                     const Icon(Icons.filter_alt_outlined, size: 20),
                     const SizedBox(width: 8),
-                    const Text("Năm:", style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Text(
+                      "Năm:",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(width: 12),
                     DropdownButton<int>(
                       value: _selectedYear,
                       items: [
                         const DropdownMenuItem(value: 0, child: Text("Tất cả")),
-                        ...years.map((year) => DropdownMenuItem(value: year, child: Text("$year"))),
+                        ...years.map(
+                          (year) => DropdownMenuItem(
+                            value: year,
+                            child: Text("$year"),
+                          ),
+                        ),
                       ],
                       onChanged: (year) {
                         if (year != null) setState(() => _selectedYear = year);
@@ -90,13 +104,15 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                     ChoiceChip(
                       label: const Text("Gà đá"),
                       selected: _filter == SaleCategory.fighting,
-                      onSelected: (_) => setState(() => _filter = SaleCategory.fighting),
+                      onSelected: (_) =>
+                          setState(() => _filter = SaleCategory.fighting),
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
                       label: const Text("Gà thịt"),
                       selected: _filter == SaleCategory.meat,
-                      onSelected: (_) => setState(() => _filter = SaleCategory.meat),
+                      onSelected: (_) =>
+                          setState(() => _filter = SaleCategory.meat),
                     ),
                   ],
                 ),
@@ -106,10 +122,16 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("${sortedSales.length} lượt bán", style: TextStyle(color: Colors.grey[600])),
+                    Text(
+                      "${sortedSales.length} lượt bán",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
                     Text(
                       "Tổng: ${total.toCurrency()}đ",
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
                     ),
                   ],
                 ),
@@ -127,7 +149,10 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Assets.images.roosterCute.svg(width: 72, height: 72),
+                                    Assets.images.roosterCute.svg(
+                                      width: 72,
+                                      height: 72,
+                                    ),
                                     const SizedBox(height: 16),
                                     Text(
                                       vm.globalCockSales.isEmpty
@@ -141,7 +166,9 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                                       const SizedBox(height: 16),
                                       ElevatedButton(
                                         onPressed: () => _showSaleDialog(),
-                                        child: const Text("Nhập bán con đầu tiên"),
+                                        child: const Text(
+                                          "Nhập bán con đầu tiên",
+                                        ),
                                       ),
                                     ],
                                   ],
@@ -154,7 +181,8 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(16),
                           itemCount: sortedSales.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final sale = sortedSales[index];
                             final isMeat = sale.category == SaleCategory.meat;
@@ -164,16 +192,28 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                               leading: CircleAvatar(
                                 radius: 22,
                                 backgroundColor: color.withValues(alpha: 0.12),
-                                child: (isMeat ? Assets.images.drumstickCute : Assets.images.roosterCute).svg(
-                                  width: 28,
-                                  height: 28,
+                                child:
+                                    (isMeat
+                                            ? Assets.images.drumstickCute
+                                            : Assets.images.roosterCute)
+                                        .svg(width: 28, height: 28),
+                              ),
+                              title: Text(
+                                sale.note,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              title: Text(sale.note, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text("${_dateFormat.format(sale.date)} · ${isMeat ? 'Gà thịt' : 'Gà đá'}"),
+                              subtitle: Text(
+                                "${_dateFormat.format(sale.date)} · ${isMeat ? 'Gà thịt' : 'Gà đá'}",
+                              ),
                               trailing: Text(
                                 "${sale.amount.toCurrency()}đ",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: color,
+                                ),
                               ),
                             );
                           },
@@ -204,10 +244,19 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
-          icon: category == SaleCategory.meat ? Assets.images.drumstickCute : Assets.images.roosterCute,
+          icon: category == SaleCategory.meat
+              ? Assets.images.drumstickCute
+              : Assets.images.roosterCute,
           title: isEditing ? "Chỉnh sửa lượt bán" : "Nhập bán gà",
           accent: category == SaleCategory.meat ? Colors.brown : Colors.red,
           confirmText: isEditing ? "Cập nhật" : "Lưu",
+          destructiveText: isEditing ? "Xóa lượt bán" : null,
+          onDestructive: isEditing
+              ? () {
+                  Navigator.pop(context);
+                  _confirmDeleteSale(sale);
+                }
+              : null,
           onConfirm: () async {
             final amount = double.tryParse(amountController.text) ?? 0;
             if (amount > 0) {
@@ -216,7 +265,9 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                 amount: amount,
                 date: saleDate,
                 note: noteController.text.trim().isEmpty
-                    ? (category == SaleCategory.meat ? "Bán gà thịt" : "Bán gà đá")
+                    ? (category == SaleCategory.meat
+                          ? "Bán gà thịt"
+                          : "Bán gà đá")
                     : noteController.text.trim(),
                 category: category,
               );
@@ -229,7 +280,9 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
                 if (context.mounted) Navigator.pop(context);
               } catch (error) {
                 if (mounted) {
-                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text("Lưu thất bại: $error")));
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(content: Text("Lưu thất bại: $error")),
+                  );
                 }
               }
             }
@@ -240,8 +293,14 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
               decoration: cuteInputDecoration(context, "Loại gà"),
               borderRadius: BorderRadius.circular(14),
               items: const [
-                DropdownMenuItem(value: SaleCategory.fighting, child: Text("Gà đá / gà nòi")),
-                DropdownMenuItem(value: SaleCategory.meat, child: Text("Gà thịt")),
+                DropdownMenuItem(
+                  value: SaleCategory.fighting,
+                  child: Text("Gà đá / gà nòi"),
+                ),
+                DropdownMenuItem(
+                  value: SaleCategory.meat,
+                  child: Text("Gà thịt"),
+                ),
               ],
               onChanged: (val) => setState(() => category = val!),
             ),
@@ -251,18 +310,15 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
               prefixText: "đ ",
               keyboardType: TextInputType.number,
             ),
-            CuteTextField(controller: noteController, label: "Ghi chú (con gà số mấy, trạng gà...)"),
-            CuteDateField(label: "Ngày bán", value: saleDate, onChanged: (d) => setState(() => saleDate = d)),
-            if (isEditing)
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _confirmDeleteSale(sale);
-                },
-                icon: const Icon(Icons.delete_outline),
-                label: const Text("Xóa lượt bán"),
-              ),
+            CuteTextField(
+              controller: noteController,
+              label: "Ghi chú (con gà số mấy, trạng gà...)",
+            ),
+            CuteDateField(
+              label: "Ngày bán",
+              value: saleDate,
+              onChanged: (d) => setState(() => saleDate = d),
+            ),
           ],
         ),
       ),
@@ -275,10 +331,13 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => CuteDialog(
-        icon: sale.category == SaleCategory.meat ? Assets.images.drumstickCute : Assets.images.roosterCute,
+        icon: sale.category == SaleCategory.meat
+            ? Assets.images.drumstickCute
+            : Assets.images.roosterCute,
         title: "Xóa lượt bán",
         accent: Colors.red,
         confirmText: "Xóa",
+        isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),
         children: [
           Text(
@@ -293,7 +352,11 @@ class _CockSalesScreenState extends ScreenState<CockSalesScreen, ChickenViewMode
     try {
       await vm.deleteGlobalCockSale(sale.id);
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Xóa thất bại: $error")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Xóa thất bại: $error")));
+      }
     }
   }
 }

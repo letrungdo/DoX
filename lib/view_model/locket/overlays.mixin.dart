@@ -6,6 +6,7 @@ import 'package:do_x/services/location_service.dart';
 import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -129,7 +130,8 @@ mixin LocketOverlays on CoreViewModel {
   static const Color blueBlues = Color(0xFF174378);
 
   // Make a custom ColorSwatch to name map from the above custom colors.
-  final Map<ColorSwatch<Object>, String> colorsNameMap = <ColorSwatch<Object>, String>{
+  final Map<ColorSwatch<Object>, String>
+  colorsNameMap = <ColorSwatch<Object>, String>{
     ColorTools.createPrimarySwatch(guidePrimary): 'Guide Purple',
     ColorTools.createPrimarySwatch(guidePrimaryVariant): 'Guide Purple Variant',
     ColorTools.createAccentSwatch(guideSecondary): 'Guide Teal',
@@ -149,7 +151,9 @@ mixin LocketOverlays on CoreViewModel {
         return AlertDialog(
           titlePadding: const EdgeInsets.all(0),
           contentPadding: const EdgeInsets.all(0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           content: SingleChildScrollView(
             child: ColorPicker(
               color: tempColor,
@@ -162,10 +166,21 @@ mixin LocketOverlays on CoreViewModel {
               spacing: 5,
               runSpacing: 5,
               wheelDiameter: 155,
-              heading: Text('Select color', style: Theme.of(context).textTheme.titleSmall),
-              subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleSmall),
-              wheelSubheading: Text('Selected color and its shades', style: Theme.of(context).textTheme.titleSmall),
-              copyPasteBehavior: const ColorPickerCopyPasteBehavior(longPressMenu: true),
+              heading: Text(
+                'Select color',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              subheading: Text(
+                'Select color shade',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              wheelSubheading: Text(
+                'Selected color and its shades',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+                longPressMenu: true,
+              ),
               materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
               colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
               colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
@@ -181,29 +196,31 @@ mixin LocketOverlays on CoreViewModel {
             ),
           ),
           actions: <Widget>[
-            TextButton(
+            DialogActionButton(
+              text: 'Reset',
+              kind: DialogActionKind.destructiveOutline,
               onPressed: () {
                 overlayBgColor = null;
                 overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
                 notifyListeners();
                 Navigator.of(context).pop(true);
               },
-              child: const Text('Reset'),
             ),
-            TextButton(
+            DialogActionButton(
+              text: 'Cancel',
+              kind: DialogActionKind.cancel,
               onPressed: () {
                 Navigator.of(context).pop(false);
               },
-              child: const Text('Cancel'),
             ),
-            TextButton(
+            DialogActionButton(
+              text: 'OK',
               onPressed: () {
                 overlayBgColor = tempColor;
                 overlayTextColor = tempColor.getTextColor()!;
                 notifyListeners();
                 Navigator.of(context).pop(true);
               },
-              child: const Text('OK'),
             ),
           ],
         );
