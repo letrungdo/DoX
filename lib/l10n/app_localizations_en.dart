@@ -316,4 +316,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expenseOther => 'Other';
+
+  @override
+  String newUpdateAvailable(String version) {
+    return 'New update available v$version';
+  }
+
+  @override
+  String get later => 'Later';
+
+  @override
+  String get appUpdate => 'App Update';
+
+  @override
+  String get downloadingUpdate => 'Downloading update...';
+
+  @override
+  String get downloadComplete => 'Download complete, opening installer...';
+
+  @override
+  String get preparing => 'Preparing...';
+
+  @override
+  String get resumeDownload => 'Resume download';
+
+  @override
+  String get downloadErrorGeneric =>
+      'Could not download update. Please check your internet connection.';
+
+  @override
+  String get downloadErrorTimeout => 'Connection timeout. Please try again.';
+
+  @override
+  String get downloadErrorNotFound => 'Update file not found on server.';
 }

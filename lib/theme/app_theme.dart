@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class AppTheme {
   AppTheme._();
 
-  static const _seed = Color(0xFF00897B);
+  static const _seed = Color(0xFF2DD4BF);
   static const _lightBackground = Color(0xFFF4FAF8);
   static const _darkBackground = Color(0xFF0D1513);
 
@@ -20,13 +20,13 @@ class AppTheme {
       dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
     );
     final scheme = baseScheme.copyWith(
-      primary: isDark ? const Color(0xFF82D5C9) : const Color(0xFF006B60),
+      primary: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF00897B),
       onPrimary: isDark ? const Color(0xFF003731) : Colors.white,
       primaryContainer: isDark
           ? const Color(0xFF005047)
-          : const Color(0xFFA4F2E5),
+          : const Color(0xFF99F6E4),
       onPrimaryContainer: isDark
-          ? const Color(0xFFA4F2E5)
+          ? const Color(0xFF99F6E4)
           : const Color(0xFF00201C),
       secondary: isDark ? const Color(0xFFB1CCC6) : const Color(0xFF4A635E),
       onSecondary: isDark ? const Color(0xFF1C3531) : Colors.white,
@@ -262,7 +262,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 2,
         height: 68,
-        indicatorColor: scheme.primaryContainer,
+        indicatorColor: scheme.primary.withValues(alpha: 0.12),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -271,6 +271,7 @@ class AppTheme {
             color: states.contains(WidgetState.selected)
                 ? scheme.primary
                 : scheme.onSurfaceVariant,
+            size: 24,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -289,8 +290,9 @@ class AppTheme {
         selectedItemColor: scheme.primary,
         unselectedItemColor: scheme.onSurfaceVariant,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
         type: BottomNavigationBarType.fixed,
-        elevation: 4,
+        elevation: 8,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primaryContainer,

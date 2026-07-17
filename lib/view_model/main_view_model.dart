@@ -1,3 +1,5 @@
+import 'package:do_x/l10n/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:do_x/services/update_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
@@ -39,24 +41,25 @@ class MainViewModel extends CoreViewModel {
   }
 
   void _checkAppUpdate() async {
+    final l10n = AppLocalizations.of(context)!;
     final update = await updateService.checkForUpdate();
     if (update == null || !context.mounted) return;
 
     final shouldUpdate = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Có bản cập nhật mới v${update.version}"),
+        title: Text(l10n.newUpdateAvailable(update.version)),
         content: update.releaseNotes?.trim().isNotEmpty == true
             ? SingleChildScrollView(child: Text(update.releaseNotes!))
             : null,
         actions: [
           DialogActionButton(
-            text: "Để sau",
+            text: l10n.later,
             kind: DialogActionKind.cancel,
             onPressed: () => Navigator.pop(context, false),
           ),
           DialogActionButton(
-            text: "Cập nhật",
+            text: l10n.update,
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -68,6 +71,7 @@ class MainViewModel extends CoreViewModel {
   }
 
   Future<void> _downloadAndInstall(AppUpdateInfo update) async {
+    final l10n = AppLocalizations.of(context)!;
     final progress = ValueNotifier<double?>(null);
     final error = ValueNotifier<Object?>(null);
     final isDone = ValueNotifier<bool>(false);
@@ -104,58 +108,78 @@ class MainViewModel extends CoreViewModel {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text("Cập nhật ứng dụng"),
-        content: ValueListenableBuilder<Object?>(
-          valueListenable: error,
-          builder: (context, errorValue, _) {
-            if (errorValue != null) {
-              return Text(
-                "Lỗi tải bản cập nhật: $errorValue",
-                style: const TextStyle(color: Colors.red),
-              );
-            }
-            return ValueListenableBuilder<bool>(
-              valueListenable: isDone,
-              builder: (context, done, _) {
-                if (done) {
-                  return const Text("Tải hoàn tất, đang mở trình cài đặt...");
-                }
-                return ValueListenableBuilder<double?>(
-                  valueListenable: progress,
-                  builder: (context, value, _) => Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text("Đang tải bản cập nhật..."),
-                      const SizedBox(height: 16),
-                      LinearProgressIndicator(value: value),
-                      const SizedBox(height: 8),
-                      Text(
-                        value != null
-                            ? "${(value * 100).toStringAsFixed(0)}%"
-                            : "Đang chuẩn bị...",
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-        actions: [
-          ValueListenableBuilder<Object?>(
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Text(l10n.appUpdate),
+          content: ValueListenableBuilder<Object?>(
             valueListenable: error,
-            builder: (context, errorValue, _) => errorValue != null
-                ? DialogActionButton(text: "Thử lại", onPressed: runDownload)
-                : const SizedBox.shrink(),
+            builder: (context, errorValue, _) {
+              if (errorValue != null) {
+                String errorMessage = l10n.downloadErrorGeneric;
+                if (errorValue is DioException) {
+                  if (errorValue.type == DioExceptionType.connectionTimeout ||
+                      errorValue.type == DioExceptionType.receiveTimeout) {
+                    errorMessage = l10n.downloadErrorTimeout;
+                  } else if (errorValue.response?.statusCode == 404) {
+                    errorMessage = l10n.downloadErrorNotFound;
+                  }
+                }
+                return Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                );
+              }
+              return ValueListenableBuilder<bool>(
+                valueListenable: isDone,
+                builder: (context, done, _) {
+                  if (done) {
+                    return Text(l10n.downloadComplete);
+                  }
+                  return ValueListenableBuilder<double?>(
+                    valueListenable: progress,
+                    builder: (context, value, _) => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(l10n.downloadingUpdate),
+                        const SizedBox(height: 16),
+                        LinearProgressIndicator(value: value),
+                        const SizedBox(height: 8),
+                        Text(
+                          value != null
+                              ? "${(value * 100).toStringAsFixed(0)}%"
+                              : l10n.preparing,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
-          DialogActionButton(
-            text: "Đóng",
-            kind: DialogActionKind.cancel,
-            onPressed: () =>
-                Navigator.of(dialogContext, rootNavigator: true).pop(),
-          ),
-        ],
+          actions: [
+            ValueListenableBuilder<Object?>(
+              valueListenable: error,
+              builder: (context, errorValue, _) => errorValue != null
+                  ? DialogActionButton(
+                      text: l10n.resumeDownload,
+                      onPressed: runDownload,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            ValueListenableBuilder<Object?>(
+              valueListenable: error,
+              builder: (context, errorValue, _) => DialogActionButton(
+                text: l10n.close,
+                kind: DialogActionKind.cancel,
+                onPressed: errorValue != null
+                    ? () =>
+                        Navigator.of(dialogContext, rootNavigator: true).pop()
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
     isDialogVisible = false;

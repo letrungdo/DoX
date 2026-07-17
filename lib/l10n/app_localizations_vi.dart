@@ -316,4 +316,38 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get expenseOther => 'Khác';
+
+  @override
+  String newUpdateAvailable(String version) {
+    return 'Có bản cập nhật mới v$version';
+  }
+
+  @override
+  String get later => 'Để sau';
+
+  @override
+  String get appUpdate => 'Cập nhật ứng dụng';
+
+  @override
+  String get downloadingUpdate => 'Đang tải bản cập nhật...';
+
+  @override
+  String get downloadComplete => 'Tải hoàn tất, đang mở trình cài đặt...';
+
+  @override
+  String get preparing => 'Đang chuẩn bị...';
+
+  @override
+  String get resumeDownload => 'Tiếp tục tải';
+
+  @override
+  String get downloadErrorGeneric =>
+      'Không thể tải bản cập nhật. Vui lòng kiểm tra kết nối mạng.';
+
+  @override
+  String get downloadErrorTimeout => 'Kết nối quá hạn. Vui lòng thử lại.';
+
+  @override
+  String get downloadErrorNotFound =>
+      'Không tìm thấy file cập nhật trên máy chủ.';
 }

@@ -131,5 +131,20 @@
   "expenseMedicine": "Medicine / vaccine",
   "expenseElectricity": "Heating electricity",
   "expenseWater": "Water",
-  "expenseOther": "Other"
+  "expenseOther": "Other",
+  "newUpdateAvailable": "New update available v{version}",
+  "@newUpdateAvailable": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "later": "Later",
+  "appUpdate": "App Update",
+  "downloadingUpdate": "Downloading update...",
+  "downloadComplete": "Download complete, opening installer...",
+  "preparing": "Preparing...",
+  "resumeDownload": "Resume download",
+  "downloadErrorGeneric": "Could not download update. Please check your internet connection.",
+  "downloadErrorTimeout": "Connection timeout. Please try again.",
+  "downloadErrorNotFound": "Update file not found on server."
 }

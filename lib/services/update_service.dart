@@ -51,11 +51,58 @@ class UpdateService {
   }
 
   /// Downloads the APK to the temp dir and opens the Android installer.
+  /// Supports resuming from where it left off.
   Future<void> downloadAndInstall(AppUpdateInfo update, {ProgressCallback? onReceiveProgress}) async {
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/dox_${update.version.replaceAll('+', '_')}.apk';
-    await _dio.download(update.apkUrl, path, onReceiveProgress: onReceiveProgress);
-    await OpenFilex.open(path);
+    final file = File(path);
+
+    int existingLength = 0;
+    if (await file.exists()) {
+      existingLength = await file.length();
+    }
+
+    try {
+      final response = await _dio.get<ResponseBody>(
+        update.apkUrl,
+        options: Options(
+          headers: {
+            if (existingLength > 0) 'range': 'bytes=$existingLength-',
+          },
+          responseType: ResponseType.stream,
+        ),
+      );
+
+      final totalLength = int.tryParse(response.headers.value('content-length') ?? '0') ?? 0;
+      final isPartial = response.statusCode == 206;
+
+      if (!isPartial && existingLength > 0) {
+        existingLength = 0;
+        await file.delete();
+      }
+
+      final sink = file.openWrite(mode: isPartial ? FileMode.append : FileMode.write);
+
+      int received = existingLength;
+      int actualTotal = isPartial ? totalLength + existingLength : totalLength;
+
+      await for (final chunk in response.data!.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+        onReceiveProgress?.call(received, actualTotal);
+      }
+
+      await sink.flush();
+      await sink.close();
+
+      final result = await OpenFilex.open(path);
+      if (result.type != ResultType.done) {
+        throw Exception(result.message);
+      }
+    } catch (e) {
+      logger.e("Download failed", error: e);
+      rethrow;
+    }
   }
 
   /// Compares "1.0.1+6"-style versions against the running app.
