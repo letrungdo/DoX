@@ -217,28 +217,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get all => 'All';
 
   @override
-  String expenseCount(int count) {
-    return '$count expenses';
-  }
-
-  @override
   String saleCount(int count) {
     return '$count sales';
-  }
-
-  @override
-  String revenueAmount(String amount) {
-    return 'Revenue: $amount';
-  }
-
-  @override
-  String profitAmount(String amount) {
-    return 'Profit: $amount';
-  }
-
-  @override
-  String totalAmount(String amount) {
-    return 'Total: $amount';
   }
 
   @override
@@ -684,4 +664,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profitLabel => 'Profit';
+
+  @override
+  String get errorEnterAmount => 'Please enter an amount';
+
+  @override
+  String get errorEnterQuantity => 'Please enter a quantity';
+
+  @override
+  String get errorEnterBatchName => 'Please enter a batch name';
+
+  @override
+  String get revenue => 'Revenue';
+
+  @override
+  String get totalLabel => 'Total';
+
+  @override
+  String get sellGrownChicken => 'Sell grown chickens';
 }

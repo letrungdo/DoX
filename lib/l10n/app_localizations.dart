@@ -494,35 +494,11 @@ abstract class AppLocalizations {
   /// **'All'**
   String get all;
 
-  /// No description provided for @expenseCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} expenses'**
-  String expenseCount(int count);
-
   /// No description provided for @saleCount.
   ///
   /// In en, this message translates to:
   /// **'{count} sales'**
   String saleCount(int count);
-
-  /// No description provided for @revenueAmount.
-  ///
-  /// In en, this message translates to:
-  /// **'Revenue: {amount}'**
-  String revenueAmount(String amount);
-
-  /// No description provided for @profitAmount.
-  ///
-  /// In en, this message translates to:
-  /// **'Profit: {amount}'**
-  String profitAmount(String amount);
-
-  /// No description provided for @totalAmount.
-  ///
-  /// In en, this message translates to:
-  /// **'Total: {amount}'**
-  String totalAmount(String amount);
 
   /// No description provided for @noBatchesInYear.
   ///
@@ -1285,6 +1261,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profit'**
   String get profitLabel;
+
+  /// No description provided for @errorEnterAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter an amount'**
+  String get errorEnterAmount;
+
+  /// No description provided for @errorEnterQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a quantity'**
+  String get errorEnterQuantity;
+
+  /// No description provided for @errorEnterBatchName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a batch name'**
+  String get errorEnterBatchName;
+
+  /// No description provided for @revenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue'**
+  String get revenue;
+
+  /// No description provided for @totalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get totalLabel;
+
+  /// No description provided for @sellGrownChicken.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell grown chickens'**
+  String get sellGrownChicken;
 }
 
 class _AppLocalizationsDelegate

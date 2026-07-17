@@ -217,28 +217,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get all => 'Tất cả';
 
   @override
-  String expenseCount(int count) {
-    return '$count khoản chi';
-  }
-
-  @override
   String saleCount(int count) {
     return '$count lượt bán';
-  }
-
-  @override
-  String revenueAmount(String amount) {
-    return 'Doanh thu: $amount';
-  }
-
-  @override
-  String profitAmount(String amount) {
-    return 'Lợi nhuận: $amount';
-  }
-
-  @override
-  String totalAmount(String amount) {
-    return 'Tổng: $amount';
   }
 
   @override
@@ -684,4 +664,22 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get profitLabel => 'Lợi nhuận';
+
+  @override
+  String get errorEnterAmount => 'Vui lòng nhập số tiền';
+
+  @override
+  String get errorEnterQuantity => 'Vui lòng nhập số lượng';
+
+  @override
+  String get errorEnterBatchName => 'Vui lòng nhập tên lứa gà';
+
+  @override
+  String get revenue => 'Doanh thu';
+
+  @override
+  String get totalLabel => 'Tổng';
+
+  @override
+  String get sellGrownChicken => 'Bán gà lớn';
 }

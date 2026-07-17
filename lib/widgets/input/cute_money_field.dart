@@ -7,6 +7,7 @@ class CuteMoneyField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final String? hint;
+  final String? errorText;
   final ValueChanged<String>? onChanged;
 
   const CuteMoneyField({
@@ -14,6 +15,7 @@ class CuteMoneyField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.hint,
+    this.errorText,
     this.onChanged,
   });
 
@@ -23,6 +25,7 @@ class CuteMoneyField extends StatelessWidget {
       controller: controller,
       label: label,
       hint: hint,
+      errorText: errorText,
       suffixText: "đ",
       keyboardType: TextInputType.number,
       inputFormatters: [ThousandsSeparatorInputFormatter()],

@@ -35,6 +35,14 @@ class _ChickenStatisticsScreenState
   }
 
   @override
+  void initData() {
+    super.initData();
+    vm.ensureBatchesLoaded();
+    vm.ensureCockSalesLoaded();
+    vm.ensureExpensesLoaded();
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
@@ -56,6 +64,11 @@ class _ChickenStatisticsScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
+          if (vm.isBatchesLoading ||
+              vm.isCockSalesLoading ||
+              vm.isExpensesLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
           return TabBarView(
             controller: _tabController,
             children: [_buildMonthlyStats(vm), _buildYearlyStats(vm)],
@@ -167,31 +180,22 @@ class _ChickenStatisticsScreenState
             ),
             const Divider(),
             if (data.batchRevenue != 0)
-              _buildStatRow(
-                l10n.batchRevenue,
-                data.batchRevenue,
-                Colors.green[700]!,
-              ),
+              _buildStatRow(l10n.batchRevenue, data.batchRevenue),
             if (data.cockRevenue != 0)
-              _buildStatRow(
-                l10n.cockRevenue,
-                data.cockRevenue,
-                Colors.red[700]!,
-              ),
+              _buildStatRow(l10n.cockRevenue, data.cockRevenue),
             if (data.meatRevenue != 0)
-              _buildStatRow(l10n.meatRevenue, data.meatRevenue, Colors.brown),
+              _buildStatRow(l10n.meatRevenue, data.meatRevenue),
             const Divider(height: 8),
             _buildStatRow(
               l10n.totalRevenueLabel,
               data.batchRevenue + data.cockRevenue + data.meatRevenue,
-              Colors.green,
             ),
-            _buildStatRow(l10n.totalExpensesLabel, data.expense, Colors.orange),
+            _buildStatRow(l10n.totalExpensesLabel, data.expense),
             const SizedBox(height: 4),
             _buildStatRow(
               l10n.profitLabel,
               data.profit,
-              data.profit >= 0 ? Colors.blue : Colors.red,
+              color: data.profit >= 0 ? context.colors.money : Colors.red,
               isBold: true,
             ),
           ],
@@ -202,8 +206,8 @@ class _ChickenStatisticsScreenState
 
   Widget _buildStatRow(
     String label,
-    double value,
-    Color color, {
+    double value, {
+    Color? color,
     bool isBold = false,
   }) {
     return Padding(
@@ -211,7 +215,10 @@ class _ChickenStatisticsScreenState
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
+          Text(
+            label,
+            style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
+          ),
           Text(
             "${value.toCurrency()}đ",
             style: TextStyle(

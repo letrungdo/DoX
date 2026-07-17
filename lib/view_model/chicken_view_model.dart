@@ -37,19 +37,49 @@ class ChickenViewModel extends CoreViewModel {
 
   StreamSubscription<AuthState>? _authSub;
 
+  bool _batchesLoaded = false;
+  bool _cockSalesLoaded = false;
+  bool _expensesLoaded = false;
+
+  // Sections requested by a screen at least once; reloaded again on sign-in.
+  bool _batchesRequested = false;
+  bool _cockSalesRequested = false;
+  bool _expensesRequested = false;
+
+  bool _batchesLoading = false;
+  bool get isBatchesLoading => _batchesLoading;
+
+  bool _cockSalesLoading = false;
+  bool get isCockSalesLoading => _cockSalesLoading;
+
+  bool _expensesLoading = false;
+  bool get isExpensesLoading => _expensesLoading;
+
   @override
   void initState() {
     super.initState();
-    // Data is (re)loaded on sign-in because this view model lives app-wide:
-    // ChickenScreen may already be built (empty) while the login screen is shown.
-    _authSub = supabase.auth.onAuthStateChange.listen((state) {
+    // This view model lives app-wide and initState runs on every screen mount,
+    // so only subscribe once. Data is (re)loaded on sign-in because screens may
+    // already be built (empty) while the login screen is shown.
+    _authSub ??= supabase.auth.onAuthStateChange.listen((state) {
       switch (state.event) {
         case AuthChangeEvent.signedIn:
-          _loadData();
+          if (_batchesRequested) {
+            unawaited(loadBatches(showLoading: true));
+          }
+          if (_cockSalesRequested) {
+            unawaited(loadCockSales(showLoading: true));
+          }
+          if (_expensesRequested) {
+            unawaited(loadExpenses(showLoading: true));
+          }
         case AuthChangeEvent.signedOut:
           _batches = [];
           _globalCockSales = [];
           _globalExpenses = [];
+          _batchesLoaded = false;
+          _cockSalesLoaded = false;
+          _expensesLoaded = false;
           notifyListenersSafe();
           unawaited(_syncVaccinationNotifications());
         default:
@@ -67,34 +97,95 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initData() {
     super.initData();
-    if (supabase.auth.currentSession == null) {
-      if (vaccinationNotificationsEnabled) {
-        unawaited(notificationService.cancelVaccinationNotifications());
-      }
-      return;
+    if (supabase.auth.currentSession == null &&
+        vaccinationNotificationsEnabled) {
+      unawaited(notificationService.cancelVaccinationNotifications());
     }
-    _loadData();
   }
 
-  Future<void> _loadData({bool showLoading = true}) async {
-    if (showLoading) setBusy(true);
+  /// Called when a screen showing batches opens: always re-fetches; shows the
+  /// spinner only on the first load, later entries refresh silently.
+  Future<void> ensureBatchesLoaded() async {
+    _batchesRequested = true;
+    if (_batchesLoading) return;
+    await loadBatches(showLoading: !_batchesLoaded);
+  }
+
+  /// Same as [ensureBatchesLoaded] but for global cock sales.
+  Future<void> ensureCockSalesLoaded() async {
+    _cockSalesRequested = true;
+    if (_cockSalesLoading) return;
+    await loadCockSales(showLoading: !_cockSalesLoaded);
+  }
+
+  /// Same as [ensureBatchesLoaded] but for global expenses.
+  Future<void> ensureExpensesLoaded() async {
+    _expensesRequested = true;
+    if (_expensesLoading) return;
+    await loadExpenses(showLoading: !_expensesLoaded);
+  }
+
+  Future<void> loadBatches({bool showLoading = false}) async {
+    if (supabase.auth.currentSession == null) return;
+    if (showLoading) {
+      _batchesLoading = true;
+      notifyListenersSafe();
+    }
     try {
       _batches = await _repository.getBatches();
-      _globalCockSales = await _repository.getGlobalCockSales();
-      _globalExpenses = await _repository.getGlobalExpenses();
-      await _syncVaccinationNotifications();
+      _batchesLoaded = true;
     } catch (e) {
-      logger.e("load chicken data failed", error: e);
+      logger.e("load chicken batches failed", error: e);
     } finally {
-      if (showLoading) {
-        setBusy(false);
-      } else {
-        notifyListenersSafe();
-      }
+      _batchesLoading = false;
+      notifyListenersSafe();
+    }
+    // Scheduling local notifications can be slow; keep it off the UI path.
+    unawaited(_syncVaccinationNotifications());
+  }
+
+  Future<void> loadCockSales({bool showLoading = false}) async {
+    if (supabase.auth.currentSession == null) return;
+    if (showLoading) {
+      _cockSalesLoading = true;
+      notifyListenersSafe();
+    }
+    try {
+      _globalCockSales = await _repository.getGlobalCockSales();
+      _cockSalesLoaded = true;
+    } catch (e) {
+      logger.e("load cock sales failed", error: e);
+    } finally {
+      _cockSalesLoading = false;
+      notifyListenersSafe();
     }
   }
 
-  Future<void> refreshData() => _loadData(showLoading: false);
+  Future<void> loadExpenses({bool showLoading = false}) async {
+    if (supabase.auth.currentSession == null) return;
+    if (showLoading) {
+      _expensesLoading = true;
+      notifyListenersSafe();
+    }
+    try {
+      _globalExpenses = await _repository.getGlobalExpenses();
+      _expensesLoaded = true;
+    } catch (e) {
+      logger.e("load global expenses failed", error: e);
+    } finally {
+      _expensesLoading = false;
+      notifyListenersSafe();
+    }
+  }
+
+  /// Refreshes every section that has been loaded before.
+  Future<void> refreshData() async {
+    await Future.wait([
+      if (_batchesLoaded) loadBatches(),
+      if (_cockSalesLoaded) loadCockSales(),
+      if (_expensesLoaded) loadExpenses(),
+    ]);
+  }
 
   Future<void> addBatch({
     required String name,
@@ -253,7 +344,7 @@ class ChickenViewModel extends CoreViewModel {
           notifyListenersSafe();
         },
       );
-      await _loadData();
+      await refreshData();
       return data.totalRecords;
     } finally {
       _isImporting = false;
@@ -267,7 +358,7 @@ class ChickenViewModel extends CoreViewModel {
     }
 
     final deletedCount = await _repository.deleteAllData();
-    await _loadData();
+    await refreshData();
     return deletedCount;
   }
 

@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
@@ -10,10 +11,10 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,12 @@ class _GlobalExpensesScreenState
   int _selectedYear = DateTime.now().year;
 
   @override
+  void initData() {
+    super.initData();
+    vm.ensureExpensesLoaded();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
@@ -50,6 +57,9 @@ class _GlobalExpensesScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
+          if (vm.isExpensesLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final years = {
             DateTime.now().year,
             ...vm.globalExpenses.map((expense) => expense.date.year),
@@ -95,12 +105,25 @@ class _GlobalExpensesScreenState
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
-                        child: Text(
-                          l10n.totalAmount("${total.toCurrency()}đ"),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: "${l10n.totalLabel}: ",
+                                style: TextStyle(
+                                  color: context
+                                      .theme
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                              ),
+                              TextSpan(
+                                text: "${total.toCurrency()}đ",
+                                style: TextStyle(color: context.colors.money),
+                              ),
+                            ],
                           ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -109,7 +132,7 @@ class _GlobalExpensesScreenState
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: vm.refreshData,
+                  onRefresh: vm.loadExpenses,
                   child: expenses.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -167,9 +190,9 @@ class _GlobalExpensesScreenState
                               ),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
+                                  color: context.colors.money,
                                 ),
                               ),
                             );
@@ -193,12 +216,13 @@ class _GlobalExpensesScreenState
     final noteController = TextEditingController(text: expense?.note ?? '');
     var selectedType = expense?.type ?? ExpenseType.feed;
     var expenseDate = expense?.date ?? DateTime.now();
+    String? amountError;
 
     showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
-          icon: Assets.images.feedCute,
+          icon: _expenseAsset(selectedType),
           title: isEditing ? l10n.editCommonExpense : l10n.addCommonExpense,
           accent: Colors.orange,
           confirmText: isEditing ? l10n.update : l10n.save,
@@ -211,7 +235,10 @@ class _GlobalExpensesScreenState
               : null,
           onConfirm: () async {
             final amount = amountController.text.toMoney() ?? 0;
-            if (amount <= 0) return;
+            if (amount <= 0) {
+              setState(() => amountError = l10n.errorEnterAmount);
+              return;
+            }
             try {
               final updatedExpense = Expense(
                 id: expense?.id ?? const Uuid().v4(),
@@ -242,21 +269,30 @@ class _GlobalExpensesScreenState
             }
           },
           children: [
-            DropdownButtonFormField<ExpenseType>(
-              initialValue: selectedType,
-              items: ExpenseType.values.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(_expenseLabel(type)),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => selectedType = value!),
-              decoration: cuteInputDecoration(context, l10n.expenseType),
-              borderRadius: BorderRadius.circular(14),
+            CuteSegmentedButton<ExpenseType>(
+              segments: [
+                for (final type in ExpenseType.values)
+                  // Water is unused for common expenses; keep it only when
+                  // editing an old record that still has it.
+                  if (type != ExpenseType.water || selectedType == type)
+                    ButtonSegment(
+                      value: type,
+                      label: Text(_expenseLabel(type)),
+                    ),
+              ],
+              value: selectedType,
+              onChanged: (value) => setState(() => selectedType = value),
             ),
-            CuteMoneyField(
-              controller: amountController,
-              label: l10n.amountLabel,
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: CuteMoneyField(
+                controller: amountController,
+                label: l10n.amountLabel,
+                errorText: amountError,
+                onChanged: (_) {
+                  if (amountError != null) setState(() => amountError = null);
+                },
+              ),
             ),
             CuteTextField(controller: noteController, label: l10n.noteLabel),
             CuteDateField(
@@ -319,14 +355,17 @@ class _GlobalExpensesScreenState
     };
   }
 
-  Widget _expenseSvg(ExpenseType type) {
-    final asset = switch (type) {
+  SvgGenImage _expenseAsset(ExpenseType type) {
+    return switch (type) {
       ExpenseType.feed => Assets.images.feedCute,
       ExpenseType.medicine => Assets.images.medicineCute,
       ExpenseType.electricity => Assets.images.lampCute,
       ExpenseType.water => Assets.images.waterCute,
       ExpenseType.other => Assets.images.starCute,
     };
-    return asset.svg(width: 30, height: 30);
+  }
+
+  Widget _expenseSvg(ExpenseType type) {
+    return _expenseAsset(type).svg(width: 30, height: 30);
   }
 }

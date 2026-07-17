@@ -94,43 +94,11 @@
   "yearPrefix": "Year",
   "yearLabel": "Year:",
   "all": "All",
-  "expenseCount": "{count} expenses",
-  "@expenseCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "saleCount": "{count} sales",
   "@saleCount": {
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "revenueAmount": "Revenue: {amount}",
-  "@revenueAmount": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "profitAmount": "Profit: {amount}",
-  "@profitAmount": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "totalAmount": "Total: {amount}",
-  "@totalAmount": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
       }
     }
   },
@@ -491,5 +459,11 @@
   "batchRevenue": "Batch revenue",
   "cockRevenue": "Fighting rooster revenue",
   "meatRevenue": "Meat chicken revenue",
-  "profitLabel": "Profit"
+  "profitLabel": "Profit",
+  "errorEnterAmount": "Please enter an amount",
+  "errorEnterQuantity": "Please enter a quantity",
+  "errorEnterBatchName": "Please enter a batch name",
+  "revenue": "Revenue",
+  "totalLabel": "Total",
+  "sellGrownChicken": "Sell grown chickens"
 }

@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
@@ -10,6 +11,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
@@ -36,6 +38,12 @@ class _CockSalesScreenState
   int _selectedYear = DateTime.now().year;
 
   @override
+  void initData() {
+    super.initData();
+    vm.ensureCockSalesLoaded();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
@@ -50,6 +58,9 @@ class _CockSalesScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
+          if (vm.isCockSalesLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final years = {
             DateTime.now().year,
             ...vm.globalCockSales.map((sale) => sale.date.year),
@@ -98,28 +109,23 @@ class _CockSalesScreenState
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Row(
-                  children: [
-                    ChoiceChip(
-                      label: Text(l10n.all),
-                      selected: _filter == null,
-                      onSelected: (_) => setState(() => _filter = null),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: Text(l10n.fightingChicken),
-                      selected: _filter == SaleCategory.fighting,
-                      onSelected: (_) =>
-                          setState(() => _filter = SaleCategory.fighting),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: Text(l10n.meatChicken),
-                      selected: _filter == SaleCategory.meat,
-                      onSelected: (_) =>
-                          setState(() => _filter = SaleCategory.meat),
-                    ),
-                  ],
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: CuteSegmentedButton<SaleCategory?>(
+                    segments: [
+                      ButtonSegment(value: null, label: Text(l10n.all)),
+                      ButtonSegment(
+                        value: SaleCategory.fighting,
+                        label: Text(l10n.fightingChicken),
+                      ),
+                      ButtonSegment(
+                        value: SaleCategory.meat,
+                        label: Text(l10n.meatChicken),
+                      ),
+                    ],
+                    value: _filter,
+                    onChanged: (val) => setState(() => _filter = val),
+                  ),
                 ),
               ),
               Padding(
@@ -131,19 +137,29 @@ class _CockSalesScreenState
                       l10n.saleCount(sortedSales.length),
                       style: TextStyle(color: Colors.grey[600]),
                     ),
-                    Text(
-                      l10n.totalAmount("${total.toCurrency()}đ"),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "${l10n.totalLabel}: ",
+                            style: TextStyle(
+                              color: context.theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          TextSpan(
+                            text: "${total.toCurrency()}đ",
+                            style: TextStyle(color: context.colors.money),
+                          ),
+                        ],
                       ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: vm.refreshData,
+                  onRefresh: vm.loadCockSales,
                   child: sortedSales.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -215,7 +231,7 @@ class _CockSalesScreenState
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: color,
+                                  color: context.colors.money,
                                 ),
                               ),
                             );
@@ -239,6 +255,7 @@ class _CockSalesScreenState
     final noteController = TextEditingController(text: sale?.note ?? '');
     DateTime saleDate = sale?.date ?? DateTime.now();
     SaleCategory category = sale?.category ?? SaleCategory.fighting;
+    String? amountError;
 
     await showDialog<void>(
       context: context,
@@ -259,36 +276,38 @@ class _CockSalesScreenState
               : null,
           onConfirm: () async {
             final amount = amountController.text.toMoney() ?? 0;
-            if (amount > 0) {
-              final updatedSale = CockSale(
-                id: sale?.id ?? const Uuid().v4(),
-                amount: amount,
-                date: saleDate,
-                note: noteController.text.trim().isEmpty
-                    ? (category == SaleCategory.meat
-                          ? l10n.soldMeatChickenNote
-                          : l10n.soldFightingChickenNote)
-                    : noteController.text.trim(),
-                category: category,
-              );
-              try {
-                if (isEditing) {
-                  await vm.updateGlobalCockSale(updatedSale);
-                } else {
-                  await vm.addGlobalCockSale(updatedSale);
-                }
-                if (context.mounted) Navigator.pop(context);
-              } catch (error) {
-                if (mounted) {
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(content: Text(l10n.saveFailed(error.toString()))),
-                  );
-                }
+            if (amount <= 0) {
+              setState(() => amountError = l10n.errorEnterAmount);
+              return;
+            }
+            final updatedSale = CockSale(
+              id: sale?.id ?? const Uuid().v4(),
+              amount: amount,
+              date: saleDate,
+              note: noteController.text.trim().isEmpty
+                  ? (category == SaleCategory.meat
+                        ? l10n.soldMeatChickenNote
+                        : l10n.soldFightingChickenNote)
+                  : noteController.text.trim(),
+              category: category,
+            );
+            try {
+              if (isEditing) {
+                await vm.updateGlobalCockSale(updatedSale);
+              } else {
+                await vm.addGlobalCockSale(updatedSale);
+              }
+              if (context.mounted) Navigator.pop(context);
+            } catch (error) {
+              if (mounted) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(content: Text(l10n.saveFailed(error.toString()))),
+                );
               }
             }
           },
           children: [
-            SegmentedButton<SaleCategory>(
+            CuteSegmentedButton<SaleCategory>(
               segments: [
                 ButtonSegment(
                   value: SaleCategory.fighting,
@@ -299,17 +318,17 @@ class _CockSalesScreenState
                   label: Text(l10n.meatChicken),
                 ),
               ],
-              selected: {category},
-              onSelectionChanged: (selection) =>
-                  setState(() => category = selection.first),
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
+              value: category,
+              onChanged: (val) => setState(() => category = val),
             ),
-            CuteMoneyField(controller: amountController, label: l10n.salePrice),
+            CuteMoneyField(
+              controller: amountController,
+              label: l10n.salePrice,
+              errorText: amountError,
+              onChanged: (_) {
+                if (amountError != null) setState(() => amountError = null);
+              },
+            ),
             CuteTextField(
               controller: noteController,
               label: l10n.cockSaleNoteHint,

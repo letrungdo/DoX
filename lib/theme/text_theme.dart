@@ -48,7 +48,10 @@ class DoTextTheme extends ThemeExtension<DoTextTheme> {
   }
 
   @override
-  ThemeExtension<DoTextTheme> lerp(ThemeExtension<DoTextTheme>? other, double t) {
+  ThemeExtension<DoTextTheme> lerp(
+    ThemeExtension<DoTextTheme>? other,
+    double t,
+  ) {
     if (other is! DoTextTheme) {
       return this;
     }

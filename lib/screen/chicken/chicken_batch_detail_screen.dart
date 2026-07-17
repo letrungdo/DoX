@@ -17,6 +17,7 @@ import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -40,12 +41,21 @@ class _ChickenBatchDetailScreenState
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
+  void initData() {
+    super.initData();
+    vm.ensureBatchesLoaded();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: DoAppBar(title: l10n.batchDetailTitle),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
+          if (vm.isBatchesLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final batch = vm.batches.firstWhereOrNull(
             (e) => e.id == widget.batchId,
           );
@@ -202,7 +212,10 @@ class _ChickenBatchDetailScreenState
             ),
             trailing: Text(
               "${e.amount.toCurrency()}đ",
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: context.colors.money,
+              ),
             ),
           ),
         ),
@@ -262,7 +275,10 @@ class _ChickenBatchDetailScreenState
                     children: [
                       Text(
                         "${sale.amount.toCurrency()}đ",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: context.colors.money,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(
@@ -296,7 +312,7 @@ class _ChickenBatchDetailScreenState
               _buildRowInfo(
                 l10n.profitUpper,
                 "${batch.profit.toCurrency()}đ",
-                color: batch.profit >= 0 ? Colors.green : Colors.red,
+                color: batch.profit >= 0 ? context.colors.money : Colors.red,
                 isBold: true,
               ),
             ],
@@ -352,7 +368,10 @@ class _ChickenBatchDetailScreenState
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
+          Text(
+            label,
+            style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
+          ),
           Text(
             value,
             style: TextStyle(
@@ -367,6 +386,7 @@ class _ChickenBatchDetailScreenState
 
   void _showAddExpenseDialog(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
+    String? amountError;
     final amountController = TextEditingController();
     final noteController = TextEditingController();
     ExpenseType selectedType = ExpenseType.feed;
@@ -381,21 +401,21 @@ class _ChickenBatchDetailScreenState
           confirmText: l10n.save,
           onConfirm: () {
             final amount = amountController.text.toMoney() ?? 0;
-            if (amount > 0) {
-              vm.addExpense(
-                batch.id,
-                Expense(
-                  id: const Uuid().v4(),
-                  type: selectedType,
-                  amount: amount,
-                  date: DateTime.now(),
-                  note: noteController.text.isEmpty
-                      ? null
-                      : noteController.text,
-                ),
-              );
-              Navigator.pop(context);
+            if (amount <= 0) {
+              setState(() => amountError = l10n.errorEnterAmount);
+              return;
             }
+            vm.addExpense(
+              batch.id,
+              Expense(
+                id: const Uuid().v4(),
+                type: selectedType,
+                amount: amount,
+                date: DateTime.now(),
+                note: noteController.text.isEmpty ? null : noteController.text,
+              ),
+            );
+            Navigator.pop(context);
           },
           children: [
             DropdownButtonFormField<ExpenseType>(
@@ -415,6 +435,10 @@ class _ChickenBatchDetailScreenState
             CuteMoneyField(
               controller: amountController,
               label: l10n.amountLabel,
+              errorText: amountError,
+              onChanged: (_) {
+                if (amountError != null) setState(() => amountError = null);
+              },
             ),
             CuteTextField(controller: noteController, label: l10n.noteLabel),
           ],
@@ -440,6 +464,8 @@ class _ChickenBatchDetailScreenState
     );
     final noteController = TextEditingController();
     DateTime saleDate = DateTime.now();
+    String? qtyError;
+    String? amountError;
 
     void updateTotal() {
       final unitPrice = unitPriceController.text.toMoney() ?? 0;
@@ -458,21 +484,24 @@ class _ChickenBatchDetailScreenState
           onConfirm: () {
             final amount = totalAmountController.text.toMoney() ?? 0;
             final qty = int.tryParse(qtyController.text) ?? 0;
-            if (amount > 0 && qty > 0) {
-              vm.addBatchSale(
-                batch.id,
-                BatchSale(
-                  id: const Uuid().v4(),
-                  date: saleDate,
-                  quantity: qty,
-                  amount: amount,
-                  note: noteController.text.isEmpty
-                      ? null
-                      : noteController.text,
-                ),
-              );
-              Navigator.pop(context);
+            if (qty <= 0 || amount <= 0) {
+              setState(() {
+                qtyError = qty <= 0 ? l10n.errorEnterQuantity : null;
+                amountError = amount <= 0 ? l10n.errorEnterAmount : null;
+              });
+              return;
             }
+            vm.addBatchSale(
+              batch.id,
+              BatchSale(
+                id: const Uuid().v4(),
+                date: saleDate,
+                quantity: qty,
+                amount: amount,
+                note: noteController.text.isEmpty ? null : noteController.text,
+              ),
+            );
+            Navigator.pop(context);
           },
           children: [
             Row(
@@ -482,7 +511,12 @@ class _ChickenBatchDetailScreenState
                     controller: qtyController,
                     label: l10n.quantityLabel,
                     keyboardType: TextInputType.number,
-                    onChanged: (_) => setState(updateTotal),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    errorText: qtyError,
+                    onChanged: (_) => setState(() {
+                      qtyError = null;
+                      updateTotal();
+                    }),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -490,7 +524,10 @@ class _ChickenBatchDetailScreenState
                   child: CuteMoneyField(
                     controller: unitPriceController,
                     label: l10n.pricePerUnit,
-                    onChanged: (_) => setState(updateTotal),
+                    onChanged: (_) => setState(() {
+                      amountError = null;
+                      updateTotal();
+                    }),
                   ),
                 ),
               ],
@@ -498,6 +535,10 @@ class _ChickenBatchDetailScreenState
             CuteMoneyField(
               controller: totalAmountController,
               label: l10n.totalAutoCalculated,
+              errorText: amountError,
+              onChanged: (_) {
+                if (amountError != null) setState(() => amountError = null);
+              },
             ),
             CuteTextField(controller: noteController, label: l10n.saleNoteHint),
             CuteDateField(
@@ -544,6 +585,8 @@ class _ChickenBatchDetailScreenState
     );
     DateTime incubationDate = batch.incubationDate;
     DateTime? actualHatchDate = batch.actualHatchDate;
+    String? nameError;
+    String? qtyError;
 
     showDialog(
       context: context,
@@ -553,26 +596,45 @@ class _ChickenBatchDetailScreenState
           title: l10n.editBatchInfo,
           confirmText: l10n.save,
           onConfirm: () {
-            final name = nameController.text;
-            final qty = int.tryParse(quantityController.text) ?? 0;
-            if (name.isNotEmpty && qty >= 0) {
-              vm.updateBatch(
-                batch.copyWith(
-                  name: name,
-                  quantity: qty,
-                  incubationDate: incubationDate,
-                  actualHatchDate: actualHatchDate,
-                ),
-              );
-              Navigator.pop(context);
+            final name = nameController.text.trim();
+            final qty = int.tryParse(quantityController.text);
+            if (name.isEmpty || qty == null || qty < 0) {
+              setState(() {
+                nameError = name.isEmpty ? l10n.errorEnterBatchName : null;
+                qtyError = (qty == null || qty < 0)
+                    ? l10n.errorEnterQuantity
+                    : null;
+              });
+              return;
             }
+            vm.updateBatch(
+              batch.copyWith(
+                name: name,
+                quantity: qty,
+                incubationDate: incubationDate,
+                actualHatchDate: actualHatchDate,
+              ),
+            );
+            Navigator.pop(context);
           },
           children: [
-            CuteTextField(controller: nameController, label: l10n.batchName),
+            CuteTextField(
+              controller: nameController,
+              label: l10n.batchName,
+              errorText: nameError,
+              onChanged: (_) {
+                if (nameError != null) setState(() => nameError = null);
+              },
+            ),
             CuteTextField(
               controller: quantityController,
               label: l10n.initialQuantity,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              errorText: qtyError,
+              onChanged: (_) {
+                if (qtyError != null) setState(() => qtyError = null);
+              },
             ),
             CuteDateField(
               label: l10n.incubationDate,

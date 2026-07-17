@@ -8,6 +8,7 @@ InputDecoration cuteInputDecoration(
   String? prefixText,
   String? suffixText,
   Widget? suffixIcon,
+  String? errorText,
 }) {
   final scheme = Theme.of(context).colorScheme;
   OutlineInputBorder border([BorderSide? side]) => OutlineInputBorder(
@@ -22,6 +23,7 @@ InputDecoration cuteInputDecoration(
     prefixText: prefixText,
     suffixText: suffixText,
     suffixIcon: suffixIcon,
+    errorText: errorText,
     filled: true,
     fillColor: scheme.surfaceContainerLow,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
