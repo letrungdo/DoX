@@ -61,6 +61,31 @@ class _StorageService {
   Future<bool> setShowLocketTab(bool value) {
     return prefs.setBool(StorageKey.showLocketTab, value);
   }
+
+  bool getShowElectricTab() {
+    return prefs.getBool(StorageKey.showElectricTab) ?? true;
+  }
+
+  Future<bool> setShowElectricTab(bool value) {
+    return prefs.setBool(StorageKey.showElectricTab, value);
+  }
+
+  /// Bottom tab order as [AppTab] names; null when the user never reordered.
+  List<String>? getTabOrder() {
+    return prefs.getStringList(StorageKey.tabOrder);
+  }
+
+  Future<bool> setTabOrder(List<String> value) {
+    return prefs.setStringList(StorageKey.tabOrder, value);
+  }
+
+  bool getElectricReminderEnabled() {
+    return prefs.getBool(StorageKey.electricReminder) ?? false;
+  }
+
+  Future<bool> setElectricReminderEnabled(bool value) {
+    return prefs.setBool(StorageKey.electricReminder, value);
+  }
 }
 
 final storageService = _StorageService();

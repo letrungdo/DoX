@@ -230,12 +230,6 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settings;
 
-  /// No description provided for @showLocketTab.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Locket Tab'**
-  String get showLocketTab;
-
   /// No description provided for @language.
   ///
   /// In en, this message translates to:
@@ -259,6 +253,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Menu'**
   String get menu;
+
+  /// No description provided for @electricity.
+  ///
+  /// In en, this message translates to:
+  /// **'Electricity'**
+  String get electricity;
+
+  /// No description provided for @electricityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Electricity management'**
+  String get electricityTitle;
+
+  /// No description provided for @tabOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab order & visibility'**
+  String get tabOrder;
+
+  /// No description provided for @electricReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly electricity reminder'**
+  String get electricReminder;
+
+  /// No description provided for @electricNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Electricity bill time ⚡'**
+  String get electricNotificationTitle;
+
+  /// No description provided for @electricNotificationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check last month\'s power usage and bill in the app!'**
+  String get electricNotificationBody;
+
+  /// No description provided for @electricLoginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to CPC customer care'**
+  String get electricLoginTitle;
+
+  /// No description provided for @username.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get username;
+
+  /// No description provided for @password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get password;
+
+  /// No description provided for @customerCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer code'**
+  String get customerCode;
+
+  /// No description provided for @meterId.
+  ///
+  /// In en, this message translates to:
+  /// **'Meter ID'**
+  String get meterId;
+
+  /// No description provided for @electricUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Power consumption'**
+  String get electricUsage;
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
+
+  /// No description provided for @thisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get thisMonth;
+
+  /// No description provided for @lastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get lastMonth;
+
+  /// No description provided for @latestMeterReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest reading'**
+  String get latestMeterReading;
+
+  /// No description provided for @spiderReadings.
+  ///
+  /// In en, this message translates to:
+  /// **'RF-SPIDER readings'**
+  String get spiderReadings;
+
+  /// No description provided for @dailyUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily consumption'**
+  String get dailyUsage;
+
+  /// No description provided for @seriesThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get seriesThisYear;
+
+  /// No description provided for @seriesLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Same period last year'**
+  String get seriesLastYear;
+
+  /// No description provided for @addAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add account'**
+  String get addAccount;
+
+  /// No description provided for @removeAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign {name} out of the app?'**
+  String removeAccountConfirm(String name);
+
+  /// No description provided for @billingHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing history'**
+  String get billingHistory;
+
+  /// No description provided for @monthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}/{year}'**
+  String monthLabel(String month, String year);
+
+  /// No description provided for @sameMonthLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Same month last year: {value}'**
+  String sameMonthLastYear(String value);
 
   /// No description provided for @news.
   ///

@@ -1,7 +1,11 @@
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/constants/enum/app_tab.dart';
 import 'package:do_x/router/app_router.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/router/navigator_observer.dart';
 import 'package:do_x/services/location_service.dart';
+import 'package:do_x/services/notification_service.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/locket/auth_service.dart';
 import 'package:do_x/services/locket/locket_service.dart';
 import 'package:do_x/services/locket/upload_service.dart';
@@ -30,6 +34,35 @@ class _MyAppState extends State<MyApp> {
     appVm.initState();
     chickenVm.setCurrentContext(context);
     chickenVm.initState();
+    notificationService.electricNotificationMonth.addListener(
+      _openElectricNotification,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _openElectricNotification();
+    });
+  }
+
+  void _openElectricNotification() {
+    final month = notificationService.electricNotificationMonth.value;
+    if (month == null) return;
+    notificationService.electricNotificationMonth.value = null;
+
+    appVm.requestElectricMonth(month);
+    if (!appVm.showElectricTab) appVm.setShowElectricTab(true);
+    final electricIndex = appVm.visibleTabs.indexOf(AppTab.electric);
+    if (electricIndex >= 0) storageService.setTabIndex(electricIndex);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      appRouter.navigate(const MainRoute(children: [ElectricRoute()]));
+    });
+  }
+
+  @override
+  void dispose() {
+    notificationService.electricNotificationMonth.removeListener(
+      _openElectricNotification,
+    );
+    super.dispose();
   }
 
   @override
@@ -55,7 +88,9 @@ class _MyAppState extends State<MyApp> {
             locale: data.$2 ?? AppLocalizations.supportedLocales.first,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: appRouter.config(navigatorObservers: () => [MyObserver()]),
+            routerConfig: appRouter.config(
+              navigatorObservers: () => [MyObserver()],
+            ),
           );
         },
       ),

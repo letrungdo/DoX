@@ -22,13 +22,54 @@
   "reduceTo480p": "Giảm xuống 480p",
   "videoStillTooLargeAt480p": "Vẫn trên 6MB ở 480p — vui lòng cắt ngắn video :(",
   "settings": "Cài đặt",
-  "showLocketTab": "Hiện tab Locket",
   "language": "Ngôn ngữ",
   "vietnamese": "Tiếng Việt",
   "english": "Tiếng Anh",
   "menu": "Menu",
+  "electricity": "Điện",
+  "electricityTitle": "Quản lý điện",
+  "tabOrder": "Thứ tự & hiển thị tab",
+  "electricReminder": "Thông báo tiền điện hàng tháng",
+  "electricNotificationTitle": "Đến kỳ chốt tiền điện ⚡",
+  "electricNotificationBody": "Xem điện năng tiêu thụ và tiền điện tháng vừa rồi trong app nhé!",
+  "electricLoginTitle": "Đăng nhập CSKH Điện lực (CPC)",
+  "username": "Tên đăng nhập",
+  "password": "Mật khẩu",
+  "customerCode": "Mã khách hàng",
+  "meterId": "Mã công tơ",
+  "electricUsage": "Điện năng tiêu thụ",
+  "today": "Hôm nay",
+  "yesterday": "Hôm qua",
+  "thisMonth": "Tháng này",
+  "lastMonth": "Tháng trước",
+  "latestMeterReading": "Chỉ số mới nhất",
+  "spiderReadings": "Đo xa RF-SPIDER",
+  "dailyUsage": "Tiêu thụ theo ngày",
+  "seriesThisYear": "Năm nay",
+  "seriesLastYear": "Cùng kỳ năm trước",
+  "addAccount": "Thêm tài khoản",
+  "removeAccountConfirm": "Đăng xuất tài khoản {name} khỏi ứng dụng?",
+  "@removeAccountConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "billingHistory": "Lịch sử tiền điện",
+  "monthLabel": "Tháng {month}/{year}",
+  "@monthLabel": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "year": {"type": "String"}
+    }
+  },
+  "sameMonthLastYear": "Cùng kỳ năm trước: {value}",
+  "@sameMonthLastYear": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
   "news": "Tin tức",
-  "chicken": "Nuôi gà",
+  "chicken": "Gà",
   "locket": "Locket",
   "rebootRouter": "Quản lý Wifi",
   "about": "Giới thiệu",

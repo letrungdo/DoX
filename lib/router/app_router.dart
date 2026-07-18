@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/enum/app_tab.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
@@ -21,7 +22,13 @@ class _AppRouter extends RootStackRouter {
 
   @override
   List<AutoRoute> get routes {
+    // The stored index is a position in the user-ordered visible tab list, so
+    // resolve it to a tab id before marking a child route as initial.
+    final visibleTabs = AppTab.visibleFromStorage();
     final initialTabIndex = storageService.getTabIndex();
+    final initialTab = (initialTabIndex >= 0 && initialTabIndex < visibleTabs.length)
+        ? visibleTabs[initialTabIndex]
+        : AppTab.news;
 
     return [
       CustomRoute(
@@ -30,16 +37,16 @@ class _AppRouter extends RootStackRouter {
         page: MainRoute.page,
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
-          AutoRoute(initial: initialTabIndex == 0, path: 'news', page: NewsRoute.page),
+          AutoRoute(initial: initialTab == AppTab.news, path: 'news', page: NewsRoute.page),
           AutoRoute(
-            initial: initialTabIndex == 1,
+            initial: initialTab == AppTab.chicken,
             path: 'chicken',
             page: ChickenRoute.page,
             guards: [_supabaseAuthGuard],
           ),
           AutoRoute(
             path: 'locket',
-            initial: initialTabIndex == 2,
+            initial: initialTab == AppTab.locket,
             page: locketTab.page,
             children: [
               AutoRoute(
@@ -60,7 +67,8 @@ class _AppRouter extends RootStackRouter {
               AutoRoute(path: 'trimmer', page: TrimmerRoute.page),
             ],
           ),
-          AutoRoute(initial: initialTabIndex == 3, path: 'menu', page: MenuRoute.page),
+          AutoRoute(initial: initialTab == AppTab.electric, path: 'electric', page: ElectricRoute.page),
+          AutoRoute(initial: initialTab == AppTab.menu, path: 'menu', page: MenuRoute.page),
         ],
       ),
       AutoRoute(path: '/login', page: AppLoginRoute.page),

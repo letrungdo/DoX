@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:do_x/constants/storage.dart';
+import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/response/user_model.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -40,6 +41,24 @@ class _SecureStorageService {
 
   Future<void> saveSupabaseAccount({required String email, required String password}) {
     return _secureStorage.write(key: StorageKey.supabaseAccount, value: jsonEncode({'email': email, 'password': password}));
+  }
+
+  Future<List<ElectricAccount>> getCpcAccounts() async {
+    try {
+      final raw = await _secureStorage.read(key: StorageKey.cpcAccounts);
+      if (raw == null) return [];
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => ElectricAccount.fromJson(e)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> saveCpcAccounts(List<ElectricAccount> accounts) {
+    return _secureStorage.write(
+      key: StorageKey.cpcAccounts,
+      value: jsonEncode(accounts.map((e) => e.toJson()).toList()),
+    );
   }
 
   Future<String?> getRouterPassword() {

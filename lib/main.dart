@@ -42,6 +42,9 @@ void main() {
         initSupabase(),
         notificationService.init(),
       ]);
+      if (storageService.getElectricReminderEnabled()) {
+        await notificationService.scheduleMonthlyElectricReminder();
+      }
 
       runApp(const MyApp());
     },

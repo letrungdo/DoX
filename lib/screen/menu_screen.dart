@@ -8,7 +8,6 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
-import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button/button.dart';
@@ -96,7 +95,6 @@ class _MenuScreenState<V extends MenuViewModel>
       child: Column(
         spacing: 8,
         children: [
-          _buildVaccinationNotificationControl(l10n),
           DoButton(
             onPressed: () {
               context.pushRoute(const WifiManagementRoute());
@@ -175,32 +173,6 @@ class _MenuScreenState<V extends MenuViewModel>
     );
     if (confirmed != true || !mounted) return;
     await supabase.auth.signOut();
-  }
-
-  Widget _buildVaccinationNotificationControl(AppLocalizations l10n) {
-    return Selector<ChickenViewModel, bool>(
-      selector: (p0, p1) => p1.vaccinationNotificationsEnabled,
-      builder: (context, enabled, _) {
-        return SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-          secondary: const Icon(Icons.notifications_active_outlined),
-          title: Text(l10n.vaccinationNotifications),
-          value: enabled,
-          onChanged: (value) async {
-            final chickenVM = context.read<ChickenViewModel>();
-            chickenVM.setCurrentContext(context);
-            final changed = await chickenVM.setVaccinationNotificationsEnabled(
-              value,
-            );
-            if (value && !changed && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.notificationPermissionDenied)),
-              );
-            }
-          },
-        );
-      },
-    );
   }
 
   Widget _buildMenuAction(IconData icon, String label) {

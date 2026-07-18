@@ -78,9 +78,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settings => 'Cài đặt';
 
   @override
-  String get showLocketTab => 'Hiện tab Locket';
-
-  @override
   String get language => 'Ngôn ngữ';
 
   @override
@@ -93,10 +90,95 @@ class AppLocalizationsVi extends AppLocalizations {
   String get menu => 'Menu';
 
   @override
+  String get electricity => 'Điện';
+
+  @override
+  String get electricityTitle => 'Quản lý điện';
+
+  @override
+  String get tabOrder => 'Thứ tự & hiển thị tab';
+
+  @override
+  String get electricReminder => 'Thông báo tiền điện hàng tháng';
+
+  @override
+  String get electricNotificationTitle => 'Đến kỳ chốt tiền điện ⚡';
+
+  @override
+  String get electricNotificationBody =>
+      'Xem điện năng tiêu thụ và tiền điện tháng vừa rồi trong app nhé!';
+
+  @override
+  String get electricLoginTitle => 'Đăng nhập CSKH Điện lực (CPC)';
+
+  @override
+  String get username => 'Tên đăng nhập';
+
+  @override
+  String get password => 'Mật khẩu';
+
+  @override
+  String get customerCode => 'Mã khách hàng';
+
+  @override
+  String get meterId => 'Mã công tơ';
+
+  @override
+  String get electricUsage => 'Điện năng tiêu thụ';
+
+  @override
+  String get today => 'Hôm nay';
+
+  @override
+  String get yesterday => 'Hôm qua';
+
+  @override
+  String get thisMonth => 'Tháng này';
+
+  @override
+  String get lastMonth => 'Tháng trước';
+
+  @override
+  String get latestMeterReading => 'Chỉ số mới nhất';
+
+  @override
+  String get spiderReadings => 'Đo xa RF-SPIDER';
+
+  @override
+  String get dailyUsage => 'Tiêu thụ theo ngày';
+
+  @override
+  String get seriesThisYear => 'Năm nay';
+
+  @override
+  String get seriesLastYear => 'Cùng kỳ năm trước';
+
+  @override
+  String get addAccount => 'Thêm tài khoản';
+
+  @override
+  String removeAccountConfirm(String name) {
+    return 'Đăng xuất tài khoản $name khỏi ứng dụng?';
+  }
+
+  @override
+  String get billingHistory => 'Lịch sử tiền điện';
+
+  @override
+  String monthLabel(String month, String year) {
+    return 'Tháng $month/$year';
+  }
+
+  @override
+  String sameMonthLastYear(String value) {
+    return 'Cùng kỳ năm trước: $value';
+  }
+
+  @override
   String get news => 'Tin tức';
 
   @override
-  String get chicken => 'Nuôi gà';
+  String get chicken => 'Gà';
 
   @override
   String get locket => 'Locket';

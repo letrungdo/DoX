@@ -8,11 +8,22 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
+  static const electricNotificationPayload = 'electric:last-month';
+
   static const _channelId = 'chicken_vaccinations';
   static const _channelName = 'Lịch tiêm phòng';
   static const _channelDescription = 'Nhắc lịch tiêm phòng cho các lứa gà';
 
+  static const _electricChannelId = 'electric_bill';
+  static const _electricChannelName = 'Tiền điện';
+  static const _electricChannelDescription =
+      'Nhắc kiểm tra tiền điện đầu tháng';
+  static const _electricReminderId = 0x0E1EC001;
+
   final _plugin = FlutterLocalNotificationsPlugin();
+  final ValueNotifier<DateTime?> electricNotificationMonth = ValueNotifier(
+    null,
+  );
   bool _initialized = false;
 
   bool get isSupported =>
@@ -46,8 +57,22 @@ class NotificationService {
           requestSoundPermission: false,
         ),
       ),
+      onDidReceiveNotificationResponse: _handleNotificationResponse,
     );
     _initialized = true;
+
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    final launchResponse = launchDetails?.notificationResponse;
+    if ((launchDetails?.didNotificationLaunchApp ?? false) &&
+        launchResponse != null) {
+      _handleNotificationResponse(launchResponse);
+    }
+  }
+
+  void _handleNotificationResponse(NotificationResponse response) {
+    if (response.payload != electricNotificationPayload) return;
+    final now = DateTime.now();
+    electricNotificationMonth.value = DateTime(now.year, now.month - 1);
   }
 
   Future<bool> requestPermission() async {
@@ -136,12 +161,62 @@ class NotificationService {
       scheduledCount++;
       if (scheduledCount >= 60) break;
     }
+
+    // cancelAllPendingNotifications above also removed the electric reminder.
+    await _restoreElectricReminderIfEnabled();
   }
 
   Future<void> cancelVaccinationNotifications() async {
     if (!isSupported) return;
     await init();
     await _plugin.cancelAllPendingNotifications();
+    await _restoreElectricReminderIfEnabled();
+  }
+
+  Future<void> _restoreElectricReminderIfEnabled() async {
+    if (storageService.getElectricReminderEnabled()) {
+      await scheduleMonthlyElectricReminder();
+    }
+  }
+
+  /// Repeats at 08:00 on the 1st of every month.
+  Future<void> scheduleMonthlyElectricReminder() async {
+    if (!isSupported) return;
+    await init();
+
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, 1, 8);
+    if (!scheduledDate.isAfter(now)) {
+      scheduledDate = tz.TZDateTime(tz.local, now.year, now.month + 1, 1, 8);
+    }
+
+    final l10n = _localizations();
+    await _plugin.zonedSchedule(
+      id: _electricReminderId,
+      title: l10n.electricNotificationTitle,
+      body: l10n.electricNotificationBody,
+      scheduledDate: scheduledDate,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _electricChannelId,
+          _electricChannelName,
+          channelDescription: _electricChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+        macOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      payload: electricNotificationPayload,
+    );
+  }
+
+  Future<void> cancelMonthlyElectricReminder() async {
+    if (!isSupported) return;
+    await init();
+    await _plugin.cancel(id: _electricReminderId);
   }
 
   int _stableId(String value) {

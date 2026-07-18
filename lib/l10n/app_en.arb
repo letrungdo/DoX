@@ -29,11 +29,52 @@
   "reduceTo480p": "Reduce to 480p",
   "videoStillTooLargeAt480p": "Still over 6MB at 480p — please shorten the video :(",
   "settings": "Settings",
-  "showLocketTab": "Show Locket Tab",
   "language": "Language",
   "vietnamese": "Vietnamese",
   "english": "English",
   "menu": "Menu",
+  "electricity": "Electricity",
+  "electricityTitle": "Electricity management",
+  "tabOrder": "Tab order & visibility",
+  "electricReminder": "Monthly electricity reminder",
+  "electricNotificationTitle": "Electricity bill time ⚡",
+  "electricNotificationBody": "Check last month's power usage and bill in the app!",
+  "electricLoginTitle": "Sign in to CPC customer care",
+  "username": "Username",
+  "password": "Password",
+  "customerCode": "Customer code",
+  "meterId": "Meter ID",
+  "electricUsage": "Power consumption",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "thisMonth": "This month",
+  "lastMonth": "Last month",
+  "latestMeterReading": "Latest reading",
+  "spiderReadings": "RF-SPIDER readings",
+  "dailyUsage": "Daily consumption",
+  "seriesThisYear": "This year",
+  "seriesLastYear": "Same period last year",
+  "addAccount": "Add account",
+  "removeAccountConfirm": "Sign {name} out of the app?",
+  "@removeAccountConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "billingHistory": "Billing history",
+  "monthLabel": "{month}/{year}",
+  "@monthLabel": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "year": {"type": "String"}
+    }
+  },
+  "sameMonthLastYear": "Same month last year: {value}",
+  "@sameMonthLastYear": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
   "news": "News",
   "chicken": "Chicken",
   "locket": "Locket",

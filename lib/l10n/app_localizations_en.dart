@@ -78,9 +78,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings => 'Settings';
 
   @override
-  String get showLocketTab => 'Show Locket Tab';
-
-  @override
   String get language => 'Language';
 
   @override
@@ -91,6 +88,91 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menu => 'Menu';
+
+  @override
+  String get electricity => 'Electricity';
+
+  @override
+  String get electricityTitle => 'Electricity management';
+
+  @override
+  String get tabOrder => 'Tab order & visibility';
+
+  @override
+  String get electricReminder => 'Monthly electricity reminder';
+
+  @override
+  String get electricNotificationTitle => 'Electricity bill time ⚡';
+
+  @override
+  String get electricNotificationBody =>
+      'Check last month\'s power usage and bill in the app!';
+
+  @override
+  String get electricLoginTitle => 'Sign in to CPC customer care';
+
+  @override
+  String get username => 'Username';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get customerCode => 'Customer code';
+
+  @override
+  String get meterId => 'Meter ID';
+
+  @override
+  String get electricUsage => 'Power consumption';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get thisMonth => 'This month';
+
+  @override
+  String get lastMonth => 'Last month';
+
+  @override
+  String get latestMeterReading => 'Latest reading';
+
+  @override
+  String get spiderReadings => 'RF-SPIDER readings';
+
+  @override
+  String get dailyUsage => 'Daily consumption';
+
+  @override
+  String get seriesThisYear => 'This year';
+
+  @override
+  String get seriesLastYear => 'Same period last year';
+
+  @override
+  String get addAccount => 'Add account';
+
+  @override
+  String removeAccountConfirm(String name) {
+    return 'Sign $name out of the app?';
+  }
+
+  @override
+  String get billingHistory => 'Billing history';
+
+  @override
+  String monthLabel(String month, String year) {
+    return '$month/$year';
+  }
+
+  @override
+  String sameMonthLastYear(String value) {
+    return 'Same month last year: $value';
+  }
 
   @override
   String get news => 'News';
