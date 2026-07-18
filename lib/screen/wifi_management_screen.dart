@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';
@@ -27,7 +28,8 @@ class WifiManagementScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _WifiManagementScreenState<V extends WifiManagementViewModel> extends ScreenState<WifiManagementScreen, V> {
+class _WifiManagementScreenState<V extends WifiManagementViewModel>
+    extends ScreenState<WifiManagementScreen, V> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -42,10 +44,13 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
               spacing: 16,
               children: [
                 _buildHeader(l10n),
+                _buildLocalNetworkNavigation(),
                 _buildConfigSection(l10n, vm),
                 if (vm.isBusy || vm.activeStep >= 0) _buildSteps(vm),
-                if (vm.successMessage != null) _buildAlert(vm.successMessage!, isError: false),
-                if (vm.errorMessage != null) _buildAlert(vm.errorMessage!, isError: true),
+                if (vm.successMessage != null)
+                  _buildAlert(vm.successMessage!, isError: false),
+                if (vm.errorMessage != null)
+                  _buildAlert(vm.errorMessage!, isError: true),
                 DoButton(
                   isBusy: vm.isBusy,
                   onPressed: vm.reboot,
@@ -54,7 +59,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                     spacing: 8,
                     children: [
                       const SFIcon(SFIcons.sf_arrow_counterclockwise),
-                      Text(vm.isBusy ? "Đang xử lý..." : l10n.rebootRouterXiaomi),
+                      Text(
+                        vm.isBusy ? "Đang xử lý..." : l10n.rebootRouterXiaomi,
+                      ),
                     ],
                   ),
                 ),
@@ -64,6 +71,51 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocalNetworkNavigation() {
+    return InkWell(
+      onTap: () => context.pushRoute(const LocalNetworkRoute()),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.theme.colorScheme.primaryContainer.withValues(
+            alpha: 0.45,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.theme.colorScheme.outlineVariant),
+        ),
+        child: Row(
+          spacing: 12,
+          children: [
+            CircleAvatar(
+              backgroundColor: context.theme.colorScheme.primary.withValues(
+                alpha: 0.12,
+              ),
+              foregroundColor: context.theme.colorScheme.primary,
+              child: const Icon(Icons.lan_outlined),
+            ),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Thiết bị trong mạng nội bộ',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Xem các thiết bị đang hoạt động trong mạng Wi-Fi',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
         ),
       ),
     );
@@ -90,7 +142,11 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
               children: [
                 Text(
                   "Đo tốc độ mạng và quản lý thiết bị router của bạn",
-                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -108,8 +164,14 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Kiểm tra tốc độ kết nối", style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            if (SpeedTestServer.internetServers.length > 1) _buildServerPicker(vm),
+            Text(
+              "Kiểm tra tốc độ kết nối",
+              style: context.theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (SpeedTestServer.internetServers.length > 1)
+              _buildServerPicker(vm),
           ],
         ),
         Row(
@@ -143,7 +205,10 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
             ),
           ],
         ),
-        if (vm.lanSpeed != null && vm.internetSpeed != null && !vm.isTestingLan && !vm.isTestingInternet)
+        if (vm.lanSpeed != null &&
+            vm.internetSpeed != null &&
+            !vm.isTestingLan &&
+            !vm.isTestingInternet)
           _buildSpeedAnalysis(vm.lanSpeed!, vm.internetSpeed!),
       ],
     );
@@ -160,7 +225,8 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
           child: Row(
             spacing: 8,
             children: [
-              if (vm.selectedServer == server) const Icon(Icons.check, size: 16, color: Colors.green),
+              if (vm.selectedServer == server)
+                const Icon(Icons.check, size: 16, color: Colors.green),
               Text(server.name, style: const TextStyle(fontSize: 13)),
             ],
           ),
@@ -205,7 +271,10 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isTesting ? color : color.withValues(alpha: 0.3), width: isTesting ? 2 : 1),
+          border: Border.all(
+            color: isTesting ? color : color.withValues(alpha: 0.3),
+            width: isTesting ? 2 : 1,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -230,14 +299,21 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                 children: [
                   Text(
                     title,
-                    style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.7)),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: color.withValues(alpha: 0.7),
+                      ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -252,13 +328,22 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    speed != null && (speed > 0 || isTesting) ? l10n.speedMbps(speed.toStringAsFixed(1)) : "--",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.theme.colorScheme.onSurface),
+                    speed != null && (speed > 0 || isTesting)
+                        ? l10n.speedMbps(speed.toStringAsFixed(1))
+                        : "--",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: context.theme.colorScheme.onSurface,
+                    ),
                   ),
                   if (latency != null)
                     Text(
                       "TTFB: ${latency}ms",
-                      style: TextStyle(fontSize: 11, color: context.theme.colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                 ],
               ),
@@ -268,7 +353,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
               isTesting ? "STOP" : l10n.startSpeedTest,
               style: TextStyle(
                 fontSize: 10,
-                color: isTesting ? Colors.red : context.theme.colorScheme.onSurfaceVariant,
+                color: isTesting
+                    ? Colors.red
+                    : context.theme.colorScheme.onSurfaceVariant,
                 fontWeight: isTesting ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -282,10 +369,12 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
     String analysis;
     Color color;
     if (lan < 10) {
-      analysis = "Kết nối LAN rất yếu. Hãy kiểm tra lại dây mạng hoặc khoảng cách tới repeater.";
+      analysis =
+          "Kết nối LAN rất yếu. Hãy kiểm tra lại dây mạng hoặc khoảng cách tới repeater.";
       color = Colors.red;
     } else if (lan > 50 && internet < 10) {
-      analysis = "Kết nối LAN tốt, nhưng Internet chậm. Vấn đề có thể từ nhà cung cấp mạng hoặc router chính.";
+      analysis =
+          "Kết nối LAN tốt, nhưng Internet chậm. Vấn đề có thể từ nhà cung cấp mạng hoặc router chính.";
       color = Colors.orange;
     } else if (lan > 50 && internet > 50) {
       analysis = "Mạng hoạt động hoàn hảo!";
@@ -306,7 +395,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
         spacing: 8,
         children: [
           Icon(Icons.analytics_outlined, color: color, size: 20),
-          Expanded(child: Text(analysis, style: TextStyle(fontSize: 12, color: color))),
+          Expanded(
+            child: Text(analysis, style: TextStyle(fontSize: 12, color: color)),
+          ),
         ],
       ),
     );
@@ -317,7 +408,12 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 16,
       children: [
-        Text("Cấu hình thiết bị", style: context.theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          "Cấu hình thiết bị",
+          style: context.theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         DoTextField(
           labelText: l10n.routerIpAddress,
           placeholder: "http://192.168.2.35",
@@ -338,7 +434,10 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
             ),
             suffixIcon: IconButton(
               onPressed: vm.togglePasswordVisible,
-              icon: SFIcon(vm.showPassword ? SFIcons.sf_eye_slash : SFIcons.sf_eye, fontSize: 18),
+              icon: SFIcon(
+                vm.showPassword ? SFIcons.sf_eye_slash : SFIcons.sf_eye,
+                fontSize: 18,
+              ),
             ),
           ),
         ),
@@ -352,7 +451,8 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
       spacing: 6,
       children: [
         Text("Tiến trình thực hiện:", style: context.theme.textTheme.bodySmall),
-        for (final (index, label) in WifiManagementViewModel.stepLabels.indexed) //
+        for (final (index, label)
+            in WifiManagementViewModel.stepLabels.indexed) //
           _buildStepRow(vm, index, label),
         if (vm.isWaitingForOnline) ...[
           const SizedBox(height: 8),
@@ -362,9 +462,12 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
               // Estimate 90s for a full reboot cycle
               value: (vm.elapsedSeconds / 90).clamp(0.0, 0.99),
               minHeight: 6,
-              backgroundColor: context.theme.colorScheme.surfaceContainerHighest,
+              backgroundColor:
+                  context.theme.colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
-                vm.isTakingTooLong ? Colors.orange : context.theme.colorScheme.primary,
+                vm.isTakingTooLong
+                    ? Colors.orange
+                    : context.theme.colorScheme.primary,
               ),
             ),
           ),
@@ -379,7 +482,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                         ? "Vẫn chưa thấy router phản hồi (${vm.elapsedSeconds}s)..."
                         : "Đang kết nối lại... (Ước tính ~90 giây)",
                     style: context.theme.textTheme.labelSmall?.copyWith(
-                      color: vm.isTakingTooLong ? Colors.orange : context.theme.colorScheme.primary,
+                      color: vm.isTakingTooLong
+                          ? Colors.orange
+                          : context.theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -389,7 +494,10 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  child: const Text("Bỏ qua chờ", style: TextStyle(fontSize: 12)),
+                  child: const Text(
+                    "Bỏ qua chờ",
+                    style: TextStyle(fontSize: 12),
+                  ),
                 ),
               ],
             ),
@@ -399,7 +507,10 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 "Lưu ý: Nếu router đã đổi IP hoặc đèn đã báo xanh, bạn có thể bỏ qua bước này.",
-                style: context.theme.textTheme.bodySmall?.copyWith(fontSize: 10, fontStyle: FontStyle.italic),
+                style: context.theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
         ],
@@ -416,7 +527,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
         ? context.theme.colorScheme.error
         : isDone
         ? Colors.green
-        : context.theme.colorScheme.onSurface.withValues(alpha: isRunning ? 1 : 0.4);
+        : context.theme.colorScheme.onSurface.withValues(
+            alpha: isRunning ? 1 : 0.4,
+          );
 
     return Row(
       spacing: 8,
@@ -435,11 +548,17 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                   fontSize: 16,
                 ),
         ),
-        Expanded(child: Text("${index + 1}. $label", style: TextStyle(color: color))),
+        Expanded(
+          child: Text("${index + 1}. $label", style: TextStyle(color: color)),
+        ),
         if (isRunning && vm.isWaitingForOnline)
           Text(
             "${vm.elapsedSeconds}s",
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontFeatures: const [FontFeature.tabularFigures()]),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
       ],
     );
@@ -480,9 +599,15 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                 const SFIcon(SFIcons.sf_apple_terminal, fontSize: 16),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text("Nhật ký chi tiết (Console Log)", style: context.theme.textTheme.bodySmall),
+                  child: Text(
+                    "Nhật ký chi tiết (Console Log)",
+                    style: context.theme.textTheme.bodySmall,
+                  ),
                 ),
-                SFIcon(vm.showLogs ? SFIcons.sf_chevron_up : SFIcons.sf_chevron_down, fontSize: 14),
+                SFIcon(
+                  vm.showLogs ? SFIcons.sf_chevron_up : SFIcons.sf_chevron_down,
+                  fontSize: 14,
+                ),
               ],
             ),
           ),
@@ -510,7 +635,8 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel> extends Scre
                           fontSize: 12,
                           color: log.contains("Lỗi") || log.contains("thất bại")
                               ? const Color(0xFFF44336)
-                              : log.contains("thành công") || log.contains("Hoàn tất")
+                              : log.contains("thành công") ||
+                                    log.contains("Hoàn tất")
                               ? const Color(0xFF4CAF50)
                               : const Color(0xFFD4D4D4),
                         ),
