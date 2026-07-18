@@ -6,8 +6,11 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:flutter/material.dart';
 
 class WifiManagementViewModel extends CoreViewModel {
+  static const double stableInternetThresholdMbps = 5;
+
   final _rebootService = RouterRebootService();
   final _speedTestService = SpeedTestService();
 
@@ -17,6 +20,7 @@ class WifiManagementViewModel extends CoreViewModel {
     "Nhận Token (stok)",
     "Khởi động lại",
     "Chờ khởi động xong",
+    "Kiểm tra kết nối Internet",
   ];
 
   String ip = "http://192.168.2.35";
@@ -26,13 +30,14 @@ class WifiManagementViewModel extends CoreViewModel {
   final List<String> logs = [];
   bool showLogs = false;
 
-  /// -1: idle, 0..3: step in progress, 4: all done
+  /// -1: idle, 0..last index: step in progress, length: all done.
   int activeStep = -1;
   String? successMessage;
   String? errorMessage;
 
   int elapsedSeconds = 0;
-  bool get isWaitingForOnline => activeStep == stepLabels.indexOf("Chờ khởi động xong");
+  bool get isWaitingForOnline =>
+      activeStep == stepLabels.indexOf("Chờ khởi động xong");
   bool get isTakingTooLong => elapsedSeconds > 120; // Alert if > 2 minutes
 
   double? lanSpeed;
@@ -94,6 +99,7 @@ class WifiManagementViewModel extends CoreViewModel {
 
   Future<void> reboot() async {
     if (isBusy) return;
+    stopTests();
     setBusy(true);
     successMessage = null;
     errorMessage = null;
@@ -123,19 +129,66 @@ class WifiManagementViewModel extends CoreViewModel {
       notifyListenersSafe();
 
       // Start a timer to track elapsed time while waiting
-      final timer = Stream.periodic(const Duration(seconds: 1), (i) => i + 1).listen((val) {
-        elapsedSeconds = val;
-        notifyListenersSafe();
-      });
+      final timer = Stream.periodic(const Duration(seconds: 1), (i) => i + 1)
+          .listen((val) {
+            elapsedSeconds = val;
+            notifyListenersSafe();
+          });
 
       try {
-        await _rebootService.checkRouterOnline(ip: ip, onLog: _log, cancelToken: cancelToken);
+        await _rebootService.checkRouterOnline(
+          ip: ip,
+          onLog: _log,
+          cancelToken: cancelToken,
+        );
       } finally {
         timer.cancel();
       }
+      if (isDispose || cancelToken.isCancelled) return;
 
-      activeStep = stepLabels.length; // Finished all steps
-      successMessage = "Router đã khởi động lại xong và đang hoạt động! (Tổng thời gian chờ: ${elapsedSeconds}s)";
+      activeStep = stepLabels.indexOf("Kiểm tra kết nối Internet");
+      _log("Router đã online. Bắt đầu kiểm tra tốc độ Internet...");
+      notifyListenersSafe();
+
+      try {
+        final measuredSpeed = await _measureInternetAfterReboot();
+        if (measuredSpeed > stableInternetThresholdMbps) {
+          activeStep = stepLabels.length;
+          successMessage =
+              "Wi-Fi đã truy cập ổn định! Tốc độ Internet ${measuredSpeed.toStringAsFixed(1)} Mbps. "
+              "(Thời gian chờ router: ${elapsedSeconds}s)";
+          _log(
+            "Internet ổn định: ${measuredSpeed.toStringAsFixed(1)} Mbps "
+            "(>${stableInternetThresholdMbps.toStringAsFixed(0)} Mbps).",
+          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(
+                    "Wi-Fi đã truy cập ổn định (${measuredSpeed.toStringAsFixed(1)} Mbps)",
+                  ),
+                  backgroundColor: Colors.green.shade700,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+          }
+        } else {
+          errorMessage =
+              "Router đã khởi động lại nhưng Internet chưa ổn định. "
+              "Tốc độ hiện tại ${measuredSpeed.toStringAsFixed(1)} Mbps, "
+              "cần lớn hơn ${stableInternetThresholdMbps.toStringAsFixed(0)} Mbps.";
+          _log(
+            "Internet chưa ổn định: ${measuredSpeed.toStringAsFixed(1)} Mbps.",
+          );
+        }
+      } catch (e) {
+        logger.e("Internet verification after reboot failed", error: e);
+        errorMessage =
+            "Router đã khởi động lại nhưng chưa xác nhận được kết nối Internet. Hãy thử đo tốc độ lại.";
+        _log("Không thể kiểm tra Internet sau khi router khởi động: $e");
+      }
     } on RouterRebootException catch (e) {
       errorMessage = e.message;
       _log("Lỗi: ${e.message}");
@@ -145,6 +198,36 @@ class WifiManagementViewModel extends CoreViewModel {
       _log("Lỗi hệ thống: $e");
     } finally {
       setBusy(false);
+    }
+  }
+
+  Future<double> _measureInternetAfterReboot() async {
+    _speedCancelToken?.cancel("Starting post-reboot Internet test");
+    _speedCancelToken = CancelToken();
+    isTestingInternet = true;
+    internetSpeed = 0;
+    internetLatency = null;
+    notifyListenersSafe();
+
+    double? finalSpeed;
+    try {
+      await for (final update in _speedTestService.testInternetSpeed(
+        selectedServer,
+        cancelToken: _speedCancelToken,
+      )) {
+        internetSpeed = update.currentMbps;
+        internetLatency = update.latencyMs;
+        if (update.isDone) finalSpeed = update.currentMbps;
+        notifyListenersSafe();
+      }
+      if (finalSpeed == null) {
+        throw StateError("Bài đo tốc độ kết thúc mà không có kết quả");
+      }
+      return finalSpeed;
+    } finally {
+      isTestingInternet = false;
+      _speedCancelToken = null;
+      notifyListenersSafe();
     }
   }
 

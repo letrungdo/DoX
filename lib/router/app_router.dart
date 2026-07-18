@@ -26,7 +26,8 @@ class _AppRouter extends RootStackRouter {
     // resolve it to a tab id before marking a child route as initial.
     final visibleTabs = AppTab.visibleFromStorage();
     final initialTabIndex = storageService.getTabIndex();
-    final initialTab = (initialTabIndex >= 0 && initialTabIndex < visibleTabs.length)
+    final initialTab =
+        (initialTabIndex >= 0 && initialTabIndex < visibleTabs.length)
         ? visibleTabs[initialTabIndex]
         : AppTab.news;
 
@@ -37,7 +38,11 @@ class _AppRouter extends RootStackRouter {
         page: MainRoute.page,
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
-          AutoRoute(initial: initialTab == AppTab.news, path: 'news', page: NewsRoute.page),
+          AutoRoute(
+            initial: initialTab == AppTab.news,
+            path: 'news',
+            page: NewsRoute.page,
+          ),
           AutoRoute(
             initial: initialTab == AppTab.chicken,
             path: 'chicken',
@@ -62,21 +67,50 @@ class _AppRouter extends RootStackRouter {
                   }),
                 ],
               ),
-              CustomRoute(path: 'login', page: LoginRoute.page, transitionsBuilder: TransitionsBuilders.fadeIn),
+              CustomRoute(
+                path: 'login',
+                page: LoginRoute.page,
+                transitionsBuilder: TransitionsBuilders.fadeIn,
+              ),
               AutoRoute(path: 'account', page: AccountRoute.page),
               AutoRoute(path: 'trimmer', page: TrimmerRoute.page),
             ],
           ),
-          AutoRoute(initial: initialTab == AppTab.electric, path: 'electric', page: ElectricRoute.page),
-          AutoRoute(initial: initialTab == AppTab.menu, path: 'menu', page: MenuRoute.page),
+          AutoRoute(
+            initial: initialTab == AppTab.electric,
+            path: 'electric',
+            page: ElectricRoute.page,
+          ),
+          AutoRoute(
+            initial: initialTab == AppTab.menu,
+            path: 'menu',
+            page: MenuRoute.page,
+          ),
         ],
       ),
       AutoRoute(path: '/login', page: AppLoginRoute.page),
-      AutoRoute(path: '/chicken/:batchId', page: ChickenBatchDetailRoute.page, guards: [_supabaseAuthGuard]),
-      AutoRoute(path: '/chicken-statistics', page: ChickenStatisticsRoute.page, guards: [_supabaseAuthGuard]),
-      AutoRoute(path: '/cock-sales', page: CockSalesRoute.page, guards: [_supabaseAuthGuard]),
-      AutoRoute(path: '/global-expenses', page: GlobalExpensesRoute.page, guards: [_supabaseAuthGuard]),
+      AutoRoute(
+        path: '/chicken/:batchId',
+        page: ChickenBatchDetailRoute.page,
+        guards: [_supabaseAuthGuard],
+      ),
+      AutoRoute(
+        path: '/chicken-statistics',
+        page: ChickenStatisticsRoute.page,
+        guards: [_supabaseAuthGuard],
+      ),
+      AutoRoute(
+        path: '/cock-sales',
+        page: CockSalesRoute.page,
+        guards: [_supabaseAuthGuard],
+      ),
+      AutoRoute(
+        path: '/global-expenses',
+        page: GlobalExpensesRoute.page,
+        guards: [_supabaseAuthGuard],
+      ),
       AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
+      AutoRoute(path: '/local-network', page: LocalNetworkRoute.page),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];

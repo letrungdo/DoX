@@ -103,6 +103,12 @@ class _MenuScreenState<V extends MenuViewModel>
           ),
           DoButton(
             onPressed: () {
+              context.pushRoute(const LocalNetworkRoute());
+            },
+            child: _buildMenuAction(Icons.lan_outlined, 'Thiết bị mạng nội bộ'),
+          ),
+          DoButton(
+            onPressed: () {
               showAboutDialog(
                 applicationVersion: appInfo.version, //
                 applicationIcon: Assets.images.appIcon.image(),
