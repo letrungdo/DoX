@@ -103,6 +103,15 @@ class _MenuScreenState<V extends MenuViewModel>
           ),
           DoButton(
             onPressed: () {
+              context.pushRoute(const FengShuiCompassRoute());
+            },
+            child: _buildMenuAction(
+              Icons.explore_rounded,
+              l10n.fengShuiCompass,
+            ),
+          ),
+          DoButton(
+            onPressed: () {
               showAboutDialog(
                 applicationVersion: appInfo.version, //
                 applicationIcon: Assets.images.appIcon.image(),

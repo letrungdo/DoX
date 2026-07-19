@@ -282,6 +282,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wifiManagement => 'Wifi Management';
 
   @override
+  String get fengShuiCompass => 'Feng shui compass';
+
+  @override
+  String get fengShuiHouseFacing => 'House facing';
+
+  @override
+  String get fengShuiSitting => 'Sitting (back)';
+
+  @override
+  String get fengShuiTrigram => 'Trigram';
+
+  @override
+  String get fengShuiElement => 'Element';
+
+  @override
+  String get fengShuiMountain => 'Mountain';
+
+  @override
+  String get fengShuiCalibrateHint =>
+      'Move the phone in a figure-8 to calibrate, and keep it away from metal or magnets.';
+
+  @override
+  String get fengShuiNoSensor => 'This device has no compass sensor.';
+
+  @override
+  String get fengShuiHoldFlat =>
+      'Hold the phone flat, top edge pointing toward the house facing.';
+
+  @override
   String get lanSpeed => 'LAN Speed';
 
   @override

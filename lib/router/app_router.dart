@@ -115,6 +115,10 @@ class _AppRouter extends RootStackRouter {
         guards: [_supabaseAuthGuard],
       ),
       AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
+      AutoRoute(
+        path: '/feng-shui-compass',
+        page: FengShuiCompassRoute.page,
+      ),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];

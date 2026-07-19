@@ -614,6 +614,60 @@ abstract class AppLocalizations {
   /// **'Wifi Management'**
   String get wifiManagement;
 
+  /// No description provided for @fengShuiCompass.
+  ///
+  /// In en, this message translates to:
+  /// **'Feng shui compass'**
+  String get fengShuiCompass;
+
+  /// No description provided for @fengShuiHouseFacing.
+  ///
+  /// In en, this message translates to:
+  /// **'House facing'**
+  String get fengShuiHouseFacing;
+
+  /// No description provided for @fengShuiSitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Sitting (back)'**
+  String get fengShuiSitting;
+
+  /// No description provided for @fengShuiTrigram.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigram'**
+  String get fengShuiTrigram;
+
+  /// No description provided for @fengShuiElement.
+  ///
+  /// In en, this message translates to:
+  /// **'Element'**
+  String get fengShuiElement;
+
+  /// No description provided for @fengShuiMountain.
+  ///
+  /// In en, this message translates to:
+  /// **'Mountain'**
+  String get fengShuiMountain;
+
+  /// No description provided for @fengShuiCalibrateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the phone in a figure-8 to calibrate, and keep it away from metal or magnets.'**
+  String get fengShuiCalibrateHint;
+
+  /// No description provided for @fengShuiNoSensor.
+  ///
+  /// In en, this message translates to:
+  /// **'This device has no compass sensor.'**
+  String get fengShuiNoSensor;
+
+  /// No description provided for @fengShuiHoldFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the phone flat, top edge pointing toward the house facing.'**
+  String get fengShuiHoldFlat;
+
   /// No description provided for @lanSpeed.
   ///
   /// In en, this message translates to:
