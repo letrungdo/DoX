@@ -82,6 +82,11 @@ class _AppRouter extends RootStackRouter {
             page: ElectricRoute.page,
           ),
           AutoRoute(
+            initial: initialTab == AppTab.lunar,
+            path: 'lunar',
+            page: LunarRoute.page,
+          ),
+          AutoRoute(
             initial: initialTab == AppTab.menu,
             path: 'menu',
             page: MenuRoute.page,

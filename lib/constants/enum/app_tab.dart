@@ -7,10 +7,12 @@ enum AppTab {
   chicken,
   myLife,
   electric,
+  lunar,
   menu;
 
   /// True for tabs the user can hide in Settings.
-  bool get isHideable => this == AppTab.myLife || this == AppTab.electric;
+  bool get isHideable =>
+      this == AppTab.myLife || this == AppTab.electric || this == AppTab.lunar;
 
   /// Restores a stored order, dropping unknown names and appending any tab
   /// missing from it (e.g. tabs added in a newer app version).
@@ -32,10 +34,12 @@ enum AppTab {
     final order = sanitizeOrder(storageService.getTabOrder());
     final showMyLife = storageService.getShowMyLifeTab();
     final showElectric = storageService.getShowElectricTab();
+    final showLunar = storageService.getShowLunarTab();
     return order.where((tab) {
       return switch (tab) {
         AppTab.myLife => showMyLife,
         AppTab.electric => showElectric,
+        AppTab.lunar => showLunar,
         _ => true,
       };
     }).toList();

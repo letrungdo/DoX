@@ -70,6 +70,14 @@ class _StorageService {
     return prefs.setBool(StorageKey.showElectricTab, value);
   }
 
+  bool getShowLunarTab() {
+    return prefs.getBool(StorageKey.showLunarTab) ?? true;
+  }
+
+  Future<bool> setShowLunarTab(bool value) {
+    return prefs.setBool(StorageKey.showLunarTab, value);
+  }
+
   /// Bottom tab order as [AppTab] names; null when the user never reordered.
   List<String>? getTabOrder() {
     return prefs.getStringList(StorageKey.tabOrder);
