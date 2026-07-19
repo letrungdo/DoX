@@ -799,6 +799,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get stopLabel => 'STOP';
 
   @override
+  String get stopSpeedTest => 'Dừng đo';
+
+  @override
   String get deviceConfig => 'Cấu hình thiết bị';
 
   @override

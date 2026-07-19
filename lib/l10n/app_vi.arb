@@ -517,6 +517,7 @@
     }
   },
   "stopLabel": "STOP",
+  "stopSpeedTest": "Dừng đo",
   "deviceConfig": "Cấu hình thiết bị",
   "adminPasswordHelper": "Mật khẩu đăng nhập trang quản trị router (MiWiFi)",
   "progressTitle": "Tiến trình thực hiện:",

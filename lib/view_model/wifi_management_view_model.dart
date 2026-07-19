@@ -43,16 +43,21 @@ class WifiManagementViewModel extends CoreViewModel {
 
   bool isTestingLan = false;
   bool isTestingInternet = false;
+  bool get isTesting => isTestingLan || isTestingInternet;
 
   SpeedTestServer selectedServer = SpeedTestServer.internetServers.first;
 
-  StreamSubscription? _speedSubscription;
-  CancelToken? _speedCancelToken;
+  StreamSubscription? _lanSubscription;
+  StreamSubscription? _internetSubscription;
+  CancelToken? _lanCancelToken;
+  CancelToken? _internetCancelToken;
 
   @override
   void dispose() {
-    _speedCancelToken?.cancel("Wifi management disposed");
-    _speedSubscription?.cancel();
+    _lanCancelToken?.cancel("Wifi management disposed");
+    _internetCancelToken?.cancel("Wifi management disposed");
+    _lanSubscription?.cancel();
+    _internetSubscription?.cancel();
     super.dispose();
   }
 
@@ -160,31 +165,49 @@ class WifiManagementViewModel extends CoreViewModel {
   }
 
   void stopTests() {
-    _speedCancelToken?.cancel("Speed test stopped");
-    _speedCancelToken = null;
-    _speedSubscription?.cancel();
-    _speedSubscription = null;
+    _lanCancelToken?.cancel("Speed test stopped");
+    _lanCancelToken = null;
+    _lanSubscription?.cancel();
+    _lanSubscription = null;
+    _internetCancelToken?.cancel("Speed test stopped");
+    _internetCancelToken = null;
+    _internetSubscription?.cancel();
+    _internetSubscription = null;
     isTestingLan = false;
     isTestingInternet = false;
     notifyListenersSafe();
   }
 
-  Future<void> testLanSpeed() async {
-    if (isTestingLan) {
+  /// Runs the LAN and Internet speed tests concurrently. If a test is already
+  /// running, it stops everything instead (acts as a toggle for a single
+  /// "start/stop" button).
+  void runSpeedTests() {
+    if (isTesting) {
       stopTests();
       return;
     }
-    stopTests(); // Stop any other test
+    _startLanTest();
+    _startInternetTest();
+  }
+
+  void setSelectedServer(SpeedTestServer server) {
+    selectedServer = server;
+    notifyListenersSafe();
+  }
+
+  void _startLanTest() {
+    _lanCancelToken?.cancel("Restarting LAN test");
+    _lanSubscription?.cancel();
     isTestingLan = true;
     lanSpeed = 0;
     lanLatency = null;
     notifyListenersSafe();
 
     final baseUrl = _rebootService.cleanIp(ip);
-    _speedCancelToken = CancelToken();
+    _lanCancelToken = CancelToken();
 
-    _speedSubscription = _speedTestService
-        .testLanSpeed(baseUrl, cancelToken: _speedCancelToken)
+    _lanSubscription = _speedTestService
+        .testLanSpeed(baseUrl, cancelToken: _lanCancelToken)
         .listen(
           (update) {
             lanSpeed = update.currentMbps;
@@ -203,26 +226,18 @@ class WifiManagementViewModel extends CoreViewModel {
         );
   }
 
-  void setSelectedServer(SpeedTestServer server) {
-    selectedServer = server;
-    notifyListenersSafe();
-  }
-
-  Future<void> testInternetSpeed() async {
-    if (isTestingInternet) {
-      stopTests();
-      return;
-    }
-    stopTests(); // Stop any other test
+  void _startInternetTest() {
+    _internetCancelToken?.cancel("Restarting Internet test");
+    _internetSubscription?.cancel();
     isTestingInternet = true;
     internetSpeed = 0;
     internetLatency = null;
     notifyListenersSafe();
 
-    _speedCancelToken = CancelToken();
+    _internetCancelToken = CancelToken();
 
-    _speedSubscription = _speedTestService
-        .testInternetSpeed(selectedServer, cancelToken: _speedCancelToken)
+    _internetSubscription = _speedTestService
+        .testInternetSpeed(selectedServer, cancelToken: _internetCancelToken)
         .listen(
           (update) {
             internetSpeed = update.currentMbps;
