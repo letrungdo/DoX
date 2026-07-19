@@ -1,13 +1,15 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
-import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/local_network_screen.dart';
 import 'package:do_x/services/speed_test_service.dart';
+import 'package:do_x/view_model/local_network_view_model.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/text_field.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:provider/provider.dart';
@@ -33,41 +35,28 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: DoAppBar(title: l10n.wifiManagement),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-        child: Consumer<V>(
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: DoAppBar(
+          title: l10n.wifiManagement,
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.center,
+            tabs: [
+              Tab(icon: const Icon(Icons.settings_ethernet), text: l10n.tabReboot),
+              Tab(icon: const Icon(Icons.speed_rounded), text: l10n.tabSpeed),
+              Tab(icon: const Icon(Icons.lan_outlined), text: l10n.tabDevices),
+            ],
+          ),
+        ),
+        body: Consumer<V>(
           builder: (context, vm, _) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 16,
+            return TabBarView(
               children: [
-                _buildHeader(l10n),
-                _buildLocalNetworkNavigation(),
-                _buildConfigSection(l10n, vm),
-                if (vm.isBusy || vm.activeStep >= 0) _buildSteps(vm),
-                if (vm.successMessage != null)
-                  _buildAlert(vm.successMessage!, isError: false),
-                if (vm.errorMessage != null)
-                  _buildAlert(vm.errorMessage!, isError: true),
-                DoButton(
-                  isBusy: vm.isBusy,
-                  onPressed: vm.reboot,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 8,
-                    children: [
-                      const SFIcon(SFIcons.sf_arrow_counterclockwise),
-                      Text(
-                        vm.isBusy ? "Đang xử lý..." : l10n.rebootRouterXiaomi,
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 32),
-                _buildSpeedTestSection(l10n, vm),
-                if (vm.logs.isNotEmpty) _buildLogs(vm),
+                _buildWifiTab(l10n, vm),
+                _buildSpeedTab(l10n, vm),
+                const _LocalNetworkTab(),
               ],
             );
           },
@@ -76,83 +65,63 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     );
   }
 
-  Widget _buildLocalNetworkNavigation() {
-    return InkWell(
-      onTap: () => context.pushRoute(const LocalNetworkRoute()),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.theme.colorScheme.primaryContainer.withValues(
-            alpha: 0.45,
+  /// Reboots the router, then switches to the speed test tab once it comes
+  /// back online and immediately measures the connection speed.
+  Future<void> _handleReboot(V vm) async {
+    await vm.reboot();
+    if (!mounted) return;
+    // Only jump to the speed tab when the reboot cycle finished successfully.
+    if (vm.errorMessage != null ||
+        vm.activeStep < WifiManagementViewModel.stepLabels.length) {
+      return;
+    }
+    DefaultTabController.of(context).animateTo(1);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).rebootSuccessStartSpeedTest),
+          backgroundColor: Colors.green.shade700,
+        ),
+      );
+    vm.testInternetSpeed();
+  }
+
+  Widget _buildWifiTab(AppLocalizations l10n, V vm) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 16,
+        children: [
+          _buildConfigSection(l10n, vm),
+          if (vm.isBusy || vm.activeStep >= 0) _buildSteps(vm),
+          if (vm.successMessage != null)
+            _buildAlert(vm.successMessage!, isError: false),
+          if (vm.errorMessage != null)
+            _buildAlert(vm.errorMessage!, isError: true),
+          DoButton(
+            isBusy: vm.isBusy,
+            onPressed: () => _handleReboot(vm),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 8,
+              children: [
+                const SFIcon(SFIcons.sf_arrow_counterclockwise),
+                Text(vm.isBusy ? l10n.processing : l10n.rebootRouter),
+              ],
+            ),
           ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.theme.colorScheme.outlineVariant),
-        ),
-        child: Row(
-          spacing: 12,
-          children: [
-            CircleAvatar(
-              backgroundColor: context.theme.colorScheme.primary.withValues(
-                alpha: 0.12,
-              ),
-              foregroundColor: context.theme.colorScheme.primary,
-              child: const Icon(Icons.lan_outlined),
-            ),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Thiết bị trong mạng nội bộ',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Xem các thiết bị đang hoạt động trong mạng Wi-Fi',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded),
-          ],
-        ),
+          if (kDebugMode && vm.logs.isNotEmpty) _buildLogs(vm),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Row(
-        spacing: 12,
-        children: [
-          SFIcon(SFIcons.sf_wifi, color: Colors.white, fontSize: 36),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Đo tốc độ mạng và quản lý thiết bị router của bạn",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  Widget _buildSpeedTab(AppLocalizations l10n, V vm) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+      child: _buildSpeedTestSection(l10n, vm),
     );
   }
 
@@ -165,7 +134,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Kiểm tra tốc độ kết nối",
+              l10n.connectionSpeedTest,
               style: context.theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -215,10 +184,11 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   }
 
   Widget _buildServerPicker(V vm) {
+    final l10n = AppLocalizations.of(context);
     return PopupMenuButton<SpeedTestServer>(
       initialValue: vm.selectedServer,
       onSelected: vm.setSelectedServer,
-      tooltip: "Chọn máy chủ đo internet",
+      tooltip: l10n.selectInternetServer,
       itemBuilder: (context) => SpeedTestServer.internetServers.map((server) {
         return PopupMenuItem(
           value: server,
@@ -243,7 +213,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           children: [
             const Icon(Icons.dns_outlined, size: 14),
             const SizedBox(width: 4),
-            Text("Máy chủ", style: context.theme.textTheme.labelSmall),
+            Text(l10n.serverLabel, style: context.theme.textTheme.labelSmall),
             const Icon(Icons.arrow_drop_down, size: 18),
           ],
         ),
@@ -339,7 +309,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                   ),
                   if (latency != null)
                     Text(
-                      "TTFB: ${latency}ms",
+                      l10n.ttfbMs(latency),
                       style: TextStyle(
                         fontSize: 11,
                         color: context.theme.colorScheme.onSurfaceVariant,
@@ -350,7 +320,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             ),
             const SizedBox(height: 8),
             Text(
-              isTesting ? "STOP" : l10n.startSpeedTest,
+              isTesting ? l10n.stopLabel : l10n.startSpeedTest,
               style: TextStyle(
                 fontSize: 10,
                 color: isTesting
@@ -366,21 +336,20 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   }
 
   Widget _buildSpeedAnalysis(double lan, double internet) {
+    final l10n = AppLocalizations.of(context);
     String analysis;
     Color color;
     if (lan < 10) {
-      analysis =
-          "Kết nối LAN rất yếu. Hãy kiểm tra lại dây mạng hoặc khoảng cách tới repeater.";
+      analysis = l10n.speedAnalysisLanWeak;
       color = Colors.red;
     } else if (lan > 50 && internet < 10) {
-      analysis =
-          "Kết nối LAN tốt, nhưng Internet chậm. Vấn đề có thể từ nhà cung cấp mạng hoặc router chính.";
+      analysis = l10n.speedAnalysisInternetSlow;
       color = Colors.orange;
     } else if (lan > 50 && internet > 50) {
-      analysis = "Mạng hoạt động hoàn hảo!";
+      analysis = l10n.speedAnalysisPerfect;
       color = Colors.green;
     } else {
-      analysis = "Tốc độ mạng ổn định.";
+      analysis = l10n.speedAnalysisStable;
       color = Colors.blue;
     }
 
@@ -409,7 +378,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       spacing: 16,
       children: [
         Text(
-          "Cấu hình thiết bị",
+          l10n.deviceConfig,
           style: context.theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -428,7 +397,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           onChanged: vm.setPassword,
           decoration: InputDecoration(
             labelText: l10n.adminPassword,
-            helperText: "Mật khẩu đăng nhập trang quản trị router (MiWiFi)",
+            helperText: l10n.adminPasswordHelper,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20), //
             ),
@@ -446,11 +415,12 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   }
 
   Widget _buildSteps(V vm) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 6,
       children: [
-        Text("Tiến trình thực hiện:", style: context.theme.textTheme.bodySmall),
+        Text(l10n.progressTitle, style: context.theme.textTheme.bodySmall),
         for (final (index, label)
             in WifiManagementViewModel.stepLabels.indexed) //
           _buildStepRow(vm, index, label),
@@ -479,8 +449,8 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                 Expanded(
                   child: Text(
                     vm.isTakingTooLong
-                        ? "Vẫn chưa thấy router phản hồi (${vm.elapsedSeconds}s)..."
-                        : "Đang kết nối lại... (Ước tính ~90 giây)",
+                        ? l10n.routerNoResponse(vm.elapsedSeconds)
+                        : l10n.reconnectingEstimate,
                     style: context.theme.textTheme.labelSmall?.copyWith(
                       color: vm.isTakingTooLong
                           ? Colors.orange
@@ -494,9 +464,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  child: const Text(
-                    "Bỏ qua chờ",
-                    style: TextStyle(fontSize: 12),
+                  child: Text(
+                    l10n.skipWaiting,
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
               ],
@@ -506,7 +476,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                "Lưu ý: Nếu router đã đổi IP hoặc đèn đã báo xanh, bạn có thể bỏ qua bước này.",
+                l10n.skipWaitingNote,
                 style: context.theme.textTheme.bodySmall?.copyWith(
                   fontSize: 10,
                   fontStyle: FontStyle.italic,
@@ -565,6 +535,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   }
 
   Widget _buildAlert(String message, {required bool isError}) {
+    final l10n = AppLocalizations.of(context);
     final color = isError ? context.theme.colorScheme.error : Colors.green;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -577,7 +548,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isError ? "Lỗi!" : "Thành công!",
+            isError ? l10n.errorLabel : l10n.successLabel,
             style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
           Text(message, style: TextStyle(color: color)),
@@ -587,6 +558,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   }
 
   Widget _buildLogs(V vm) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -600,7 +572,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Nhật ký chi tiết (Console Log)",
+                    l10n.consoleLog,
                     style: context.theme.textTheme.bodySmall,
                   ),
                 ),
@@ -647,6 +619,45 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Local network scan tab. Owns its own [LocalNetworkViewModel] and starts a
+/// scan as soon as the tab is first shown.
+class _LocalNetworkTab extends StatefulWidget {
+  const _LocalNetworkTab();
+
+  @override
+  State<_LocalNetworkTab> createState() => _LocalNetworkTabState();
+}
+
+class _LocalNetworkTabState extends State<_LocalNetworkTab>
+    with AutomaticKeepAliveClientMixin {
+  final _vm = LocalNetworkViewModel();
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _vm.setCurrentContext(context);
+    _vm.initData();
+  }
+
+  @override
+  void dispose() {
+    _vm.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return ChangeNotifierProvider.value(
+      value: _vm,
+      child: const LocalNetworkView(),
     );
   }
 }

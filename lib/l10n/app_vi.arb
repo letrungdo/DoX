@@ -71,7 +71,7 @@
   "news": "Tin tức",
   "chicken": "Gà",
   "locket": "Locket",
-  "rebootRouter": "Quản lý Wifi",
+  "rebootRouter": "Khởi động lại router",
   "about": "Giới thiệu",
   "loginDoX": "Đăng nhập Do X",
   "logoutDoX": "Đăng xuất Do X",
@@ -499,5 +499,94 @@
   "errorEnterBatchName": "Vui lòng nhập tên lứa gà",
   "revenue": "Doanh thu",
   "totalLabel": "Tổng",
-  "sellGrownChicken": "Bán gà lớn"
+  "sellGrownChicken": "Bán gà lớn",
+  "tabReboot": "Khởi động lại",
+  "tabDevices": "Thiết bị",
+  "tabSpeed": "Tốc độ",
+  "processing": "Đang xử lý...",
+  "rebootSuccessStartSpeedTest": "Khởi động lại thành công, bắt đầu kiểm tra tốc độ",
+  "connectionSpeedTest": "Kiểm tra tốc độ kết nối",
+  "selectInternetServer": "Chọn máy chủ đo internet",
+  "serverLabel": "Máy chủ",
+  "ttfbMs": "TTFB: {ms}ms",
+  "@ttfbMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "stopLabel": "STOP",
+  "deviceConfig": "Cấu hình thiết bị",
+  "adminPasswordHelper": "Mật khẩu đăng nhập trang quản trị router (MiWiFi)",
+  "progressTitle": "Tiến trình thực hiện:",
+  "routerNoResponse": "Vẫn chưa thấy router phản hồi ({seconds}s)...",
+  "@routerNoResponse": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "reconnectingEstimate": "Đang kết nối lại... (Ước tính ~90 giây)",
+  "skipWaiting": "Bỏ qua chờ",
+  "skipWaitingNote": "Lưu ý: Nếu router đã đổi IP hoặc đèn đã báo xanh, bạn có thể bỏ qua bước này.",
+  "errorLabel": "Lỗi!",
+  "successLabel": "Thành công!",
+  "consoleLog": "Nhật ký chi tiết (Console Log)",
+  "speedAnalysisLanWeak": "Kết nối LAN rất yếu. Hãy kiểm tra lại dây mạng hoặc khoảng cách tới repeater.",
+  "speedAnalysisInternetSlow": "Kết nối LAN tốt, nhưng Internet chậm. Vấn đề có thể từ nhà cung cấp mạng hoặc router chính.",
+  "speedAnalysisPerfect": "Mạng hoạt động hoàn hảo!",
+  "speedAnalysisStable": "Tốc độ mạng ổn định.",
+  "localNetworkDevices": "Thiết bị mạng nội bộ",
+  "activeDevices": "Thiết bị đang hoạt động",
+  "scanningAddresses": "Đang quét {scanned}/{total} địa chỉ",
+  "@scanningAddresses": {
+    "placeholders": {
+      "scanned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "devicesDetected": "{count} thiết bị được phát hiện",
+  "@devicesDetected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rescan": "Quét lại",
+  "noDevicesFound": "Chưa tìm thấy thiết bị. Hãy chắc chắn điện thoại đang kết nối Wi-Fi rồi quét lại.",
+  "deviceScanHint": "Kết quả gồm các thiết bị phản hồi trên những cổng mạng phổ biến. Thiết bị chặn kết nối có thể không xuất hiện.",
+  "thisDevice": "Thiết bị này",
+  "thisDeviceNamed": "{name} (Thiết bị này)",
+  "@thisDeviceNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "routerLabel": "Router",
+  "networkDevice": "Thiết bị mạng",
+  "macLabel": "MAC: {mac}",
+  "@macLabel": {
+    "placeholders": {
+      "mac": {
+        "type": "String"
+      }
+    }
+  },
+  "portsLabel": "Cổng: {ports}",
+  "@portsLabel": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  }
 }

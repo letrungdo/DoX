@@ -184,7 +184,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get locket => 'Locket';
 
   @override
-  String get rebootRouter => 'Quản lý Wifi';
+  String get rebootRouter => 'Khởi động lại router';
 
   @override
   String get about => 'Giới thiệu';
@@ -764,4 +764,136 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get sellGrownChicken => 'Bán gà lớn';
+
+  @override
+  String get tabReboot => 'Khởi động lại';
+
+  @override
+  String get tabDevices => 'Thiết bị';
+
+  @override
+  String get tabSpeed => 'Tốc độ';
+
+  @override
+  String get processing => 'Đang xử lý...';
+
+  @override
+  String get rebootSuccessStartSpeedTest =>
+      'Khởi động lại thành công, bắt đầu kiểm tra tốc độ';
+
+  @override
+  String get connectionSpeedTest => 'Kiểm tra tốc độ kết nối';
+
+  @override
+  String get selectInternetServer => 'Chọn máy chủ đo internet';
+
+  @override
+  String get serverLabel => 'Máy chủ';
+
+  @override
+  String ttfbMs(int ms) {
+    return 'TTFB: ${ms}ms';
+  }
+
+  @override
+  String get stopLabel => 'STOP';
+
+  @override
+  String get deviceConfig => 'Cấu hình thiết bị';
+
+  @override
+  String get adminPasswordHelper =>
+      'Mật khẩu đăng nhập trang quản trị router (MiWiFi)';
+
+  @override
+  String get progressTitle => 'Tiến trình thực hiện:';
+
+  @override
+  String routerNoResponse(int seconds) {
+    return 'Vẫn chưa thấy router phản hồi (${seconds}s)...';
+  }
+
+  @override
+  String get reconnectingEstimate => 'Đang kết nối lại... (Ước tính ~90 giây)';
+
+  @override
+  String get skipWaiting => 'Bỏ qua chờ';
+
+  @override
+  String get skipWaitingNote =>
+      'Lưu ý: Nếu router đã đổi IP hoặc đèn đã báo xanh, bạn có thể bỏ qua bước này.';
+
+  @override
+  String get errorLabel => 'Lỗi!';
+
+  @override
+  String get successLabel => 'Thành công!';
+
+  @override
+  String get consoleLog => 'Nhật ký chi tiết (Console Log)';
+
+  @override
+  String get speedAnalysisLanWeak =>
+      'Kết nối LAN rất yếu. Hãy kiểm tra lại dây mạng hoặc khoảng cách tới repeater.';
+
+  @override
+  String get speedAnalysisInternetSlow =>
+      'Kết nối LAN tốt, nhưng Internet chậm. Vấn đề có thể từ nhà cung cấp mạng hoặc router chính.';
+
+  @override
+  String get speedAnalysisPerfect => 'Mạng hoạt động hoàn hảo!';
+
+  @override
+  String get speedAnalysisStable => 'Tốc độ mạng ổn định.';
+
+  @override
+  String get localNetworkDevices => 'Thiết bị mạng nội bộ';
+
+  @override
+  String get activeDevices => 'Thiết bị đang hoạt động';
+
+  @override
+  String scanningAddresses(int scanned, int total) {
+    return 'Đang quét $scanned/$total địa chỉ';
+  }
+
+  @override
+  String devicesDetected(int count) {
+    return '$count thiết bị được phát hiện';
+  }
+
+  @override
+  String get rescan => 'Quét lại';
+
+  @override
+  String get noDevicesFound =>
+      'Chưa tìm thấy thiết bị. Hãy chắc chắn điện thoại đang kết nối Wi-Fi rồi quét lại.';
+
+  @override
+  String get deviceScanHint =>
+      'Kết quả gồm các thiết bị phản hồi trên những cổng mạng phổ biến. Thiết bị chặn kết nối có thể không xuất hiện.';
+
+  @override
+  String get thisDevice => 'Thiết bị này';
+
+  @override
+  String thisDeviceNamed(String name) {
+    return '$name (Thiết bị này)';
+  }
+
+  @override
+  String get routerLabel => 'Router';
+
+  @override
+  String get networkDevice => 'Thiết bị mạng';
+
+  @override
+  String macLabel(String mac) {
+    return 'MAC: $mac';
+  }
+
+  @override
+  String portsLabel(String ports) {
+    return 'Cổng: $ports';
+  }
 }

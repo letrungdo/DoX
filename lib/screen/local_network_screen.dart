@@ -1,78 +1,65 @@
-import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/local_network_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
-import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-@RoutePage()
-class LocalNetworkScreen extends StatefulScreen implements AutoRouteWrapper {
-  const LocalNetworkScreen({super.key});
+/// Reusable body that lists the devices discovered on the local network.
+///
+/// Expects a [LocalNetworkViewModel] to be provided by an ancestor.
+class LocalNetworkView extends StatelessWidget {
+  const LocalNetworkView({super.key});
 
-  @override
-  State<LocalNetworkScreen> createState() => _LocalNetworkScreenState();
-
-  @override
-  Widget wrappedRoute(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => LocalNetworkViewModel(),
-      child: this,
-    );
-  }
-}
-
-class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
-    extends ScreenState<LocalNetworkScreen, V> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const DoAppBar(title: 'Thiết bị mạng nội bộ'),
-      body: Consumer<V>(
-        builder: (context, vm, _) {
-          return RefreshIndicator.adaptive(
-            onRefresh: vm.scan,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(15, 16, 15, 28),
-              children: [
-                _buildSummary(vm),
-                const SizedBox(height: 14),
-                if (vm.errorMessage != null)
-                  _buildNotice(
-                    vm.errorMessage!,
-                    icon: Icons.wifi_off_rounded,
-                    color: context.theme.colorScheme.error,
-                  )
-                else if (!vm.isScanning && vm.devices.isEmpty)
-                  _buildNotice(
-                    'Chưa tìm thấy thiết bị. Hãy chắc chắn điện thoại đang kết nối Wi-Fi rồi quét lại.',
-                    icon: Icons.search_off_rounded,
-                    color: context.theme.colorScheme.onSurfaceVariant,
-                  )
-                else
-                  for (final device in vm.devices) ...[
-                    _buildDeviceCard(device),
-                    const SizedBox(height: 10),
-                  ],
-                const SizedBox(height: 4),
-                Text(
-                  'Kết quả gồm các thiết bị phản hồi trên những cổng mạng phổ biến. Thiết bị chặn kết nối có thể không xuất hiện.',
-                  style: context.theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    color: context.theme.colorScheme.onSurfaceVariant,
-                  ),
+    final l10n = AppLocalizations.of(context);
+    return Consumer<LocalNetworkViewModel>(
+      builder: (context, vm, _) {
+        return RefreshIndicator.adaptive(
+          onRefresh: vm.scan,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(15, 16, 15, 28),
+            children: [
+              _buildSummary(context, vm),
+              const SizedBox(height: 14),
+              if (vm.errorMessage != null)
+                _buildNotice(
+                  context,
+                  vm.errorMessage!,
+                  icon: Icons.wifi_off_rounded,
+                  color: context.theme.colorScheme.error,
+                )
+              else if (!vm.isScanning && vm.devices.isEmpty)
+                _buildNotice(
+                  context,
+                  l10n.noDevicesFound,
+                  icon: Icons.search_off_rounded,
+                  color: context.theme.colorScheme.onSurfaceVariant,
+                )
+              else
+                for (final device in vm.devices) ...[
+                  _buildDeviceCard(context, device),
+                  const SizedBox(height: 10),
+                ],
+              const SizedBox(height: 4),
+              Text(
+                l10n.deviceScanHint,
+                style: context.theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: context.theme.colorScheme.onSurfaceVariant,
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSummary(V vm) {
+  Widget _buildSummary(BuildContext context, LocalNetworkViewModel vm) {
+    final l10n = AppLocalizations.of(context);
     final progress = vm.totalAddresses == 0
         ? 0.0
         : vm.scannedAddresses / vm.totalAddresses;
@@ -98,9 +85,9 @@ class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Thiết bị đang hoạt động',
-                      style: TextStyle(
+                    Text(
+                      l10n.activeDevices,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -108,8 +95,11 @@ class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
                     ),
                     Text(
                       vm.isScanning
-                          ? 'Đang quét ${vm.scannedAddresses}/${vm.totalAddresses} địa chỉ'
-                          : '${vm.devices.length} thiết bị được phát hiện',
+                          ? l10n.scanningAddresses(
+                              vm.scannedAddresses,
+                              vm.totalAddresses,
+                            )
+                          : l10n.devicesDetected(vm.devices.length),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -120,7 +110,7 @@ class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
               ),
               IconButton(
                 onPressed: vm.isScanning ? null : vm.scan,
-                tooltip: 'Quét lại',
+                tooltip: l10n.rescan,
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.white.withValues(alpha: 0.14),
                   disabledBackgroundColor: Colors.white.withValues(alpha: 0.08),
@@ -144,22 +134,23 @@ class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
     );
   }
 
-  Widget _buildDeviceCard(LocalNetworkDevice device) {
-    final title = device.isCurrentDevice
-        ? 'Thiết bị này'
-        : device.isRouter
-        ? 'Router'
-        : device.deviceName ?? device.hostName ?? 'Thiết bị mạng';
+  Widget _buildDeviceCard(BuildContext context, LocalNetworkDevice device) {
+    final l10n = AppLocalizations.of(context);
+    final title = _deviceTitle(context, device);
     final details = <String>[
       device.ipAddress,
-      if (device.deviceName != null &&
-          (device.isCurrentDevice || device.isRouter))
-        device.deviceName!,
+      if (device.deviceName != null && device.isRouter) device.deviceName!,
       if (device.hostName != null &&
-          (device.isCurrentDevice || device.isRouter) &&
+          device.isRouter &&
           device.hostName != device.deviceName)
         device.hostName!,
-      if (device.openPorts.isNotEmpty) 'Cổng: ${device.openPorts.join(', ')}',
+      if (device.macAddress != null) l10n.macLabel(device.macAddress!),
+      if (device.modelName != null &&
+          device.deviceName != null &&
+          device.modelName != device.deviceName)
+        device.modelName!,
+      if (device.openPorts.isNotEmpty)
+        l10n.portsLabel(device.openPorts.join(', ')),
     ];
     final color = device.isRouter
         ? Colors.blue
@@ -181,14 +172,7 @@ class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
             radius: 20,
             backgroundColor: color.withValues(alpha: 0.12),
             foregroundColor: color,
-            child: Icon(
-              device.isRouter
-                  ? Icons.router_outlined
-                  : device.isCurrentDevice
-                  ? Icons.smartphone_outlined
-                  : Icons.devices_other_outlined,
-              size: 22,
-            ),
+            child: Icon(_deviceIcon(device), size: 22),
           ),
           Expanded(
             child: Column(
@@ -222,7 +206,30 @@ class _LocalNetworkScreenState<V extends LocalNetworkViewModel>
     );
   }
 
+  String _deviceTitle(BuildContext context, LocalNetworkDevice device) {
+    final l10n = AppLocalizations.of(context);
+    if (device.isCurrentDevice) {
+      final name = device.deviceName ?? device.modelName ?? device.hostName;
+      return name == null ? l10n.thisDevice : l10n.thisDeviceNamed(name);
+    }
+    if (device.isRouter) return l10n.routerLabel;
+    return device.deviceName ?? device.hostName ?? l10n.networkDevice;
+  }
+
+  IconData _deviceIcon(LocalNetworkDevice device) {
+    if (device.isRouter) return Icons.router_outlined;
+    return switch (device.deviceType) {
+      LocalNetworkDeviceType.phone => Icons.phone_iphone_rounded,
+      LocalNetworkDeviceType.tablet => Icons.tablet_mac_rounded,
+      LocalNetworkDeviceType.computer => Icons.laptop_mac_rounded,
+      LocalNetworkDeviceType.camera => Icons.videocam_outlined,
+      LocalNetworkDeviceType.router => Icons.router_outlined,
+      LocalNetworkDeviceType.unknown => Icons.devices_other_outlined,
+    };
+  }
+
   Widget _buildNotice(
+    BuildContext context,
     String message, {
     required IconData icon,
     required Color color,

@@ -78,7 +78,7 @@
   "news": "News",
   "chicken": "Chicken",
   "locket": "Locket",
-  "rebootRouter": "Wifi Management",
+  "rebootRouter": "Reboot Router",
   "about": "About",
   "loginDoX": "Login Do X",
   "logoutDoX": "Logout Do X",
@@ -506,5 +506,94 @@
   "errorEnterBatchName": "Please enter a batch name",
   "revenue": "Revenue",
   "totalLabel": "Total",
-  "sellGrownChicken": "Sell grown chickens"
+  "sellGrownChicken": "Sell grown chickens",
+  "tabReboot": "Reboot",
+  "tabDevices": "Devices",
+  "tabSpeed": "Speed",
+  "processing": "Processing...",
+  "rebootSuccessStartSpeedTest": "Reboot successful, starting speed test",
+  "connectionSpeedTest": "Check connection speed",
+  "selectInternetServer": "Select internet test server",
+  "serverLabel": "Server",
+  "ttfbMs": "TTFB: {ms}ms",
+  "@ttfbMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "stopLabel": "STOP",
+  "deviceConfig": "Device configuration",
+  "adminPasswordHelper": "Login password for the router admin page (MiWiFi)",
+  "progressTitle": "Progress:",
+  "routerNoResponse": "Still no response from the router ({seconds}s)...",
+  "@routerNoResponse": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "reconnectingEstimate": "Reconnecting... (Estimated ~90 seconds)",
+  "skipWaiting": "Skip waiting",
+  "skipWaitingNote": "Note: If the router changed IP or the light turned green, you can skip this step.",
+  "errorLabel": "Error!",
+  "successLabel": "Success!",
+  "consoleLog": "Detailed log (Console Log)",
+  "speedAnalysisLanWeak": "LAN connection is very weak. Check the network cable or the distance to the repeater.",
+  "speedAnalysisInternetSlow": "LAN connection is good, but the Internet is slow. The issue may be from the ISP or the main router.",
+  "speedAnalysisPerfect": "The network is working perfectly!",
+  "speedAnalysisStable": "Network speed is stable.",
+  "localNetworkDevices": "Local network devices",
+  "activeDevices": "Active devices",
+  "scanningAddresses": "Scanning {scanned}/{total} addresses",
+  "@scanningAddresses": {
+    "placeholders": {
+      "scanned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "devicesDetected": "{count} devices detected",
+  "@devicesDetected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rescan": "Rescan",
+  "noDevicesFound": "No devices found. Make sure your phone is connected to Wi-Fi and scan again.",
+  "deviceScanHint": "Results include devices that respond on common network ports. Devices blocking connections may not appear.",
+  "thisDevice": "This device",
+  "thisDeviceNamed": "{name} (This device)",
+  "@thisDeviceNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "routerLabel": "Router",
+  "networkDevice": "Network device",
+  "macLabel": "MAC: {mac}",
+  "@macLabel": {
+    "placeholders": {
+      "mac": {
+        "type": "String"
+      }
+    }
+  },
+  "portsLabel": "Ports: {ports}",
+  "@portsLabel": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  }
 }

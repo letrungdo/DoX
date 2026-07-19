@@ -184,7 +184,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locket => 'Locket';
 
   @override
-  String get rebootRouter => 'Wifi Management';
+  String get rebootRouter => 'Reboot Router';
 
   @override
   String get about => 'About';
@@ -764,4 +764,136 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sellGrownChicken => 'Sell grown chickens';
+
+  @override
+  String get tabReboot => 'Reboot';
+
+  @override
+  String get tabDevices => 'Devices';
+
+  @override
+  String get tabSpeed => 'Speed';
+
+  @override
+  String get processing => 'Processing...';
+
+  @override
+  String get rebootSuccessStartSpeedTest =>
+      'Reboot successful, starting speed test';
+
+  @override
+  String get connectionSpeedTest => 'Check connection speed';
+
+  @override
+  String get selectInternetServer => 'Select internet test server';
+
+  @override
+  String get serverLabel => 'Server';
+
+  @override
+  String ttfbMs(int ms) {
+    return 'TTFB: ${ms}ms';
+  }
+
+  @override
+  String get stopLabel => 'STOP';
+
+  @override
+  String get deviceConfig => 'Device configuration';
+
+  @override
+  String get adminPasswordHelper =>
+      'Login password for the router admin page (MiWiFi)';
+
+  @override
+  String get progressTitle => 'Progress:';
+
+  @override
+  String routerNoResponse(int seconds) {
+    return 'Still no response from the router (${seconds}s)...';
+  }
+
+  @override
+  String get reconnectingEstimate => 'Reconnecting... (Estimated ~90 seconds)';
+
+  @override
+  String get skipWaiting => 'Skip waiting';
+
+  @override
+  String get skipWaitingNote =>
+      'Note: If the router changed IP or the light turned green, you can skip this step.';
+
+  @override
+  String get errorLabel => 'Error!';
+
+  @override
+  String get successLabel => 'Success!';
+
+  @override
+  String get consoleLog => 'Detailed log (Console Log)';
+
+  @override
+  String get speedAnalysisLanWeak =>
+      'LAN connection is very weak. Check the network cable or the distance to the repeater.';
+
+  @override
+  String get speedAnalysisInternetSlow =>
+      'LAN connection is good, but the Internet is slow. The issue may be from the ISP or the main router.';
+
+  @override
+  String get speedAnalysisPerfect => 'The network is working perfectly!';
+
+  @override
+  String get speedAnalysisStable => 'Network speed is stable.';
+
+  @override
+  String get localNetworkDevices => 'Local network devices';
+
+  @override
+  String get activeDevices => 'Active devices';
+
+  @override
+  String scanningAddresses(int scanned, int total) {
+    return 'Scanning $scanned/$total addresses';
+  }
+
+  @override
+  String devicesDetected(int count) {
+    return '$count devices detected';
+  }
+
+  @override
+  String get rescan => 'Rescan';
+
+  @override
+  String get noDevicesFound =>
+      'No devices found. Make sure your phone is connected to Wi-Fi and scan again.';
+
+  @override
+  String get deviceScanHint =>
+      'Results include devices that respond on common network ports. Devices blocking connections may not appear.';
+
+  @override
+  String get thisDevice => 'This device';
+
+  @override
+  String thisDeviceNamed(String name) {
+    return '$name (This device)';
+  }
+
+  @override
+  String get routerLabel => 'Router';
+
+  @override
+  String get networkDevice => 'Network device';
+
+  @override
+  String macLabel(String mac) {
+    return 'MAC: $mac';
+  }
+
+  @override
+  String portsLabel(String ports) {
+    return 'Ports: $ports';
+  }
 }

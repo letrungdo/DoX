@@ -21,7 +21,8 @@ class RouterRebootException implements Exception {
 class RouterRebootService {
   static const _key = "a2ffa5c9be07488bbb04a3a47d3c5f6a";
   static const _fallbackMac = "00:11:22:33:44:55";
-  static const _userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DoXRebootUtility";
+  static const _userAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DoXRebootUtility";
 
   // A bare Dio without the app's BaseInterceptor, which force-overrides every
   // request's Content-Type to application/json — that breaks the router's
@@ -42,7 +43,10 @@ class RouterRebootService {
     return cleaned.replaceAll(RegExp(r'/+$'), '');
   }
 
-  Future<String> _getRouterMac(String baseUrl, void Function(String) onLog) async {
+  Future<String> _getRouterMac(
+    String baseUrl,
+    void Function(String) onLog,
+  ) async {
     try {
       final response = await _dio.get(
         "$baseUrl/cgi-bin/luci/web/home",
@@ -52,7 +56,9 @@ class RouterRebootService {
           headers: {"User-Agent": _userAgent},
         ),
       );
-      final match = RegExp(r'([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}').firstMatch(response.data.toString());
+      final match = RegExp(
+        r'([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}',
+      ).firstMatch(response.data.toString());
       if (match != null) return match.group(0)!;
     } catch (e) {
       onLog("Không quét được MAC, dùng MAC mặc định. ($e)");
@@ -86,7 +92,9 @@ class RouterRebootService {
     onLog("Bắt đầu reboot router tại $baseUrl");
 
     if (password.isEmpty) {
-      throw RouterRebootException("Mật khẩu đang trống. Hãy nhập mật khẩu trang quản trị router rồi thử lại.");
+      throw RouterRebootException(
+        "Mật khẩu đang trống. Hãy nhập mật khẩu trang quản trị router rồi thử lại.",
+      );
     }
 
     // Step 1: Get MAC address (used in the login nonce)
@@ -97,7 +105,9 @@ class RouterRebootService {
 
     // Step 2: Generate nonce and hash password
     onStep(1);
-    onLog("Step 2: Tạo nonce và mã hóa mật khẩu... (mật khẩu dài ${password.length} ký tự)");
+    onLog(
+      "Step 2: Tạo nonce và mã hóa mật khẩu... (mật khẩu dài ${password.length} ký tự)",
+    );
     final nonce = _generateNonce(mac);
     final passwordHash = _generatePasswordHash(nonce, password);
     onLog("Nonce: $nonce");
@@ -108,12 +118,18 @@ class RouterRebootService {
     onLog("Step 3: Đăng nhập để lấy session token (stok)...");
     final Map<String, dynamic> loginData;
     try {
-      final body = {
-        "username": "admin", //
-        "password": passwordHash,
-        "logtype": "2",
-        "nonce": nonce,
-      }.entries.map((e) => "${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}").join("&");
+      final body =
+          {
+                "username": "admin", //
+                "password": passwordHash,
+                "logtype": "2",
+                "nonce": nonce,
+              }.entries
+              .map(
+                (e) =>
+                    "${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}",
+              )
+              .join("&");
 
       final response = await _dio.post(
         "$baseUrl/cgi-bin/luci/api/xqsystem/login",
@@ -125,12 +141,18 @@ class RouterRebootService {
         cancelToken: cancelToken,
       );
       final raw = response.data;
-      loginData = raw is Map<String, dynamic> ? raw : jsonDecode(raw.toString()) as Map<String, dynamic>;
+      loginData = raw is Map<String, dynamic>
+          ? raw
+          : jsonDecode(raw.toString()) as Map<String, dynamic>;
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) rethrow;
-      throw RouterRebootException("Không kết nối được tới router: ${e.message ?? e.type.name}");
+      throw RouterRebootException(
+        "Không kết nối được tới router: ${e.message ?? e.type.name}",
+      );
     } on FormatException {
-      throw RouterRebootException("Router trả về dữ liệu không hợp lệ khi đăng nhập.");
+      throw RouterRebootException(
+        "Router trả về dữ liệu không hợp lệ khi đăng nhập.",
+      );
     }
 
     if (loginData["code"] != 0) {
@@ -141,7 +163,9 @@ class RouterRebootService {
     }
     final stok = loginData["token"] as String?;
     if (stok == null || stok.isEmpty) {
-      throw RouterRebootException("Đăng nhập thành công nhưng router không trả về session token (stok).");
+      throw RouterRebootException(
+        "Đăng nhập thành công nhưng router không trả về session token (stok).",
+      );
     }
     onLog("Xác thực thành công! Đã nhận session token.");
 
@@ -166,11 +190,15 @@ class RouterRebootService {
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
         case DioExceptionType.connectionError:
-          onLog("Mất kết nối/timeout — bình thường vì router bắt đầu khởi động lại.");
+          onLog(
+            "Mất kết nối/timeout — bình thường vì router bắt đầu khởi động lại.",
+          );
         case DioExceptionType.cancel:
           rethrow;
         default:
-          throw RouterRebootException("Gửi lệnh reboot thất bại: ${e.message ?? e.type.name}");
+          throw RouterRebootException(
+            "Gửi lệnh reboot thất bại: ${e.message ?? e.type.name}",
+          );
       }
     }
 
@@ -206,7 +234,9 @@ class RouterRebootService {
         );
 
         if (response.statusCode == 200) {
-          onLog("Router đã phản hồi sau $retryCount lần thử. Đã khởi động xong!");
+          onLog(
+            "Router đã phản hồi sau $retryCount lần thử. Đã khởi động xong!",
+          );
           return;
         }
       } catch (e) {
