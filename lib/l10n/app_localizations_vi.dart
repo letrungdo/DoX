@@ -282,6 +282,35 @@ class AppLocalizationsVi extends AppLocalizations {
   String get wifiManagement => 'Quản lý Wifi';
 
   @override
+  String get fengShuiCompass => 'La bàn phong thủy';
+
+  @override
+  String get fengShuiHouseFacing => 'Hướng nhà';
+
+  @override
+  String get fengShuiSitting => 'Tọa (lưng nhà)';
+
+  @override
+  String get fengShuiTrigram => 'Quái';
+
+  @override
+  String get fengShuiElement => 'Ngũ hành';
+
+  @override
+  String get fengShuiMountain => 'Sơn hướng';
+
+  @override
+  String get fengShuiCalibrateHint =>
+      'Lắc điện thoại theo hình số 8 để hiệu chỉnh, tránh xa kim loại và nam châm.';
+
+  @override
+  String get fengShuiNoSensor => 'Thiết bị không có cảm biến la bàn.';
+
+  @override
+  String get fengShuiHoldFlat =>
+      'Đặt điện thoại nằm ngang, cạnh trên hướng về mặt tiền nhà.';
+
+  @override
   String get lanSpeed => 'Tốc độ LAN';
 
   @override
