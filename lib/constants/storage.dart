@@ -14,6 +14,7 @@ class StorageKey {
   static const locale = "locale";
   static const showLocketTab = "showLocketTab";
   static const showElectricTab = "showElectricTab";
+  static const showLunarTab = "showLunarTab";
   static const tabOrder = "tabOrder";
   static const electricReminder = "electricReminder";
 }

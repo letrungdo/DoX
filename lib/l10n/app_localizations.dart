@@ -428,6 +428,102 @@ abstract class AppLocalizations {
   /// **'Locket'**
   String get locket;
 
+  /// No description provided for @lunar.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunar'**
+  String get lunar;
+
+  /// No description provided for @lunarCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunar calendar'**
+  String get lunarCalendar;
+
+  /// No description provided for @lunarToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get lunarToday;
+
+  /// No description provided for @lunarSolarDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Solar'**
+  String get lunarSolarDate;
+
+  /// No description provided for @lunarLunarDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunar'**
+  String get lunarLunarDate;
+
+  /// No description provided for @lunarLeapMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'leap'**
+  String get lunarLeapMonth;
+
+  /// No description provided for @lunarDayOfWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get lunarDayOfWeek;
+
+  /// No description provided for @lunarCanChiDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get lunarCanChiDay;
+
+  /// No description provided for @lunarCanChiMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get lunarCanChiMonth;
+
+  /// No description provided for @lunarCanChiYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get lunarCanChiYear;
+
+  /// No description provided for @lunarCanChiHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Hour'**
+  String get lunarCanChiHour;
+
+  /// No description provided for @lunarGoodDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Auspicious day'**
+  String get lunarGoodDay;
+
+  /// No description provided for @lunarBadDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Inauspicious day'**
+  String get lunarBadDay;
+
+  /// No description provided for @lunarSolarTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Solar term'**
+  String get lunarSolarTerm;
+
+  /// No description provided for @lunarTide.
+  ///
+  /// In en, this message translates to:
+  /// **'Tide'**
+  String get lunarTide;
+
+  /// No description provided for @lunarGoodHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Good hours'**
+  String get lunarGoodHours;
+
   /// No description provided for @rebootRouter.
   ///
   /// In en, this message translates to:

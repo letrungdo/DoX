@@ -64,12 +64,22 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     );
   }
 
+  /// Nav item backed by a Material [IconData] for tabs without a cute SVG.
+  BottomNavigationBarItem _navItemIcon(IconData icon, Color color, String label) {
+    return BottomNavigationBarItem(
+      icon: Icon(icon, size: 26, color: Colors.grey),
+      activeIcon: Icon(icon, size: 26, color: color),
+      label: label,
+    );
+  }
+
   PageRouteInfo _routeOf(AppTab tab) {
     return switch (tab) {
       AppTab.news => const NewsRoute(),
       AppTab.chicken => const ChickenRoute(),
       AppTab.locket => const LocketRoute(),
       AppTab.electric => const ElectricRoute(),
+      AppTab.lunar => const LunarRoute(),
       AppTab.menu => const MenuRoute(),
     };
   }
@@ -80,6 +90,11 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       AppTab.chicken => _navItem(Assets.images.chickCute, l10n.chicken),
       AppTab.locket => _navItem(Assets.images.heartCute, l10n.locket),
       AppTab.electric => _navItem(Assets.images.lampCute, l10n.electricity),
+      AppTab.lunar => _navItemIcon(
+        Icons.calendar_month_rounded,
+        Theme.of(context).colorScheme.primary,
+        l10n.lunar,
+      ),
       AppTab.menu => _navItem(Assets.images.menuCute, l10n.menu),
     };
   }

@@ -184,6 +184,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locket => 'Locket';
 
   @override
+  String get lunar => 'Lunar';
+
+  @override
+  String get lunarCalendar => 'Lunar calendar';
+
+  @override
+  String get lunarToday => 'Today';
+
+  @override
+  String get lunarSolarDate => 'Solar';
+
+  @override
+  String get lunarLunarDate => 'Lunar';
+
+  @override
+  String get lunarLeapMonth => 'leap';
+
+  @override
+  String get lunarDayOfWeek => 'Day';
+
+  @override
+  String get lunarCanChiDay => 'Day';
+
+  @override
+  String get lunarCanChiMonth => 'Month';
+
+  @override
+  String get lunarCanChiYear => 'Year';
+
+  @override
+  String get lunarCanChiHour => 'Hour';
+
+  @override
+  String get lunarGoodDay => 'Auspicious day';
+
+  @override
+  String get lunarBadDay => 'Inauspicious day';
+
+  @override
+  String get lunarSolarTerm => 'Solar term';
+
+  @override
+  String get lunarTide => 'Tide';
+
+  @override
+  String get lunarGoodHours => 'Good hours';
+
+  @override
   String get rebootRouter => 'Reboot Router';
 
   @override

@@ -184,6 +184,54 @@ class AppLocalizationsVi extends AppLocalizations {
   String get locket => 'Locket';
 
   @override
+  String get lunar => 'Âm lịch';
+
+  @override
+  String get lunarCalendar => 'Lịch âm';
+
+  @override
+  String get lunarToday => 'Hôm nay';
+
+  @override
+  String get lunarSolarDate => 'Dương lịch';
+
+  @override
+  String get lunarLunarDate => 'Âm lịch';
+
+  @override
+  String get lunarLeapMonth => 'nhuận';
+
+  @override
+  String get lunarDayOfWeek => 'Thứ';
+
+  @override
+  String get lunarCanChiDay => 'Ngày';
+
+  @override
+  String get lunarCanChiMonth => 'Tháng';
+
+  @override
+  String get lunarCanChiYear => 'Năm';
+
+  @override
+  String get lunarCanChiHour => 'Giờ';
+
+  @override
+  String get lunarGoodDay => 'Ngày hoàng đạo';
+
+  @override
+  String get lunarBadDay => 'Ngày hắc đạo';
+
+  @override
+  String get lunarSolarTerm => 'Tiết khí';
+
+  @override
+  String get lunarTide => 'Con nước';
+
+  @override
+  String get lunarGoodHours => 'Giờ tốt';
+
+  @override
   String get rebootRouter => 'Khởi động lại router';
 
   @override

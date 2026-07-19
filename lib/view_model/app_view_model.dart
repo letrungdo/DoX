@@ -20,6 +20,9 @@ class AppViewModel extends CoreViewModel {
   bool _showElectricTab = storageService.getShowElectricTab();
   bool get showElectricTab => _showElectricTab;
 
+  bool _showLunarTab = storageService.getShowLunarTab();
+  bool get showLunarTab => _showLunarTab;
+
   List<AppTab> _tabOrder = AppTab.sanitizeOrder(storageService.getTabOrder());
 
   DateTime? _electricMonthToHighlight;
@@ -34,6 +37,7 @@ class AppViewModel extends CoreViewModel {
       return switch (tab) {
         AppTab.locket => _showLocketTab,
         AppTab.electric => _showElectricTab,
+        AppTab.lunar => _showLunarTab,
         _ => true,
       };
     }).toList();
@@ -77,6 +81,12 @@ class AppViewModel extends CoreViewModel {
     _showElectricTab = value;
     notifyListeners();
     storageService.setShowElectricTab(value);
+  }
+
+  void setShowLunarTab(bool value) {
+    _showLunarTab = value;
+    notifyListeners();
+    storageService.setShowLunarTab(value);
   }
 
   void setTabOrder(List<AppTab> value) {

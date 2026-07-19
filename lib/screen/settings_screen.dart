@@ -150,6 +150,7 @@ class SettingsScreen extends StatelessWidget {
       AppTab.chicken => l10n.chicken,
       AppTab.locket => l10n.locket,
       AppTab.electric => l10n.electricity,
+      AppTab.lunar => l10n.lunarCalendar,
       AppTab.menu => l10n.menu,
     };
   }
@@ -158,6 +159,7 @@ class SettingsScreen extends StatelessWidget {
     return switch (tab) {
       AppTab.locket => appVm.showLocketTab,
       AppTab.electric => appVm.showElectricTab,
+      AppTab.lunar => appVm.showLunarTab,
       _ => true,
     };
   }
@@ -232,6 +234,8 @@ class SettingsScreen extends StatelessWidget {
                                 appVm.setShowLocketTab(value);
                               case AppTab.electric:
                                 appVm.setShowElectricTab(value);
+                              case AppTab.lunar:
+                                appVm.setShowLunarTab(value);
                               default:
                                 break;
                             }
