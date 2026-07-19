@@ -34,6 +34,17 @@
 	<string>This app needs access to location when open.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Do X needs local network access to find devices connected to your Wi-Fi network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+		<string>_workstation._tcp</string>
+		<string>_airplay._tcp</string>
+		<string>_raop._tcp</string>
+		<string>_companion-link._tcp</string>
+		<string>_apple-mobdev2._tcp</string>
+		<string>_device-info._tcp</string>
+		<string>_smb._tcp</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Used to capture audio for image picker plugin</string>
 	<key>NSPhotoLibraryUsageDescription</key>

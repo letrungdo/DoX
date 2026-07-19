@@ -431,7 +431,7 @@ abstract class AppLocalizations {
   /// No description provided for @rebootRouter.
   ///
   /// In en, this message translates to:
-  /// **'Wifi Management'**
+  /// **'Reboot Router'**
   String get rebootRouter;
 
   /// No description provided for @about.
@@ -1447,6 +1447,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sell grown chickens'**
   String get sellGrownChicken;
+
+  /// No description provided for @tabReboot.
+  ///
+  /// In en, this message translates to:
+  /// **'Reboot'**
+  String get tabReboot;
+
+  /// No description provided for @tabDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get tabDevices;
+
+  /// No description provided for @tabSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get tabSpeed;
+
+  /// No description provided for @processing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get processing;
+
+  /// No description provided for @rebootSuccessStartSpeedTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Reboot successful, starting speed test'**
+  String get rebootSuccessStartSpeedTest;
+
+  /// No description provided for @connectionSpeedTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Check connection speed'**
+  String get connectionSpeedTest;
+
+  /// No description provided for @selectInternetServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Select internet test server'**
+  String get selectInternetServer;
+
+  /// No description provided for @serverLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get serverLabel;
+
+  /// No description provided for @ttfbMs.
+  ///
+  /// In en, this message translates to:
+  /// **'TTFB: {ms}ms'**
+  String ttfbMs(int ms);
+
+  /// No description provided for @stopLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'STOP'**
+  String get stopLabel;
+
+  /// No description provided for @deviceConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Device configuration'**
+  String get deviceConfig;
+
+  /// No description provided for @adminPasswordHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Login password for the router admin page (MiWiFi)'**
+  String get adminPasswordHelper;
+
+  /// No description provided for @progressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress:'**
+  String get progressTitle;
+
+  /// No description provided for @routerNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Still no response from the router ({seconds}s)...'**
+  String routerNoResponse(int seconds);
+
+  /// No description provided for @reconnectingEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting... (Estimated ~90 seconds)'**
+  String get reconnectingEstimate;
+
+  /// No description provided for @skipWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip waiting'**
+  String get skipWaiting;
+
+  /// No description provided for @skipWaitingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: If the router changed IP or the light turned green, you can skip this step.'**
+  String get skipWaitingNote;
+
+  /// No description provided for @errorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Error!'**
+  String get errorLabel;
+
+  /// No description provided for @successLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Success!'**
+  String get successLabel;
+
+  /// No description provided for @consoleLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed log (Console Log)'**
+  String get consoleLog;
+
+  /// No description provided for @speedAnalysisLanWeak.
+  ///
+  /// In en, this message translates to:
+  /// **'LAN connection is very weak. Check the network cable or the distance to the repeater.'**
+  String get speedAnalysisLanWeak;
+
+  /// No description provided for @speedAnalysisInternetSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'LAN connection is good, but the Internet is slow. The issue may be from the ISP or the main router.'**
+  String get speedAnalysisInternetSlow;
+
+  /// No description provided for @speedAnalysisPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'The network is working perfectly!'**
+  String get speedAnalysisPerfect;
+
+  /// No description provided for @speedAnalysisStable.
+  ///
+  /// In en, this message translates to:
+  /// **'Network speed is stable.'**
+  String get speedAnalysisStable;
+
+  /// No description provided for @localNetworkDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Local network devices'**
+  String get localNetworkDevices;
+
+  /// No description provided for @activeDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Active devices'**
+  String get activeDevices;
+
+  /// No description provided for @scanningAddresses.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning {scanned}/{total} addresses'**
+  String scanningAddresses(int scanned, int total);
+
+  /// No description provided for @devicesDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} devices detected'**
+  String devicesDetected(int count);
+
+  /// No description provided for @rescan.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan'**
+  String get rescan;
+
+  /// No description provided for @noDevicesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices found. Make sure your phone is connected to Wi-Fi and scan again.'**
+  String get noDevicesFound;
+
+  /// No description provided for @deviceScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Results include devices that respond on common network ports. Devices blocking connections may not appear.'**
+  String get deviceScanHint;
+
+  /// No description provided for @thisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get thisDevice;
+
+  /// No description provided for @thisDeviceNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (This device)'**
+  String thisDeviceNamed(String name);
+
+  /// No description provided for @routerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Router'**
+  String get routerLabel;
+
+  /// No description provided for @networkDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Network device'**
+  String get networkDevice;
+
+  /// No description provided for @macLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'MAC: {mac}'**
+  String macLabel(String mac);
+
+  /// No description provided for @portsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ports: {ports}'**
+  String portsLabel(String ports);
 }
 
 class _AppLocalizationsDelegate

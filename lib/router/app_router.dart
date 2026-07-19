@@ -110,7 +110,6 @@ class _AppRouter extends RootStackRouter {
         guards: [_supabaseAuthGuard],
       ),
       AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
-      AutoRoute(path: '/local-network', page: LocalNetworkRoute.page),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];
