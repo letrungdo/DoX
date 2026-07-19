@@ -1508,6 +1508,12 @@ abstract class AppLocalizations {
   /// **'STOP'**
   String get stopLabel;
 
+  /// No description provided for @stopSpeedTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get stopSpeedTest;
+
   /// No description provided for @deviceConfig.
   ///
   /// In en, this message translates to:

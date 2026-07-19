@@ -524,6 +524,7 @@
     }
   },
   "stopLabel": "STOP",
+  "stopSpeedTest": "Stop",
   "deviceConfig": "Device configuration",
   "adminPasswordHelper": "Login password for the router admin page (MiWiFi)",
   "progressTitle": "Progress:",

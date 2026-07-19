@@ -799,6 +799,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stopLabel => 'STOP';
 
   @override
+  String get stopSpeedTest => 'Stop';
+
+  @override
   String get deviceConfig => 'Device configuration';
 
   @override
