@@ -1052,6 +1052,12 @@ abstract class AppLocalizations {
   /// **'Hatched {date}'**
   String hatchedOnDate(String date);
 
+  /// No description provided for @soldOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold {date}'**
+  String soldOnDate(String date);
+
   /// No description provided for @badgeRevenue.
   ///
   /// In en, this message translates to:

@@ -149,6 +149,8 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                   }
                   tabsRouter.setActiveIndex(value);
                   storageService.setTabIndex(value);
+                  // Switching to another tab re-fetches that tab's data.
+                  await vm.handleTabReselect(routes[value].routeName);
                 },
                 items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
               ),

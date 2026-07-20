@@ -293,6 +293,14 @@
       }
     }
   },
+  "soldOnDate": "Sold {date}",
+  "@soldOnDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "badgeRevenue": "Revenue",
   "badgeExpense": "Expense",
   "badgeProfit": "Profit",

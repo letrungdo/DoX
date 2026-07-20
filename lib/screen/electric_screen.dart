@@ -89,6 +89,12 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
   }
 
   @override
+  void onResume() {
+    super.onResume();
+    if (vm.status == ElectricStatus.loggedIn) vm.onRefresh();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(

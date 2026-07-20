@@ -43,6 +43,14 @@ class _ChickenStatisticsScreenState
   }
 
   @override
+  void onResume() {
+    super.onResume();
+    vm.ensureBatchesLoaded();
+    vm.ensureCockSalesLoaded();
+    vm.ensureExpensesLoaded();
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
@@ -64,14 +72,22 @@ class _ChickenStatisticsScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          if (vm.isBatchesLoading ||
-              vm.isCockSalesLoading ||
-              vm.isExpensesLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return TabBarView(
-            controller: _tabController,
-            children: [_buildMonthlyStats(vm), _buildYearlyStats(vm)],
+          final isFetching =
+              vm.isBatchesFetching ||
+              vm.isCockSalesFetching ||
+              vm.isExpensesFetching;
+          return Column(
+            children: [
+              isFetching
+                  ? const LinearProgressIndicator(minHeight: 2)
+                  : const SizedBox(height: 2),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [_buildMonthlyStats(vm), _buildYearlyStats(vm)],
+                ),
+              ),
+            ],
           );
         },
       ).webConstrainedBox(),

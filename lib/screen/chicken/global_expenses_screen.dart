@@ -8,6 +8,7 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
@@ -43,11 +44,20 @@ class _GlobalExpensesScreenState
   }
 
   @override
+  void onResume() {
+    super.onResume();
+    vm.ensureExpensesLoaded();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
+        bottom: AppBarLoadingBar<ChickenViewModel>(
+          selector: (vm) => vm.isExpensesFetching,
+        ),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
@@ -57,9 +67,6 @@ class _GlobalExpensesScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          if (vm.isExpensesLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
           final years = {
             DateTime.now().year,
             ...vm.globalExpenses.map((expense) => expense.date.year),
@@ -100,8 +107,8 @@ class _GlobalExpensesScreenState
                         if (year != null) setState(() => _selectedYear = year);
                       },
                     ),
-                    const Spacer(),
-                    Flexible(
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
@@ -140,31 +147,37 @@ class _GlobalExpensesScreenState
                             children: [
                               SizedBox(
                                 height: constraints.maxHeight,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Assets.images.feedCute.svg(
-                                      width: 72,
-                                      height: 72,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      vm.globalExpenses.isEmpty
-                                          ? l10n.noCommonExpenses
-                                          : l10n.noCommonExpensesInYear(
-                                              _selectedYear,
+                                child: vm.isExpensesLoading
+                                    ? const SizedBox.shrink()
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Assets.images.feedCute.svg(
+                                            width: 72,
+                                            height: 72,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            vm.globalExpenses.isEmpty
+                                                ? l10n.noCommonExpenses
+                                                : l10n.noCommonExpensesInYear(
+                                                    _selectedYear,
+                                                  ),
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
                                             ),
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                    if (vm.globalExpenses.isEmpty) ...[
-                                      const SizedBox(height: 16),
-                                      ElevatedButton(
-                                        onPressed: () => _showExpenseDialog(),
-                                        child: Text(l10n.addFirstExpense),
+                                          ),
+                                          if (vm.globalExpenses.isEmpty) ...[
+                                            const SizedBox(height: 16),
+                                            ElevatedButton(
+                                              onPressed: () =>
+                                                  _showExpenseDialog(),
+                                              child: Text(l10n.addFirstExpense),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                    ],
-                                  ],
-                                ),
                               ),
                             ],
                           ),

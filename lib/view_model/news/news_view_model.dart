@@ -19,6 +19,9 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   String? _dcomRate;
   String? get dcomRate => _dcomRate;
 
+  bool _isFetching = false;
+  bool get isFetching => _isFetching;
+
   @override
   void initState() {
     super.initState();
@@ -38,14 +41,21 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   }
 
   Future<void> _fetchData() async {
-    await Future.wait([
-      _getGoldPrice(), //
-      _getSmileRate(),
-      _getDcomRate(),
-      _getGoogleRate(),
-      _getMoneyGramRate(),
-      getMarket(),
-    ]);
+    _isFetching = true;
+    notifyListenersSafe();
+    try {
+      await Future.wait([
+        _getGoldPrice(), //
+        _getSmileRate(),
+        _getDcomRate(),
+        _getGoogleRate(),
+        _getMoneyGramRate(),
+        getMarket(),
+      ]);
+    } finally {
+      _isFetching = false;
+      notifyListenersSafe();
+    }
   }
 
   Future<void> onRefresh() {

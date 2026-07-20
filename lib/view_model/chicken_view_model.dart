@@ -55,6 +55,17 @@ class ChickenViewModel extends CoreViewModel {
   bool _expensesLoading = false;
   bool get isExpensesLoading => _expensesLoading;
 
+  // True while a fetch is in flight (including silent refreshes), used to drive
+  // the thin progress bar under the app bar.
+  bool _batchesFetching = false;
+  bool get isBatchesFetching => _batchesFetching;
+
+  bool _cockSalesFetching = false;
+  bool get isCockSalesFetching => _cockSalesFetching;
+
+  bool _expensesFetching = false;
+  bool get isExpensesFetching => _expensesFetching;
+
   @override
   void initState() {
     super.initState();
@@ -127,10 +138,9 @@ class ChickenViewModel extends CoreViewModel {
 
   Future<void> loadBatches({bool showLoading = false}) async {
     if (supabase.auth.currentSession == null) return;
-    if (showLoading) {
-      _batchesLoading = true;
-      notifyListenersSafe();
-    }
+    _batchesFetching = true;
+    if (showLoading) _batchesLoading = true;
+    notifyListenersSafe();
     try {
       _batches = await _repository.getBatches();
       _batchesLoaded = true;
@@ -138,6 +148,7 @@ class ChickenViewModel extends CoreViewModel {
       logger.e("load chicken batches failed", error: e);
     } finally {
       _batchesLoading = false;
+      _batchesFetching = false;
       notifyListenersSafe();
     }
     // Scheduling local notifications can be slow; keep it off the UI path.
@@ -146,10 +157,9 @@ class ChickenViewModel extends CoreViewModel {
 
   Future<void> loadCockSales({bool showLoading = false}) async {
     if (supabase.auth.currentSession == null) return;
-    if (showLoading) {
-      _cockSalesLoading = true;
-      notifyListenersSafe();
-    }
+    _cockSalesFetching = true;
+    if (showLoading) _cockSalesLoading = true;
+    notifyListenersSafe();
     try {
       _globalCockSales = await _repository.getGlobalCockSales();
       _cockSalesLoaded = true;
@@ -157,16 +167,16 @@ class ChickenViewModel extends CoreViewModel {
       logger.e("load cock sales failed", error: e);
     } finally {
       _cockSalesLoading = false;
+      _cockSalesFetching = false;
       notifyListenersSafe();
     }
   }
 
   Future<void> loadExpenses({bool showLoading = false}) async {
     if (supabase.auth.currentSession == null) return;
-    if (showLoading) {
-      _expensesLoading = true;
-      notifyListenersSafe();
-    }
+    _expensesFetching = true;
+    if (showLoading) _expensesLoading = true;
+    notifyListenersSafe();
     try {
       _globalExpenses = await _repository.getGlobalExpenses();
       _expensesLoaded = true;
@@ -174,6 +184,7 @@ class ChickenViewModel extends CoreViewModel {
       logger.e("load global expenses failed", error: e);
     } finally {
       _expensesLoading = false;
+      _expensesFetching = false;
       notifyListenersSafe();
     }
   }
