@@ -530,6 +530,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String soldOnDate(String date) {
+    return 'Sold $date';
+  }
+
+  @override
   String get badgeRevenue => 'Revenue';
 
   @override

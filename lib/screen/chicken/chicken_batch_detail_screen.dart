@@ -11,6 +11,7 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
@@ -47,15 +48,23 @@ class _ChickenBatchDetailScreenState
   }
 
   @override
+  void onResume() {
+    super.onResume();
+    vm.ensureBatchesLoaded();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: DoAppBar(title: l10n.batchDetailTitle),
+      appBar: DoAppBar(
+        title: l10n.batchDetailTitle,
+        bottom: AppBarLoadingBar<ChickenViewModel>(
+          selector: (vm) => vm.isBatchesFetching,
+        ),
+      ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          if (vm.isBatchesLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
           final batch = vm.batches.firstWhereOrNull(
             (e) => e.id == widget.batchId,
           );

@@ -13,6 +13,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
@@ -51,6 +52,12 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   @override
   void initData() {
     super.initData();
+    vm.ensureBatchesLoaded();
+  }
+
+  @override
+  void onResume() {
+    super.onResume();
     vm.ensureBatchesLoaded();
   }
 
@@ -97,6 +104,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.chickenManagement,
+        bottom: AppBarLoadingBar<ChickenViewModel>(
+          selector: (vm) => vm.isBatchesFetching,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -133,10 +143,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          if (vm.isBatchesLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           final years = {
             DateTime.now().year,
             ...vm.batches.map(
@@ -154,9 +160,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                           _selectedYear,
                     )
                     .toList();
-          final totalProfit = batches.fold<double>(
+          final totalRevenue = batches.fold<double>(
             0,
-            (sum, batch) => sum + batch.profit,
+            (sum, batch) => sum + batch.totalSaleAmount + batch.totalCockSales,
           );
 
           final items = <Widget>[];
@@ -257,12 +263,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                                 ),
                               ),
                               TextSpan(
-                                text: "${totalProfit.toCurrency()}đ",
-                                style: TextStyle(
-                                  color: totalProfit >= 0
-                                      ? context.colors.money
-                                      : Colors.red,
-                                ),
+                                text: "${totalRevenue.toCurrency()}đ",
+                                style: TextStyle(color: context.colors.money),
                               ),
                             ],
                           ),
@@ -284,21 +286,26 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                             children: [
                               SizedBox(
                                 height: constraints.maxHeight,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Assets.images.chickCute.svg(
-                                      width: 72,
-                                      height: 72,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _selectedYear == 0
-                                          ? l10n.noBatchesYet
-                                          : l10n.noBatchesInYear(_selectedYear),
-                                    ),
-                                  ],
-                                ),
+                                child: vm.isBatchesLoading
+                                    ? const SizedBox.shrink()
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Assets.images.chickCute.svg(
+                                            width: 72,
+                                            height: 72,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            _selectedYear == 0
+                                                ? l10n.noBatchesYet
+                                                : l10n.noBatchesInYear(
+                                                    _selectedYear,
+                                                  ),
+                                          ),
+                                        ],
+                                      ),
                               ),
                             ],
                           ),
@@ -387,19 +394,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: CircleAvatar(
-        radius: 22,
-        backgroundColor: statusColor.withValues(alpha: 0.12),
-        child:
-            (!isHatched
-                    ? Assets.images.eggCute
-                    : isSoldOut
-                    ? Assets.images.henCute
-                    : Assets.images.chickCute)
-                .svg(width: 30, height: 30),
-      ),
       title: Row(
         children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: statusColor.withValues(alpha: 0.12),
+            child:
+                (!isHatched
+                        ? Assets.images.eggCute
+                        : isSoldOut
+                        ? Assets.images.henCute
+                        : Assets.images.chickCute)
+                    .svg(width: 30, height: 30),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               batch.name,
@@ -442,10 +450,25 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildBatchInfo(
-                    Icons.calendar_today_rounded,
-                    l10n.hatchedOnDate(dateFormat.format(hatchDate)),
-                    alignment: MainAxisAlignment.end,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildBatchInfo(
+                        Icons.calendar_today_rounded,
+                        l10n.hatchedOnDate(dateFormat.format(hatchDate)),
+                        alignment: MainAxisAlignment.end,
+                      ),
+                      if (batch.lastSaleDate != null) ...[
+                        const SizedBox(height: 4),
+                        _buildBatchInfo(
+                          Icons.sell_rounded,
+                          l10n.soldOnDate(
+                            dateFormat.format(batch.lastSaleDate!),
+                          ),
+                          alignment: MainAxisAlignment.end,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],

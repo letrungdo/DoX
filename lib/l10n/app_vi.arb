@@ -286,6 +286,14 @@
       }
     }
   },
+  "soldOnDate": "Bán {date}",
+  "@soldOnDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "badgeRevenue": "Thu",
   "badgeExpense": "Chi",
   "badgeProfit": "Lãi",

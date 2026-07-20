@@ -531,6 +531,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String soldOnDate(String date) {
+    return 'Bán $date';
+  }
+
+  @override
   String get badgeRevenue => 'Thu';
 
   @override

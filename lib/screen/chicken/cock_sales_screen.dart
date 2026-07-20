@@ -8,6 +8,7 @@ import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
@@ -44,11 +45,20 @@ class _CockSalesScreenState
   }
 
   @override
+  void onResume() {
+    super.onResume();
+    vm.ensureCockSalesLoaded();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.sellRoosterMeat,
+        bottom: AppBarLoadingBar<ChickenViewModel>(
+          selector: (vm) => vm.isCockSalesFetching,
+        ),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.roosterCute),
@@ -58,9 +68,6 @@ class _CockSalesScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          if (vm.isCockSalesLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
           final years = {
             DateTime.now().year,
             ...vm.globalCockSales.map((sale) => sale.date.year),
@@ -167,31 +174,38 @@ class _CockSalesScreenState
                             children: [
                               SizedBox(
                                 height: constraints.maxHeight,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Assets.images.roosterCute.svg(
-                                      width: 72,
-                                      height: 72,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      vm.globalCockSales.isEmpty
-                                          ? l10n.noCockSalesData
-                                          : _selectedYear == 0
-                                          ? l10n.noMatchingSales
-                                          : l10n.noSalesInYear(_selectedYear),
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                    if (vm.globalCockSales.isEmpty) ...[
-                                      const SizedBox(height: 16),
-                                      ElevatedButton(
-                                        onPressed: () => _showSaleDialog(),
-                                        child: Text(l10n.enterFirstSale),
+                                child: vm.isCockSalesLoading
+                                    ? const SizedBox.shrink()
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Assets.images.roosterCute.svg(
+                                            width: 72,
+                                            height: 72,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            vm.globalCockSales.isEmpty
+                                                ? l10n.noCockSalesData
+                                                : _selectedYear == 0
+                                                ? l10n.noMatchingSales
+                                                : l10n.noSalesInYear(
+                                                    _selectedYear,
+                                                  ),
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          if (vm.globalCockSales.isEmpty) ...[
+                                            const SizedBox(height: 16),
+                                            ElevatedButton(
+                                              onPressed: () => _showSaleDialog(),
+                                              child: Text(l10n.enterFirstSale),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                    ],
-                                  ],
-                                ),
                               ),
                             ],
                           ),

@@ -45,7 +45,7 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> with WidgetsBindingObserver {
+class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> {
   final colsRatio = [40, 30, 30];
   final _scrollController = ScrollController();
   MainViewModel? _mainViewModel;
@@ -60,7 +60,6 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
   void initState() {
     _tabReselectHandler = _handleTabReselect;
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
@@ -77,7 +76,6 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
   void dispose() {
     _mainViewModel?.unregisterTabReselectHandler(NewsRoute.name, _tabReselectHandler);
     _scrollController.dispose();
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -89,7 +87,14 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
   }
 
   @override
+  void onResume() {
+    super.onResume();
+    vm.onRefresh();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       if (_isVisible) _socketService.connect(context);
     } else if (state == AppLifecycleState.paused) {
@@ -124,9 +129,23 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
             ),
           ],
         ),
-        body: RefreshIndicator.adaptive(
-          onRefresh: () => vm.onRefresh(), //
-          child: _buildBody(l10n),
+        body: Column(
+          children: [
+            Selector<V, bool>(
+              selector: (_, vm) => vm.isFetching,
+              builder: (context, isFetching, _) {
+                return isFetching
+                    ? const LinearProgressIndicator(minHeight: 2)
+                    : const SizedBox(height: 2);
+              },
+            ),
+            Expanded(
+              child: RefreshIndicator.adaptive(
+                onRefresh: () => vm.onRefresh(), //
+                child: _buildBody(l10n),
+              ),
+            ),
+          ],
         ),
       ),
     );
