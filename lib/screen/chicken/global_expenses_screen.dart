@@ -56,7 +56,7 @@ class _GlobalExpensesScreenState
       appBar: DoAppBar(
         title: l10n.commonExpenses,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isExpensesFetching,
+          selector: (vm) => vm.isExpensesLoading,
         ),
         actions: [
           IconButton(
@@ -139,7 +139,7 @@ class _GlobalExpensesScreenState
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: vm.loadExpenses,
+                  onRefresh: () => vm.loadExpenses(showLoading: true),
                   child: expenses.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(

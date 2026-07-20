@@ -108,7 +108,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               return Row(
                 children: [
                   IconButton(
-                    onPressed: vm.onRefresh, //
+                    onPressed: () => vm.onRefresh(showLoading: true), //
                     icon: const Icon(Icons.refresh_rounded, size: 27),
                   ),
                   IconButton(
@@ -131,16 +131,16 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
             ElectricStatus.loggedIn => Column(
               children: [
                 Selector<ElectricViewModel, bool>(
-                  selector: (_, vm) => vm.isFetching,
-                  builder: (context, isFetching, _) {
-                    return isFetching
+                  selector: (_, vm) => vm.isLoading,
+                  builder: (context, isLoading, _) {
+                    return isLoading
                         ? const LinearProgressIndicator(minHeight: 2)
                         : const SizedBox(height: 2);
                   },
                 ),
                 Expanded(
                   child: RefreshIndicator.adaptive(
-                    onRefresh: () => vm.onRefresh(), //
+                    onRefresh: () => vm.onRefresh(showLoading: true), //
                     child: _buildContent(l10n),
                   ),
                 ),

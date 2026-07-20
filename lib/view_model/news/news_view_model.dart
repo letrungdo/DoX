@@ -22,6 +22,13 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   bool _isFetching = false;
   bool get isFetching => _isFetching;
 
+  bool _isLoading = false;
+
+  /// True only during an explicitly-requested load (first load or a manual
+  /// reload). Background refreshes on tab switch / resume leave this false so
+  /// the top progress bar stays hidden.
+  bool get isLoading => _isLoading;
+
   @override
   void initState() {
     super.initState();
@@ -37,11 +44,12 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   @override
   void initData() {
     super.initData();
-    _fetchData();
+    _fetchData(showLoading: true);
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchData({bool showLoading = false}) async {
     _isFetching = true;
+    if (showLoading) _isLoading = true;
     notifyListenersSafe();
     try {
       await Future.wait([
@@ -54,13 +62,14 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
       ]);
     } finally {
       _isFetching = false;
+      _isLoading = false;
       notifyListenersSafe();
     }
   }
 
-  Future<void> onRefresh() {
+  Future<void> onRefresh({bool showLoading = false}) {
     renewCancelToken("onRefresh");
-    return _fetchData();
+    return _fetchData(showLoading: showLoading);
   }
 
   Future<void> _getGoldPrice() async {

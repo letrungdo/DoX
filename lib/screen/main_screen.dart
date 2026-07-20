@@ -144,6 +144,14 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                     if (supabase.auth.currentSession == null) return;
                   }
                   if (value == tabsRouter.activeIndex) {
+                    // If the tab has a detail screen pushed on its nested
+                    // stack, re-tapping goes back one level instead of
+                    // reloading the tab's root.
+                    final innerRouter = tabsRouter.stackRouterOfIndex(value);
+                    if (innerRouter != null && innerRouter.canPop()) {
+                      await innerRouter.maybePop();
+                      return;
+                    }
                     await vm.handleTabReselect(routes[value].routeName);
                     return;
                   }

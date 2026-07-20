@@ -105,7 +105,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       appBar: DoAppBar(
         title: l10n.chickenManagement,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isBatchesFetching,
+          selector: (vm) => vm.isBatchesLoading,
         ),
         actions: [
           IconButton(
@@ -277,7 +277,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: vm.loadBatches,
+                  onRefresh: () => vm.loadBatches(showLoading: true),
                   child: items.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(

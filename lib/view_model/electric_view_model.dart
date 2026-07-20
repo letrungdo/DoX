@@ -27,10 +27,21 @@ class ElectricViewModel extends CoreViewModel {
 
   final _fetchingUsernames = <String>{};
 
-  /// True while data for the active account is being (re)loaded.
+  /// True while data for the active account is being (re)loaded (any trigger,
+  /// including background refreshes on tab switch / resume).
   bool get isFetching {
     final account = activeAccount;
     return account != null && _fetchingUsernames.contains(account.username);
+  }
+
+  final _loadingUsernames = <String>{};
+
+  /// True only while an explicitly-requested load is running — first load or a
+  /// manual reload (refresh button / pull-to-refresh). Background refreshes on
+  /// tab switch / resume don't set this, so the top progress bar stays hidden.
+  bool get isLoading {
+    final account = activeAccount;
+    return account != null && _loadingUsernames.contains(account.username);
   }
 
   ElectricCustomer? get customer => activeAccount?.customer;
@@ -102,7 +113,7 @@ class ElectricViewModel extends CoreViewModel {
     }
     _activeIndex = 0;
     _setStatus(ElectricStatus.loggedIn);
-    await _fetchAccount(_accounts[_activeIndex]);
+    await _fetchAccount(_accounts[_activeIndex], showLoading: true);
   }
 
   /// Logs in and adds a new account tab, then makes it active.
@@ -124,7 +135,7 @@ class ElectricViewModel extends CoreViewModel {
     _activeIndex = _accounts.length - 1;
     await secureStorage.saveCpcAccounts(_accounts);
     _setStatus(ElectricStatus.loggedIn);
-    await _fetchAccount(account);
+    await _fetchAccount(account, showLoading: true);
   }
 
   Future<void> removeActiveAccount() async {
@@ -139,7 +150,9 @@ class ElectricViewModel extends CoreViewModel {
     }
     notifyListenersSafe();
     final active = activeAccount;
-    if (active != null && !active.loaded) await _fetchAccount(active);
+    if (active != null && !active.loaded) {
+      await _fetchAccount(active, showLoading: true);
+    }
   }
 
   void switchAccount(int index) {
@@ -147,22 +160,26 @@ class ElectricViewModel extends CoreViewModel {
     _activeIndex = index;
     notifyListenersSafe();
     final account = _accounts[index];
-    if (!account.loaded) _fetchAccount(account);
+    if (!account.loaded) _fetchAccount(account, showLoading: true);
   }
 
-  Future<void> onRefresh() async {
+  Future<void> onRefresh({bool showLoading = false}) async {
     renewCancelToken("onRefresh");
     final account = activeAccount;
-    if (account != null) await _fetchAccount(account);
+    if (account != null) {
+      await _fetchAccount(account, showLoading: showLoading);
+    }
   }
 
-  Future<void> _fetchAccount(ElectricAccount account) async {
+  Future<void> _fetchAccount(ElectricAccount account, {bool showLoading = false}) async {
     _fetchingUsernames.add(account.username);
+    if (showLoading) _loadingUsernames.add(account.username);
     notifyListenersSafe();
     try {
       await _doFetchAccount(account);
     } finally {
       _fetchingUsernames.remove(account.username);
+      _loadingUsernames.remove(account.username);
       notifyListenersSafe();
     }
   }

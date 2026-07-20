@@ -60,7 +60,7 @@ class _ChickenBatchDetailScreenState
       appBar: DoAppBar(
         title: l10n.batchDetailTitle,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isBatchesFetching,
+          selector: (vm) => vm.isBatchesLoading,
         ),
       ),
       body: Consumer<ChickenViewModel>(

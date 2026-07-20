@@ -72,13 +72,13 @@ class _ChickenStatisticsScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final isFetching =
-              vm.isBatchesFetching ||
-              vm.isCockSalesFetching ||
-              vm.isExpensesFetching;
+          final isLoading =
+              vm.isBatchesLoading ||
+              vm.isCockSalesLoading ||
+              vm.isExpensesLoading;
           return Column(
             children: [
-              isFetching
+              isLoading
                   ? const LinearProgressIndicator(minHeight: 2)
                   : const SizedBox(height: 2),
               Expanded(

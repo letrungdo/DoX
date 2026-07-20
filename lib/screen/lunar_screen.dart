@@ -255,6 +255,7 @@ class _LunarScreenState extends State<LunarScreen> {
 
     return Container(
       margin: const EdgeInsets.all(2),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: isSelected ? scheme.primaryContainer : null,
         border: Border.all(
