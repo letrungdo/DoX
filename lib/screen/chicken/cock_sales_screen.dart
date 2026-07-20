@@ -57,7 +57,7 @@ class _CockSalesScreenState
       appBar: DoAppBar(
         title: l10n.sellRoosterMeat,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isCockSalesFetching,
+          selector: (vm) => vm.isCockSalesLoading,
         ),
         actions: [
           IconButton(
@@ -166,7 +166,7 @@ class _CockSalesScreenState
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: vm.loadCockSales,
+                  onRefresh: () => vm.loadCockSales(showLoading: true),
                   child: sortedSales.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(

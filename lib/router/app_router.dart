@@ -46,8 +46,18 @@ class _AppRouter extends RootStackRouter {
           AutoRoute(
             initial: initialTab == AppTab.chicken,
             path: 'chicken',
-            page: ChickenRoute.page,
+            page: chickenTab.page,
             guards: [_supabaseAuthGuard],
+            children: [
+              AutoRoute(path: '', page: ChickenRoute.page),
+              AutoRoute(path: ':batchId', page: ChickenBatchDetailRoute.page),
+              AutoRoute(path: 'statistics', page: ChickenStatisticsRoute.page),
+              AutoRoute(path: 'cock-sales', page: CockSalesRoute.page),
+              AutoRoute(
+                path: 'global-expenses',
+                page: GlobalExpensesRoute.page,
+              ),
+            ],
           ),
           AutoRoute(
             path: 'locket',
@@ -94,26 +104,6 @@ class _AppRouter extends RootStackRouter {
         ],
       ),
       AutoRoute(path: '/login', page: AppLoginRoute.page),
-      AutoRoute(
-        path: '/chicken/:batchId',
-        page: ChickenBatchDetailRoute.page,
-        guards: [_supabaseAuthGuard],
-      ),
-      AutoRoute(
-        path: '/chicken-statistics',
-        page: ChickenStatisticsRoute.page,
-        guards: [_supabaseAuthGuard],
-      ),
-      AutoRoute(
-        path: '/cock-sales',
-        page: CockSalesRoute.page,
-        guards: [_supabaseAuthGuard],
-      ),
-      AutoRoute(
-        path: '/global-expenses',
-        page: GlobalExpensesRoute.page,
-        guards: [_supabaseAuthGuard],
-      ),
       AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
       AutoRoute(
         path: '/feng-shui-compass',
@@ -126,5 +116,6 @@ class _AppRouter extends RootStackRouter {
 }
 
 const locketTab = EmptyShellRoute('LocketTab');
+const chickenTab = EmptyShellRoute('ChickenTab');
 
 final appRouter = _AppRouter();

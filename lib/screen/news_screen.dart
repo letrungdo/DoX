@@ -124,7 +124,7 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           title: l10n.news, //
           actions: [
             IconButton(
-              onPressed: vm.onRefresh, //
+              onPressed: () => vm.onRefresh(showLoading: true), //
               icon: const Icon(Icons.refresh_rounded, size: 27),
             ),
           ],
@@ -132,16 +132,16 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
         body: Column(
           children: [
             Selector<V, bool>(
-              selector: (_, vm) => vm.isFetching,
-              builder: (context, isFetching, _) {
-                return isFetching
+              selector: (_, vm) => vm.isLoading,
+              builder: (context, isLoading, _) {
+                return isLoading
                     ? const LinearProgressIndicator(minHeight: 2)
                     : const SizedBox(height: 2);
               },
             ),
             Expanded(
               child: RefreshIndicator.adaptive(
-                onRefresh: () => vm.onRefresh(), //
+                onRefresh: () => vm.onRefresh(showLoading: true), //
                 child: _buildBody(l10n),
               ),
             ),
