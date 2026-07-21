@@ -81,11 +81,11 @@ class _ChickenBatchDetailScreenState
               children: [
                 _buildInfoSection(batch),
                 const SizedBox(height: 24),
+                _buildSaleSection(batch),
+                const SizedBox(height: 24),
                 _buildVaccinationSection(batch),
                 const SizedBox(height: 24),
                 _buildExpenseSection(batch),
-                const SizedBox(height: 24),
-                _buildSaleSection(batch),
                 const SizedBox(height: 40),
                 Center(
                   child: TextButton(
@@ -313,53 +313,12 @@ class _ChickenBatchDetailScreenState
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              // Edit + delete in the top-right corner.
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    constraints: const BoxConstraints(),
-                                    padding: const EdgeInsets.all(4),
-                                    icon: Icon(
-                                      Icons.edit_outlined,
-                                      size: 18,
-                                      color: context.theme.colorScheme.primary,
-                                    ),
-                                    onPressed: () =>
-                                        _showSaleDialog(batch, sale: sale),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    constraints: const BoxConstraints(),
-                                    padding: const EdgeInsets.all(4),
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      size: 18,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () =>
-                                        _confirmDeleteSale(batch, sale),
-                                  ),
-                                ],
-                              ),
-                              // Amount on its own line, bottom-right.
-                              Padding(
-                                padding: const EdgeInsets.only(right: 4, top: 2),
-                                child: Text(
-                                  "${sale.amount.toCurrency()}đ",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: context.colors.money,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            "${sale.amount.toCurrency()}đ",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: context.colors.money,
+                            ),
                           ),
                         ],
                       ),
@@ -561,7 +520,14 @@ class _ChickenBatchDetailScreenState
           icon: Assets.images.coinCute,
           title: isEditing ? l10n.editSaleRound : l10n.recordSale,
           accent: Colors.green,
-          confirmText: l10n.confirm,
+          confirmText: isEditing ? l10n.update : l10n.confirm,
+          destructiveText: isEditing ? l10n.delete : null,
+          onDestructive: isEditing
+              ? () {
+                  Navigator.pop(context);
+                  _confirmDeleteSale(batch, sale);
+                }
+              : null,
           onConfirm: () {
             final amount = totalAmountController.text.toMoney() ?? 0;
             final qty = int.tryParse(qtyController.text) ?? 0;

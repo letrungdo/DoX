@@ -836,7 +836,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noStatsData => 'Chưa có dữ liệu thống kê.';
 
   @override
-  String get batchRevenue => 'Doanh thu lứa gà';
+  String get batchRevenue => 'Doanh thu gà con';
 
   @override
   String get cockRevenue => 'Doanh thu gà đá';

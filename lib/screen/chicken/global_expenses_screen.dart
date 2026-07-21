@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:collection/collection.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
@@ -38,6 +39,27 @@ class _GlobalExpensesScreenState
   String _fmt(DateTime date) =>
       ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   int _selectedYear = DateTime.now().year;
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls the list to the top after a new record is added (it sorts to the
+  /// top). Waits a frame so the new item is laid out first.
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   @override
   void initData() {
@@ -76,7 +98,11 @@ class _GlobalExpensesScreenState
           final expenses = vm.globalExpenses.where((expense) {
             return _selectedYear == 0 ||
                 vm.displayYear(expense.date) == _selectedYear;
-          }).toList()..sort((a, b) => b.date.compareTo(a.date));
+          }).toList();
+          // Stable sort by date desc so that, for the same date, the most
+          // recently added record (kept at the front of the source list)
+          // stays on top.
+          mergeSort(expenses, compare: (a, b) => b.date.compareTo(a.date));
           final total = expenses.fold<double>(
             0,
             (sum, expense) => sum + expense.amount,
@@ -186,6 +212,7 @@ class _GlobalExpensesScreenState
                           ),
                         )
                       : ListView.separated(
+                          controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                           itemCount: expenses.length,
@@ -193,6 +220,10 @@ class _GlobalExpensesScreenState
                           itemBuilder: (context, index) {
                             final expense = expenses[index];
                             return ChickenListTileCard(
+                              color: expense.id == vm.highlightedId
+                                  ? context.theme.colorScheme.primary
+                                        .withValues(alpha: 0.18)
+                                  : null,
                               onTap: () => _showExpenseDialog(expense),
                               leading: _expenseSvg(expense.type),
                               title: Text(
@@ -269,6 +300,8 @@ class _GlobalExpensesScreenState
                 await vm.updateGlobalExpense(updatedExpense);
               } else {
                 await vm.addGlobalExpense(updatedExpense);
+                vm.flashHighlight(updatedExpense.id);
+                _scrollToTop();
               }
               if (context.mounted) Navigator.pop(context);
             } catch (error) {

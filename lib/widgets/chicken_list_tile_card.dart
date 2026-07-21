@@ -15,6 +15,7 @@ class ChickenListTileCard extends StatelessWidget {
     this.contentPadding,
     this.onTap,
     this.onLongPress,
+    this.color,
   });
 
   final Widget title;
@@ -25,11 +26,13 @@ class ChickenListTileCard extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: margin,
+      color: color,
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: contentPadding,

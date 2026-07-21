@@ -1583,7 +1583,7 @@ abstract class AppLocalizations {
   /// No description provided for @batchRevenue.
   ///
   /// In en, this message translates to:
-  /// **'Batch revenue'**
+  /// **'Chick revenue'**
   String get batchRevenue;
 
   /// No description provided for @cockRevenue.

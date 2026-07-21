@@ -15,7 +15,8 @@ class ChickenRepository {
         .select(
           '*, vaccinations(*), expenses(*), cock_sales(*), batch_sales(*)',
         )
-        .order('incubation_date', ascending: false);
+        .order('incubation_date', ascending: false)
+        .order('created_at', ascending: false);
     return rows.map(_batchFromRow).toList();
   }
 
@@ -148,7 +149,8 @@ class ChickenRepository {
         .from('expenses')
         .select()
         .isFilter('batch_id', null)
-        .order('date', ascending: false);
+        .order('date', ascending: false)
+        .order('created_at', ascending: false);
     return rows.map(_expenseFromRow).toList();
   }
 
@@ -204,7 +206,8 @@ class ChickenRepository {
         .from('cock_sales')
         .select()
         .isFilter('batch_id', null)
-        .order('date', ascending: false);
+        .order('date', ascending: false)
+        .order('created_at', ascending: false);
     return rows.map(_cockSaleFromRow).toList();
   }
 

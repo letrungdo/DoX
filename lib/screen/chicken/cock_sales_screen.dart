@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:collection/collection.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
@@ -39,6 +40,27 @@ class _CockSalesScreenState
       ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   SaleCategory? _filter;
   int _selectedYear = DateTime.now().year;
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls the list to the top after a new record is added (it sorts to the
+  /// top). Waits a frame so the new item is laid out first.
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   @override
   void initData() {
@@ -74,16 +96,16 @@ class _CockSalesScreenState
             DateTime.now().year,
             ...vm.globalCockSales.map((sale) => vm.displayYear(sale.date)),
           }.toList()..sort((a, b) => b.compareTo(a));
-          final sortedSales =
-              vm.globalCockSales
-                  .where(
-                    (sale) =>
-                        _selectedYear == 0 ||
-                        vm.displayYear(sale.date) == _selectedYear,
-                  )
-                  .where((sale) => _filter == null || sale.category == _filter)
-                  .toList()
-                ..sort((a, b) => b.date.compareTo(a.date));
+          final sortedSales = vm.globalCockSales
+              .where(
+                (sale) =>
+                    _selectedYear == 0 ||
+                    vm.displayYear(sale.date) == _selectedYear,
+              )
+              .where((sale) => _filter == null || sale.category == _filter)
+              .toList();
+          // Stable sort by date desc so a same-date sale added last stays on top.
+          mergeSort(sortedSales, compare: (a, b) => b.date.compareTo(a.date));
           final total = sortedSales.fold<double>(0, (sum, s) => sum + s.amount);
 
           return Column(
@@ -214,6 +236,7 @@ class _CockSalesScreenState
                           ),
                         )
                       : ListView.separated(
+                          controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(16),
                           itemCount: sortedSales.length,
@@ -224,6 +247,10 @@ class _CockSalesScreenState
                             final isMeat = sale.category == SaleCategory.meat;
                             final color = isMeat ? Colors.brown : Colors.red;
                             return ChickenListTileCard(
+                              color: sale.id == vm.highlightedId
+                                  ? context.theme.colorScheme.primary
+                                        .withValues(alpha: 0.18)
+                                  : null,
                               onTap: () => _showSaleDialog(sale),
                               leading: CircleAvatar(
                                 radius: 22,
@@ -313,6 +340,8 @@ class _CockSalesScreenState
                 await vm.updateGlobalCockSale(updatedSale);
               } else {
                 await vm.addGlobalCockSale(updatedSale);
+                vm.flashHighlight(updatedSale.id);
+                _scrollToTop();
               }
               if (context.mounted) Navigator.pop(context);
             } catch (error) {
