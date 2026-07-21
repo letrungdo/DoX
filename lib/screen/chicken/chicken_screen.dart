@@ -88,6 +88,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     super.dispose();
   }
 
+  /// Scrolls the list back to the top (e.g. after a new record is added, which
+  /// appears at the top). Waits a frame so the new item is laid out first.
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   Future<void> _handleTabReselect() async {
     if (_scrollController.hasClients) {
       await _scrollController.animateTo(
@@ -381,10 +395,22 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         batch.actualHatchDate != null ||
         DateTime.now().isAfter(batch.expectedHatchDateSolar);
     final isSoldOut = batch.sales.isNotEmpty && batch.remainingQuantity <= 0;
+    final isPartiallySold = batch.sales.isNotEmpty && !isSoldOut;
     final hasMoney =
         batch.sales.isNotEmpty ||
         batch.expenses.isNotEmpty ||
         batch.cockSales.isNotEmpty;
+
+    // Freshly added rows get a highlight; otherwise: sold out → red,
+    // partially sold → green, not sold → default card color.
+    final isDark = context.theme.brightness == Brightness.dark;
+    final Color? cardColor = batch.id == vm.highlightedId
+        ? context.theme.colorScheme.primary.withValues(alpha: 0.18)
+        : isSoldOut
+        ? (isDark ? Colors.red[900]?.withValues(alpha: 0.38) : Colors.red[100])
+        : isPartiallySold
+        ? (isDark ? Colors.green[900]?.withValues(alpha: 0.24) : Colors.green[50])
+        : null;
 
     final (statusText, statusColor) = !isHatched
         ? (
@@ -397,6 +423,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
+      color: cardColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       title: Row(
         children: [
@@ -519,7 +546,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }) {
     final color = highlighted
         ? Theme.of(context).colorScheme.primary
-        : Colors.grey[700];
+        : Colors.grey[600];
     return Row(
       mainAxisAlignment: alignment,
       children: [
@@ -735,11 +762,14 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               });
               return;
             }
-            vm.addBatch(
-              name: name,
-              incubationDate: selectedDate,
-              quantity: qty,
-            );
+            vm
+                .addBatch(
+                  name: name,
+                  incubationDate: selectedDate,
+                  quantity: qty,
+                )
+                .then((batch) => vm.flashHighlight(batch.id));
+            _scrollToTop();
             Navigator.pop(context);
           },
           children: [

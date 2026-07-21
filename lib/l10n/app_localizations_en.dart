@@ -837,7 +837,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noStatsData => 'No statistics yet.';
 
   @override
-  String get batchRevenue => 'Batch revenue';
+  String get batchRevenue => 'Chick revenue';
 
   @override
   String get cockRevenue => 'Fighting rooster revenue';

@@ -49,6 +49,25 @@ class ChickenViewModel extends CoreViewModel {
     await storageService.setChickenLunarDisplay(value);
   }
 
+  String? _highlightedId;
+
+  /// Id of a freshly added record to highlight briefly in the lists. Shared by
+  /// all chicken screens (they observe this view model).
+  String? get highlightedId => _highlightedId;
+
+  Timer? _highlightTimer;
+
+  /// Highlights [id] for a short moment, then clears it.
+  void flashHighlight(String id) {
+    _highlightTimer?.cancel();
+    _highlightedId = id;
+    notifyListenersSafe();
+    _highlightTimer = Timer(const Duration(milliseconds: 2500), () {
+      _highlightedId = null;
+      notifyListenersSafe();
+    });
+  }
+
   /// Year of a stored (lunar) [date] in the currently displayed calendar:
   /// the lunar year in lunar mode, the solar year in solar mode. Used by the
   /// year filters/grouping so they match the statistics.
@@ -123,6 +142,7 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void dispose() {
     _authSub?.cancel();
+    _highlightTimer?.cancel();
     super.dispose();
   }
 
@@ -219,7 +239,7 @@ class ChickenViewModel extends CoreViewModel {
     ]);
   }
 
-  Future<void> addBatch({
+  Future<ChickenBatch> addBatch({
     required String name,
     required DateTime incubationDate,
     required int quantity,
@@ -232,10 +252,16 @@ class ChickenViewModel extends CoreViewModel {
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
     _batches.insert(0, newBatch);
-    _batches.sort((a, b) => b.incubationDate.compareTo(a.incubationDate));
+    // Stable sort so a batch added with the same incubation date as an existing
+    // one stays on top (it was just inserted at the front).
+    mergeSort(
+      _batches,
+      compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
+    );
     await _repository.insertBatch(newBatch);
     notifyListenersSafe();
     await _syncVaccinationNotifications();
+    return newBatch;
   }
 
   Future<void> updateBatch(ChickenBatch batch) async {
@@ -334,7 +360,8 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addGlobalCockSale(CockSale sale) async {
-    _globalCockSales.add(sale);
+    // Front of the list so a same-date sale shows on top (stable sort keeps it).
+    _globalCockSales.insert(0, sale);
     await _repository.insertCockSale(null, sale);
     notifyListenersSafe();
   }
