@@ -10,6 +10,8 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/utils/chicken_date.dart';
+import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -18,12 +20,11 @@ import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
+import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
@@ -146,8 +147,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           final years = {
             DateTime.now().year,
             ...vm.batches.map(
-              (batch) =>
-                  (batch.actualHatchDate ?? batch.expectedHatchDate).year,
+              (batch) => vm.displayYear(
+                batch.actualHatchDate ?? batch.expectedHatchDate,
+              ),
             ),
           }.toList()..sort((a, b) => b.compareTo(a));
           final batches = _selectedYear == 0
@@ -155,8 +157,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               : vm.batches
                     .where(
                       (batch) =>
-                          (batch.actualHatchDate ?? batch.expectedHatchDate)
-                              .year ==
+                          vm.displayYear(
+                            batch.actualHatchDate ?? batch.expectedHatchDate,
+                          ) ==
                           _selectedYear,
                     )
                     .toList();
@@ -168,8 +171,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           final items = <Widget>[];
           int? currentYear;
           for (final batch in batches) {
-            final year =
-                (batch.actualHatchDate ?? batch.expectedHatchDate).year;
+            final year = vm.displayYear(
+              batch.actualHatchDate ?? batch.expectedHatchDate,
+            );
             if (_selectedYear == 0 && year != currentYear) {
               currentYear = year;
               items.add(
@@ -371,11 +375,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
   Widget _buildBatchCard(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
-    final dateFormat = DateFormat('dd/MM/yyyy');
+    final useLunar = vm.useLunarCalendar;
     final hatchDate = batch.actualHatchDate ?? batch.expectedHatchDate;
     final isHatched =
         batch.actualHatchDate != null ||
-        DateTime.now().isAfter(batch.expectedHatchDate);
+        DateTime.now().isAfter(batch.expectedHatchDateSolar);
     final isSoldOut = batch.sales.isNotEmpty && batch.remainingQuantity <= 0;
     final hasMoney =
         batch.sales.isNotEmpty ||
@@ -384,7 +388,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
     final (statusText, statusColor) = !isHatched
         ? (
-            l10n.statusWaitingHatch(dateFormat.format(batch.expectedHatchDate)),
+            l10n.statusWaitingHatch(ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar)),
             Colors.orange,
           )
         : isSoldOut
@@ -455,7 +459,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                     children: [
                       _buildBatchInfo(
                         Icons.calendar_today_rounded,
-                        l10n.hatchedOnDate(dateFormat.format(hatchDate)),
+                        l10n.hatchedOnDate(ChickenDate.format(hatchDate, useLunar: useLunar)),
                         alignment: MainAxisAlignment.end,
                       ),
                       if (batch.lastSaleDate != null) ...[
@@ -463,7 +467,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                         _buildBatchInfo(
                           Icons.sell_rounded,
                           l10n.soldOnDate(
-                            dateFormat.format(batch.lastSaleDate!),
+                            ChickenDate.format(batch.lastSaleDate!, useLunar: useLunar),
                           ),
                           alignment: MainAxisAlignment.end,
                         ),
@@ -710,7 +714,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     }
     final nameController = TextEditingController(text: suggestedName);
     final quantityController = TextEditingController();
-    DateTime selectedDate = DateTime.now();
+    DateTime selectedDate = LunarCalendar.solarToLunarDateTime(DateTime.now());
     String? nameError;
     String? qtyError;
 
@@ -758,9 +762,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 if (qtyError != null) setState(() => qtyError = null);
               },
             ),
-            CuteDateField(
+            LunarDateField(
               label: l10n.incubationDate,
               value: selectedDate,
+              useLunar: vm.useLunarCalendar,
               onChanged: (d) => setState(() => selectedDate = d),
             ),
           ],

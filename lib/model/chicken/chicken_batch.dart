@@ -2,6 +2,7 @@ import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
+import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'chicken_batch.g.dart';
@@ -34,9 +35,25 @@ class ChickenBatch {
       _$ChickenBatchFromJson(json);
   Map<String, dynamic> toJson() => _$ChickenBatchToJson(this);
 
-  // Helper to calculate expected hatch date (usually 21 days for chickens)
+  // Stored dates are lunar values; the solar equivalents are used for any
+  // real (physical) day arithmetic such as age and incubation duration.
+  DateTime get incubationDateSolar =>
+      LunarCalendar.lunarDateTimeToSolar(incubationDate);
+
+  DateTime? get actualHatchDateSolar => actualHatchDate == null
+      ? null
+      : LunarCalendar.lunarDateTimeToSolar(actualHatchDate!);
+
+  /// Expected hatch date in the solar calendar, usually 21 real days after
+  /// incubation.
+  DateTime get expectedHatchDateSolar =>
+      incubationDateSolar.add(const Duration(days: 21));
+
+  /// Expected hatch date (lunar value), usually 21 real days after incubation.
   DateTime get expectedHatchDate =>
-      incubationDate.add(const Duration(days: 21));
+      LunarCalendar.solarToLunarDateTime(expectedHatchDateSolar);
+
+  DateTime get _hatchDateSolar => actualHatchDateSolar ?? expectedHatchDateSolar;
 
   double get totalExpenses =>
       expenses.fold(0, (sum, item) => sum + item.amount);
@@ -56,13 +73,25 @@ class ChickenBatch {
 
   double get profit => (totalSaleAmount + totalCockSales) - totalExpenses;
 
+  /// Age of the batch (in real days) on a given date, e.g. a sale date.
+  /// [date] is a stored lunar value; both sides are converted to solar so the
+  /// result is a real elapsed-day count.
+  int ageInDaysAt(DateTime date) =>
+      LunarCalendar.lunarDateTimeToSolar(date).difference(_hatchDateSolar).inDays;
+
+  /// Shifts every vaccination by a real (solar) [offset]. Dates are lunar
+  /// values, so the shift is applied in the solar calendar and converted back.
   ChickenBatch shiftVaccinationSchedule(Duration offset) {
     if (offset == Duration.zero) return this;
     return copyWith(
       vaccinations: vaccinations
           .map(
             (vaccination) => vaccination.copyWith(
-              scheduledDate: vaccination.scheduledDate.add(offset),
+              scheduledDate: LunarCalendar.solarToLunarDateTime(
+                LunarCalendar.lunarDateTimeToSolar(
+                  vaccination.scheduledDate,
+                ).add(offset),
+              ),
             ),
           )
           .toList(),
@@ -71,10 +100,14 @@ class ChickenBatch {
 
   int get ageInDays {
     // Once the batch is sold out, its age freezes at the last sale date.
+    // Everything here is in the solar calendar so the day count is a real
+    // elapsed-day count, not a lunar-day difference.
+    final lastSaleSolar = lastSaleDate == null
+        ? null
+        : LunarCalendar.lunarDateTimeToSolar(lastSaleDate!);
     final referenceDate =
-        (remainingQuantity <= 0 ? lastSaleDate : null) ?? DateTime.now();
-    final hatchDate = actualHatchDate ?? expectedHatchDate;
-    return referenceDate.difference(hatchDate).inDays;
+        (remainingQuantity <= 0 ? lastSaleSolar : null) ?? DateTime.now();
+    return referenceDate.difference(_hatchDateSolar).inDays;
   }
 
   ChickenBatch copyWith({

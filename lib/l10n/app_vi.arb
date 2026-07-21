@@ -92,6 +92,12 @@
   "loginDoX": "Đăng nhập Do X",
   "logoutDoX": "Đăng xuất Do X",
   "vaccinationNotifications": "Thông báo lịch tiêm phòng",
+  "editSaleRound": "Sửa đợt bán",
+  "lunarDatePickerTitle": "Chọn ngày (Âm lịch)",
+  "lunarShort": "ÂL",
+  "solarShort": "DL",
+  "chickenLunarCalendar": "Lịch âm (mục Gà)",
+  "chickenLunarCalendarDesc": "Hiển thị ngày ở mục Gà theo lịch âm",
   "notificationPermissionDenied": "Không thể cập nhật lịch thông báo. Vui lòng kiểm tra quyền thông báo trong cài đặt thiết bị.",
   "vaccinationNotificationTitle": "Lịch tiêm: {vaccination}",
   "@vaccinationNotificationTitle": {

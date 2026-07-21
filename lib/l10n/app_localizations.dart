@@ -554,6 +554,42 @@ abstract class AppLocalizations {
   /// **'Vaccination schedule notifications'**
   String get vaccinationNotifications;
 
+  /// No description provided for @editSaleRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit sale'**
+  String get editSaleRound;
+
+  /// No description provided for @lunarDatePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date (Lunar)'**
+  String get lunarDatePickerTitle;
+
+  /// No description provided for @lunarShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunar'**
+  String get lunarShort;
+
+  /// No description provided for @solarShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Solar'**
+  String get solarShort;
+
+  /// No description provided for @chickenLunarCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunar calendar (Chicken)'**
+  String get chickenLunarCalendar;
+
+  /// No description provided for @chickenLunarCalendarDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Show chicken dates on the lunar calendar'**
+  String get chickenLunarCalendarDesc;
+
   /// No description provided for @notificationPermissionDenied.
   ///
   /// In en, this message translates to:

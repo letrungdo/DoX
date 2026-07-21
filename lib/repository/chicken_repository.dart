@@ -65,6 +65,18 @@ class ChickenRepository {
     await _client.from('batch_sales').insert(_batchSaleToRow(sale, batchId));
   }
 
+  Future<void> updateBatchSale(BatchSale sale) async {
+    await _client
+        .from('batch_sales')
+        .update({
+          'date': _dateStr(sale.date),
+          'quantity': sale.quantity,
+          'amount': sale.amount,
+          'note': sale.note,
+        })
+        .eq('id', sale.id);
+  }
+
   Future<void> deleteBatchSale(String id) async {
     await _client.from('batch_sales').delete().eq('id', id);
   }

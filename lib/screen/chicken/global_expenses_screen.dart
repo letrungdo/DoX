@@ -6,6 +6,8 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/utils/chicken_date.dart';
+import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
@@ -15,9 +17,8 @@ import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
+import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -34,7 +35,8 @@ class GlobalExpensesScreen extends StatefulScreen implements AutoRouteWrapper {
 
 class _GlobalExpensesScreenState
     extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
-  final _dateFormat = DateFormat('dd/MM/yyyy');
+  String _fmt(DateTime date) =>
+      ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   int _selectedYear = DateTime.now().year;
 
   @override
@@ -69,10 +71,11 @@ class _GlobalExpensesScreenState
         builder: (context, vm, child) {
           final years = {
             DateTime.now().year,
-            ...vm.globalExpenses.map((expense) => expense.date.year),
+            ...vm.globalExpenses.map((expense) => vm.displayYear(expense.date)),
           }.toList()..sort((a, b) => b.compareTo(a));
           final expenses = vm.globalExpenses.where((expense) {
-            return _selectedYear == 0 || expense.date.year == _selectedYear;
+            return _selectedYear == 0 ||
+                vm.displayYear(expense.date) == _selectedYear;
           }).toList()..sort((a, b) => b.date.compareTo(a.date));
           final total = expenses.fold<double>(
             0,
@@ -199,7 +202,7 @@ class _GlobalExpensesScreenState
                                 ),
                               ),
                               subtitle: Text(
-                                "${_dateFormat.format(expense.date)} · ${_expenseLabel(expense.type)}",
+                                "${_fmt(expense.date)} · ${_expenseLabel(expense.type)}",
                               ),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
@@ -228,7 +231,7 @@ class _GlobalExpensesScreenState
     );
     final noteController = TextEditingController(text: expense?.note ?? '');
     var selectedType = expense?.type ?? ExpenseType.feed;
-    var expenseDate = expense?.date ?? DateTime.now();
+    var expenseDate = expense?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
     String? amountError;
 
     showDialog<void>(
@@ -308,9 +311,10 @@ class _GlobalExpensesScreenState
               ),
             ),
             CuteTextField(controller: noteController, label: l10n.noteLabel),
-            CuteDateField(
+            LunarDateField(
               label: l10n.expenseDate,
               value: expenseDate,
+              useLunar: vm.useLunarCalendar,
               onChanged: (date) => setState(() => expenseDate = date),
             ),
           ],
@@ -333,7 +337,7 @@ class _GlobalExpensesScreenState
         children: [
           Text(
             l10n.confirmDeleteCommonExpense(
-              _dateFormat.format(expense.date),
+              _fmt(expense.date),
               '${expense.amount.toCurrency()}đ',
             ),
             textAlign: TextAlign.center,

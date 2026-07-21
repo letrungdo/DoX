@@ -185,6 +185,86 @@ class LunarCalendar {
     return LunarDate(lunarDay, lunarMonth, lunarYear, lunarLeap);
   }
 
+  /// Solar (Gregorian/Julian) date from a Julian day number — the inverse of
+  /// [_jdFromDate]. Returns (day, month, year).
+  static (int, int, int) _jdToDate(int jd) {
+    int a, b, c;
+    if (jd > 2299160) {
+      // After 5/10/1582, Gregorian calendar.
+      a = jd + 32044;
+      b = ((4 * a + 3) / 146097).floor();
+      c = a - ((b * 146097) / 4).floor();
+    } else {
+      b = 0;
+      c = jd + 32082;
+    }
+    final d = ((4 * c + 3) / 1461).floor();
+    final e = c - ((1461 * d) / 4).floor();
+    final m = ((5 * e + 2) / 153).floor();
+    final day = e - ((153 * m + 2) / 5).floor() + 1;
+    final month = m + 3 - 12 * (m / 10).floor();
+    final year = b * 100 + d - 4800 + (m / 10).floor();
+    return (day, month, year);
+  }
+
+  /// Converts a Vietnamese lunar date to its solar (Gregorian) date.
+  /// The inverse of [solarToLunar].
+  static DateTime lunarToSolar(
+    int lunarDay,
+    int lunarMonth,
+    int lunarYear, {
+    bool isLeap = false,
+  }) {
+    const timeZone = _timeZone;
+    int a11, b11;
+    if (lunarMonth < 11) {
+      a11 = _getLunarMonth11(lunarYear - 1, timeZone);
+      b11 = _getLunarMonth11(lunarYear, timeZone);
+    } else {
+      a11 = _getLunarMonth11(lunarYear, timeZone);
+      b11 = _getLunarMonth11(lunarYear + 1, timeZone);
+    }
+    final k = (0.5 + (a11 - 2415021.076998695) / 29.530588853).floor();
+    var off = lunarMonth - 11;
+    if (off < 0) off += 12;
+    if (b11 - a11 > 365) {
+      final leapOff = _getLeapMonthOffset(a11, timeZone);
+      var leapMonth = leapOff - 2;
+      if (leapMonth < 0) leapMonth += 12;
+      if (isLeap && lunarMonth != leapMonth) {
+        // Requested leap month doesn't exist this year; fall back to the
+        // regular month rather than throwing.
+      } else if (isLeap || off >= leapOff) {
+        off += 1;
+      }
+    }
+    final monthStart = _getNewMoonDay(k + off, timeZone);
+    final (d, m, y) = _jdToDate(monthStart + lunarDay - 1);
+    return DateTime(y, m, d);
+  }
+
+  /// Reinterprets a [DateTime] whose day/month/year are a lunar date and
+  /// returns the matching solar date. Time-of-day is dropped.
+  static DateTime lunarDateTimeToSolar(DateTime lunar, {bool isLeap = false}) =>
+      lunarToSolar(lunar.day, lunar.month, lunar.year, isLeap: isLeap);
+
+  /// Converts a solar [DateTime] to a lunar-valued [DateTime] (its day/month/
+  /// year hold the lunar date). Time-of-day is dropped. The leap flag is not
+  /// representable in a [DateTime] and is therefore lost.
+  static DateTime solarToLunarDateTime(DateTime solar) {
+    final l = solarToLunar(solar.day, solar.month, solar.year);
+    return DateTime(l.year, l.month, l.day);
+  }
+
+  /// Number of days (29 or 30) in a given lunar month.
+  static int daysInLunarMonth(int month, int year, {bool isLeap = false}) {
+    // If lunar day 30 exists it round-trips to day 30 of the same month;
+    // otherwise the month is short and day 30 rolls into the next month.
+    final solar = lunarToSolar(30, month, year, isLeap: isLeap);
+    final back = solarToLunar(solar.day, solar.month, solar.year);
+    return (back.day == 30 && back.month == month) ? 30 : 29;
+  }
+
   /// Can-Chi (sexagenary) name of a lunar year, e.g. "Giáp Thìn".
   static String canChiOfYear(int lunarYear) {
     final can = _canNames[(lunarYear + 6) % 10];

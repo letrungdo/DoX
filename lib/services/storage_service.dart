@@ -46,6 +46,16 @@ class _StorageService {
     return prefs.setBool(StorageKey.chickenNotifications, value);
   }
 
+  /// Whether chicken dates are shown on the lunar calendar. Defaults to true
+  /// because the recorded data (and the user) work in lunar dates.
+  bool getChickenLunarDisplay() {
+    return prefs.getBool(StorageKey.chickenLunarDisplay) ?? true;
+  }
+
+  Future<bool> setChickenLunarDisplay(bool value) {
+    return prefs.setBool(StorageKey.chickenLunarDisplay, value);
+  }
+
   String? getLocale() {
     return prefs.getString(StorageKey.locale);
   }
