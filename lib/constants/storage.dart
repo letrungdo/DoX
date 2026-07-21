@@ -11,6 +11,7 @@ class StorageKey {
   static const tabIndex = "tabIndex";
   static const routerIp = "routerIp";
   static const chickenNotifications = "chickenNotifications";
+  static const chickenLunarDisplay = "chickenLunarDisplay";
   static const locale = "locale";
   static const showLocketTab = "showLocketTab";
   static const showElectricTab = "showElectricTab";

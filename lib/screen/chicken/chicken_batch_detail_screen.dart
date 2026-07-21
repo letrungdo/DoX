@@ -9,17 +9,18 @@ import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/utils/chicken_date.dart';
+import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
+import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -39,7 +40,8 @@ class ChickenBatchDetailScreen extends StatefulScreen
 
 class _ChickenBatchDetailScreenState
     extends ScreenState<ChickenBatchDetailScreen, ChickenViewModel> {
-  final _dateFormat = DateFormat('dd/MM/yyyy');
+  String _fmt(DateTime date) =>
+      ChickenDate.format(date, useLunar: vm.useLunarCalendar);
 
   @override
   void initData() {
@@ -137,17 +139,17 @@ class _ChickenBatchDetailScreenState
               ),
             _buildRowInfo(
               l10n.incubationDay,
-              _dateFormat.format(batch.incubationDate),
+              _fmt(batch.incubationDate),
             ),
             if (batch.actualHatchDate == null)
               _buildRowInfo(
                 l10n.expectedHatch,
-                _dateFormat.format(batch.expectedHatchDate),
+                _fmt(batch.expectedHatchDate),
               )
             else
               _buildRowInfo(
                 l10n.actualHatchDateLabel,
-                _dateFormat.format(batch.actualHatchDate!),
+                _fmt(batch.actualHatchDate!),
               ),
             if (batch.ageInDays >= 0)
               _buildRowInfo(l10n.ageLabel, l10n.daysCount(batch.ageInDays))
@@ -178,7 +180,7 @@ class _ChickenBatchDetailScreenState
         ...batch.vaccinations.map(
           (v) => CheckboxListTile(
             title: Text(v.title),
-            subtitle: Text(l10n.dateValue(_dateFormat.format(v.scheduledDate))),
+            subtitle: Text(l10n.dateValue(_fmt(v.scheduledDate))),
             value: v.isCompleted,
             onChanged: (val) {
               vm.setCurrentContext(context);
@@ -217,7 +219,7 @@ class _ChickenBatchDetailScreenState
             leading: _getExpenseSvg(e.type),
             title: Text(_getExpenseLabel(e.type)),
             subtitle: Text(
-              "${_dateFormat.format(e.date)}${e.note != null ? ' - ${e.note}' : ''}",
+              "${_fmt(e.date)}${e.note != null ? ' - ${e.note}' : ''}",
             ),
             trailing: Text(
               "${e.amount.toCurrency()}đ",
@@ -271,33 +273,97 @@ class _ChickenBatchDetailScreenState
               ),
             ] else ...[
               ...batch.sales.map(
-                (sale) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  leading: Assets.images.coinCute.svg(width: 26, height: 26),
-                  title: Text(
-                    "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
-                  ),
-                  subtitle: Text(_dateFormat.format(sale.date)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "${sale.amount.toCurrency()}đ",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: context.colors.money,
+                (sale) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _showSaleDialog(batch, sale: sale),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: context.theme.colorScheme.outlineVariant,
                         ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: Colors.red,
-                        ),
-                        onPressed: () => _confirmDeleteSale(batch, sale),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Assets.images.coinCute.svg(width: 26, height: 26),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "${_fmt(sale.date)} · ${l10n.statusDaysOld(batch.ageInDaysAt(sale.date))}",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context
+                                        .theme
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              // Edit + delete in the top-right corner.
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.all(4),
+                                    icon: Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                      color: context.theme.colorScheme.primary,
+                                    ),
+                                    onPressed: () =>
+                                        _showSaleDialog(batch, sale: sale),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.all(4),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () =>
+                                        _confirmDeleteSale(batch, sale),
+                                  ),
+                                ],
+                              ),
+                              // Amount on its own line, bottom-right.
+                              Padding(
+                                padding: const EdgeInsets.only(right: 4, top: 2),
+                                child: Text(
+                                  "${sale.amount.toCurrency()}đ",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: context.colors.money,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -356,7 +422,7 @@ class _ChickenBatchDetailScreenState
         children: [
           Text(
             l10n.confirmDeleteSaleRound(
-              _dateFormat.format(sale.date),
+              _fmt(sale.date),
               "${sale.amount.toCurrency()}đ",
             ),
             textAlign: TextAlign.center,
@@ -420,7 +486,7 @@ class _ChickenBatchDetailScreenState
                 id: const Uuid().v4(),
                 type: selectedType,
                 amount: amount,
-                date: DateTime.now(),
+                date: LunarCalendar.solarToLunarDateTime(DateTime.now()),
                 note: noteController.text.isEmpty ? null : noteController.text,
               ),
             );
@@ -456,13 +522,18 @@ class _ChickenBatchDetailScreenState
     );
   }
 
-  void _showSaleDialog(ChickenBatch batch) {
+  void _showSaleDialog(ChickenBatch batch, {BatchSale? sale}) {
     final l10n = AppLocalizations.of(context);
-    final quantity = batch.remainingQuantity > 0
-        ? batch.remainingQuantity
-        : batch.quantity;
-    final unitPrice = vm.suggestPrice(batch.ageInDays);
-    final totalAmount = unitPrice * quantity;
+    final isEditing = sale != null;
+    final quantity =
+        sale?.quantity ??
+        (batch.remainingQuantity > 0
+            ? batch.remainingQuantity
+            : batch.quantity);
+    final unitPrice = isEditing && sale.quantity > 0
+        ? sale.amount / sale.quantity
+        : vm.suggestPrice(batch.ageInDays);
+    final totalAmount = sale?.amount ?? unitPrice * quantity;
 
     final unitPriceController = TextEditingController(
       text: unitPrice.toCurrency(),
@@ -471,8 +542,9 @@ class _ChickenBatchDetailScreenState
     final totalAmountController = TextEditingController(
       text: totalAmount.toCurrency(),
     );
-    final noteController = TextEditingController();
-    DateTime saleDate = DateTime.now();
+    final noteController = TextEditingController(text: sale?.note ?? '');
+    DateTime saleDate =
+        sale?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
     String? qtyError;
     String? amountError;
 
@@ -487,7 +559,7 @@ class _ChickenBatchDetailScreenState
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.coinCute,
-          title: l10n.recordSale,
+          title: isEditing ? l10n.editSaleRound : l10n.recordSale,
           accent: Colors.green,
           confirmText: l10n.confirm,
           onConfirm: () {
@@ -500,16 +572,18 @@ class _ChickenBatchDetailScreenState
               });
               return;
             }
-            vm.addBatchSale(
-              batch.id,
-              BatchSale(
-                id: const Uuid().v4(),
-                date: saleDate,
-                quantity: qty,
-                amount: amount,
-                note: noteController.text.isEmpty ? null : noteController.text,
-              ),
+            final newSale = BatchSale(
+              id: sale?.id ?? const Uuid().v4(),
+              date: saleDate,
+              quantity: qty,
+              amount: amount,
+              note: noteController.text.isEmpty ? null : noteController.text,
             );
+            if (isEditing) {
+              vm.updateBatchSale(batch.id, newSale);
+            } else {
+              vm.addBatchSale(batch.id, newSale);
+            }
             Navigator.pop(context);
           },
           children: [
@@ -550,9 +624,10 @@ class _ChickenBatchDetailScreenState
               },
             ),
             CuteTextField(controller: noteController, label: l10n.saleNoteHint),
-            CuteDateField(
+            LunarDateField(
               label: l10n.saleDate,
               value: saleDate,
+              useLunar: vm.useLunarCalendar,
               onChanged: (d) => setState(() => saleDate = d),
             ),
           ],
@@ -645,14 +720,16 @@ class _ChickenBatchDetailScreenState
                 if (qtyError != null) setState(() => qtyError = null);
               },
             ),
-            CuteDateField(
+            LunarDateField(
               label: l10n.incubationDate,
               value: incubationDate,
+              useLunar: vm.useLunarCalendar,
               onChanged: (d) => setState(() => incubationDate = d),
             ),
-            CuteDateField(
+            LunarDateField(
               label: l10n.actualHatchDateLabel,
               value: actualHatchDate,
+              useLunar: vm.useLunarCalendar,
               onChanged: (d) => setState(() => actualHatchDate = d),
             ),
           ],

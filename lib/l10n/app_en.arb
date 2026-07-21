@@ -99,6 +99,12 @@
   "loginDoX": "Login Do X",
   "logoutDoX": "Logout Do X",
   "vaccinationNotifications": "Vaccination schedule notifications",
+  "editSaleRound": "Edit sale",
+  "lunarDatePickerTitle": "Pick a date (Lunar)",
+  "lunarShort": "Lunar",
+  "solarShort": "Solar",
+  "chickenLunarCalendar": "Lunar calendar (Chicken)",
+  "chickenLunarCalendarDesc": "Show chicken dates on the lunar calendar",
   "notificationPermissionDenied": "Unable to update the notification schedule. Please check notification permission in the device settings.",
   "vaccinationNotificationTitle": "Vaccination: {vaccination}",
   "@vaccinationNotificationTitle": {

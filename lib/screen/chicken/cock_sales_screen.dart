@@ -6,6 +6,8 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/utils/chicken_date.dart';
+import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
@@ -15,9 +17,8 @@ import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
+import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -34,7 +35,8 @@ class CockSalesScreen extends StatefulScreen implements AutoRouteWrapper {
 
 class _CockSalesScreenState
     extends ScreenState<CockSalesScreen, ChickenViewModel> {
-  final _dateFormat = DateFormat('dd/MM/yyyy');
+  String _fmt(DateTime date) =>
+      ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   SaleCategory? _filter;
   int _selectedYear = DateTime.now().year;
 
@@ -70,13 +72,14 @@ class _CockSalesScreenState
         builder: (context, vm, child) {
           final years = {
             DateTime.now().year,
-            ...vm.globalCockSales.map((sale) => sale.date.year),
+            ...vm.globalCockSales.map((sale) => vm.displayYear(sale.date)),
           }.toList()..sort((a, b) => b.compareTo(a));
           final sortedSales =
               vm.globalCockSales
                   .where(
                     (sale) =>
-                        _selectedYear == 0 || sale.date.year == _selectedYear,
+                        _selectedYear == 0 ||
+                        vm.displayYear(sale.date) == _selectedYear,
                   )
                   .where((sale) => _filter == null || sale.category == _filter)
                   .toList()
@@ -238,7 +241,7 @@ class _CockSalesScreenState
                                 ),
                               ),
                               subtitle: Text(
-                                "${_dateFormat.format(sale.date)} · ${isMeat ? l10n.meatChicken : l10n.fightingChicken}",
+                                "${_fmt(sale.date)} · ${isMeat ? l10n.meatChicken : l10n.fightingChicken}",
                               ),
                               trailing: Text(
                                 "${sale.amount.toCurrency()}đ",
@@ -267,7 +270,7 @@ class _CockSalesScreenState
       text: sale == null ? '' : sale.amount.toCurrency(),
     );
     final noteController = TextEditingController(text: sale?.note ?? '');
-    DateTime saleDate = sale?.date ?? DateTime.now();
+    DateTime saleDate = sale?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
     SaleCategory category = sale?.category ?? SaleCategory.fighting;
     String? amountError;
 
@@ -347,9 +350,10 @@ class _CockSalesScreenState
               controller: noteController,
               label: l10n.cockSaleNoteHint,
             ),
-            CuteDateField(
+            LunarDateField(
               label: l10n.saleDate,
               value: saleDate,
+              useLunar: vm.useLunarCalendar,
               onChanged: (d) => setState(() => saleDate = d),
             ),
           ],
@@ -376,7 +380,7 @@ class _CockSalesScreenState
         children: [
           Text(
             l10n.confirmDeleteSaleRecord(
-              _dateFormat.format(sale.date),
+              _fmt(sale.date),
               "${sale.amount.toCurrency()}đ",
             ),
             textAlign: TextAlign.center,

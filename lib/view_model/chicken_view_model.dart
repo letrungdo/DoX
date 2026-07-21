@@ -12,6 +12,7 @@ import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -34,6 +35,26 @@ class ChickenViewModel extends CoreViewModel {
 
   double _importProgress = 0;
   double get importProgress => _importProgress;
+
+  bool _useLunarCalendar = storageService.getChickenLunarDisplay();
+
+  /// Whether chicken dates are displayed on the lunar calendar (default) or
+  /// converted to the solar calendar. Stored dates are always lunar values.
+  bool get useLunarCalendar => _useLunarCalendar;
+
+  Future<void> setUseLunarCalendar(bool value) async {
+    if (_useLunarCalendar == value) return;
+    _useLunarCalendar = value;
+    notifyListenersSafe();
+    await storageService.setChickenLunarDisplay(value);
+  }
+
+  /// Year of a stored (lunar) [date] in the currently displayed calendar:
+  /// the lunar year in lunar mode, the solar year in solar mode. Used by the
+  /// year filters/grouping so they match the statistics.
+  int displayYear(DateTime date) => _useLunarCalendar
+      ? date.year
+      : LunarCalendar.lunarDateTimeToSolar(date).year;
 
   StreamSubscription<AuthState>? _authSub;
 
@@ -221,8 +242,12 @@ class ChickenViewModel extends CoreViewModel {
     final index = _batches.indexWhere((e) => e.id == batch.id);
     if (index != -1) {
       final previousBatch = _batches[index];
-      final incubationDateDelta = batch.incubationDate.difference(
-        previousBatch.incubationDate,
+      // Dates are lunar values; measure the shift in real (solar) days so the
+      // vaccination schedule moves by the same physical amount.
+      final incubationDateDelta = LunarCalendar.lunarDateTimeToSolar(
+        batch.incubationDate,
+      ).difference(
+        LunarCalendar.lunarDateTimeToSolar(previousBatch.incubationDate),
       );
       final updatedBatch = incubationDateDelta == Duration.zero
           ? batch
@@ -267,6 +292,20 @@ class ChickenViewModel extends CoreViewModel {
       updatedSales.sort((a, b) => a.date.compareTo(b.date));
       _batches[index] = _batches[index].copyWith(sales: updatedSales);
       await _repository.insertBatchSale(batchId, sale);
+      notifyListenersSafe();
+    }
+  }
+
+  Future<void> updateBatchSale(String batchId, BatchSale sale) async {
+    final index = _batches.indexWhere((e) => e.id == batchId);
+    if (index != -1) {
+      final updatedSales =
+          _batches[index].sales
+              .map((s) => s.id == sale.id ? sale : s)
+              .toList()
+            ..sort((a, b) => a.date.compareTo(b.date));
+      _batches[index] = _batches[index].copyWith(sales: updatedSales);
+      await _repository.updateBatchSale(sale);
       notifyListenersSafe();
     }
   }
@@ -399,33 +438,28 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   List<Vaccination> _getDefaultVaccinationSchedule(DateTime incubationDate) {
-    final hatchDate = incubationDate.add(const Duration(days: 21));
+    // [incubationDate] is a lunar-valued date. The offsets below are real
+    // (biological) day counts, so compute them in the solar calendar and store
+    // the result back as lunar values to stay consistent with the rest of the
+    // data.
+    final hatchSolar = LunarCalendar.lunarDateTimeToSolar(
+      incubationDate,
+    ).add(const Duration(days: 21));
+
+    Vaccination vaccination(String title, int daysAfterHatch) => Vaccination(
+      id: _uuid.v4(),
+      title: title,
+      scheduledDate: LunarCalendar.solarToLunarDateTime(
+        hatchSolar.add(Duration(days: daysAfterHatch)),
+      ),
+    );
+
     return [
-      Vaccination(
-        id: _uuid.v4(),
-        title: 'Gumboro (Lần 1)',
-        scheduledDate: hatchDate.add(const Duration(days: 7)),
-      ),
-      Vaccination(
-        id: _uuid.v4(),
-        title: 'Newcastle (Lần 1)',
-        scheduledDate: hatchDate.add(const Duration(days: 10)),
-      ),
-      Vaccination(
-        id: _uuid.v4(),
-        title: 'Gumboro (Lần 2)',
-        scheduledDate: hatchDate.add(const Duration(days: 14)),
-      ),
-      Vaccination(
-        id: _uuid.v4(),
-        title: 'Newcastle (Lần 2)',
-        scheduledDate: hatchDate.add(const Duration(days: 21)),
-      ),
-      Vaccination(
-        id: _uuid.v4(),
-        title: 'Tụ huyết trùng',
-        scheduledDate: hatchDate.add(const Duration(days: 45)),
-      ),
+      vaccination('Gumboro (Lần 1)', 7),
+      vaccination('Newcastle (Lần 1)', 10),
+      vaccination('Gumboro (Lần 2)', 14),
+      vaccination('Newcastle (Lần 2)', 21),
+      vaccination('Tụ huyết trùng', 45),
     ];
   }
 
@@ -486,8 +520,14 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   void _accumulateStats(_MutableStats? Function(DateTime date) bucketOf) {
+    // Stored dates are lunar values. In lunar mode the buckets are lunar
+    // year/month; in solar mode convert first so stats group by solar dates.
+    DateTime bucketDate(DateTime date) => _useLunarCalendar
+        ? date
+        : LunarCalendar.lunarDateTimeToSolar(date);
+
     void addSale(CockSale sale) {
-      final bucket = bucketOf(sale.date);
+      final bucket = bucketOf(bucketDate(sale.date));
       if (bucket == null) return;
       if (sale.category == SaleCategory.meat) {
         bucket.meatRevenue += sale.amount;
@@ -496,11 +536,12 @@ class ChickenViewModel extends CoreViewModel {
       }
     }
 
-    void addExpense(Expense exp) => bucketOf(exp.date)?.expense += exp.amount;
+    void addExpense(Expense exp) =>
+        bucketOf(bucketDate(exp.date))?.expense += exp.amount;
 
     for (var batch in _batches) {
       for (var sale in batch.sales) {
-        bucketOf(sale.date)?.batchRevenue += sale.amount;
+        bucketOf(bucketDate(sale.date))?.batchRevenue += sale.amount;
       }
       batch.cockSales.forEach(addSale);
       batch.expenses.forEach(addExpense);

@@ -247,6 +247,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vaccinationNotifications => 'Vaccination schedule notifications';
 
   @override
+  String get editSaleRound => 'Edit sale';
+
+  @override
+  String get lunarDatePickerTitle => 'Pick a date (Lunar)';
+
+  @override
+  String get lunarShort => 'Lunar';
+
+  @override
+  String get solarShort => 'Solar';
+
+  @override
+  String get chickenLunarCalendar => 'Lunar calendar (Chicken)';
+
+  @override
+  String get chickenLunarCalendarDesc =>
+      'Show chicken dates on the lunar calendar';
+
+  @override
   String get notificationPermissionDenied =>
       'Unable to update the notification schedule. Please check notification permission in the device settings.';
 

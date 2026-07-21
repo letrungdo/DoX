@@ -247,6 +247,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get vaccinationNotifications => 'Thông báo lịch tiêm phòng';
 
   @override
+  String get editSaleRound => 'Sửa đợt bán';
+
+  @override
+  String get lunarDatePickerTitle => 'Chọn ngày (Âm lịch)';
+
+  @override
+  String get lunarShort => 'ÂL';
+
+  @override
+  String get solarShort => 'DL';
+
+  @override
+  String get chickenLunarCalendar => 'Lịch âm (mục Gà)';
+
+  @override
+  String get chickenLunarCalendarDesc => 'Hiển thị ngày ở mục Gà theo lịch âm';
+
+  @override
   String get notificationPermissionDenied =>
       'Không thể cập nhật lịch thông báo. Vui lòng kiểm tra quyền thông báo trong cài đặt thiết bị.';
 

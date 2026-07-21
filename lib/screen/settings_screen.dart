@@ -92,6 +92,23 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          Selector<ChickenViewModel, bool>(
+            selector: (_, vm) => vm.useLunarCalendar,
+            builder: (context, useLunar, _) => _buildSettingCard(
+              icon: Icons.calendar_month_rounded,
+              color: Colors.deepPurple,
+              title: Text(l10n.chickenLunarCalendar),
+              trailing: Switch.adaptive(
+                value: useLunar,
+                onChanged: (value) =>
+                    context.read<ChickenViewModel>().setUseLunarCalendar(value),
+              ),
+              onTap: () => context.read<ChickenViewModel>().setUseLunarCalendar(
+                !useLunar,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           _buildSettingCard(
             icon: Icons.electric_bolt_rounded,
             color: Colors.amber.shade700,

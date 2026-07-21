@@ -96,6 +96,7 @@ class _ChickenStatisticsScreenState
 
   Widget _buildMonthlyStats(ChickenViewModel vm) {
     final l10n = AppLocalizations.of(context);
+    final cal = vm.useLunarCalendar ? l10n.lunarShort : l10n.solarShort;
     final stats = vm.getMonthlyStats(_selectedYear);
     final years = vm.getYearlyStats().keys.toList();
     if (!years.contains(_selectedYear)) years.add(_selectedYear);
@@ -147,7 +148,7 @@ class _ChickenStatisticsScreenState
                 itemBuilder: (context, index) {
                   final entry = visibleMonths[index];
                   return _buildStatCard(
-                    "${l10n.monthPrefix} ${entry.key}",
+                    "${l10n.monthPrefix} ${entry.key} ($cal)",
                     entry.value,
                   );
                 },
@@ -161,6 +162,7 @@ class _ChickenStatisticsScreenState
 
   Widget _buildYearlyStats(ChickenViewModel vm) {
     final l10n = AppLocalizations.of(context);
+    final cal = vm.useLunarCalendar ? l10n.lunarShort : l10n.solarShort;
     final stats = vm.getYearlyStats();
     final sortedYears = stats.keys.toList()..sort((a, b) => b.compareTo(a));
 
@@ -174,7 +176,7 @@ class _ChickenStatisticsScreenState
       itemBuilder: (context, index) {
         final year = sortedYears[index];
         final data = stats[year]!;
-        return _buildStatCard("${l10n.yearPrefix} $year", data);
+        return _buildStatCard("${l10n.yearPrefix} $year ($cal)", data);
       },
     );
   }
