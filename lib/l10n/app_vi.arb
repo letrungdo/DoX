@@ -265,6 +265,25 @@
       }
     }
   },
+  "statusMonthsOld": "{months} tháng tuổi",
+  "@statusMonthsOld": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "statusMonthsDaysOld": "{months} tháng {days} ngày tuổi",
+  "@statusMonthsDaysOld": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "chickenQuantity": "{count} con",
   "@chickenQuantity": {
     "placeholders": {

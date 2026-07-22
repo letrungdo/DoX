@@ -1,3 +1,4 @@
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:intl/intl.dart';
 
@@ -17,5 +18,17 @@ class ChickenDate {
   static String format(DateTime date, {required bool useLunar}) {
     if (useLunar) return '${_format.format(date)} ÂL';
     return _format.format(LunarCalendar.lunarDateTimeToSolar(date));
+  }
+
+  /// Formats an age in [days] for display. Below a month it is shown in days;
+  /// from one month up it is shown as months (using 30-day months) plus the
+  /// leftover days, e.g. 63 days → "2 tháng 3 ngày tuổi".
+  static String formatAge(AppLocalizations l10n, int days) {
+    if (days < 30) return l10n.statusDaysOld(days);
+    final months = days ~/ 30;
+    final remainingDays = days % 30;
+    return remainingDays == 0
+        ? l10n.statusMonthsOld(months)
+        : l10n.statusMonthsDaysOld(months, remainingDays);
   }
 }

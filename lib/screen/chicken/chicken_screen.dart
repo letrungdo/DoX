@@ -412,14 +412,19 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         ? (isDark ? Colors.green[900]?.withValues(alpha: 0.24) : Colors.green[50])
         : null;
 
+    // Darker shades in light theme so the status text reads clearly against
+    // its tinted background; brighter shades stay legible in dark theme.
     final (statusText, statusColor) = !isHatched
         ? (
             l10n.statusWaitingHatch(ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar)),
-            Colors.orange,
+            isDark ? Colors.orange : Colors.orange[900]!,
           )
         : isSoldOut
-        ? (l10n.statusSoldOut, Colors.grey)
-        : (l10n.statusDaysOld(batch.ageInDays), Colors.green);
+        ? (l10n.statusSoldOut, isDark ? Colors.grey : Colors.grey[700]!)
+        : (
+            ChickenDate.formatAge(l10n, batch.ageInDays),
+            isDark ? Colors.green : Colors.green[800]!,
+          );
 
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),

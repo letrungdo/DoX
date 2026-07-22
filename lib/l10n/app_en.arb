@@ -272,6 +272,25 @@
       }
     }
   },
+  "statusMonthsOld": "{months} months old",
+  "@statusMonthsOld": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "statusMonthsDaysOld": "{months}mo {days}d old",
+  "@statusMonthsDaysOld": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "chickenQuantity": "{count} chickens",
   "@chickenQuantity": {
     "placeholders": {
