@@ -460,6 +460,19 @@
     }
   },
   "addExpense": "Add expense",
+  "editExpense": "Edit expense",
+  "deleteExpense": "Delete expense",
+  "confirmDeleteExpense": "Delete the expense {label} ({amount})?",
+  "@confirmDeleteExpense": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "recordSale": "Record sale",
   "quantityLabel": "Quantity",
   "pricePerUnit": "Price each",
@@ -542,6 +555,14 @@
   "profitLabel": "Profit",
   "errorEnterAmount": "Please enter an amount",
   "errorEnterQuantity": "Please enter a quantity",
+  "errorQuantityExceedsRemaining": "Only {remaining} chickens left to sell",
+  "@errorQuantityExceedsRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
   "errorEnterBatchName": "Please enter a batch name",
   "revenue": "Revenue",
   "totalLabel": "Total",

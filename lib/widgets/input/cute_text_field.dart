@@ -15,6 +15,7 @@ class CuteTextField extends StatelessWidget {
   final int maxLines;
   final TextStyle? style;
   final ValueChanged<String>? onChanged;
+  final bool autofocus;
 
   const CuteTextField({
     super.key,
@@ -29,6 +30,7 @@ class CuteTextField extends StatelessWidget {
     this.maxLines = 1,
     this.style,
     this.onChanged,
+    this.autofocus = false,
   });
 
   @override
@@ -40,6 +42,7 @@ class CuteTextField extends StatelessWidget {
       maxLines: maxLines,
       style: style,
       onChanged: onChanged,
+      autofocus: autofocus,
       decoration: cuteInputDecoration(
         context,
         label,

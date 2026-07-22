@@ -24,6 +24,11 @@ class ChickenViewModel extends CoreViewModel {
   List<ChickenBatch> _batches = [];
   List<ChickenBatch> get batches => _batches;
 
+  // Ids of batches deleted locally whose server delete may still be settling.
+  // A batch load in flight can return a stale snapshot that still contains a
+  // just-deleted batch; we filter those out so it doesn't reappear.
+  final Set<String> _pendingDeletedBatchIds = {};
+
   List<CockSale> _globalCockSales = [];
   List<CockSale> get globalCockSales => _globalCockSales;
 
@@ -183,7 +188,17 @@ class ChickenViewModel extends CoreViewModel {
     if (showLoading) _batchesLoading = true;
     notifyListenersSafe();
     try {
-      _batches = await _repository.getBatches();
+      final fetched = await _repository.getBatches();
+      if (_pendingDeletedBatchIds.isNotEmpty) {
+        // Once the server no longer returns a deleted batch, stop guarding it.
+        final fetchedIds = fetched.map((b) => b.id).toSet();
+        _pendingDeletedBatchIds.removeWhere((id) => !fetchedIds.contains(id));
+      }
+      _batches = _pendingDeletedBatchIds.isEmpty
+          ? fetched
+          : fetched
+                .where((b) => !_pendingDeletedBatchIds.contains(b.id))
+                .toList();
       _batchesLoaded = true;
     } catch (e) {
       logger.e("load chicken batches failed", error: e);
@@ -293,8 +308,25 @@ class ChickenViewModel extends CoreViewModel {
     final batch = _batches.firstWhereOrNull((e) => e.id == id);
     if (batch != null) {
       _batches.removeWhere((e) => e.id == id);
-      await _repository.deleteBatch(id);
+      // Guard against an in-flight load re-adding this batch before the server
+      // delete has settled. The guard is cleared by a later load once the
+      // server confirms the batch is gone.
+      _pendingDeletedBatchIds.add(id);
       notifyListenersSafe();
+      try {
+        await _repository.deleteBatch(id);
+      } catch (e) {
+        logger.e("delete chicken batch failed", error: e);
+        // Delete failed: stop guarding and restore the batch locally.
+        _pendingDeletedBatchIds.remove(id);
+        _batches.add(batch);
+        mergeSort(
+          _batches,
+          compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
+        );
+        notifyListenersSafe();
+        return;
+      }
       await _syncVaccinationNotifications();
     }
   }
@@ -306,6 +338,30 @@ class ChickenViewModel extends CoreViewModel {
         ..add(expense);
       _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
       await _repository.insertExpense(batchId, expense);
+      notifyListenersSafe();
+    }
+  }
+
+  Future<void> updateExpense(String batchId, Expense expense) async {
+    final index = _batches.indexWhere((e) => e.id == batchId);
+    if (index != -1) {
+      final updatedExpenses = _batches[index].expenses
+          .map((e) => e.id == expense.id ? expense : e)
+          .toList();
+      _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
+      await _repository.updateExpense(expense);
+      notifyListenersSafe();
+    }
+  }
+
+  Future<void> deleteExpense(String batchId, String expenseId) async {
+    final index = _batches.indexWhere((e) => e.id == batchId);
+    if (index != -1) {
+      final updatedExpenses = _batches[index].expenses
+          .where((e) => e.id != expenseId)
+          .toList();
+      _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
+      await _repository.deleteExpense(expenseId);
       notifyListenersSafe();
     }
   }

@@ -8,20 +8,15 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
-import 'package:do_x/widgets/input/cute_segmented_button.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/lunar_date_field.dart';
+import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 
 @RoutePage()
 class GlobalExpensesScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -256,103 +251,38 @@ class _GlobalExpensesScreenState
 
   void _showExpenseDialog([Expense? expense]) {
     final l10n = AppLocalizations.of(context);
-    final isEditing = expense != null;
-    final amountController = TextEditingController(
-      text: expense == null ? '' : expense.amount.toCurrency(),
-    );
-    final noteController = TextEditingController(text: expense?.note ?? '');
-    var selectedType = expense?.type ?? ExpenseType.feed;
-    var expenseDate = expense?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
-    String? amountError;
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
-          icon: _expenseAsset(selectedType),
-          title: isEditing ? l10n.editCommonExpense : l10n.addCommonExpense,
-          accent: Colors.orange,
-          confirmText: isEditing ? l10n.update : l10n.save,
-          destructiveText: isEditing ? l10n.delete : null,
-          onDestructive: isEditing
-              ? () {
-                  Navigator.pop(context);
-                  _confirmDeleteExpense(expense);
-                }
-              : null,
-          onConfirm: () async {
-            final amount = amountController.text.toMoney() ?? 0;
-            if (amount <= 0) {
-              setState(() => amountError = l10n.errorEnterAmount);
-              return;
-            }
-            try {
-              final updatedExpense = Expense(
-                id: expense?.id ?? const Uuid().v4(),
-                type: selectedType,
-                amount: amount,
-                date: expenseDate,
-                note: noteController.text.trim().isEmpty
-                    ? null
-                    : noteController.text.trim(),
-              );
-              if (isEditing) {
-                await vm.updateGlobalExpense(updatedExpense);
-              } else {
-                await vm.addGlobalExpense(updatedExpense);
-                vm.flashHighlight(updatedExpense.id);
-                _scrollToTop();
-              }
-              if (context.mounted) Navigator.pop(context);
-            } catch (error) {
-              if (mounted) {
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      l10n.saveCommonExpenseFailed(error.toString()),
-                    ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
-          children: [
-            CuteSegmentedButton<ExpenseType>(
-              segments: [
-                for (final type in ExpenseType.values)
-                  // Water is unused for common expenses; keep it only when
-                  // editing an old record that still has it.
-                  if (type != ExpenseType.water || selectedType == type)
-                    ButtonSegment(
-                      value: type,
-                      label: Text(_expenseLabel(type)),
-                    ),
-              ],
-              value: selectedType,
-              onChanged: (value) => setState(() => selectedType = value),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: CuteMoneyField(
-                controller: amountController,
-                label: l10n.amountLabel,
-                errorText: amountError,
-                onChanged: (_) {
-                  if (amountError != null) setState(() => amountError = null);
-                },
+    // Water is unused for common expenses; the shared dialog still keeps it
+    // when editing an old record that has it.
+    showExpenseDialog(
+      context,
+      expense: expense,
+      useLunar: vm.useLunarCalendar,
+      addTitle: l10n.addCommonExpense,
+      editTitle: l10n.editCommonExpense,
+      allowWater: false,
+      onDelete: () => _confirmDeleteExpense(expense!),
+      onSubmit: (updatedExpense) async {
+        try {
+          if (expense != null) {
+            await vm.updateGlobalExpense(updatedExpense);
+          } else {
+            await vm.addGlobalExpense(updatedExpense);
+            vm.flashHighlight(updatedExpense.id);
+            _scrollToTop();
+          }
+          return true;
+        } catch (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.saveCommonExpenseFailed(error.toString())),
+                backgroundColor: Colors.red,
               ),
-            ),
-            CuteTextField(controller: noteController, label: l10n.noteLabel),
-            LunarDateField(
-              label: l10n.expenseDate,
-              value: expenseDate,
-              useLunar: vm.useLunarCalendar,
-              onChanged: (date) => setState(() => expenseDate = date),
-            ),
-          ],
-        ),
-      ),
+            );
+          }
+          return false;
+        }
+      },
     );
   }
 

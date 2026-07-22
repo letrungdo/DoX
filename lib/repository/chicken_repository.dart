@@ -109,6 +109,22 @@ class ChickenRepository {
     await _client.from('expenses').insert(_expenseToRow(expense, batchId));
   }
 
+  Future<void> updateExpense(Expense expense) async {
+    await _client
+        .from('expenses')
+        .update({
+          'type': expense.type.name,
+          'amount': expense.amount,
+          'date': _dateStr(expense.date),
+          'note': expense.note,
+        })
+        .eq('id', expense.id);
+  }
+
+  Future<void> deleteExpense(String id) async {
+    await _client.from('expenses').delete().eq('id', id);
+  }
+
   Future<void> updateGlobalExpense(Expense expense) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw StateError('Bạn cần đăng nhập để sửa chi phí.');

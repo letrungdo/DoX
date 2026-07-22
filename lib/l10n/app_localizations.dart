@@ -1394,6 +1394,24 @@ abstract class AppLocalizations {
   /// **'Add expense'**
   String get addExpense;
 
+  /// No description provided for @editExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit expense'**
+  String get editExpense;
+
+  /// No description provided for @deleteExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete expense'**
+  String get deleteExpense;
+
+  /// No description provided for @confirmDeleteExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the expense {label} ({amount})?'**
+  String confirmDeleteExpense(String label, String amount);
+
   /// No description provided for @recordSale.
   ///
   /// In en, this message translates to:
@@ -1615,6 +1633,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a quantity'**
   String get errorEnterQuantity;
+
+  /// No description provided for @errorQuantityExceedsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {remaining} chickens left to sell'**
+  String errorQuantityExceedsRemaining(int remaining);
 
   /// No description provided for @errorEnterBatchName.
   ///

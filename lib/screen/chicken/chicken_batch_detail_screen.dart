@@ -15,10 +15,10 @@ import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -83,9 +83,9 @@ class _ChickenBatchDetailScreenState
                 const SizedBox(height: 24),
                 _buildSaleSection(batch),
                 const SizedBox(height: 24),
-                _buildVaccinationSection(batch),
-                const SizedBox(height: 24),
                 _buildExpenseSection(batch),
+                const SizedBox(height: 24),
+                _buildVaccinationSection(batch),
                 const SizedBox(height: 40),
                 Center(
                   child: TextButton(
@@ -115,12 +115,15 @@ class _ChickenBatchDetailScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  batch.name,
-                  style: context.theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    batch.name,
+                    style: context.theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.edit, size: 20),
                   onPressed: () => _showEditInfoDialog(batch),
@@ -208,24 +211,34 @@ class _ChickenBatchDetailScreenState
             ),
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
-              onPressed: () => _showAddExpenseDialog(batch),
+              onPressed: () => _showExpenseDialog(batch),
             ),
           ],
         ),
         const SizedBox(height: 8),
         if (batch.expenses.isEmpty) Text(l10n.noExpensesYet),
         ...batch.expenses.map(
-          (e) => ListTile(
-            leading: _getExpenseSvg(e.type),
-            title: Text(_getExpenseLabel(e.type)),
-            subtitle: Text(
-              "${_fmt(e.date)}${e.note != null ? ' - ${e.note}' : ''}",
-            ),
-            trailing: Text(
-              "${e.amount.toCurrency()}đ",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: context.colors.money,
+          (e) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              onTap: () => _showExpenseDialog(batch, expense: e),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: context.theme.colorScheme.outlineVariant,
+                ),
+              ),
+              leading: _getExpenseSvg(e.type),
+              title: Text(_getExpenseLabel(e.type)),
+              subtitle: Text(
+                "${_fmt(e.date)}${e.note != null ? ' - ${e.note}' : ''}",
+              ),
+              trailing: Text(
+                "${e.amount.toCurrency()}đ",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.money,
+                ),
               ),
             ),
           ),
@@ -279,7 +292,7 @@ class _ChickenBatchDetailScreenState
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => _showSaleDialog(batch, sale: sale),
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: context.theme.colorScheme.outlineVariant,
@@ -289,36 +302,81 @@ class _ChickenBatchDetailScreenState
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Assets.images.coinCute.svg(width: 26, height: 26),
-                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  "${_fmt(sale.date)} · ${l10n.statusDaysOld(batch.ageInDaysAt(sale.date))}",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: context
-                                        .theme
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "${_fmt(sale.date)} · ",
+                                        style: TextStyle(
+                                          color: context
+                                              .theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: l10n.statusDaysOld(
+                                          batch.ageInDaysAt(sale.date),
+                                        ),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color:
+                                              context.theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      if (sale.quantity > 0) ...[
+                                        TextSpan(
+                                          text: " · ",
+                                          style: TextStyle(
+                                            color: context
+                                                .theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: l10n.pricePerChicken(
+                                            "${(sale.amount / sale.quantity).toCurrency()}đ",
+                                          ),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: context.colors.money,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  style: const TextStyle(fontSize: 12),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            "${sale.amount.toCurrency()}đ",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: context.colors.money,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Assets.images.coinCute.svg(width: 24, height: 24),
+                              const SizedBox(height: 2),
+                              Text(
+                                "${sale.amount.toCurrency()}đ",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colors.money,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -350,14 +408,17 @@ class _ChickenBatchDetailScreenState
                 isBold: true,
               ),
             ],
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _showSaleDialog(batch),
-                child: Text(l10n.recordNewSale),
+            // Sold out: nothing left to sell, so hide the record button.
+            if (!soldOut) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _showSaleDialog(batch),
+                  child: Text(l10n.recordNewSale),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -383,6 +444,33 @@ class _ChickenBatchDetailScreenState
             l10n.confirmDeleteSaleRound(
               _fmt(sale.date),
               "${sale.amount.toCurrency()}đ",
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteExpense(ChickenBatch batch, Expense expense) {
+    final l10n = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => CuteDialog(
+        icon: Assets.images.feedCute,
+        title: l10n.deleteExpense,
+        accent: Colors.red,
+        confirmText: l10n.delete,
+        isDestructive: true,
+        onConfirm: () {
+          vm.deleteExpense(batch.id, expense.id);
+          Navigator.pop(context);
+        },
+        children: [
+          Text(
+            l10n.confirmDeleteExpense(
+              _getExpenseLabel(expense.type),
+              "${expense.amount.toCurrency()}đ",
             ),
             textAlign: TextAlign.center,
           ),
@@ -418,66 +506,23 @@ class _ChickenBatchDetailScreenState
     );
   }
 
-  void _showAddExpenseDialog(ChickenBatch batch) {
+  void _showExpenseDialog(ChickenBatch batch, {Expense? expense}) {
     final l10n = AppLocalizations.of(context);
-    String? amountError;
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-    ExpenseType selectedType = ExpenseType.feed;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
-          icon: Assets.images.feedCute,
-          title: l10n.addExpense,
-          accent: Colors.orange,
-          confirmText: l10n.save,
-          onConfirm: () {
-            final amount = amountController.text.toMoney() ?? 0;
-            if (amount <= 0) {
-              setState(() => amountError = l10n.errorEnterAmount);
-              return;
-            }
-            vm.addExpense(
-              batch.id,
-              Expense(
-                id: const Uuid().v4(),
-                type: selectedType,
-                amount: amount,
-                date: LunarCalendar.solarToLunarDateTime(DateTime.now()),
-                note: noteController.text.isEmpty ? null : noteController.text,
-              ),
-            );
-            Navigator.pop(context);
-          },
-          children: [
-            DropdownButtonFormField<ExpenseType>(
-              initialValue: selectedType,
-              items: ExpenseType.values
-                  .map(
-                    (t) => DropdownMenuItem(
-                      value: t,
-                      child: Text(_getExpenseLabel(t)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (val) => setState(() => selectedType = val!),
-              decoration: cuteInputDecoration(context, l10n.expenseType),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            CuteMoneyField(
-              controller: amountController,
-              label: l10n.amountLabel,
-              errorText: amountError,
-              onChanged: (_) {
-                if (amountError != null) setState(() => amountError = null);
-              },
-            ),
-            CuteTextField(controller: noteController, label: l10n.noteLabel),
-          ],
-        ),
-      ),
+    showExpenseDialog(
+      context,
+      expense: expense,
+      useLunar: vm.useLunarCalendar,
+      addTitle: l10n.addExpense,
+      editTitle: l10n.editExpense,
+      onDelete: () async => _confirmDeleteExpense(batch, expense!),
+      onSubmit: (updatedExpense) async {
+        if (expense != null) {
+          await vm.updateExpense(batch.id, updatedExpense);
+        } else {
+          await vm.addExpense(batch.id, updatedExpense);
+        }
+        return true;
+      },
     );
   }
 
@@ -493,6 +538,9 @@ class _ChickenBatchDetailScreenState
         ? sale.amount / sale.quantity
         : vm.suggestPrice(batch.ageInDays);
     final totalAmount = sale?.amount ?? unitPrice * quantity;
+    // Available to sell = remaining, plus this sale's own quantity when editing
+    // (it is already counted in the remaining figure).
+    final maxQuantity = batch.remainingQuantity + (sale?.quantity ?? 0);
 
     final unitPriceController = TextEditingController(
       text: unitPrice.toCurrency(),
@@ -531,9 +579,13 @@ class _ChickenBatchDetailScreenState
           onConfirm: () {
             final amount = totalAmountController.text.toMoney() ?? 0;
             final qty = int.tryParse(qtyController.text) ?? 0;
-            if (qty <= 0 || amount <= 0) {
+            if (qty <= 0 || qty > maxQuantity || amount <= 0) {
               setState(() {
-                qtyError = qty <= 0 ? l10n.errorEnterQuantity : null;
+                qtyError = qty <= 0
+                    ? l10n.errorEnterQuantity
+                    : qty > maxQuantity
+                    ? l10n.errorQuantityExceedsRemaining(maxQuantity)
+                    : null;
                 amountError = amount <= 0 ? l10n.errorEnterAmount : null;
               });
               return;
@@ -559,6 +611,7 @@ class _ChickenBatchDetailScreenState
                   child: CuteTextField(
                     controller: qtyController,
                     label: l10n.quantityLabel,
+                    autofocus: !isEditing,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     errorText: qtyError,

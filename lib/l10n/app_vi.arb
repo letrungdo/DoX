@@ -453,6 +453,19 @@
     }
   },
   "addExpense": "Thêm chi phí",
+  "editExpense": "Sửa chi phí",
+  "deleteExpense": "Xóa chi phí",
+  "confirmDeleteExpense": "Xóa chi phí {label} ({amount})?",
+  "@confirmDeleteExpense": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "recordSale": "Ghi nhận đợt bán",
   "quantityLabel": "Số lượng",
   "pricePerUnit": "Giá 1 con",
@@ -535,6 +548,14 @@
   "profitLabel": "Lợi nhuận",
   "errorEnterAmount": "Vui lòng nhập số tiền",
   "errorEnterQuantity": "Vui lòng nhập số lượng",
+  "errorQuantityExceedsRemaining": "Chỉ còn {remaining} con để bán",
+  "@errorQuantityExceedsRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
   "errorEnterBatchName": "Vui lòng nhập tên lứa gà",
   "revenue": "Doanh thu",
   "totalLabel": "Tổng",

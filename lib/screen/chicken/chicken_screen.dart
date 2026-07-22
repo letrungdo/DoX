@@ -785,6 +785,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             CuteTextField(
               controller: quantityController,
               label: l10n.eggQuantity,
+              autofocus: true,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               errorText: qtyError,
