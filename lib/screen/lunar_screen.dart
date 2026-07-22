@@ -131,8 +131,13 @@ class _LunarScreenState extends State<LunarScreen> {
   }
 
   Widget _buildMonthHeader(BuildContext context) {
+    final scheme = context.theme.colorScheme;
     final localeName = Localizations.localeOf(context).toString();
     final title = DateFormat.yMMMM(localeName).format(_focusedDay);
+
+    // Lunar year label from the 1st of the focused month.
+    final lunar = LunarCalendar.solarToLunar(1, _focusedDay.month, _focusedDay.year);
+    final canChiYear = LunarCalendar.canChiOfYear(lunar.year);
 
     return Row(
       children: [
@@ -141,12 +146,22 @@ class _LunarScreenState extends State<LunarScreen> {
           icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
-          child: Text(
-            _capitalize(title),
-            textAlign: TextAlign.center,
-            style: context.theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          child: Column(
+            children: [
+              Text(
+                _capitalize(title),
+                style: context.theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                'Năm $canChiYear',
+                style: context.theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
         IconButton(
@@ -227,7 +242,9 @@ class _LunarScreenState extends State<LunarScreen> {
     final isSunday = date.weekday == DateTime.sunday;
 
     final lunar = LunarCalendar.solarToLunar(date.day, date.month, date.year);
-    final showLunarMonth = lunar.day == 1;
+    // Show the month only every other day to reduce clutter; odd lunar days
+    // (which include mùng 1 & rằm) carry the month, even days show just the day.
+    final showLunarMonth = lunar.day.isOdd;
 
     final baseColor = isSunday ? scheme.error : scheme.onSurface;
     final solarColor = isOutside ? baseColor.withValues(alpha: 0.3) : baseColor;
@@ -267,15 +284,16 @@ class _LunarScreenState extends State<LunarScreen> {
                 TextSpan(
                   text: '${lunar.day}',
                   style: TextStyle(
-                    fontWeight: showLunarMonth || isSpecialLunar
+                    fontWeight: isSpecialLunar
                         ? FontWeight.w700
                         : FontWeight.w600,
                   ),
                 ),
-                TextSpan(
-                  text: '/${lunar.month}',
-                  style: const TextStyle(fontWeight: FontWeight.w400),
-                ),
+                if (showLunarMonth)
+                  TextSpan(
+                    text: '/${lunar.month}',
+                    style: const TextStyle(fontWeight: FontWeight.w400),
+                  ),
               ],
             ),
             style: TextStyle(
