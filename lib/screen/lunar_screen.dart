@@ -131,13 +131,8 @@ class _LunarScreenState extends State<LunarScreen> {
   }
 
   Widget _buildMonthHeader(BuildContext context) {
-    final scheme = context.theme.colorScheme;
     final localeName = Localizations.localeOf(context).toString();
     final title = DateFormat.yMMMM(localeName).format(_focusedDay);
-
-    // Lunar year label from the 1st of the focused month.
-    final lunar = LunarCalendar.solarToLunar(1, _focusedDay.month, _focusedDay.year);
-    final canChiYear = LunarCalendar.canChiOfYear(lunar.year);
 
     return Row(
       children: [
@@ -146,22 +141,12 @@ class _LunarScreenState extends State<LunarScreen> {
           icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
-          child: Column(
-            children: [
-              Text(
-                _capitalize(title),
-                style: context.theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                'Năm $canChiYear',
-                style: context.theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          child: Text(
+            _capitalize(title),
+            textAlign: TextAlign.center,
+            style: context.theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         IconButton(
@@ -182,8 +167,8 @@ class _LunarScreenState extends State<LunarScreen> {
       lastDay: _lastDay,
       focusedDay: _focusedDay,
       currentDay: DateTime.now(),
-      rowHeight: 56,
-      daysOfWeekHeight: 22,
+      rowHeight: 64,
+      daysOfWeekHeight: 26,
       startingDayOfWeek: StartingDayOfWeek.monday,
       headerVisible: false,
       availableGestures: AvailableGestures.horizontalSwipe,
@@ -208,7 +193,7 @@ class _LunarScreenState extends State<LunarScreen> {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: day.weekday == DateTime.sunday
                     ? scheme.error
@@ -243,9 +228,6 @@ class _LunarScreenState extends State<LunarScreen> {
 
     final lunar = LunarCalendar.solarToLunar(date.day, date.month, date.year);
     final showLunarMonth = lunar.day == 1;
-    final lunarText = showLunarMonth
-        ? '${lunar.day}/${lunar.month}'
-        : '${lunar.day}';
 
     final baseColor = isSunday ? scheme.error : scheme.onSurface;
     final solarColor = isOutside ? baseColor.withValues(alpha: 0.3) : baseColor;
@@ -270,7 +252,7 @@ class _LunarScreenState extends State<LunarScreen> {
           Text(
             '${date.day}',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: isToday || isSelected
                   ? FontWeight.w700
                   : FontWeight.w500,
@@ -278,15 +260,28 @@ class _LunarScreenState extends State<LunarScreen> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            lunarText,
+          Text.rich(
+            TextSpan(
+              children: [
+                // Lunar day is emphasised; the month reads lighter beside it.
+                TextSpan(
+                  text: '${lunar.day}',
+                  style: TextStyle(
+                    fontWeight: showLunarMonth || isSpecialLunar
+                        ? FontWeight.w700
+                        : FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: '/${lunar.month}',
+                  style: const TextStyle(fontWeight: FontWeight.w400),
+                ),
+              ],
+            ),
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 14,
               color: (isSelected ? scheme.onPrimaryContainer : lunarColor)
                   .withValues(alpha: isOutside ? 0.4 : 1),
-              fontWeight: showLunarMonth || isSpecialLunar
-                  ? FontWeight.w700
-                  : FontWeight.w400,
             ),
           ),
         ],

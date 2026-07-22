@@ -534,6 +534,16 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String statusMonthsOld(int months) {
+    return '$months tháng tuổi';
+  }
+
+  @override
+  String statusMonthsDaysOld(int months, int days) {
+    return '$months tháng $days ngày tuổi';
+  }
+
+  @override
   String chickenQuantity(int count) {
     return '$count con';
   }

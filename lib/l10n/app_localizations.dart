@@ -1070,6 +1070,18 @@ abstract class AppLocalizations {
   /// **'{days} days old'**
   String statusDaysOld(int days);
 
+  /// No description provided for @statusMonthsOld.
+  ///
+  /// In en, this message translates to:
+  /// **'{months} months old'**
+  String statusMonthsOld(int months);
+
+  /// No description provided for @statusMonthsDaysOld.
+  ///
+  /// In en, this message translates to:
+  /// **'{months}mo {days}d old'**
+  String statusMonthsDaysOld(int months, int days);
+
   /// No description provided for @chickenQuantity.
   ///
   /// In en, this message translates to:

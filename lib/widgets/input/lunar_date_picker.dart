@@ -66,12 +66,23 @@ class _LunarCalendarPickerDialogState
   Widget build(BuildContext context) {
     final materialL10n = MaterialLocalizations.of(context);
     final l10n = AppLocalizations.of(context);
+    // Small inset so the dialog uses most of the screen width, letting the
+    // calendar grid render larger. Cap the content so it stays readable on
+    // wide screens (tablet/web).
+    const insetHorizontal = 12.0;
+    final availableWidth =
+        MediaQuery.sizeOf(context).width - insetHorizontal * 2;
+    final contentWidth = availableWidth < 460.0 ? availableWidth : 460.0;
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: insetHorizontal,
+        vertical: 24,
+      ),
       titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       title: Text(l10n.lunarDatePickerTitle, textAlign: TextAlign.center),
       contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
       content: SizedBox(
-        width: 340,
+        width: contentWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -99,15 +110,8 @@ class _LunarCalendarPickerDialogState
 
   Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
     final localeName = Localizations.localeOf(context).toString();
     final title = _capitalize(DateFormat.yMMMM(localeName).format(_focusedDay));
-    final lunar = LunarCalendar.solarToLunar(
-      1,
-      _focusedDay.month,
-      _focusedDay.year,
-    );
-    final canChiYear = LunarCalendar.canChiOfYear(lunar.year);
 
     return Row(
       children: [
@@ -116,22 +120,12 @@ class _LunarCalendarPickerDialogState
           icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                '${l10n.yearPrefix} $canChiYear',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         IconButton(
@@ -152,8 +146,8 @@ class _LunarCalendarPickerDialogState
       lastDay: widget.lastDay,
       focusedDay: _focusedDay,
       currentDay: DateTime.now(),
-      rowHeight: 50,
-      daysOfWeekHeight: 20,
+      rowHeight: 64,
+      daysOfWeekHeight: 26,
       startingDayOfWeek: StartingDayOfWeek.monday,
       headerVisible: false,
       availableGestures: AvailableGestures.horizontalSwipe,
@@ -176,7 +170,7 @@ class _LunarCalendarPickerDialogState
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: day.weekday == DateTime.sunday
                     ? scheme.error
@@ -211,9 +205,6 @@ class _LunarCalendarPickerDialogState
 
     final lunar = LunarCalendar.solarToLunar(date.day, date.month, date.year);
     final showLunarMonth = lunar.day == 1;
-    final lunarText = showLunarMonth
-        ? '${lunar.day}/${lunar.month}'
-        : '${lunar.day}';
 
     final baseColor = isSunday ? scheme.error : scheme.onSurface;
     final solarColor = isOutside ? baseColor.withValues(alpha: 0.3) : baseColor;
@@ -237,7 +228,7 @@ class _LunarCalendarPickerDialogState
           Text(
             '${date.day}',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 20,
               fontWeight: isToday || isSelected
                   ? FontWeight.w700
                   : FontWeight.w500,
@@ -245,15 +236,28 @@ class _LunarCalendarPickerDialogState
             ),
           ),
           const SizedBox(height: 1),
-          Text(
-            lunarText,
+          Text.rich(
+            TextSpan(
+              children: [
+                // Lunar day is emphasised; the month reads lighter beside it.
+                TextSpan(
+                  text: '${lunar.day}',
+                  style: TextStyle(
+                    fontWeight: showLunarMonth || isSpecialLunar
+                        ? FontWeight.w700
+                        : FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: '/${lunar.month}',
+                  style: const TextStyle(fontWeight: FontWeight.w400),
+                ),
+              ],
+            ),
             style: TextStyle(
-              fontSize: 9.5,
+              fontSize: 14,
               color: (isSelected ? scheme.onPrimaryContainer : lunarColor)
                   .withValues(alpha: isOutside ? 0.4 : 1),
-              fontWeight: showLunarMonth || isSpecialLunar
-                  ? FontWeight.w700
-                  : FontWeight.w400,
             ),
           ),
         ],

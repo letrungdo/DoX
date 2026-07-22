@@ -534,6 +534,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String statusMonthsOld(int months) {
+    return '$months months old';
+  }
+
+  @override
+  String statusMonthsDaysOld(int months, int days) {
+    return '${months}mo ${days}d old';
+  }
+
+  @override
   String chickenQuantity(int count) {
     return '$count chickens';
   }
