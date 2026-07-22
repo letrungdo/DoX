@@ -50,11 +50,22 @@ class UpdateService {
     }
   }
 
-  /// Downloads the APK to the temp dir and opens the Android installer.
-  /// Supports resuming from where it left off.
-  Future<void> downloadAndInstall(AppUpdateInfo update, {ProgressCallback? onReceiveProgress}) async {
+  /// Deterministic temp-dir path where the given update's APK is downloaded.
+  /// Stable across app restarts so a partial file can be resumed.
+  Future<String> apkPath(AppUpdateInfo update) async {
     final dir = await getTemporaryDirectory();
-    final path = '${dir.path}/dox_${update.version.replaceAll('+', '_')}.apk';
+    return '${dir.path}/dox_${update.version.replaceAll('+', '_')}.apk';
+  }
+
+  /// Downloads the APK to the temp dir, resuming from any partial file left
+  /// over from a previous (possibly killed) run via an HTTP range request.
+  /// Does NOT install — call [install] afterwards.
+  Future<void> download(
+    AppUpdateInfo update, {
+    ProgressCallback? onReceiveProgress,
+    CancelToken? cancelToken,
+  }) async {
+    final path = await apkPath(update);
     final file = File(path);
 
     int existingLength = 0;
@@ -62,9 +73,11 @@ class UpdateService {
       existingLength = await file.length();
     }
 
+    IOSink? sink;
     try {
       final response = await _dio.get<ResponseBody>(
         update.apkUrl,
+        cancelToken: cancelToken,
         options: Options(
           headers: {
             if (existingLength > 0) 'range': 'bytes=$existingLength-',
@@ -81,7 +94,7 @@ class UpdateService {
         await file.delete();
       }
 
-      final sink = file.openWrite(mode: isPartial ? FileMode.append : FileMode.write);
+      sink = file.openWrite(mode: isPartial ? FileMode.append : FileMode.write);
 
       int received = existingLength;
       int actualTotal = isPartial ? totalLength + existingLength : totalLength;
@@ -94,16 +107,28 @@ class UpdateService {
 
       await sink.flush();
       await sink.close();
-
-      final result = await OpenFilex.open(path);
-      if (result.type != ResultType.done) {
-        throw Exception(result.message);
-      }
+      sink = null;
     } catch (e) {
-      logger.e("Download failed", error: e);
+      await sink?.flush();
+      await sink?.close();
+      if (e is! DioException || e.type != DioExceptionType.cancel) {
+        logger.e("Download failed", error: e);
+      }
       rethrow;
     }
   }
+
+  /// Opens the Android installer for the already-downloaded APK.
+  Future<void> install(AppUpdateInfo update) async {
+    final path = await apkPath(update);
+    final result = await OpenFilex.open(path);
+    if (result.type != ResultType.done) {
+      throw Exception(result.message);
+    }
+  }
+
+  /// Whether the given "1.0.1+6"-style version is newer than the running app.
+  bool isNewerThanCurrent(String version) => _isNewerThanCurrent(version);
 
   /// Compares "1.0.1+6"-style versions against the running app.
   bool _isNewerThanCurrent(String latest) {

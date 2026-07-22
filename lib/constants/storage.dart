@@ -18,4 +18,10 @@ class StorageKey {
   static const showLunarTab = "showLunarTab";
   static const tabOrder = "tabOrder";
   static const electricReminder = "electricReminder";
+
+  // Pending in-background app update (resumable across app restarts).
+  static const pendingUpdateVersion = "pendingUpdateVersion";
+  static const pendingUpdateUrl = "pendingUpdateUrl";
+  static const pendingUpdateNotes = "pendingUpdateNotes";
+  static const pendingUpdateDone = "pendingUpdateDone";
 }

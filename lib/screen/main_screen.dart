@@ -8,6 +8,7 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
+import 'package:do_x/widgets/update_download_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -162,7 +163,17 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                 },
                 items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
               ),
-              body: child,
+              body: Stack(
+                children: [
+                  child,
+                  Positioned(
+                    left: 8,
+                    right: 8,
+                    bottom: 8,
+                    child: const UpdateDownloadToast(),
+                  ),
+                ],
+              ),
             );
           },
         );
