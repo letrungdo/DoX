@@ -9,6 +9,7 @@ class CuteMoneyField extends StatelessWidget {
   final String? hint;
   final String? errorText;
   final ValueChanged<String>? onChanged;
+  final bool autofocus;
 
   const CuteMoneyField({
     super.key,
@@ -17,6 +18,7 @@ class CuteMoneyField extends StatelessWidget {
     this.hint,
     this.errorText,
     this.onChanged,
+    this.autofocus = false,
   });
 
   @override
@@ -30,6 +32,7 @@ class CuteMoneyField extends StatelessWidget {
       keyboardType: TextInputType.number,
       inputFormatters: [ThousandsSeparatorInputFormatter()],
       onChanged: onChanged,
+      autofocus: autofocus,
     );
   }
 }

@@ -732,6 +732,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpense => 'Delete expense';
+
+  @override
+  String confirmDeleteExpense(String label, String amount) {
+    return 'Delete the expense $label ($amount)?';
+  }
+
+  @override
   String get recordSale => 'Record sale';
 
   @override
@@ -853,6 +864,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorEnterQuantity => 'Please enter a quantity';
+
+  @override
+  String errorQuantityExceedsRemaining(int remaining) {
+    return 'Only $remaining chickens left to sell';
+  }
 
   @override
   String get errorEnterBatchName => 'Please enter a batch name';

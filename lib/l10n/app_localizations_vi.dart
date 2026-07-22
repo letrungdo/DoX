@@ -731,6 +731,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addExpense => 'Thêm chi phí';
 
   @override
+  String get editExpense => 'Sửa chi phí';
+
+  @override
+  String get deleteExpense => 'Xóa chi phí';
+
+  @override
+  String confirmDeleteExpense(String label, String amount) {
+    return 'Xóa chi phí $label ($amount)?';
+  }
+
+  @override
   String get recordSale => 'Ghi nhận đợt bán';
 
   @override
@@ -852,6 +863,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get errorEnterQuantity => 'Vui lòng nhập số lượng';
+
+  @override
+  String errorQuantityExceedsRemaining(int remaining) {
+    return 'Chỉ còn $remaining con để bán';
+  }
 
   @override
   String get errorEnterBatchName => 'Vui lòng nhập tên lứa gà';

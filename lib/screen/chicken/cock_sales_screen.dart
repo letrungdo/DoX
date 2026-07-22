@@ -370,6 +370,7 @@ class _CockSalesScreenState
             CuteMoneyField(
               controller: amountController,
               label: l10n.salePrice,
+              autofocus: !isEditing,
               errorText: amountError,
               onChanged: (_) {
                 if (amountError != null) setState(() => amountError = null);
