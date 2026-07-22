@@ -509,6 +509,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadErrorNotFound => 'Update file not found on server.';
 
   @override
+  String downloadingUpdateVersion(String version) {
+    return 'Downloading update v$version';
+  }
+
+  @override
+  String updateReadyToInstall(String version) {
+    return 'Update v$version ready';
+  }
+
+  @override
+  String get install => 'Install';
+
+  @override
   String get add => 'Add';
 
   @override

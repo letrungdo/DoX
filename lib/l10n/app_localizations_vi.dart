@@ -509,6 +509,19 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không tìm thấy file cập nhật trên máy chủ.';
 
   @override
+  String downloadingUpdateVersion(String version) {
+    return 'Đang tải bản cập nhật v$version';
+  }
+
+  @override
+  String updateReadyToInstall(String version) {
+    return 'Đã tải xong bản v$version';
+  }
+
+  @override
+  String get install => 'Cài đặt';
+
+  @override
   String get add => 'Thêm';
 
   @override

@@ -104,6 +104,51 @@ class _StorageService {
   Future<bool> setElectricReminderEnabled(bool value) {
     return prefs.setBool(StorageKey.electricReminder, value);
   }
+
+  // --- Pending background app update ---------------------------------------
+
+  String? getPendingUpdateVersion() {
+    return prefs.getString(StorageKey.pendingUpdateVersion);
+  }
+
+  String? getPendingUpdateUrl() {
+    return prefs.getString(StorageKey.pendingUpdateUrl);
+  }
+
+  String? getPendingUpdateNotes() {
+    return prefs.getString(StorageKey.pendingUpdateNotes);
+  }
+
+  bool getPendingUpdateDone() {
+    return prefs.getBool(StorageKey.pendingUpdateDone) ?? false;
+  }
+
+  Future<void> savePendingUpdate({
+    required String version,
+    required String url,
+    String? notes,
+    bool done = false,
+  }) async {
+    await prefs.setString(StorageKey.pendingUpdateVersion, version);
+    await prefs.setString(StorageKey.pendingUpdateUrl, url);
+    if (notes != null) {
+      await prefs.setString(StorageKey.pendingUpdateNotes, notes);
+    } else {
+      await prefs.remove(StorageKey.pendingUpdateNotes);
+    }
+    await prefs.setBool(StorageKey.pendingUpdateDone, done);
+  }
+
+  Future<void> setPendingUpdateDone(bool done) {
+    return prefs.setBool(StorageKey.pendingUpdateDone, done);
+  }
+
+  Future<void> clearPendingUpdate() async {
+    await prefs.remove(StorageKey.pendingUpdateVersion);
+    await prefs.remove(StorageKey.pendingUpdateUrl);
+    await prefs.remove(StorageKey.pendingUpdateNotes);
+    await prefs.remove(StorageKey.pendingUpdateDone);
+  }
 }
 
 final storageService = _StorageService();

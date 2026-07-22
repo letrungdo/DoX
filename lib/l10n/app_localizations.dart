@@ -1028,6 +1028,24 @@ abstract class AppLocalizations {
   /// **'Update file not found on server.'**
   String get downloadErrorNotFound;
 
+  /// No description provided for @downloadingUpdateVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading update v{version}'**
+  String downloadingUpdateVersion(String version);
+
+  /// No description provided for @updateReadyToInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Update v{version} ready'**
+  String updateReadyToInstall(String version);
+
+  /// No description provided for @install.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get install;
+
   /// No description provided for @add.
   ///
   /// In en, this message translates to:

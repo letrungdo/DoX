@@ -251,6 +251,23 @@
   "downloadErrorGeneric": "Could not download update. Please check your internet connection.",
   "downloadErrorTimeout": "Connection timeout. Please try again.",
   "downloadErrorNotFound": "Update file not found on server.",
+  "downloadingUpdateVersion": "Downloading update v{version}",
+  "@downloadingUpdateVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateReadyToInstall": "Update v{version} ready",
+  "@updateReadyToInstall": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "install": "Install",
   "add": "Add",
   "confirm": "Confirm",
   "pleaseWait": "Please wait...",
