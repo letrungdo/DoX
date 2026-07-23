@@ -391,6 +391,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get yearLabel => 'Năm:';
 
   @override
+  String get selectYear => 'Chọn năm';
+
+  @override
   String get all => 'Tất cả';
 
   @override

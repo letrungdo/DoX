@@ -306,8 +306,25 @@ class _ChickenBatchDetailScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text:
+                                            "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
+                                      ),
+                                      TextSpan(
+                                        text:
+                                            " (${l10n.statusDaysOld(batch.ageInDaysAt(sale.date))})",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.normal,
+                                          color: batch.ageInDaysAt(sale.date) < 0
+                                              ? Colors.red
+                                              : null,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -317,22 +334,12 @@ class _ChickenBatchDetailScreenState
                                   TextSpan(
                                     children: [
                                       TextSpan(
-                                        text: "${_fmt(sale.date)} · ",
+                                        text: _fmt(sale.date),
                                         style: TextStyle(
                                           color: context
                                               .theme
                                               .colorScheme
                                               .onSurfaceVariant,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: l10n.statusDaysOld(
-                                          batch.ageInDaysAt(sale.date),
-                                        ),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          color:
-                                              context.theme.colorScheme.primary,
                                         ),
                                       ),
                                       if (sale.quantity > 0) ...[

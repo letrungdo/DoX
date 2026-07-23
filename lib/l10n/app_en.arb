@@ -165,6 +165,7 @@
   "noBatchesYet": "No batches yet. Press + to add.",
   "yearPrefix": "Year",
   "yearLabel": "Year:",
+  "selectYear": "Select year",
   "all": "All",
   "saleCount": "{count} sales",
   "@saleCount": {

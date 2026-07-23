@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 /// Rounded text field styled with [cuteInputDecoration].
 class CuteTextField extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String label;
   final String? hint;
   final String? prefixText;
@@ -20,6 +21,7 @@ class CuteTextField extends StatelessWidget {
   const CuteTextField({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.label,
     this.hint,
     this.prefixText,
@@ -37,6 +39,7 @@ class CuteTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       maxLines: maxLines,

@@ -6,6 +6,7 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -108,19 +109,10 @@ class _ChickenStatisticsScreenState
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Text(
-                l10n.yearLabel,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 8),
-              DropdownButton<int>(
-                value: _selectedYear,
-                items: years
-                    .map((y) => DropdownMenuItem(value: y, child: Text("$y")))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedYear = val);
-                },
+              YearFilter(
+                selectedYear: _selectedYear,
+                years: years,
+                onChanged: (val) => setState(() => _selectedYear = val),
               ),
             ],
           ),
