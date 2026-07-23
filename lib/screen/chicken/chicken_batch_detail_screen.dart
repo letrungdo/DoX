@@ -317,15 +317,11 @@ class _ChickenBatchDetailScreenState
                                         text:
                                             "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
                                       ),
-                                      TextSpan(
-                                        text:
-                                            " (${l10n.statusDaysOld(batch.ageInDaysAt(sale.date))})",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.normal,
-                                          color: batch.ageInDaysAt(sale.date) < 0
-                                              ? Colors.red
-                                              : null,
+                                      _buildSaleAgeSpan(
+                                        l10n.statusDaysOld(
+                                          batch.ageInDaysAt(sale.date),
                                         ),
+                                        batch.ageInDaysAt(sale.date),
                                       ),
                                     ],
                                   ),
@@ -358,7 +354,7 @@ class _ChickenBatchDetailScreenState
                                         ),
                                         TextSpan(
                                           text: l10n.pricePerChicken(
-                                            "${(sale.amount / sale.quantity).toCurrency()}đ",
+                                            "${(sale.amount / sale.quantity).round().toCurrency()}đ",
                                           ),
                                           style: TextStyle(
                                             fontWeight: FontWeight.w700,
@@ -433,6 +429,35 @@ class _ChickenBatchDetailScreenState
           ],
         ),
       ),
+    );
+  }
+
+  TextSpan _buildSaleAgeSpan(String ageLabel, int ageInDays) {
+    final ageText = ageInDays.toString();
+    final ageTextIndex = ageLabel.indexOf(ageText);
+
+    if (ageTextIndex < 0) {
+      return TextSpan(
+        text: " ($ageLabel)",
+        style: const TextStyle(fontWeight: FontWeight.normal),
+      );
+    }
+
+    return TextSpan(
+      style: const TextStyle(fontWeight: FontWeight.normal),
+      children: [
+        TextSpan(text: " (${ageLabel.substring(0, ageTextIndex)}"),
+        TextSpan(
+          text: ageText,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: ageInDays < 0
+                ? Colors.red
+                : context.theme.colorScheme.primary,
+          ),
+        ),
+        TextSpan(text: "${ageLabel.substring(ageTextIndex + ageText.length)})"),
+      ],
     );
   }
 

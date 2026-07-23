@@ -4,6 +4,7 @@ import 'package:do_x/repository/client/http_client_adapter.dart';
 import 'package:do_x/repository/client/interceptor/firebase_interceptor.dart';
 import 'package:do_x/repository/client/interceptor/interceptor.dart';
 import 'package:do_x/repository/client/interceptor/locket_interceptor.dart';
+import 'package:do_x/repository/client/interceptor/retry_interceptor.dart';
 import 'package:flutter/foundation.dart';
 
 final _baseOptions = BaseOptions(
@@ -15,7 +16,10 @@ final _baseOptions = BaseOptions(
 class DioClient {
   static Dio create([String? baseUrl]) {
     final dio = Dio(_baseOptions.copyWith(baseUrl: baseUrl));
-    dio.interceptors.add(BaseInterceptor());
+    dio.interceptors.addAll([
+      RetryInterceptor(dio),
+      BaseInterceptor(),
+    ]);
     if (!kIsWeb) {
       dio.httpClientAdapter = httpClientAdapter;
     }
@@ -27,6 +31,7 @@ class DioClient {
   static Dio createLocket() {
     final dio = Dio(_baseOptions.copyWith(baseUrl: "https://api.locketcamera.com"));
     dio.interceptors.addAll([
+      RetryInterceptor(dio),
       LocketInterceptor(), //
     ]);
     if (!kIsWeb) {
@@ -38,6 +43,7 @@ class DioClient {
   static Dio createFirebase() {
     final dio = Dio(_baseOptions);
     dio.interceptors.addAll([
+      RetryInterceptor(dio),
       FirebaseInterceptor(), //
     ]);
     if (!kIsWeb) {
