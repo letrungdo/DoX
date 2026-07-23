@@ -11,11 +11,11 @@ import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
-import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
+import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -30,10 +30,8 @@ class GlobalExpensesScreen extends StatefulScreen implements AutoRouteWrapper {
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _GlobalExpensesScreenState
-    extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
-  String _fmt(DateTime date) =>
-      ChickenDate.format(date, useLunar: vm.useLunarCalendar);
+class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
+  String _fmt(DateTime date) => ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   int _selectedYear = DateTime.now().year;
   final _scrollController = ScrollController();
 
@@ -48,11 +46,7 @@ class _GlobalExpensesScreenState
   void _scrollToTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
@@ -75,9 +69,7 @@ class _GlobalExpensesScreenState
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
-        bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isExpensesLoading,
-        ),
+        bottom: AppBarLoadingBar<ChickenViewModel>(selector: (vm) => vm.isExpensesLoading),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
@@ -87,22 +79,16 @@ class _GlobalExpensesScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final years = {
-            DateTime.now().year,
-            ...vm.globalExpenses.map((expense) => vm.displayYear(expense.date)),
-          }.toList()..sort((a, b) => b.compareTo(a));
+          final years = {DateTime.now().year, ...vm.globalExpenses.map((expense) => vm.displayYear(expense.date))}.toList()
+            ..sort((a, b) => b.compareTo(a));
           final expenses = vm.globalExpenses.where((expense) {
-            return _selectedYear == 0 ||
-                vm.displayYear(expense.date) == _selectedYear;
+            return _selectedYear == 0 || vm.displayYear(expense.date) == _selectedYear;
           }).toList();
           // Stable sort by date desc so that, for the same date, the most
           // recently added record (kept at the front of the source list)
           // stays on top.
           mergeSort(expenses, compare: (a, b) => b.date.compareTo(a.date));
-          final total = expenses.fold<double>(
-            0,
-            (sum, expense) => sum + expense.amount,
-          );
+          final total = expenses.fold<double>(0, (sum, expense) => sum + expense.amount);
 
           return Column(
             children: [
@@ -114,8 +100,7 @@ class _GlobalExpensesScreenState
                       selectedYear: _selectedYear,
                       years: years,
                       includeAll: true,
-                      onChanged: (year) =>
-                          setState(() => _selectedYear = year),
+                      onChanged: (year) => setState(() => _selectedYear = year),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -127,12 +112,7 @@ class _GlobalExpensesScreenState
                             children: [
                               TextSpan(
                                 text: "${l10n.totalLabel}: ",
-                                style: TextStyle(
-                                  color: context
-                                      .theme
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
+                                style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
                               ),
                               TextSpan(
                                 text: "${total.toCurrency()}đ",
@@ -160,31 +140,17 @@ class _GlobalExpensesScreenState
                                 child: vm.isExpensesLoading
                                     ? const SizedBox.shrink()
                                     : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Assets.images.feedCute.svg(
-                                            width: 72,
-                                            height: 72,
-                                          ),
+                                          Assets.images.feedCute.svg(width: 72, height: 72),
                                           const SizedBox(height: 16),
                                           Text(
-                                            vm.globalExpenses.isEmpty
-                                                ? l10n.noCommonExpenses
-                                                : l10n.noCommonExpensesInYear(
-                                                    _selectedYear,
-                                                  ),
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                            ),
+                                            vm.globalExpenses.isEmpty ? l10n.noCommonExpenses : l10n.noCommonExpensesInYear(_selectedYear),
+                                            style: TextStyle(color: Colors.grey[600]),
                                           ),
                                           if (vm.globalExpenses.isEmpty) ...[
                                             const SizedBox(height: 16),
-                                            ElevatedButton(
-                                              onPressed: () =>
-                                                  _showExpenseDialog(),
-                                              child: Text(l10n.addFirstExpense),
-                                            ),
+                                            ElevatedButton(onPressed: () => _showExpenseDialog(), child: Text(l10n.addFirstExpense)),
                                           ],
                                         ],
                                       ),
@@ -201,27 +167,14 @@ class _GlobalExpensesScreenState
                           itemBuilder: (context, index) {
                             final expense = expenses[index];
                             return ChickenListTileCard(
-                              color: expense.id == vm.highlightedId
-                                  ? context.theme.colorScheme.primary
-                                        .withValues(alpha: 0.18)
-                                  : null,
+                              color: expense.id == vm.highlightedId ? context.theme.colorScheme.primary.withValues(alpha: 0.18) : null,
                               onTap: () => _showExpenseDialog(expense),
                               leading: _expenseSvg(expense.type),
-                              title: Text(
-                                expense.note ?? _expenseLabel(expense.type),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                "${_fmt(expense.date)} · ${_expenseLabel(expense.type)}",
-                              ),
+                              title: Text(expense.note ?? _expenseLabel(expense.type), style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: Text("${_fmt(expense.date)} · ${_expenseLabel(expense.type)}"),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: context.colors.money,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.colors.money),
                               ),
                             );
                           },
@@ -246,6 +199,7 @@ class _GlobalExpensesScreenState
       addTitle: l10n.addCommonExpense,
       editTitle: l10n.editCommonExpense,
       allowWater: false,
+      noteSuggestions: vm.expenseNoteSuggestions,
       onDelete: () => _confirmDeleteExpense(expense!),
       onSubmit: (updatedExpense) async {
         try {
@@ -259,12 +213,9 @@ class _GlobalExpensesScreenState
           return true;
         } catch (error) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.saveCommonExpenseFailed(error.toString())),
-                backgroundColor: Colors.red,
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.saveCommonExpenseFailed(error.toString())), backgroundColor: Colors.red));
           }
           return false;
         }
@@ -284,13 +235,7 @@ class _GlobalExpensesScreenState
         isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),
         children: [
-          Text(
-            l10n.confirmDeleteCommonExpense(
-              _fmt(expense.date),
-              '${expense.amount.toCurrency()}đ',
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Text(l10n.confirmDeleteCommonExpense(_fmt(expense.date), '${expense.amount.toCurrency()}đ'), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -300,12 +245,9 @@ class _GlobalExpensesScreenState
       await vm.deleteGlobalExpense(expense.id);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.deleteCommonExpenseFailed(error.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.deleteCommonExpenseFailed(error.toString())), backgroundColor: Colors.red));
       }
     }
   }

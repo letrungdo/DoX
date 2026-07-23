@@ -19,6 +19,7 @@ import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
@@ -778,7 +779,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               label: l10n.eggQuantity,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                NoLeadingZeroInputFormatter(),
+              ],
               errorText: qtyError,
               onChanged: (_) {
                 if (qtyError != null) setState(() => qtyError = null);

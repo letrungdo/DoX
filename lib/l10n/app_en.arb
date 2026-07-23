@@ -164,7 +164,7 @@
   "importData": "Import data (JSON)",
   "noBatchesYet": "No batches yet. Press + to add.",
   "yearPrefix": "Year",
-  "yearLabel": "Year:",
+  "yearLabel": "Year",
   "selectYear": "Select year",
   "all": "All",
   "saleCount": "{count} sales",
