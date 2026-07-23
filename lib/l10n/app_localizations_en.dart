@@ -389,7 +389,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yearPrefix => 'Year';
 
   @override
-  String get yearLabel => 'Year:';
+  String get yearLabel => 'Year';
 
   @override
   String get selectYear => 'Select year';

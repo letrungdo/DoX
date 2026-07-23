@@ -6,8 +6,8 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
+import 'package:do_x/widgets/input/note_field.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,6 +23,7 @@ Future<void> showExpenseDialog(
   required Future<bool> Function(Expense expense) onSubmit,
   Future<void> Function()? onDelete,
   bool allowWater = true,
+  List<String> noteSuggestions = const [],
 }) {
   final l10n = AppLocalizations.of(context);
   final isEditing = expense != null;
@@ -91,13 +92,26 @@ Future<void> showExpenseDialog(
               controller: amountController,
               label: l10n.amountLabel,
               autofocus: !isEditing,
+              presetSuggestions: const [
+                50000,
+                100000,
+                200000,
+                500000,
+                1000000,
+                2000000,
+                5000000,
+              ],
               errorText: amountError,
               onChanged: (_) {
                 if (amountError != null) setState(() => amountError = null);
               },
             ),
           ),
-          CuteTextField(controller: noteController, label: l10n.noteLabel),
+          NoteField(
+            controller: noteController,
+            label: l10n.noteLabel,
+            suggestions: noteSuggestions,
+          ),
           LunarDateField(
             label: l10n.expenseDate,
             value: expenseDate,

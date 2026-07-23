@@ -157,7 +157,7 @@
   "importData": "Nhập dữ liệu (JSON)",
   "noBatchesYet": "Chưa có lứa gà nào. Nhấn + để thêm.",
   "yearPrefix": "Năm",
-  "yearLabel": "Năm:",
+  "yearLabel": "Năm",
   "selectYear": "Chọn năm",
   "all": "Tất cả",
   "saleCount": "{count} lượt bán",

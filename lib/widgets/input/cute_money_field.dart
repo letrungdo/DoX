@@ -4,8 +4,11 @@ import 'package:flutter/services.dart';
 
 /// Money input: "đ" unit on the right, thousands separators added while typing.
 ///
-/// While focused, shows a suggestion bar just above the keyboard: e.g. typing
-/// "25" offers 25,000 / 250,000 / 2,500,000 for one-tap completion.
+/// When [showSuggestions] is true, a bar above the keyboard offers one-tap
+/// amounts while the field is focused, capped at 50 million:
+/// - empty field: the [presetSuggestions] for this field (e.g. chick prices),
+/// - after typing: length-aware completions, e.g. "25" -> 25k / 250k / 2.5tr,
+///   suppressed once the typed number already looks full (5+ digits).
 class CuteMoneyField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -13,6 +16,13 @@ class CuteMoneyField extends StatefulWidget {
   final String? errorText;
   final ValueChanged<String>? onChanged;
   final bool autofocus;
+
+  /// Whether to show the one-tap suggestion bar above the keyboard.
+  final bool showSuggestions;
+
+  /// Amounts offered while the field is still empty. Use to seed
+  /// context-specific defaults (e.g. chick prices vs. adult-bird prices).
+  final List<int>? presetSuggestions;
 
   const CuteMoneyField({
     super.key,
@@ -22,6 +32,8 @@ class CuteMoneyField extends StatefulWidget {
     this.errorText,
     this.onChanged,
     this.autofocus = false,
+    this.showSuggestions = true,
+    this.presetSuggestions,
   });
 
   @override
@@ -49,7 +61,7 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
   }
 
   void _onFocusChanged() {
-    if (_focusNode.hasFocus) {
+    if (_focusNode.hasFocus && widget.showSuggestions) {
       _showOverlay();
     } else {
       _removeOverlay();
@@ -80,13 +92,30 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
     return buffer.toString();
   }
 
+  /// Suggestions never exceed 50 million.
+  static const int _maxSuggestion = 50000000;
+
+  /// Completions smaller than this are too noisy to offer (e.g. "2.5k").
+  static const int _minSuggestion = 10000;
+
   List<int> _suggestions() {
     final raw = _rawDigits;
-    if (raw.isEmpty) return const [];
+    // Nothing typed yet: offer this field's preset amounts.
+    if (raw.isEmpty) {
+      final presets = widget.presetSuggestions;
+      if (presets == null) return const [];
+      return presets.where((v) => v <= _maxSuggestion).toList();
+    }
     final base = int.tryParse(raw);
     if (base == null || base == 0) return const [];
-    // Skip suggestions that already have too many trailing zeros to be useful.
-    return [base * 1000, base * 10000, base * 100000];
+    // Offer round "×10" completions above what's typed, e.g. "25" -> 25k/250k/
+    // 2.5tr, "10000" -> 100k/1tr/10tr. Bounded to [10k, 50tr], so the list
+    // stays short (at most a handful of chips) whatever the input length.
+    final result = <int>[];
+    for (var value = base * 10; value <= _maxSuggestion; value *= 10) {
+      if (value >= _minSuggestion) result.add(value);
+    }
+    return result;
   }
 
   void _applySuggestion(int value) {
@@ -124,7 +153,18 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
               itemBuilder: (_, index) {
                 final value = suggestions[index];
                 return ActionChip(
-                  label: Text('${_formatThousands(value.toString())} đ'),
+                  label: Text(_formatCompact(value)),
+                  labelStyle: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  backgroundColor: theme.colorScheme.surface,
+                  side: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
+                  visualDensity: VisualDensity.compact,
                   onPressed: () => _applySuggestion(value),
                 );
               },
@@ -152,6 +192,18 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
   }
 }
 
+/// Compact money label for chips: 25,000 -> "25k", 1,500,000 -> "1.5tr".
+String _formatCompact(int value) {
+  if (value >= 1000000) return '${_trimZeros(value / 1000000)}tr';
+  if (value >= 1000) return '${_trimZeros(value / 1000)}k';
+  return value.toString();
+}
+
+/// "1.0" -> "1", "1.5" -> "1.5" (drops a trailing ".0").
+String _trimZeros(double v) {
+  return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+}
+
 /// Formats an integer string with thousands separators (no decimals).
 String _formatThousands(String intText) {
   final buffer = StringBuffer();
@@ -160,6 +212,27 @@ String _formatThousands(String intText) {
     buffer.write(intText[i]);
   }
   return buffer.toString();
+}
+
+/// Strips leading zeros from a plain integer field: "01" -> "1", "00" -> "0".
+/// Pair it after [FilteringTextInputFormatter.digitsOnly] on quantity inputs.
+class NoLeadingZeroInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    final stripped = text.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+    if (stripped == text) return newValue;
+    final removed = text.length - stripped.length;
+    var offset = newValue.selection.end - removed;
+    offset = offset.clamp(0, stripped.length);
+    return TextEditingValue(
+      text: stripped,
+      selection: TextSelection.collapsed(offset: offset),
+    );
+  }
 }
 
 /// Inserts thousands separators while typing, keeping the cursor in place.
@@ -189,8 +262,17 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     if (rawText.isEmpty) return const TextEditingValue(text: '');
 
     final dotIndex = rawText.indexOf('.');
-    final intPart = dotIndex < 0 ? rawText : rawText.substring(0, dotIndex);
+    final rawInt = dotIndex < 0 ? rawText : rawText.substring(0, dotIndex);
     final decPart = dotIndex < 0 ? '' : rawText.substring(dotIndex);
+    // Drop leading zeros: "01" -> "1", "00" -> "0" (keep a single leading 0 so
+    // "0.5" still works). Shift the cursor back past any zeros we removed.
+    final intPart = rawInt.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+    final removedZeros = rawInt.length - intPart.length;
+    if (removedZeros > 0) {
+      rawCharsBeforeCursor = rawCharsBeforeCursor > removedZeros
+          ? rawCharsBeforeCursor - removedZeros
+          : 0;
+    }
     final formattedInt = StringBuffer();
     for (var i = 0; i < intPart.length; i++) {
       if (i > 0 && (intPart.length - i) % 3 == 0) formattedInt.write(',');

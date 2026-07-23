@@ -16,7 +16,7 @@ import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
@@ -357,14 +357,25 @@ class _CockSalesScreenState
               controller: amountController,
               label: l10n.salePrice,
               autofocus: !isEditing,
+              presetSuggestions: const [
+                250000,
+                500000,
+                1000000,
+                1500000,
+                2000000,
+                3000000,
+                5000000,
+                10000000,
+              ],
               errorText: amountError,
               onChanged: (_) {
                 if (amountError != null) setState(() => amountError = null);
               },
             ),
-            CuteTextField(
+            NoteField(
               controller: noteController,
               label: l10n.cockSaleNoteHint,
+              suggestions: vm.cockSaleNoteSuggestions,
             ),
             LunarDateField(
               label: l10n.saleDate,

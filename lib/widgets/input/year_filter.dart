@@ -41,6 +41,7 @@ class YearFilter extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: Text(
                   l10n.selectYear,
+                  textAlign: TextAlign.center,
                   style: context.theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -81,12 +82,12 @@ class YearFilter extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.filter_alt_outlined, size: 20),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         Text(
           l10n.yearLabel,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () => _openSheet(context),

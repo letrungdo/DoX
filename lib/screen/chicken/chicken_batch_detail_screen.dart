@@ -19,6 +19,7 @@ import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
+import 'package:do_x/widgets/input/note_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -47,12 +48,15 @@ class _ChickenBatchDetailScreenState
   void initData() {
     super.initData();
     vm.ensureBatchesLoaded();
+    // Also load common expenses so the expense dialog can suggest their notes.
+    vm.ensureExpensesLoaded();
   }
 
   @override
   void onResume() {
     super.onResume();
     vm.ensureBatchesLoaded();
+    vm.ensureExpensesLoaded();
   }
 
   @override
@@ -521,6 +525,7 @@ class _ChickenBatchDetailScreenState
       useLunar: vm.useLunarCalendar,
       addTitle: l10n.addExpense,
       editTitle: l10n.editExpense,
+      noteSuggestions: vm.expenseNoteSuggestions,
       onDelete: () async => _confirmDeleteExpense(batch, expense!),
       onSubmit: (updatedExpense) async {
         if (expense != null) {
@@ -541,20 +546,20 @@ class _ChickenBatchDetailScreenState
         (batch.remainingQuantity > 0
             ? batch.remainingQuantity
             : batch.quantity);
-    final unitPrice = isEditing && sale.quantity > 0
-        ? sale.amount / sale.quantity
-        : vm.suggestPrice(batch.ageInDays);
-    final totalAmount = sale?.amount ?? unitPrice * quantity;
     // Available to sell = remaining, plus this sale's own quantity when editing
     // (it is already counted in the remaining figure).
     final maxQuantity = batch.remainingQuantity + (sale?.quantity ?? 0);
 
+    // For a new sale, leave the price fields empty so the user types them in;
+    // only pre-fill when editing an existing record.
     final unitPriceController = TextEditingController(
-      text: unitPrice.toCurrency(),
+      text: isEditing && sale.quantity > 0
+          ? (sale.amount / sale.quantity).toCurrency()
+          : '',
     );
     final qtyController = TextEditingController(text: quantity.toString());
     final totalAmountController = TextEditingController(
-      text: totalAmount.toCurrency(),
+      text: isEditing ? sale.amount.toCurrency() : '',
     );
     final noteController = TextEditingController(text: sale?.note ?? '');
     DateTime saleDate =
@@ -620,7 +625,10 @@ class _ChickenBatchDetailScreenState
                     label: l10n.quantityLabel,
                     autofocus: !isEditing,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      NoLeadingZeroInputFormatter(),
+                    ],
                     errorText: qtyError,
                     onChanged: (_) => setState(() {
                       qtyError = null;
@@ -633,6 +641,15 @@ class _ChickenBatchDetailScreenState
                   child: CuteMoneyField(
                     controller: unitPriceController,
                     label: l10n.pricePerUnit,
+                    presetSuggestions: const [
+                      20000,
+                      25000,
+                      30000,
+                      35000,
+                      40000,
+                      45000,
+                      50000,
+                    ],
                     onChanged: (_) => setState(() {
                       amountError = null;
                       updateTotal();
@@ -649,7 +666,11 @@ class _ChickenBatchDetailScreenState
                 if (amountError != null) setState(() => amountError = null);
               },
             ),
-            CuteTextField(controller: noteController, label: l10n.saleNoteHint),
+            NoteField(
+              controller: noteController,
+              label: l10n.saleNoteHint,
+              suggestions: vm.batchSaleNoteSuggestions,
+            ),
             LunarDateField(
               label: l10n.saleDate,
               value: saleDate,
@@ -740,7 +761,10 @@ class _ChickenBatchDetailScreenState
               controller: quantityController,
               label: l10n.initialQuantity,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                NoLeadingZeroInputFormatter(),
+              ],
               errorText: qtyError,
               onChanged: (_) {
                 if (qtyError != null) setState(() => qtyError = null);

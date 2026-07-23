@@ -35,6 +35,46 @@ class ChickenViewModel extends CoreViewModel {
   List<Expense> _globalExpenses = [];
   List<Expense> get globalExpenses => _globalExpenses;
 
+  /// Distinct, non-empty notes in the order given, keeping the first occurrence
+  /// — callers pass records sorted newest-first so recent notes come first.
+  List<String> _distinctNotes(Iterable<String?> notes) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final note in notes) {
+      final trimmed = note?.trim() ?? '';
+      if (trimmed.isEmpty || !seen.add(trimmed)) continue;
+      result.add(trimmed);
+    }
+    return result;
+  }
+
+  /// Previously used notes for cock-sale records (global + per batch), newest
+  /// first.
+  List<String> get cockSaleNoteSuggestions {
+    final sales = [
+      ..._globalCockSales,
+      ..._batches.expand((b) => b.cockSales),
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    return _distinctNotes(sales.map((s) => s.note));
+  }
+
+  /// Previously used notes for batch-sale records, newest first.
+  List<String> get batchSaleNoteSuggestions {
+    final sales = _batches.expand((b) => b.sales).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return _distinctNotes(sales.map((s) => s.note));
+  }
+
+  /// Previously used notes for expense records (global + per batch), newest
+  /// first.
+  List<String> get expenseNoteSuggestions {
+    final expenses = [
+      ..._globalExpenses,
+      ..._batches.expand((b) => b.expenses),
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    return _distinctNotes(expenses.map((e) => e.note));
+  }
+
   bool _isImporting = false;
   bool get isImporting => _isImporting;
 
