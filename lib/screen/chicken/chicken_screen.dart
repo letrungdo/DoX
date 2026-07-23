@@ -21,6 +21,7 @@ import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
+import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -241,27 +242,12 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.filter_alt_outlined, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.yearLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 12),
-                    DropdownButton<int>(
-                      value: _selectedYear,
-                      items: [
-                        DropdownMenuItem(value: 0, child: Text(l10n.all)),
-                        ...years.map(
-                          (year) => DropdownMenuItem(
-                            value: year,
-                            child: Text("$year"),
-                          ),
-                        ),
-                      ],
-                      onChanged: (year) {
-                        if (year != null) setState(() => _selectedYear = year);
-                      },
+                    YearFilter(
+                      selectedYear: _selectedYear,
+                      years: years,
+                      includeAll: true,
+                      onChanged: (year) =>
+                          setState(() => _selectedYear = year),
                     ),
                     const SizedBox(width: 8),
                     Expanded(

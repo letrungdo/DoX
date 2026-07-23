@@ -19,6 +19,7 @@ import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
+import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -114,27 +115,12 @@ class _CockSalesScreenState
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(
                   children: [
-                    const Icon(Icons.filter_alt_outlined, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.yearLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 12),
-                    DropdownButton<int>(
-                      value: _selectedYear,
-                      items: [
-                        DropdownMenuItem(value: 0, child: Text(l10n.all)),
-                        ...years.map(
-                          (year) => DropdownMenuItem(
-                            value: year,
-                            child: Text("$year"),
-                          ),
-                        ),
-                      ],
-                      onChanged: (year) {
-                        if (year != null) setState(() => _selectedYear = year);
-                      },
+                    YearFilter(
+                      selectedYear: _selectedYear,
+                      years: years,
+                      includeAll: true,
+                      onChanged: (year) =>
+                          setState(() => _selectedYear = year),
                     ),
                   ],
                 ),

@@ -392,6 +392,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yearLabel => 'Year:';
 
   @override
+  String get selectYear => 'Select year';
+
+  @override
   String get all => 'All';
 
   @override

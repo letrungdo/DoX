@@ -824,6 +824,12 @@ abstract class AppLocalizations {
   /// **'Year:'**
   String get yearLabel;
 
+  /// No description provided for @selectYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Select year'**
+  String get selectYear;
+
   /// No description provided for @all.
   ///
   /// In en, this message translates to:

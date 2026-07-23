@@ -11,6 +11,7 @@ import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
+import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
@@ -109,27 +110,12 @@ class _GlobalExpensesScreenState
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.filter_alt_outlined, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.yearLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 12),
-                    DropdownButton<int>(
-                      value: _selectedYear,
-                      items: [
-                        DropdownMenuItem(value: 0, child: Text(l10n.all)),
-                        ...years.map(
-                          (year) => DropdownMenuItem(
-                            value: year,
-                            child: Text("$year"),
-                          ),
-                        ),
-                      ],
-                      onChanged: (year) {
-                        if (year != null) setState(() => _selectedYear = year);
-                      },
+                    YearFilter(
+                      selectedYear: _selectedYear,
+                      years: years,
+                      includeAll: true,
+                      onChanged: (year) =>
+                          setState(() => _selectedYear = year),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
