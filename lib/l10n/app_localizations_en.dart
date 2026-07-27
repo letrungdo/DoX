@@ -24,6 +24,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get close => 'Close';
 
   @override
+  String get priceOpen => 'Open';
+
+  @override
+  String get priceHigh => 'High';
+
+  @override
+  String get priceLow => 'Low';
+
+  @override
+  String get priceClose => 'Close';
+
+  @override
+  String get high52Week => '52W High';
+
+  @override
+  String get low52Week => '52W Low';
+
+  @override
   String get retry => 'Retry';
 
   @override

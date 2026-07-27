@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/string_extensions.dart';
@@ -15,13 +16,37 @@ class FxRateService {
   Future<Result<List<MarketCodeInfo>>> getMarket({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
       final codes = MarketCode.values.map((e) => e.code).join(",");
+      // Bars come back newest-first (DESC); we sort ascending client-side.
+      // 1m timeframe keeps the sparkline responsive and matches the real-time
+      // push cadence (see CoinChartMixin._bucketMs). Only recent points are
+      // charted, so keep countBack small.
       final response = await dio.get(
-        'https://api.market-data.example/api/tradingview/v2/bars/many/all/get?timeframe=5m&code=$codes&countBack=200'.withProxy(),
+        'https://api.market-data.example/api/tradingview/v2/bars/many/all/get?timeframe=1m&code=$codes&countBack=60'.withProxy(),
         cancelToken: cancelToken,
       );
       final data = MarketResponse.fromJson(response.data);
 
       return data.data.codes;
+    });
+  }
+
+  /// Fetches the bars for a single [code] at the given [timeframe]
+  /// (e.g. `1m`, `5m`, `1h`, `1d`). Bars come back newest-first (DESC);
+  /// callers should sort ascending before charting.
+  Future<Result<List<Bar>>> getBars({
+    required MarketCode code,
+    required String timeframe,
+    int countBack = 100,
+    CancelToken? cancelToken,
+  }) {
+    return Result.guardFuture(() async {
+      final response = await dio.get(
+        'https://api.market-data.example/api/tradingview/v2/bars/many/all/get?timeframe=$timeframe&code=${code.code}&countBack=$countBack'.withProxy(),
+        cancelToken: cancelToken,
+      );
+      final data = MarketResponse.fromJson(response.data);
+      final info = data.data.codes.firstWhereOrNull((c) => c.code == code);
+      return info?.bars ?? [];
     });
   }
 

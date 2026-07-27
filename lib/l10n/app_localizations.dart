@@ -128,6 +128,42 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get close;
 
+  /// No description provided for @priceOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get priceOpen;
+
+  /// No description provided for @priceHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get priceHigh;
+
+  /// No description provided for @priceLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get priceLow;
+
+  /// No description provided for @priceClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get priceClose;
+
+  /// No description provided for @high52Week.
+  ///
+  /// In en, this message translates to:
+  /// **'52W High'**
+  String get high52Week;
+
+  /// No description provided for @low52Week.
+  ///
+  /// In en, this message translates to:
+  /// **'52W Low'**
+  String get low52Week;
+
   /// No description provided for @retry.
   ///
   /// In en, this message translates to:
