@@ -54,10 +54,7 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
     try {
       await Future.wait([
         _getGoldPrice(), //
-        _getSmileRate(),
-        _getDcomRate(),
-        _getGoogleRate(),
-        _getMoneyGramRate(),
+        _getFxRates(),
         getMarket(),
       ]);
     } finally {
@@ -87,78 +84,30 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
     notifyListenersSafe();
   }
 
-  Future<void> _getGoogleRate() async {
+  // All JPY→VND rates are stored in one Supabase table, so a single query
+  // fetches every source at once instead of one request per source.
+  Future<void> _getFxRates() async {
     _googleRate = null;
-    notifyListenersSafe();
-    final res = await fxRateService.getGoogleJpyVnd(cancelToken: cancelToken);
-    if (res.isCancelByUser) {
-      return;
-    }
-    _googleRate = res.data.formatUnit();
-    notifyListenersSafe();
-    if (res.isError) {
-      showAppError(
-        // ignore: use_build_context_synchronously
-        context,
-        res.error, //
-        onRetry: _getGoogleRate,
-      );
-    }
-  }
-
-  Future<void> _getSmileRate() async {
     _smileRate = null;
-    notifyListenersSafe();
-    final res = await fxRateService.getSmileRate(cancelToken: cancelToken);
-    if (res.isCancelByUser) {
-      return;
-    }
-    _smileRate = res.data?["Currency_JPY_VND"]?.sellingRate.formatUnit();
-    notifyListenersSafe();
-    if (res.isError) {
-      showAppError(
-        // ignore: use_build_context_synchronously
-        context,
-        res.error, //
-        onRetry: _getSmileRate,
-      );
-    }
-  }
-
-  Future<void> _getMoneyGramRate() async {
     _moneyGramRate = null;
-    notifyListenersSafe();
-    final res = await fxRateService.getMoneyGramRate(cancelToken: cancelToken);
-    if (res.isCancelByUser) {
-      return;
-    }
-    _moneyGramRate = res.data.formatUnit();
-    notifyListenersSafe();
-    if (res.isError) {
-      showAppError(
-        // ignore: use_build_context_synchronously
-        context,
-        res.error, //
-        onRetry: _getMoneyGramRate,
-      );
-    }
-  }
-
-  Future<void> _getDcomRate() async {
     _dcomRate = null;
     notifyListenersSafe();
-    final res = await fxRateService.getDcomRate(cancelToken: cancelToken);
+    final res = await fxRateService.getFxRates(cancelToken: cancelToken);
     if (res.isCancelByUser) {
       return;
     }
-    _dcomRate = res.data.formatUnit();
+    final rates = res.data ?? {};
+    _googleRate = rates['google_jpy_vnd'].formatUnit();
+    _smileRate = rates['smile_jpy_vnd'].formatUnit();
+    _moneyGramRate = rates['moneygram_jpy_vnd'].formatUnit();
+    _dcomRate = rates['dcom_jpy_vnd'].formatUnit();
     notifyListenersSafe();
     if (res.isError) {
       showAppError(
         // ignore: use_build_context_synchronously
         context,
         res.error, //
-        onRetry: _getDcomRate,
+        onRetry: _getFxRates,
       );
     }
   }
