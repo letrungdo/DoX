@@ -1,0 +1,302 @@
+import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/constants/enum/chart_interval.dart';
+import 'package:do_x/constants/enum/market_code.dart';
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/double_extensions.dart';
+import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/services/fx_rate_service.dart';
+import 'package:do_x/services/web_socket/web_socket_service.dart';
+import 'package:do_x/view_model/news/market_detail_view_model.dart';
+import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/chart/candle_chart_view.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+@RoutePage()
+class MarketDetailScreen extends StatefulScreen implements AutoRouteWrapper {
+  final MarketCode code;
+
+  const MarketDetailScreen({super.key, required this.code});
+
+  @override
+  State<MarketDetailScreen> createState() => _MarketDetailScreenState();
+
+  @override
+  Widget wrappedRoute(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        Provider(create: (_) => FxRateService()),
+        Provider<WebSocketService>(create: (_) => WebSocketService()),
+        ChangeNotifierProvider(
+          create: (_) => MarketDetailViewModel(code: code),
+        ),
+      ],
+      child: this,
+    );
+  }
+}
+
+class _MarketDetailScreenState
+    extends ScreenState<MarketDetailScreen, MarketDetailViewModel> {
+  @override
+  void onResume() {
+    super.onResume();
+    vm.onRefresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: DoAppBar(
+        title: widget.code.getName(),
+        actions: [
+          IconButton(
+            onPressed: () => vm.onRefresh(),
+            icon: const Icon(Icons.refresh_rounded, size: 27),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Selector<MarketDetailViewModel, bool>(
+            selector: (_, vm) => vm.isLoading,
+            builder: (context, isLoading, _) {
+              return isLoading
+                  ? const LinearProgressIndicator(minHeight: 2)
+                  : const SizedBox(height: 2);
+            },
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: Dimens.webMaxWidth,
+                  ),
+                  child: Consumer<MarketDetailViewModel>(
+                    builder: (context, vm, _) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeader(vm),
+                          const SizedBox(height: 16),
+                          _IntervalSelector(
+                            value: vm.interval,
+                            onChanged: vm.changeInterval,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildChart(vm),
+                          const SizedBox(height: 24),
+                          _buildStats(vm),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(MarketDetailViewModel vm) {
+    final changeColor = (vm.dayChange ?? 0).getColor();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          (vm.price).formatUnit(digit: 3),
+          style: context.textTheme.primary.size24.bold.copyWith(
+            color: vm.color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text(
+              (vm.dayChange).formatUnit(hasPlus: true, digit: 3),
+              style: context.textTheme.primary.copyWith(color: changeColor),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              "(${(vm.dayChangePercent).formatUnit(hasPlus: true)}%)",
+              style: context.textTheme.primary.copyWith(color: changeColor),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChart(MarketDetailViewModel vm) {
+    return SizedBox(
+      height: 280,
+      child: vm.candles.isEmpty
+          ? const Center(child: CircularProgressIndicator.adaptive())
+          : CandleChartView(candles: vm.candles, precision: 3),
+    );
+  }
+
+  Widget _buildStats(MarketDetailViewModel vm) {
+    final l10n = AppLocalizations.of(context);
+    final rows = <(String, double?)>[
+      (l10n.high52Week, vm.high52),
+      (l10n.low52Week, vm.low52),
+    ];
+    return Column(
+      children: [
+        for (final row in rows)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(row.$1, style: context.textTheme.secondary),
+                Text(
+                  (row.$2).formatUnit(digit: 3),
+                  style: context.textTheme.primary.bold,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Interval selector: a fixed set of primary chips shown inline plus a "more"
+/// button. The bottom sheet lists only the intervals that aren't shown inline.
+/// When a hidden interval is selected, the button shows its label.
+class _IntervalSelector extends StatelessWidget {
+  final ChartInterval value;
+  final ValueChanged<ChartInterval> onChanged;
+
+  const _IntervalSelector({required this.value, required this.onChanged});
+
+  /// Intervals shown inline (fixed 5).
+  static const _primaryCount = 5;
+
+  List<ChartInterval> get _primary =>
+      ChartInterval.values.take(_primaryCount).toList();
+
+  List<ChartInterval> get _extra =>
+      ChartInterval.values.skip(_primaryCount).toList();
+
+  Future<void> _openSheet(BuildContext context) async {
+    final selected = await showModalBottomSheet<ChartInterval>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _extra.map((item) {
+                final isSelected = item == value;
+                return ListTile(
+                  title: Text(item.label),
+                  selected: isSelected,
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: scheme.primary)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(item),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+    if (selected != null) onChanged(selected);
+  }
+
+  /// A segment that fills its [Expanded] cell so every option has the exact
+  /// same width and the gaps stay even.
+  Widget _cell(
+    BuildContext context, {
+    required Widget child,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final fg = selected ? scheme.onSecondaryContainer : scheme.onSurface;
+    return Material(
+      color: selected ? scheme.secondaryContainer : Colors.transparent,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: selected ? Colors.transparent : scheme.outlineVariant,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 34,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: IconTheme(
+                  data: IconThemeData(color: fg, size: 18),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(
+                      color: fg,
+                      fontWeight: selected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final extraSelected = _extra.contains(value);
+    return Row(
+      spacing: 6,
+      children: [
+        for (final item in _primary)
+          Expanded(
+            child: _cell(
+              context,
+              selected: item == value,
+              onTap: () => onChanged(item),
+              child: Text(item.label),
+            ),
+          ),
+        Expanded(
+          child: _cell(
+            context,
+            selected: extraSelected,
+            onTap: () => _openSheet(context),
+            child: extraSelected
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(value.label),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
+                  )
+                : const Icon(Icons.more_horiz),
+          ),
+        ),
+      ],
+    );
+  }
+}

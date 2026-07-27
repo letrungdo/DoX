@@ -41,7 +41,11 @@ class _AppRouter extends RootStackRouter {
           AutoRoute(
             initial: initialTab == AppTab.news,
             path: 'news',
-            page: NewsRoute.page,
+            page: newsTab.page,
+            children: [
+              AutoRoute(path: '', page: NewsRoute.page),
+              AutoRoute(path: 'detail', page: MarketDetailRoute.page),
+            ],
           ),
           AutoRoute(
             initial: initialTab == AppTab.chicken,
@@ -115,6 +119,7 @@ class _AppRouter extends RootStackRouter {
   }
 }
 
+const newsTab = EmptyShellRoute('NewsTab');
 const locketTab = EmptyShellRoute('LocketTab');
 const chickenTab = EmptyShellRoute('ChickenTab');
 

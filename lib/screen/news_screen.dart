@@ -45,7 +45,8 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, V> {
+class _NewsScreenState<V extends NewsViewModel>
+    extends ScreenState<NewsScreen, V> {
   final colsRatio = [40, 30, 30];
   final _scrollController = ScrollController();
   MainViewModel? _mainViewModel;
@@ -67,21 +68,34 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
     super.didChangeDependencies();
     final mainViewModel = context.read<MainViewModel>();
     if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(NewsRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      NewsRoute.name,
+      _tabReselectHandler,
+    );
     _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(NewsRoute.name, _tabReselectHandler);
+    mainViewModel.registerTabReselectHandler(
+      NewsRoute.name,
+      _tabReselectHandler,
+    );
   }
 
   @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(NewsRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      NewsRoute.name,
+      _tabReselectHandler,
+    );
     _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _handleTabReselect() async {
     if (_scrollController.hasClients) {
-      await _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
     if (mounted) await vm.onRefresh();
   }
@@ -165,8 +179,13 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
               horizontalPadding = (screenWidth - maxContentWidth) / 2;
             }
             return SliverPadding(
-              padding: EdgeInsets.symmetric(vertical: 15, horizontal: horizontalPadding), //
-              sliver: SliverList(delegate: SliverChildListDelegate(_buildPrice(l10n))),
+              padding: EdgeInsets.symmetric(
+                vertical: 15,
+                horizontal: horizontalPadding,
+              ), //
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(_buildPrice(l10n)),
+              ),
             );
           },
         ),
@@ -295,48 +314,57 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
               return Selector<V, ChartData?>(
                 selector: (p0, p1) => p1.coinChartMap[code],
                 builder: (context, data, _) {
-                  return SizedBox(
-                    height: 60,
-                    child: Row(
-                      spacing: 4,
-                      children: [
-                        SizedBox(
-                          width: 123,
-                          child: Row(
-                            spacing: 6,
-                            children: [
-                              _buildCurrencyIcon(code),
-                              Expanded(
-                                child: TextAutoScaleWidget(
-                                  code.getName(),
-                                  style: context.textTheme.primary.bold,
-                                  overflow: TextOverflow.ellipsis,
+                  return InkWell(
+                    onTap: () =>
+                        context.router.push(MarketDetailRoute(code: code)),
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      height: 60,
+                      child: Row(
+                        spacing: 4,
+                        children: [
+                          SizedBox(
+                            width: 123,
+                            child: Row(
+                              spacing: 6,
+                              children: [
+                                _buildCurrencyIcon(code),
+                                Expanded(
+                                  child: TextAutoScaleWidget(
+                                    code.getName(),
+                                    style: context.textTheme.primary.bold,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 60,
+                            child: data == null
+                                ? SizedBox.shrink()
+                                : LineAreaChart(
+                                    data: data.chartData,
+                                    times: data.times,
+                                    lineColor: data.color ?? Colors.blue,
+                                    areaColor: (data.color ?? Colors.blue)
+                                        .withValues(alpha: 0.1),
+                                    strokeWidth: 2.0,
+                                    showArea: true,
+                                  ),
+                          ),
+                          Expanded(
+                            flex: 40,
+                            child: TextAutoScaleWidget(
+                              (data?.price).formatUnit(digit: 3),
+                              style: context.textTheme.primary.bold.copyWith(
+                                color: data?.color,
                               ),
-                            ],
+                              textAlign: TextAlign.right,
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 60,
-                          child: data == null
-                              ? SizedBox.shrink()
-                              : LineAreaChart(
-                                  data: data.chartData,
-                                  lineColor: data.color ?? Colors.blue,
-                                  areaColor: (data.color ?? Colors.blue).withValues(alpha: 0.1),
-                                  strokeWidth: 2.0,
-                                  showArea: true,
-                                ),
-                        ),
-                        Expanded(
-                          flex: 40,
-                          child: TextAutoScaleWidget(
-                            (data?.price).formatUnit(digit: 3),
-                            style: context.textTheme.primary.bold.copyWith(color: data?.color),
-                            textAlign: TextAlign.right,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -377,7 +405,10 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
       return Container(
         width: 32,
         height: 32,
-        decoration: BoxDecoration(color: iconColor?.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+          color: iconColor?.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Icon(iconData, size: 20, color: iconColor),
       );
     }
@@ -392,7 +423,10 @@ class _NewsScreenState<V extends NewsViewModel> extends ScreenState<NewsScreen, 
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.name.toDashIfNull, style: context.textTheme.primary.bold), //
+              Text(
+                item.name.toDashIfNull,
+                style: context.textTheme.primary.bold,
+              ), //
               Text(
                 item.desc.toDashIfNull,
                 style: context.textTheme.secondary.size13,

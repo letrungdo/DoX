@@ -13,9 +13,15 @@ class ChartData {
   double? price;
   Color? color;
   final List<double> chartData;
+
+  /// Timestamps aligned 1:1 with [chartData]. Used to plot the x-axis
+  /// proportionally to real time instead of evenly by index.
+  final List<DateTime> times;
+
   ChartData({
     required this.price, //
     required this.chartData,
+    this.times = const [],
     this.color,
   });
 }
@@ -37,58 +43,74 @@ mixin CoinChartMixin on CoreViewModel {
   @override
   void dispose() {
     _rateSubscription.cancel();
-    realTimeSymbols.clear();
     super.dispose();
   }
+
+  /// Max number of points kept on screen (historical + real-time sliding window).
+  static const int _maxChartPoints = 40;
+
+  /// Chart timeframe in ms — must match the REST `timeframe=1m` param so the
+  /// real-time ticks fold into the same candle buckets as the historical bars.
+  static const int _bucketMs = 1 * 60 * 1000;
 
   void onRateReceived(RatePushModel data) {
     final code = data.code;
     if (code == null) return;
     final price = data.price;
     final chartData = coinChartMap[code];
-    if (chartData != null && price != null) {
-      final prevPrice = chartData.price ?? 0;
-      
-      List<double> updatedChartData;
-      
-      // Check if this is the first real-time update for this symbol
-      if (!realTimeSymbols.contains(code)) {
-        // Clear historical data and start fresh with real-time data
-        realTimeSymbols.add(code);
-        updatedChartData = [price];
-      } else {
-        // Continue adding real-time data
-        updatedChartData = List<double>.from(chartData.chartData);
-        updatedChartData.add(price);
-        
-        // Maintain sliding window of 30 points
-        if (updatedChartData.length > 30) {
-          updatedChartData.removeAt(0);
-        }
+    if (chartData == null || price == null) return;
+
+    // Real-time ticks arrive every few seconds, but the chart is a 5m series.
+    // Fold each tick into its 5m bucket: update the current (live) candle in
+    // place, and only append a new point when crossing into the next bucket.
+    final tickTime = data.time ?? DateTime.now();
+    final bucketMs = (tickTime.millisecondsSinceEpoch ~/ _bucketMs) * _bucketMs;
+
+    final points = List<double>.from(chartData.chartData);
+    final times = List<DateTime>.from(chartData.times);
+
+    final inCurrentBucket = points.isNotEmpty &&
+        times.isNotEmpty &&
+        times.last.millisecondsSinceEpoch == bucketMs;
+
+    if (inCurrentBucket) {
+      // Same 5m candle → let the last point breathe with the live price.
+      if (points.last == price) return; // no visible change
+      points[points.length - 1] = price;
+    } else {
+      // New 5m candle → append a point aligned to the bucket start, then keep
+      // only the most recent window.
+      points.add(price);
+      times.add(DateTime.fromMillisecondsSinceEpoch(bucketMs));
+      if (points.length > _maxChartPoints) {
+        points.removeRange(0, points.length - _maxChartPoints);
+        times.removeRange(0, times.length - _maxChartPoints);
       }
-      
-      coinChartMap[code] = ChartData(
-        chartData: updatedChartData,
-        price: price,
-        color:
-            price > prevPrice
-                ? Colors.green
-                : price < prevPrice
-                ? Colors.red
-                : null,
-      );
-      notifyListenersSafe();
     }
+
+    coinChartMap[code] = ChartData(
+      chartData: points,
+      times: times,
+      price: price,
+      color: _trendColor(points),
+    );
+    notifyListenersSafe();
+  }
+
+  /// Color reflects the trend of the visible window (matches what the line
+  /// shows): green when it ends higher than it started, red when lower.
+  Color? _trendColor(List<double> points) {
+    if (points.length < 2) return null;
+    final diff = points.last - points.first;
+    if (diff > 0) return Colors.green;
+    if (diff < 0) return Colors.red;
+    return null;
   }
 
   Map<MarketCode, ChartData> coinChartMap = {};
-  Set<MarketCode> realTimeSymbols = {}; // Track symbols that have switched to real-time mode
-
-
 
   Future<void> getMarket() async {
     coinChartMap = {};
-    realTimeSymbols.clear(); // Clear real-time tracking when refreshing data
     notifyInInitState();
     final res = await fxRateService.getMarket(cancelToken: cancelToken);
     if (res.isCancelByUser) {
@@ -108,17 +130,19 @@ mixin CoinChartMixin on CoreViewModel {
       final code = e.code;
       if (code == null) continue;
 
-      // Extract last 30 close prices for chart
-      final bars = e.bars;
-      final startIndex = math.max(0, bars.length - 30);
-      final chartData = bars
-          .sublist(startIndex)
-          .map((candle) => candle.close)
-          .toList();
-      
+      // Sort by time ascending so the x-axis is chronological even if the API
+      // returns bars out of order, then keep the most recent window.
+      final bars = List.of(e.bars)..sort((a, b) => a.date.compareTo(b.date));
+      final startIndex = math.max(0, bars.length - _maxChartPoints);
+      final window = bars.sublist(startIndex);
+      final chartData = window.map((candle) => candle.close).toList();
+      final times = window.map((candle) => candle.date).toList();
+
       coinChartMap[code] = ChartData(
         chartData: chartData,
-        price: bars.lastOrNull?.close,
+        times: times,
+        price: window.lastOrNull?.close,
+        color: _trendColor(chartData),
       );
     }
     notifyListenersSafe();

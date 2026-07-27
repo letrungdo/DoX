@@ -24,6 +24,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get close => 'Đóng';
 
   @override
+  String get priceOpen => 'Mở cửa';
+
+  @override
+  String get priceHigh => 'Cao nhất';
+
+  @override
+  String get priceLow => 'Thấp nhất';
+
+  @override
+  String get priceClose => 'Đóng cửa';
+
+  @override
+  String get high52Week => 'Đỉnh 52T';
+
+  @override
+  String get low52Week => 'Đáy 52T';
+
+  @override
   String get retry => 'Thử lại';
 
   @override
