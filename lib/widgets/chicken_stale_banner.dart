@@ -1,3 +1,4 @@
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -54,14 +55,15 @@ class ChickenStaleBanner extends StatelessWidget {
       },
       builder: (context, state, _) {
         final l10n = AppLocalizations.of(context);
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final colors = context.colors;
 
         // Most actionable first: something went wrong, then work in progress,
         // then the merely-stale case.
         if (state.discarded > 0) {
           return _Bar(
             icon: Icons.error_outline_rounded,
-            color: isDark ? Colors.red[300]! : Colors.red[900]!,
+            color: colors.danger,
+            background: colors.dangerSoft,
             message: l10n.changesDiscarded(state.discarded),
             onDismiss: context
                 .read<ChickenViewModel>()
@@ -73,7 +75,8 @@ class ChickenStaleBanner extends StatelessWidget {
             icon: state.syncing
                 ? Icons.cloud_sync_rounded
                 : Icons.cloud_off_rounded,
-            color: isDark ? Colors.orange[300]! : Colors.orange[900]!,
+            color: colors.warning,
+            background: colors.warningSoft,
             message: state.syncing
                 ? l10n.syncingChanges(state.pending)
                 : l10n.pendingChanges(state.pending),
@@ -82,7 +85,8 @@ class ChickenStaleBanner extends StatelessWidget {
         if (!state.refreshFailed) return const SizedBox.shrink();
         return _Bar(
           icon: Icons.cloud_off_rounded,
-          color: isDark ? Colors.orange[300]! : Colors.orange[900]!,
+          color: colors.warning,
+          background: colors.warningSoft,
           message: state.syncedAt == null
               ? l10n.refreshFailedNoData
               : l10n.dataAsOf(_formatSyncedAt(state.syncedAt!)),
@@ -96,12 +100,17 @@ class _Bar extends StatelessWidget {
   const _Bar({
     required this.icon,
     required this.color,
+    required this.background,
     required this.message,
     this.onDismiss,
   });
 
   final IconData icon;
   final Color color;
+
+  /// Opaque strip fill, so the bar sits cleanly under the app bar instead of
+  /// letting the scaffold color show through a translucent tint.
+  final Color background;
   final String message;
   final VoidCallback? onDismiss;
 
@@ -110,13 +119,20 @@ class _Bar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(16, 6, onDismiss == null ? 16 : 4, 6),
-      color: color.withValues(alpha: 0.12),
+      color: background,
       child: Row(
         children: [
           Icon(icon, size: 15, color: color),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(message, style: TextStyle(fontSize: 12, color: color)),
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
           ),
           if (onDismiss != null)
             IconButton(

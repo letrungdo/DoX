@@ -909,6 +909,61 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profitLabel => 'Lợi nhuận';
 
   @override
+  String get profitMargin => 'Tỷ suất lợi nhuận';
+
+  @override
+  String get revenueVsExpense => 'Doanh thu & chi phí';
+
+  @override
+  String get revenueBreakdown => 'Cấu phần doanh thu';
+
+  @override
+  String get monthlyDetails => 'Chi tiết theo tháng';
+
+  @override
+  String get yearlyDetails => 'Chi tiết theo năm';
+
+  @override
+  String get averagePerMonth => 'TB / tháng';
+
+  @override
+  String get averagePerYear => 'TB / năm';
+
+  @override
+  String get bestMonth => 'Tháng cao nhất';
+
+  @override
+  String get bestYear => 'Năm cao nhất';
+
+  @override
+  String get allYearsLabel => 'Tất cả các năm';
+
+  @override
+  String monthShort(int month) {
+    return 'T$month';
+  }
+
+  @override
+  String activeMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tháng có dữ liệu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String activeYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count năm có dữ liệu',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get errorEnterAmount => 'Vui lòng nhập số tiền';
 
   @override

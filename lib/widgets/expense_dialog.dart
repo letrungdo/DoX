@@ -1,3 +1,4 @@
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -43,7 +44,7 @@ Future<void> showExpenseDialog(
       builder: (context, setState) => CuteDialog(
         icon: _expenseAsset(selectedType),
         title: isEditing ? editTitle : addTitle,
-        accent: Colors.orange,
+        accent: context.colors.warning,
         confirmText: isEditing ? l10n.update : l10n.save,
         destructiveText: isEditing && onDelete != null ? l10n.delete : null,
         onDestructive: isEditing && onDelete != null

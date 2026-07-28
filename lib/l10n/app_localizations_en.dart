@@ -910,6 +910,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profitLabel => 'Profit';
 
   @override
+  String get profitMargin => 'Profit margin';
+
+  @override
+  String get revenueVsExpense => 'Revenue vs expense';
+
+  @override
+  String get revenueBreakdown => 'Revenue breakdown';
+
+  @override
+  String get monthlyDetails => 'Monthly breakdown';
+
+  @override
+  String get yearlyDetails => 'Yearly breakdown';
+
+  @override
+  String get averagePerMonth => 'Avg / month';
+
+  @override
+  String get averagePerYear => 'Avg / year';
+
+  @override
+  String get bestMonth => 'Best month';
+
+  @override
+  String get bestYear => 'Best year';
+
+  @override
+  String get allYearsLabel => 'All years';
+
+  @override
+  String monthShort(int month) {
+    return 'M$month';
+  }
+
+  @override
+  String activeMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months with data',
+      one: '1 month with data',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String activeYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count years with data',
+      one: '1 year with data',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get errorEnterAmount => 'Please enter an amount';
 
   @override

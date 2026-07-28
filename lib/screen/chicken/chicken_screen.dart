@@ -158,7 +158,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   value: 'delete_all',
                   child: Text(
                     l10n.deleteAllChickenData,
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(color: context.colors.danger),
                   ),
                 ),
               ],
@@ -197,13 +197,26 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               currentYear = year;
               items.add(
                 Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 8),
-                  child: Text(
-                    "${l10n.yearPrefix} $year",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                    ),
+                  padding: const EdgeInsets.only(top: 12, bottom: 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        "${l10n.yearPrefix} $year",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Divider(
+                          height: 1,
+                          color: context.theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -222,7 +235,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       child: _buildFeatureCard(
                         icon: Assets.images.feedCute.svg(width: 32, height: 32),
                         title: l10n.commonExpenses,
-                        color: Colors.orange,
+                        accent: context.colors.warning,
+                        accentSoft: context.colors.warningSoft,
                         onTap: () =>
                             context.router.push(const GlobalExpensesRoute()),
                       ),
@@ -235,7 +249,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                           height: 32,
                         ),
                         title: l10n.sellGrownChicken,
-                        color: Colors.red,
+                        accent: context.colors.danger,
+                        accentSoft: context.colors.dangerSoft,
                         onTap: () =>
                             context.router.push(const CockSalesRoute()),
                       ),
@@ -344,7 +359,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   Widget _buildFeatureCard({
     required Widget icon,
     required String title,
-    required Color color,
+    required Color accent,
+    required Color accentSoft,
     required VoidCallback onTap,
   }) {
     return Card(
@@ -353,7 +369,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
           child: Row(
             children: [
               Container(
@@ -361,8 +377,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 height: 42,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: accentSoft,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: accent.withValues(alpha: 0.28)),
                 ),
                 child: icon,
               ),
@@ -376,6 +393,13 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: context.theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.7,
                 ),
               ),
             ],
@@ -400,36 +424,40 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         batch.cockSales.isNotEmpty;
 
     // Sold out → red, partially sold → green, not sold → default card color.
-    final isDark = context.theme.brightness == Brightness.dark;
+    // The tints come from the theme so they stay soft on a light background and
+    // deep on a dark one, instead of a raw Material shade that only reads well
+    // in one of the two.
+    final colors = context.colors;
     final Color? cardColor = isSoldOut
-        ? (isDark ? Colors.red[900]?.withValues(alpha: 0.38) : Colors.red[100])
+        ? colors.dangerSoft
         : isPartiallySold
-        ? (isDark ? Colors.green[900]?.withValues(alpha: 0.24) : Colors.green[50])
+        ? colors.successSoft
+        : null;
+    final Color? cardBorder = isSoldOut
+        ? colors.danger.withValues(alpha: 0.30)
+        : isPartiallySold
+        ? colors.success.withValues(alpha: 0.30)
         : null;
 
-    // Darker shades in light theme so the status text reads clearly against
-    // its tinted background; brighter shades stay legible in dark theme.
     final (statusText, statusColor) = !isHatched
         ? (
             l10n.statusWaitingHatch(ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar)),
-            isDark ? Colors.orange : Colors.orange[900]!,
+            colors.warning,
           )
         : isSoldOut
-        ? (l10n.statusSoldOut, isDark ? Colors.grey : Colors.grey[700]!)
-        : (
-            ChickenDate.formatAge(l10n, batch.ageInDays),
-            isDark ? Colors.green : Colors.green[800]!,
-          );
+        ? (l10n.statusSoldOut, context.theme.colorScheme.onSurfaceVariant)
+        : (ChickenDate.formatAge(l10n, batch.ageInDays), colors.success);
 
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
       color: cardColor,
+      borderColor: cardBorder,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       title: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: statusColor.withValues(alpha: 0.12),
+            backgroundColor: context.theme.colorScheme.surface,
             child:
                 (!isHatched
                         ? Assets.images.eggCute
@@ -457,17 +485,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               if (vm.changeBadgeOf(batch.id) != null)
                 const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
+                  color: context.theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.35),
+                  ),
                 ),
                 child: Text(
                   statusText,
                   style: TextStyle(
                     fontSize: 11,
                     color: statusColor,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -525,18 +556,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   _buildMoneyBadge(
                     l10n.badgeRevenue,
                     batch.totalSaleAmount + batch.totalCockSales,
-                    context.colors.money,
+                    colors.money,
                   ),
                   if (batch.totalExpenses > 0)
                     _buildMoneyBadge(
                       l10n.badgeExpense,
                       batch.totalExpenses,
-                      Colors.orange,
+                      colors.warning,
                     ),
                   _buildMoneyBadge(
                     l10n.badgeProfit,
                     batch.profit,
-                    batch.profit >= 0 ? context.colors.money : Colors.red,
+                    batch.profit >= 0 ? colors.money : colors.danger,
                   ),
                 ],
               ),
@@ -557,8 +588,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     bool highlighted = false,
   }) {
     final color = highlighted
-        ? Theme.of(context).colorScheme.primary
-        : Colors.grey[600];
+        ? context.theme.colorScheme.primary
+        : context.theme.colorScheme.onSurfaceVariant;
     return Row(
       mainAxisAlignment: alignment,
       children: [
@@ -586,8 +617,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        // Opaque surface rather than a translucent tint: these badges also sit
+        // on tinted cards, where a translucent fill turns muddy.
+        color: context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
       ),
       child: Text(
         "$label ${amount.toCurrency()}đ",
@@ -633,10 +667,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.importFileFailed(e.toString())),
-          backgroundColor: Colors.red,
-        ),
+        context.errorSnackBar(l10n.importFileFailed(e.toString())),
       );
     }
   }
@@ -678,7 +709,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       context: context,
       builder: (dialogContext) => CuteDialog(
         title: l10n.confirmDeleteAllChickenData,
-        accent: Colors.red,
+        accent: context.colors.danger,
         confirmText: l10n.deleteData,
         isDestructive: true,
         onConfirm: () {
@@ -731,10 +762,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.deleteDataFailed(e.toString())),
-          backgroundColor: Colors.red,
-        ),
+        context.errorSnackBar(l10n.deleteDataFailed(e.toString())),
       );
     }
   }

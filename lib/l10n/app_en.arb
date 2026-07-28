@@ -598,6 +598,40 @@
   "cockRevenue": "Fighting rooster revenue",
   "meatRevenue": "Meat chicken revenue",
   "profitLabel": "Profit",
+  "profitMargin": "Profit margin",
+  "revenueVsExpense": "Revenue vs expense",
+  "revenueBreakdown": "Revenue breakdown",
+  "monthlyDetails": "Monthly breakdown",
+  "yearlyDetails": "Yearly breakdown",
+  "averagePerMonth": "Avg / month",
+  "averagePerYear": "Avg / year",
+  "bestMonth": "Best month",
+  "bestYear": "Best year",
+  "allYearsLabel": "All years",
+  "monthShort": "M{month}",
+  "@monthShort": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "activeMonths": "{count, plural, =1{1 month with data} other{{count} months with data}}",
+  "@activeMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activeYears": "{count, plural, =1{1 year with data} other{{count} years with data}}",
+  "@activeYears": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "errorEnterAmount": "Please enter an amount",
   "errorEnterQuantity": "Please enter a quantity",
   "errorQuantityExceedsRemaining": "Only {remaining} chickens left to sell",

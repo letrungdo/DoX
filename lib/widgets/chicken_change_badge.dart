@@ -1,3 +1,4 @@
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/chicken_recent_changes.dart';
 import 'package:flutter/material.dart';
@@ -27,13 +28,11 @@ class ChickenChangeBadge extends StatelessWidget {
     if (change == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final isNew = change == RecordChange.added;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Orange on a light tint is hard to read, so the light theme uses darker
-    // shades for the text/border and keeps the tint for the fill.
-    final tint = isNew ? Colors.red : Colors.orange;
-    final color = isDark
-        ? tint
-        : (isNew ? Colors.red[800]! : Colors.orange[900]!);
+    final colors = context.colors;
+    // The accent is already picked per theme (deep in light, bright in dark),
+    // and its soft fill is opaque so the pill keeps its hue on tinted cards.
+    final color = isNew ? colors.danger : colors.warning;
+    final tint = isNew ? colors.dangerSoft : colors.warningSoft;
     return Container(
       margin: leading
           ? const EdgeInsets.only(right: 6)
@@ -43,9 +42,9 @@ class ChickenChangeBadge extends StatelessWidget {
         vertical: compact ? 1 : 2,
       ),
       decoration: BoxDecoration(
-        color: tint.withValues(alpha: isDark ? 0.16 : 0.12),
+        color: tint,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         isNew ? l10n.badgeNew : l10n.badgeUpdated,

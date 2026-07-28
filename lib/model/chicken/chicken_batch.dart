@@ -61,6 +61,17 @@ class ChickenBatch {
   double get totalCockSales =>
       cockSales.fold(0, (sum, item) => sum + item.amount);
 
+  /// Split of [totalCockSales] by kind. Fighting roosters and meat chickens
+  /// fetch very different prices, so anywhere the revenue is broken down they
+  /// have to be told apart instead of shown as one "cock sales" figure.
+  double get totalFightingSales => cockSales
+      .where((sale) => sale.category != SaleCategory.meat)
+      .fold(0, (sum, item) => sum + item.amount);
+
+  double get totalMeatSales => cockSales
+      .where((sale) => sale.category == SaleCategory.meat)
+      .fold(0, (sum, item) => sum + item.amount);
+
   double get totalSaleAmount => sales.fold(0, (sum, item) => sum + item.amount);
 
   int get soldQuantity => sales.fold(0, (sum, item) => sum + item.quantity);

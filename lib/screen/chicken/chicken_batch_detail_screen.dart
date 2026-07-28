@@ -144,7 +144,9 @@ class _ChickenBatchDetailScreenState
               onPressed: () => _confirmDelete(batch),
               icon: const Icon(Icons.delete_outline, size: 18),
               label: Text(l10n.deleteThisBatch),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(
+                foregroundColor: context.colors.danger,
+              ),
             ),
           ),
         ],
@@ -159,10 +161,18 @@ class _ChickenBatchDetailScreenState
     required String title,
     Widget? trailing,
     Color? color,
+    Color? borderColor,
     required List<Widget> children,
   }) {
     return Card(
       color: color,
+      elevation: borderColor == null ? null : 0,
+      shape: borderColor == null
+          ? null
+          : RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: borderColor),
+            ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         child: Column(
@@ -196,8 +206,14 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: context.theme.colorScheme.surfaceContainerHighest,
+        // Opaque so the badge keeps the same look on the tinted section cards.
+        color: context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: context.theme.colorScheme.outlineVariant.withValues(
+            alpha: 0.8,
+          ),
+        ),
       ),
       child: asset.svg(width: size, height: size),
     );
@@ -226,10 +242,13 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
-        color: context.theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.6,
-        ),
+        color: context.theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.theme.colorScheme.outlineVariant.withValues(
+            alpha: 0.7,
+          ),
+        ),
       ),
       child: Column(
         children: [
@@ -260,15 +279,18 @@ class _ChickenBatchDetailScreenState
   Widget _buildStatusChip(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
     final hatched = batch.ageInDays >= 0;
-    final color = hatched ? context.theme.colorScheme.primary : Colors.orange;
+    final color = hatched
+        ? context.theme.colorScheme.primary
+        : context.colors.warning;
     final text = hatched
         ? ChickenDate.formatAge(l10n, batch.ageInDays)
         : l10n.notHatchedYet(-batch.ageInDays);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -412,7 +434,7 @@ class _ChickenBatchDetailScreenState
                         backgroundColor:
                             context.theme.colorScheme.surfaceContainerHighest,
                         color: soldOut
-                            ? Colors.green
+                            ? context.colors.success
                             : context.theme.colorScheme.primary,
                       ),
                     ),
@@ -458,7 +480,7 @@ class _ChickenBatchDetailScreenState
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: done == total
-                    ? Colors.green
+                    ? context.colors.success
                     : context.theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -475,9 +497,9 @@ class _ChickenBatchDetailScreenState
           v.scheduledDate,
         ).isBefore(DateTime.now());
     final accent = v.isCompleted
-        ? Colors.green
+        ? context.colors.success
         : overdue
-        ? Colors.red
+        ? context.colors.danger
         : context.theme.colorScheme.onSurfaceVariant;
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -518,7 +540,7 @@ class _ChickenBatchDetailScreenState
                 fontSize: 12,
                 fontWeight: overdue ? FontWeight.bold : FontWeight.normal,
                 color: overdue
-                    ? Colors.red
+                    ? context.colors.danger
                     : context.theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -626,20 +648,17 @@ class _ChickenBatchDetailScreenState
     final l10n = AppLocalizations.of(context);
     final hasSold = batch.sales.isNotEmpty;
     final soldOut = hasSold && batch.remainingQuantity <= 0;
-    final isDark = context.theme.brightness == Brightness.dark;
 
     // Theme-aware tint: green once the batch is sold out, amber while there are
     // still chickens left to sell.
+    final accent = soldOut ? context.colors.success : context.colors.warning;
     final cardColor = soldOut
-        ? (isDark
-              ? Colors.green[900]?.withValues(alpha: 0.25)
-              : Colors.green[50])
-        : (isDark
-              ? Colors.amber[900]?.withValues(alpha: 0.22)
-              : Colors.amber[50]);
+        ? context.colors.successSoft
+        : context.colors.warningSoft;
 
     return _buildSectionCard(
       color: cardColor,
+      borderColor: accent.withValues(alpha: 0.30),
       icon: _buildIconBadge(Assets.images.coinCute),
       title: l10n.saleAndProfit,
       trailing: hasSold
@@ -683,10 +702,17 @@ class _ChickenBatchDetailScreenState
               l10n.totalRevenueLabel,
               "${batch.totalSaleAmount.toCurrency()}đ",
             ),
-            if (batch.totalCockSales > 0)
+            // Fighting and meat sales are listed apart: lumping them together
+            // hid the meat revenue behind a "fighting rooster" label.
+            if (batch.totalFightingSales > 0)
               _buildRowInfo(
                 l10n.cockRevenue,
-                "${batch.totalCockSales.toCurrency()}đ",
+                "${batch.totalFightingSales.toCurrency()}đ",
+              ),
+            if (batch.totalMeatSales > 0)
+              _buildRowInfo(
+                l10n.meatRevenue,
+                "${batch.totalMeatSales.toCurrency()}đ",
               ),
             _buildRowInfo(
               l10n.totalExpensesLabel,
@@ -711,7 +737,7 @@ class _ChickenBatchDetailScreenState
                     fontWeight: FontWeight.bold,
                     color: batch.profit >= 0
                         ? context.colors.money
-                        : Colors.red,
+                        : context.colors.danger,
                   ),
                 ),
               ],
@@ -739,8 +765,15 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: context.theme.colorScheme.surface.withValues(alpha: 0.55),
+        // Opaque panel: a half-transparent one let the section tint bleed
+        // through and dulled the numbers on it.
+        color: context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.theme.colorScheme.outlineVariant.withValues(
+            alpha: 0.7,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -759,17 +792,17 @@ class _ChickenBatchDetailScreenState
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
-            color: context.theme.colorScheme.surface.withValues(alpha: 0.8),
+            color: context.theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
-            // Stronger outline + soft shadow so each sale round reads as its
-            // own tappable card on top of the tinted section.
+            // Outline + soft shadow so each sale round reads as its own
+            // tappable card on top of the tinted section.
             border: Border.all(
-              color: context.colors.money.withValues(alpha: 0.45),
-              width: 1.5,
+              color: context.colors.money.withValues(alpha: 0.35),
+              width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: context.theme.colorScheme.shadow.withValues(alpha: 0.07),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -882,7 +915,7 @@ class _ChickenBatchDetailScreenState
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: ageInDays < 0
-                ? Colors.red
+                ? context.colors.danger
                 : context.theme.colorScheme.primary,
           ),
         ),
@@ -898,7 +931,7 @@ class _ChickenBatchDetailScreenState
       builder: (context) => CuteDialog(
         icon: Assets.images.coinCute,
         title: l10n.deleteSaleRound,
-        accent: Colors.red,
+        accent: context.colors.danger,
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
@@ -925,7 +958,7 @@ class _ChickenBatchDetailScreenState
       builder: (context) => CuteDialog(
         icon: Assets.images.feedCute,
         title: l10n.deleteExpense,
-        accent: Colors.red,
+        accent: context.colors.danger,
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
@@ -1031,7 +1064,7 @@ class _ChickenBatchDetailScreenState
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.coinCute,
           title: isEditing ? l10n.editSaleRound : l10n.recordSale,
-          accent: Colors.green,
+          accent: context.colors.success,
           confirmText: isEditing ? l10n.update : l10n.confirm,
           destructiveText: isEditing ? l10n.delete : null,
           onDestructive: isEditing
@@ -1154,7 +1187,7 @@ class _ChickenBatchDetailScreenState
       builder: (context) => CuteDialog(
         icon: Assets.images.henCute,
         title: l10n.deleteBatch,
-        accent: Colors.red,
+        accent: context.colors.danger,
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
