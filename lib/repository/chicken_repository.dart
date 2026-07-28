@@ -7,18 +7,97 @@ import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// A slice of the chicken data. Screens ask for the slices they show so they
+/// do not pay for the rest, and each slice has its own function on the server.
+enum ChickenSection {
+  batches('batches', 'get_chicken_batches'),
+  globalCockSales('global_cock_sales', 'get_global_cock_sales'),
+  globalExpenses('global_expenses', 'get_global_expenses');
+
+  const ChickenSection(this.wireName, this.functionName);
+
+  /// How the server names this section in the years payload.
+  final String wireName;
+
+  /// The function that reads this section.
+  final String functionName;
+}
+
+/// The result of a read. A section that was not asked for comes back null,
+/// which is not the same as an empty list — that would mean the user has none.
+typedef ChickenData = ({
+  List<ChickenBatch>? batches,
+  List<CockSale>? globalCockSales,
+  List<Expense>? globalExpenses,
+  Map<ChickenSection, Set<int>> years,
+});
+
 class ChickenRepository {
   SupabaseClient get _client => supabase;
 
-  Future<List<ChickenBatch>> getBatches() async {
-    final rows = await _client
-        .from('chicken_batches')
-        .select(
-          '*, vaccinations(*), expenses(*), cock_sales(*), batch_sales(*)',
-        )
-        .order('incubation_date', ascending: false)
-        .order('created_at', ascending: false);
-    return rows.map(_batchFromRow).toList();
+  /// Reads the requested [sections], or all of them when [sections] is null.
+  ///
+  /// Each section has its own function on the server and they are fetched in
+  /// parallel, so a screen pays for one request holding only what it shows.
+  /// Going through functions rather than table queries also means the payload
+  /// is a contract of its own: the client no longer breaks when a column or an
+  /// embed is renamed. They are SECURITY INVOKER, so every table they touch is
+  /// still filtered by row level security.
+  ///
+  /// [year] narrows the read to that year. The server widens it to the stored
+  /// years `[year - 1, year]` because dates are lunar values that can land in
+  /// the next solar year, and a batch is grouped by its hatch date — see the
+  /// SQL. Callers must still apply their own exact filter.
+  Future<ChickenData> getChickenData({
+    Set<ChickenSection>? sections,
+    int? year,
+  }) async {
+    final wanted = sections ?? ChickenSection.values.toSet();
+    final reads = await Future.wait([
+      for (final section in wanted) _readSection(section, year),
+      _readYears(),
+    ]);
+    final rows = {
+      for (final (index, section) in wanted.indexed)
+        section: reads[index] as List,
+    };
+    final years = reads.last as Map<ChickenSection, Set<int>>;
+
+    List<T>? decode<T>(
+      ChickenSection section,
+      T Function(Map<String, dynamic>) fromRow,
+    ) => rows[section]
+        ?.map((row) => fromRow(row as Map<String, dynamic>))
+        .toList();
+
+    return (
+      batches: decode(ChickenSection.batches, _batchFromRow),
+      globalCockSales: decode(ChickenSection.globalCockSales, _cockSaleFromRow),
+      globalExpenses: decode(ChickenSection.globalExpenses, _expenseFromRow),
+      years: years,
+    );
+  }
+
+  Future<List<dynamic>> _readSection(ChickenSection section, int? year) async {
+    final rows = await _client.rpc(
+      section.functionName,
+      params: {if (year != null) 'p_year': year},
+    );
+    return (rows as List?) ?? const [];
+  }
+
+  /// Every year the user has records in. The year pickers are built from the
+  /// data on screen, so with a year filter in place they would otherwise only
+  /// ever offer the year already being shown; this keeps them complete for
+  /// about a hundred bytes.
+  Future<Map<ChickenSection, Set<int>>> _readYears() async {
+    final data = await _client.rpc('get_chicken_years') as Map<String, dynamic>;
+    return {
+      for (final section in ChickenSection.values)
+        section: ((data[section.wireName] as List?) ?? const [])
+            .map((year) => (year as num).toInt())
+            .toSet(),
+    };
   }
 
   // --- Writes ---------------------------------------------------------------
@@ -231,26 +310,6 @@ class ChickenRepository {
 
   Future<void> insertCockSale(String? batchId, CockSale sale) =>
       apply(insertCockSaleOp(batchId, sale));
-
-  Future<List<Expense>> getGlobalExpenses() async {
-    final rows = await _client
-        .from('expenses')
-        .select()
-        .isFilter('batch_id', null)
-        .order('date', ascending: false)
-        .order('created_at', ascending: false);
-    return rows.map(_expenseFromRow).toList();
-  }
-
-  Future<List<CockSale>> getGlobalCockSales() async {
-    final rows = await _client
-        .from('cock_sales')
-        .select()
-        .isFilter('batch_id', null)
-        .order('date', ascending: false)
-        .order('created_at', ascending: false);
-    return rows.map(_cockSaleFromRow).toList();
-  }
 
   /// Inserts imported data additively (batches with children, global sales, global expenses).
   Future<void> importData({

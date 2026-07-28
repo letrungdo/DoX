@@ -9,6 +9,7 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
@@ -43,6 +44,10 @@ class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
 
 class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   int _selectedYear = DateTime.now().year;
+
+  /// The year to ask the server for; null when the picker is on "all", which
+  /// is the one case that needs every year.
+  int? get _yearFilter => _selectedYear == 0 ? null : _selectedYear;
   final _scrollController = ScrollController();
   MainViewModel? _mainViewModel;
   late final Future<void> Function() _tabReselectHandler;
@@ -56,13 +61,13 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   @override
   void initData() {
     super.initData();
-    vm.ensureBatchesLoaded();
+    vm.ensureLoaded({ChickenSection.batches}, year: _yearFilter);
   }
 
   @override
   void onResume() {
     super.onResume();
-    vm.ensureBatchesLoaded();
+    vm.ensureLoaded({ChickenSection.batches}, year: _yearFilter);
   }
 
   @override
@@ -113,7 +118,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         curve: Curves.easeOut,
       );
     }
-    if (mounted) await vm.loadBatches();
+    if (mounted) await vm.loadData(sections: {ChickenSection.batches});
   }
 
   @override
@@ -123,7 +128,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       appBar: DoAppBar(
         title: l10n.chickenManagement,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isBatchesFetching,
+          selector: (vm) => vm.isFetching,
         ),
         actions: [
           IconButton(
@@ -163,11 +168,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         builder: (context, vm, child) {
           final years = {
             DateTime.now().year,
-            ...vm.batches.map(
-              (batch) => vm.displayYear(
-                batch.actualHatchDate ?? batch.expectedHatchDate,
-              ),
-            ),
+            ...vm.yearsFor({ChickenSection.batches}),
           }.toList()..sort((a, b) => b.compareTo(a));
           final batches = _selectedYear == 0
               ? vm.batches
@@ -211,7 +212,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
           return Column(
             children: [
-              ChickenStaleBanner(selector: (vm) => vm.batchesSync),
+              const ChickenStaleBanner(sections: {ChickenSection.batches}),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(
@@ -249,8 +250,14 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       selectedYear: _selectedYear,
                       years: years,
                       includeAll: true,
-                      onChanged: (year) =>
-                          setState(() => _selectedYear = year),
+                      onChanged: (year) {
+                        setState(() => _selectedYear = year);
+                        // Another year means another read: the server only
+                        // sent the one that was selected.
+                        vm.ensureLoaded({
+                          ChickenSection.batches,
+                        }, year: _yearFilter);
+                      },
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -284,7 +291,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => vm.loadBatches(showLoading: true),
+                  onRefresh: () =>
+                      vm.loadData(sections: {ChickenSection.batches}),
                   child: items.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -293,7 +301,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                             children: [
                               SizedBox(
                                 height: constraints.maxHeight,
-                                child: vm.isBatchesLoading
+                                child: vm.isLoading
                                     ? const SizedBox.shrink()
                                     : Column(
                                         mainAxisAlignment:

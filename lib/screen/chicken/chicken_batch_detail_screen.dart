@@ -10,6 +10,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/expense.dart';
+import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
@@ -65,19 +66,29 @@ class _ChickenBatchDetailScreenState
     }
   }
 
+  /// Refreshes just the year this batch lives in rather than every batch ever
+  /// recorded. Falls back to all years when the batch is not in memory yet,
+  /// which is the case when this screen is opened straight from a notification.
+  void _refresh() {
+    final batch = vm.batches.firstWhereOrNull((e) => e.id == widget.batchId);
+    vm.ensureLoaded(
+      {ChickenSection.batches},
+      year: batch == null
+          ? null
+          : vm.displayYear(batch.actualHatchDate ?? batch.expectedHatchDate),
+    );
+  }
+
   @override
   void initData() {
     super.initData();
-    vm.ensureBatchesLoaded();
-    // Also load common expenses so the expense dialog can suggest their notes.
-    vm.ensureExpensesLoaded();
+    _refresh();
   }
 
   @override
   void onResume() {
     super.onResume();
-    vm.ensureBatchesLoaded();
-    vm.ensureExpensesLoaded();
+    _refresh();
   }
 
   @override
@@ -87,7 +98,7 @@ class _ChickenBatchDetailScreenState
       appBar: DoAppBar(
         title: l10n.batchDetailTitle,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isBatchesFetching,
+          selector: (vm) => vm.isFetching,
         ),
       ),
       body: Consumer<ChickenViewModel>(
@@ -101,7 +112,7 @@ class _ChickenBatchDetailScreenState
 
           return Column(
             children: [
-              ChickenStaleBanner(selector: (vm) => vm.batchesSync),
+              const ChickenStaleBanner(sections: {ChickenSection.batches}),
               Expanded(child: _buildBody(batch)),
             ],
           );
