@@ -160,6 +160,8 @@
     }
   },
   "goldPrice": "Giá vàng",
+  "exchangeRate": "Tỷ giá",
+  "market": "Thị trường",
   "index": "Chỉ số",
   "buy": "Mua vào",
   "sell": "Bán ra",

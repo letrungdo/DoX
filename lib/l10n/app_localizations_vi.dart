@@ -384,6 +384,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get goldPrice => 'Giá vàng';
 
   @override
+  String get exchangeRate => 'Tỷ giá';
+
+  @override
+  String get market => 'Thị trường';
+
+  @override
   String get index => 'Chỉ số';
 
   @override

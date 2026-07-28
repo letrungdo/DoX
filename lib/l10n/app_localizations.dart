@@ -806,6 +806,18 @@ abstract class AppLocalizations {
   /// **'Gold Price'**
   String get goldPrice;
 
+  /// No description provided for @exchangeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange rate'**
+  String get exchangeRate;
+
+  /// No description provided for @market.
+  ///
+  /// In en, this message translates to:
+  /// **'Market'**
+  String get market;
+
   /// No description provided for @index.
   ///
   /// In en, this message translates to:
