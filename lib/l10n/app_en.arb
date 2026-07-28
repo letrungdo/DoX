@@ -167,6 +167,8 @@
     }
   },
   "goldPrice": "Gold Price",
+  "exchangeRate": "Exchange rate",
+  "market": "Market",
   "index": "Index",
   "buy": "Buy",
   "sell": "Sell",

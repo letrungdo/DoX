@@ -385,6 +385,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goldPrice => 'Gold Price';
 
   @override
+  String get exchangeRate => 'Exchange rate';
+
+  @override
+  String get market => 'Market';
+
+  @override
   String get index => 'Index';
 
   @override
