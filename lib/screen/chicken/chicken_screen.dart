@@ -18,6 +18,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
+import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
@@ -122,7 +123,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       appBar: DoAppBar(
         title: l10n.chickenManagement,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isBatchesLoading,
+          selector: (vm) => vm.isBatchesFetching,
         ),
         actions: [
           IconButton(
@@ -210,6 +211,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
           return Column(
             children: [
+              ChickenStaleBanner(selector: (vm) => vm.batchesSync),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(
@@ -719,6 +721,25 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     }
   }
 
+  /// Adds a batch and highlights it. If the insert fails the view model has
+  /// already removed it again locally, so the user is told it wasn't saved.
+  Future<void> _addBatch(String name, DateTime incubationDate, int qty) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      final batch = await vm.addBatch(
+        name: name,
+        incubationDate: incubationDate,
+        quantity: qty,
+      );
+      vm.flashHighlight(batch.id);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.saveFailed(error.toString()))),
+      );
+    }
+  }
+
   void _showAddBatchDialog() {
     final l10n = AppLocalizations.of(context);
     // Prefill "Bầy xx" continuing the latest batch's number (if its name ends with one).
@@ -754,13 +775,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               });
               return;
             }
-            vm
-                .addBatch(
-                  name: name,
-                  incubationDate: selectedDate,
-                  quantity: qty,
-                )
-                .then((batch) => vm.flashHighlight(batch.id));
+            unawaited(_addBatch(name, selectedDate, qty));
             _scrollToTop();
             Navigator.pop(context);
           },

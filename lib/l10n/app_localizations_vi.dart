@@ -1059,4 +1059,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String portsLabel(String ports) {
     return 'Cổng: $ports';
   }
+
+  @override
+  String dataAsOf(String time) {
+    return 'Dữ liệu lúc $time — chưa cập nhật được';
+  }
+
+  @override
+  String pendingChanges(int count) {
+    return '$count thay đổi chờ đồng bộ — đang lưu trên máy';
+  }
+
+  @override
+  String syncingChanges(int count) {
+    return 'Đang đồng bộ $count thay đổi...';
+  }
+
+  @override
+  String changesDiscarded(int count) {
+    return '$count thay đổi không đồng bộ được và đã bị bỏ qua';
+  }
+
+  @override
+  String get refreshFailedNoData => 'Không tải được dữ liệu';
 }

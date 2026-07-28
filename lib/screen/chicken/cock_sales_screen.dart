@@ -14,6 +14,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
+import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/note_field.dart';
@@ -82,7 +83,7 @@ class _CockSalesScreenState
       appBar: DoAppBar(
         title: l10n.sellRoosterMeat,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isCockSalesLoading,
+          selector: (vm) => vm.isCockSalesFetching,
         ),
         actions: [
           IconButton(
@@ -111,6 +112,7 @@ class _CockSalesScreenState
 
           return Column(
             children: [
+              ChickenStaleBanner(selector: (vm) => vm.cockSalesSync),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(

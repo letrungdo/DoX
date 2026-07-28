@@ -2,6 +2,7 @@ import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
+import 'package:do_x/model/chicken/pending_op.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,145 +21,216 @@ class ChickenRepository {
     return rows.map(_batchFromRow).toList();
   }
 
+  // --- Writes ---------------------------------------------------------------
+  // Every write is first described as a [PendingOp] and then executed by
+  // [apply]. That indirection is what makes offline editing possible: the very
+  // same value the view model tried to send can be parked in the sync queue and
+  // replayed later, with no second code path to keep in step.
+
+  /// Inserts a batch together with its vaccinations, expenses and sales.
+  ///
+  /// This goes through the `insert_chicken_batch` function rather than five
+  /// separate table inserts: PostgREST gives the client no way to group those,
+  /// so a failure part-way through used to leave a batch row on the server
+  /// without its children. A function body is one transaction, so the insert
+  /// now either lands whole or not at all. Row level security still applies —
+  /// the function is SECURITY INVOKER and every row keeps defaulting `user_id`
+  /// to `auth.uid()`.
+  PendingOp insertBatchOp(ChickenBatch batch) => PendingOp(
+    action: PendingOpAction.rpc,
+    target: 'insert_chicken_batch',
+    payload: {
+      'p_batch': _batchToRow(batch),
+      'p_vaccinations': batch.vaccinations
+          .map((v) => _vaccinationToRow(v, batch.id))
+          .toList(),
+      'p_expenses': batch.expenses
+          .map((e) => _expenseToRow(e, batch.id))
+          .toList(),
+      'p_cock_sales': batch.cockSales
+          .map((s) => _cockSaleToRow(s, batch.id))
+          .toList(),
+      'p_batch_sales': batch.sales
+          .map((s) => _batchSaleToRow(s, batch.id))
+          .toList(),
+    },
+  );
+
+  /// Updates the batch's own fields only. Expenses, vaccinations and sales are
+  /// managed through their dedicated operations.
+  PendingOp updateBatchOp(ChickenBatch batch) => PendingOp(
+    action: PendingOpAction.update,
+    target: 'chicken_batches',
+    rowId: batch.id,
+    payload: _batchToRow(batch),
+  );
+
+  PendingOp deleteBatchOp(String id) => PendingOp(
+    action: PendingOpAction.delete,
+    target: 'chicken_batches',
+    rowId: id,
+  );
+
+  /// One op per vaccination whose date moved with the incubation date.
+  List<PendingOp> updateVaccinationDateOps(List<Vaccination> vaccinations) => [
+    for (final vaccination in vaccinations)
+      PendingOp(
+        action: PendingOpAction.update,
+        target: 'vaccinations',
+        rowId: vaccination.id,
+        payload: {'scheduled_date': _dateStr(vaccination.scheduledDate)},
+      ),
+  ];
+
+  PendingOp setVaccinationCompletedOp(String id, bool isCompleted) => PendingOp(
+    action: PendingOpAction.update,
+    target: 'vaccinations',
+    rowId: id,
+    payload: {'is_completed': isCompleted},
+  );
+
+  PendingOp insertBatchSaleOp(String batchId, BatchSale sale) => PendingOp(
+    action: PendingOpAction.insert,
+    target: 'batch_sales',
+    payload: _batchSaleToRow(sale, batchId),
+  );
+
+  PendingOp updateBatchSaleOp(BatchSale sale) => PendingOp(
+    action: PendingOpAction.update,
+    target: 'batch_sales',
+    rowId: sale.id,
+    payload: {
+      'date': _dateStr(sale.date),
+      'quantity': sale.quantity,
+      'amount': sale.amount,
+      'note': sale.note,
+    },
+  );
+
+  PendingOp deleteBatchSaleOp(String id) => PendingOp(
+    action: PendingOpAction.delete,
+    target: 'batch_sales',
+    rowId: id,
+  );
+
+  /// [batchId] null means a global expense (not tied to any batch).
+  PendingOp insertExpenseOp(String? batchId, Expense expense) => PendingOp(
+    action: PendingOpAction.insert,
+    target: 'expenses',
+    payload: _expenseToRow(expense, batchId),
+  );
+
+  /// [globalRecord] scopes the write to the signed-in user's batch-less
+  /// records, the way the global expense screen needs it.
+  PendingOp updateExpenseOp(Expense expense, {bool globalRecord = false}) =>
+      PendingOp(
+        action: PendingOpAction.update,
+        target: 'expenses',
+        rowId: expense.id,
+        globalRecord: globalRecord,
+        payload: {
+          'type': expense.type.name,
+          'amount': expense.amount,
+          'date': _dateStr(expense.date),
+          'note': expense.note,
+        },
+      );
+
+  PendingOp deleteExpenseOp(String id, {bool globalRecord = false}) =>
+      PendingOp(
+        action: PendingOpAction.delete,
+        target: 'expenses',
+        rowId: id,
+        globalRecord: globalRecord,
+      );
+
+  /// [batchId] null means a global cock sale (not tied to any batch).
+  PendingOp insertCockSaleOp(String? batchId, CockSale sale) => PendingOp(
+    action: PendingOpAction.insert,
+    target: 'cock_sales',
+    payload: _cockSaleToRow(sale, batchId),
+  );
+
+  PendingOp updateCockSaleOp(CockSale sale, {bool globalRecord = false}) =>
+      PendingOp(
+        action: PendingOpAction.update,
+        target: 'cock_sales',
+        rowId: sale.id,
+        globalRecord: globalRecord,
+        payload: {
+          'note': sale.note,
+          'amount': sale.amount,
+          'date': _dateStr(sale.date),
+          'category': sale.category.name,
+        },
+      );
+
+  PendingOp deleteCockSaleOp(String id, {bool globalRecord = false}) =>
+      PendingOp(
+        action: PendingOpAction.delete,
+        target: 'cock_sales',
+        rowId: id,
+        globalRecord: globalRecord,
+      );
+
+  /// Executes one write against the server. Throws if it does not land: a
+  /// [globalRecord] write that matches no row is a failure, because the record
+  /// it was meant to change is not there (or is not the caller's).
+  Future<void> apply(PendingOp op) async {
+    switch (op.action) {
+      case PendingOpAction.rpc:
+        await _client.rpc(op.target, params: op.payload);
+      case PendingOpAction.insert:
+        await _client.from(op.target).insert(op.payload);
+      case PendingOpAction.update:
+        final query = _client
+            .from(op.target)
+            .update(op.payload)
+            .eq('id', op.rowId!);
+        if (!op.globalRecord) {
+          await query;
+          return;
+        }
+        final updated = await _scopeToOwnGlobalRecords(
+          query,
+        ).select('id').maybeSingle();
+        if (updated == null) {
+          throw StateError('Không tìm thấy bản ghi để cập nhật.');
+        }
+      case PendingOpAction.delete:
+        final query = _client.from(op.target).delete().eq('id', op.rowId!);
+        if (!op.globalRecord) {
+          await query;
+          return;
+        }
+        final deleted = await _scopeToOwnGlobalRecords(
+          query,
+        ).select('id').maybeSingle();
+        if (deleted == null) throw StateError('Không tìm thấy bản ghi để xóa.');
+    }
+  }
+
+  /// Narrows a write to records of the signed-in user that belong to no batch.
+  PostgrestFilterBuilder<T> _scopeToOwnGlobalRecords<T>(
+    PostgrestFilterBuilder<T> query,
+  ) {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw StateError('Bạn cần đăng nhập để sửa dữ liệu.');
+    return query.eq('user_id', userId).isFilter('batch_id', null);
+  }
+
   Future<void> insertBatch(
     ChickenBatch batch, {
     void Function(int count)? onInserted,
   }) async {
-    await _client.from('chicken_batches').insert(_batchToRow(batch));
-    onInserted?.call(1);
-    if (batch.vaccinations.isNotEmpty) {
-      await _client
-          .from('vaccinations')
-          .insert(
-            batch.vaccinations
-                .map((v) => _vaccinationToRow(v, batch.id))
-                .toList(),
-          );
-      onInserted?.call(batch.vaccinations.length);
-    }
-    if (batch.expenses.isNotEmpty) {
-      await _client
-          .from('expenses')
-          .insert(
-            batch.expenses.map((e) => _expenseToRow(e, batch.id)).toList(),
-          );
-      onInserted?.call(batch.expenses.length);
-    }
-    if (batch.cockSales.isNotEmpty) {
-      await _client
-          .from('cock_sales')
-          .insert(
-            batch.cockSales.map((s) => _cockSaleToRow(s, batch.id)).toList(),
-          );
-      onInserted?.call(batch.cockSales.length);
-    }
-    if (batch.sales.isNotEmpty) {
-      await _client
-          .from('batch_sales')
-          .insert(
-            batch.sales.map((s) => _batchSaleToRow(s, batch.id)).toList(),
-          );
-      onInserted?.call(batch.sales.length);
-    }
+    final op = insertBatchOp(batch);
+    await apply(op);
+    // One request, so progress is reported once the whole batch is in.
+    onInserted?.call(op.recordCount);
   }
 
-  Future<void> insertBatchSale(String batchId, BatchSale sale) async {
-    await _client.from('batch_sales').insert(_batchSaleToRow(sale, batchId));
-  }
-
-  Future<void> updateBatchSale(BatchSale sale) async {
-    await _client
-        .from('batch_sales')
-        .update({
-          'date': _dateStr(sale.date),
-          'quantity': sale.quantity,
-          'amount': sale.amount,
-          'note': sale.note,
-        })
-        .eq('id', sale.id);
-  }
-
-  Future<void> deleteBatchSale(String id) async {
-    await _client.from('batch_sales').delete().eq('id', id);
-  }
-
-  /// Updates the batch's own fields only. Expenses, vaccinations and cock
-  /// sales are managed through their dedicated methods.
-  Future<void> updateBatch(ChickenBatch batch) async {
-    await _client
-        .from('chicken_batches')
-        .update(_batchToRow(batch))
-        .eq('id', batch.id);
-  }
-
-  Future<void> updateVaccinationDates(List<Vaccination> vaccinations) async {
-    for (final vaccination in vaccinations) {
-      await _client
-          .from('vaccinations')
-          .update({'scheduled_date': _dateStr(vaccination.scheduledDate)})
-          .eq('id', vaccination.id);
-    }
-  }
-
-  Future<void> deleteBatch(String id) async {
-    await _client.from('chicken_batches').delete().eq('id', id);
-  }
-
-  /// [batchId] null means a global expense (not tied to any batch).
-  Future<void> insertExpense(String? batchId, Expense expense) async {
-    await _client.from('expenses').insert(_expenseToRow(expense, batchId));
-  }
-
-  Future<void> updateExpense(Expense expense) async {
-    await _client
-        .from('expenses')
-        .update({
-          'type': expense.type.name,
-          'amount': expense.amount,
-          'date': _dateStr(expense.date),
-          'note': expense.note,
-        })
-        .eq('id', expense.id);
-  }
-
-  Future<void> deleteExpense(String id) async {
-    await _client.from('expenses').delete().eq('id', id);
-  }
-
-  Future<void> updateGlobalExpense(Expense expense) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw StateError('Bạn cần đăng nhập để sửa chi phí.');
-    final updated = await _client
-        .from('expenses')
-        .update({
-          'type': expense.type.name,
-          'amount': expense.amount,
-          'date': _dateStr(expense.date),
-          'note': expense.note,
-        })
-        .eq('id', expense.id)
-        .eq('user_id', userId)
-        .isFilter('batch_id', null)
-        .select('id')
-        .maybeSingle();
-    if (updated == null) {
-      throw StateError('Không tìm thấy chi phí để cập nhật.');
-    }
-  }
-
-  Future<void> deleteGlobalExpense(String id) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw StateError('Bạn cần đăng nhập để xóa chi phí.');
-    final deleted = await _client
-        .from('expenses')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId)
-        .isFilter('batch_id', null)
-        .select('id')
-        .maybeSingle();
-    if (deleted == null) throw StateError('Không tìm thấy chi phí để xóa.');
-  }
+  Future<void> insertCockSale(String? batchId, CockSale sale) =>
+      apply(insertCockSaleOp(batchId, sale));
 
   Future<List<Expense>> getGlobalExpenses() async {
     final rows = await _client
@@ -168,53 +240,6 @@ class ChickenRepository {
         .order('date', ascending: false)
         .order('created_at', ascending: false);
     return rows.map(_expenseFromRow).toList();
-  }
-
-  /// [batchId] null means a global cock sale (not tied to any batch).
-  Future<void> insertCockSale(String? batchId, CockSale sale) async {
-    await _client.from('cock_sales').insert(_cockSaleToRow(sale, batchId));
-  }
-
-  Future<void> updateGlobalCockSale(CockSale sale) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw StateError('Bạn cần đăng nhập để sửa lượt bán.');
-    final updated = await _client
-        .from('cock_sales')
-        .update({
-          'note': sale.note,
-          'amount': sale.amount,
-          'date': _dateStr(sale.date),
-          'category': sale.category.name,
-        })
-        .eq('id', sale.id)
-        .eq('user_id', userId)
-        .isFilter('batch_id', null)
-        .select('id')
-        .maybeSingle();
-    if (updated == null) {
-      throw StateError('Không tìm thấy lượt bán để cập nhật.');
-    }
-  }
-
-  Future<void> deleteGlobalCockSale(String id) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw StateError('Bạn cần đăng nhập để xóa lượt bán.');
-    final deleted = await _client
-        .from('cock_sales')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId)
-        .isFilter('batch_id', null)
-        .select('id')
-        .maybeSingle();
-    if (deleted == null) throw StateError('Không tìm thấy lượt bán để xóa.');
-  }
-
-  Future<void> setVaccinationCompleted(String id, bool isCompleted) async {
-    await _client
-        .from('vaccinations')
-        .update({'is_completed': isCompleted})
-        .eq('id', id);
   }
 
   Future<List<CockSale>> getGlobalCockSales() async {

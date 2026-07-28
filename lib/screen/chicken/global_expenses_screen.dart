@@ -13,6 +13,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
+import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
@@ -69,7 +70,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
-        bottom: AppBarLoadingBar<ChickenViewModel>(selector: (vm) => vm.isExpensesLoading),
+        bottom: AppBarLoadingBar<ChickenViewModel>(selector: (vm) => vm.isExpensesFetching),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
@@ -92,6 +93,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
 
           return Column(
             children: [
+              ChickenStaleBanner(selector: (vm) => vm.expensesSync),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(

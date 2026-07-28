@@ -1060,4 +1060,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String portsLabel(String ports) {
     return 'Ports: $ports';
   }
+
+  @override
+  String dataAsOf(String time) {
+    return 'Data from $time — couldn\'t refresh';
+  }
+
+  @override
+  String pendingChanges(int count) {
+    return '$count changes waiting to sync — saved on this device';
+  }
+
+  @override
+  String syncingChanges(int count) {
+    return 'Syncing $count changes...';
+  }
+
+  @override
+  String changesDiscarded(int count) {
+    return '$count changes could not be synced and were dropped';
+  }
+
+  @override
+  String get refreshFailedNoData => 'Couldn\'t load data';
 }

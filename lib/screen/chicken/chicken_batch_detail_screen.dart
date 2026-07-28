@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:do_x/extensions/context_extensions.dart';
@@ -14,6 +16,7 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
+import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
@@ -44,6 +47,24 @@ class _ChickenBatchDetailScreenState
   String _fmt(DateTime date) =>
       ChickenDate.format(date, useLunar: vm.useLunarCalendar);
 
+  /// Runs a write and reports a failure to the user. The view model has already
+  /// undone the change locally by the time this returns false, so the screen
+  /// only has to say so.
+  Future<bool> _runWrite(Future<void> write) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await write;
+      return true;
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.saveFailed(error.toString()))),
+        );
+      }
+      return false;
+    }
+  }
+
   @override
   void initData() {
     super.initData();
@@ -66,7 +87,7 @@ class _ChickenBatchDetailScreenState
       appBar: DoAppBar(
         title: l10n.batchDetailTitle,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isBatchesLoading,
+          selector: (vm) => vm.isBatchesFetching,
         ),
       ),
       body: Consumer<ChickenViewModel>(
@@ -78,32 +99,42 @@ class _ChickenBatchDetailScreenState
             return Center(child: Text(l10n.batchNotFound));
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoSection(batch),
-                const SizedBox(height: 24),
-                _buildSaleSection(batch),
-                const SizedBox(height: 24),
-                _buildExpenseSection(batch),
-                const SizedBox(height: 24),
-                _buildVaccinationSection(batch),
-                const SizedBox(height: 40),
-                Center(
-                  child: TextButton(
-                    onPressed: () => _confirmDelete(batch),
-                    child: Text(
-                      l10n.deleteThisBatch,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ).webConstrainedBox();
+          return Column(
+            children: [
+              ChickenStaleBanner(selector: (vm) => vm.batchesSync),
+              Expanded(child: _buildBody(batch)),
+            ],
+          );
         },
+      ).webConstrainedBox(),
+    );
+  }
+
+  Widget _buildBody(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoSection(batch),
+          const SizedBox(height: 24),
+          _buildSaleSection(batch),
+          const SizedBox(height: 24),
+          _buildExpenseSection(batch),
+          const SizedBox(height: 24),
+          _buildVaccinationSection(batch),
+          const SizedBox(height: 40),
+          Center(
+            child: TextButton(
+              onPressed: () => _confirmDelete(batch),
+              child: Text(
+                l10n.deleteThisBatch,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -144,15 +175,9 @@ class _ChickenBatchDetailScreenState
                   batch.remainingQuantity,
                 ),
               ),
-            _buildRowInfo(
-              l10n.incubationDay,
-              _fmt(batch.incubationDate),
-            ),
+            _buildRowInfo(l10n.incubationDay, _fmt(batch.incubationDate)),
             if (batch.actualHatchDate == null)
-              _buildRowInfo(
-                l10n.expectedHatch,
-                _fmt(batch.expectedHatchDate),
-              )
+              _buildRowInfo(l10n.expectedHatch, _fmt(batch.expectedHatchDate))
             else
               _buildRowInfo(
                 l10n.actualHatchDateLabel,
@@ -191,7 +216,7 @@ class _ChickenBatchDetailScreenState
             value: v.isCompleted,
             onChanged: (val) {
               vm.setCurrentContext(context);
-              vm.toggleVaccination(batch.id, v.id);
+              unawaited(_runWrite(vm.toggleVaccination(batch.id, v.id)));
             },
           ),
         ),
@@ -472,7 +497,7 @@ class _ChickenBatchDetailScreenState
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
-          vm.deleteBatchSale(batch.id, sale.id);
+          unawaited(_runWrite(vm.deleteBatchSale(batch.id, sale.id)));
           Navigator.pop(context);
         },
         children: [
@@ -499,7 +524,7 @@ class _ChickenBatchDetailScreenState
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
-          vm.deleteExpense(batch.id, expense.id);
+          unawaited(_runWrite(vm.deleteExpense(batch.id, expense.id)));
           Navigator.pop(context);
         },
         children: [
@@ -552,14 +577,11 @@ class _ChickenBatchDetailScreenState
       editTitle: l10n.editExpense,
       noteSuggestions: vm.expenseNoteSuggestions,
       onDelete: () async => _confirmDeleteExpense(batch, expense!),
-      onSubmit: (updatedExpense) async {
-        if (expense != null) {
-          await vm.updateExpense(batch.id, updatedExpense);
-        } else {
-          await vm.addExpense(batch.id, updatedExpense);
-        }
-        return true;
-      },
+      onSubmit: (updatedExpense) => _runWrite(
+        expense != null
+            ? vm.updateExpense(batch.id, updatedExpense)
+            : vm.addExpense(batch.id, updatedExpense),
+      ),
     );
   }
 
@@ -634,11 +656,13 @@ class _ChickenBatchDetailScreenState
               amount: amount,
               note: noteController.text.isEmpty ? null : noteController.text,
             );
-            if (isEditing) {
-              vm.updateBatchSale(batch.id, newSale);
-            } else {
-              vm.addBatchSale(batch.id, newSale);
-            }
+            unawaited(
+              _runWrite(
+                isEditing
+                    ? vm.updateBatchSale(batch.id, newSale)
+                    : vm.addBatchSale(batch.id, newSale),
+              ),
+            );
             Navigator.pop(context);
           },
           children: [
@@ -719,7 +743,7 @@ class _ChickenBatchDetailScreenState
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () {
-          vm.deleteBatch(batch.id);
+          unawaited(_runWrite(vm.deleteBatch(batch.id)));
           Navigator.pop(context);
           context.router.back();
         },
@@ -763,12 +787,16 @@ class _ChickenBatchDetailScreenState
               });
               return;
             }
-            vm.updateBatch(
-              batch.copyWith(
-                name: name,
-                quantity: qty,
-                incubationDate: incubationDate,
-                actualHatchDate: actualHatchDate,
+            unawaited(
+              _runWrite(
+                vm.updateBatch(
+                  batch.copyWith(
+                    name: name,
+                    quantity: qty,
+                    incubationDate: incubationDate,
+                    actualHatchDate: actualHatchDate,
+                  ),
+                ),
               ),
             );
             Navigator.pop(context);

@@ -19,6 +19,13 @@ class StorageKey {
   static const tabOrder = "tabOrder";
   static const electricReminder = "electricReminder";
 
+  /// Last known chicken data (batches + global sales/expenses), shown while the
+  /// screens refresh from the API.
+  static const chickenCache = "chickenCache";
+
+  /// Chicken writes made while offline, waiting to be pushed to the server.
+  static const chickenSyncQueue = "chickenSyncQueue";
+
   // Pending in-background app update (resumable across app restarts).
   static const pendingUpdateVersion = "pendingUpdateVersion";
   static const pendingUpdateUrl = "pendingUpdateUrl";

@@ -56,6 +56,33 @@ class _StorageService {
     return prefs.setBool(StorageKey.chickenLunarDisplay, value);
   }
 
+  /// Cached chicken data as a JSON string; see [ChickenViewModel].
+  String? getChickenCache() {
+    return prefs.getString(StorageKey.chickenCache);
+  }
+
+  Future<bool> setChickenCache(String value) {
+    return prefs.setString(StorageKey.chickenCache, value);
+  }
+
+  Future<bool> clearChickenCache() {
+    return prefs.remove(StorageKey.chickenCache);
+  }
+
+  /// Chicken writes that have not reached the server yet, as a JSON string;
+  /// see [ChickenSyncQueue].
+  String? getChickenSyncQueue() {
+    return prefs.getString(StorageKey.chickenSyncQueue);
+  }
+
+  Future<bool> setChickenSyncQueue(String value) {
+    return prefs.setString(StorageKey.chickenSyncQueue, value);
+  }
+
+  Future<bool> clearChickenSyncQueue() {
+    return prefs.remove(StorageKey.chickenSyncQueue);
+  }
+
   String? getLocale() {
     return prefs.getString(StorageKey.locale);
   }

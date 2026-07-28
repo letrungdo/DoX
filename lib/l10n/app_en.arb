@@ -699,5 +699,38 @@
         "type": "String"
       }
     }
-  }
+  },
+  "dataAsOf": "Data from {time} — couldn't refresh",
+  "@dataAsOf": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingChanges": "{count} changes waiting to sync — saved on this device",
+  "@pendingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncingChanges": "Syncing {count} changes...",
+  "@syncingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changesDiscarded": "{count} changes could not be synced and were dropped",
+  "@changesDiscarded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "refreshFailedNoData": "Couldn't load data"
 }

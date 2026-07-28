@@ -1,24 +1,48 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
+import 'package:do_x/model/chicken/pending_op.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/services/chicken_import_service.dart';
+import 'package:do_x/services/chicken_sync_queue.dart';
 import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+/// The slice of authentication the chicken data depends on. It exists as a
+/// class so tests can drive the signed-in state without a real Supabase
+/// session; production uses the default implementation over [supabase].
+class ChickenAuth {
+  const ChickenAuth();
+
+  bool get isSignedIn => supabase.auth.currentSession != null;
+
+  String? get userId => supabase.auth.currentUser?.id;
+
+  Stream<AuthState> get changes => supabase.auth.onAuthStateChange;
+}
+
 class ChickenViewModel extends CoreViewModel {
-  final ChickenRepository _repository = ChickenRepository();
+  ChickenViewModel({
+    ChickenRepository? repository,
+    ChickenAuth auth = const ChickenAuth(),
+  }) : _repository = repository ?? ChickenRepository(),
+       _auth = auth;
+
+  final ChickenRepository _repository;
+  final ChickenAuth _auth;
   final _uuid = const Uuid();
 
   List<ChickenBatch> _batches = [];
@@ -122,6 +146,226 @@ class ChickenViewModel extends CoreViewModel {
 
   StreamSubscription<AuthState>? _authSub;
 
+  // --- Local cache ----------------------------------------------------------
+  // The screens show the data cached from the previous session right away and
+  // refresh from the API in the background, so opening the tab is never empty.
+
+  static const _cacheVersion = 1;
+  static const _cacheSaveDelay = Duration(milliseconds: 500);
+
+  bool _cacheRestored = false;
+  bool _restoringCache = false;
+  Timer? _cacheSaveTimer;
+
+  /// Loads the data cached on disk into memory. Runs once per app launch, as
+  /// soon as a session is available (restoring it is async, so this is retried
+  /// from the auth listener); a cache written by another account is discarded.
+  void _restoreFromCache() {
+    if (_cacheRestored || !_auth.isSignedIn) return;
+    _cacheRestored = true;
+    // Writes made offline in an earlier session go back on the queue, and are
+    // pushed by the first load that follows.
+    _queue.restore(_auth.userId);
+    _scheduleSyncRetry();
+    final raw = storageService.getChickenCache();
+    if (raw == null) return;
+    _restoringCache = true;
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (data['version'] != _cacheVersion || data['userId'] != _auth.userId) {
+        unawaited(storageService.clearChickenCache());
+        return;
+      }
+      List<T>? decode<T>(
+        String key,
+        T Function(Map<String, dynamic>) fromJson,
+      ) {
+        final list = data[key] as List?;
+        return list
+            ?.map((e) => fromJson(e as Map<String, dynamic>))
+            .toList(growable: true);
+      }
+
+      DateTime? syncedAt(String key) =>
+          DateTime.tryParse(data[key] as String? ?? '');
+
+      // A section already fetched from the API wins: never fall back to stale
+      // data if a load happened to win the race with the session restore.
+      if (!_batchesLoaded) {
+        final batches = decode('batches', ChickenBatch.fromJson);
+        if (batches != null) {
+          _batches = batches;
+          _batchesLoaded = true;
+          _batchesSyncedAt = syncedAt('batchesSyncedAt');
+        }
+      }
+      if (!_cockSalesLoaded) {
+        final cockSales = decode('cockSales', CockSale.fromJson);
+        if (cockSales != null) {
+          _globalCockSales = cockSales;
+          _cockSalesLoaded = true;
+          _cockSalesSyncedAt = syncedAt('cockSalesSyncedAt');
+        }
+      }
+      if (!_expensesLoaded) {
+        final expenses = decode('expenses', Expense.fromJson);
+        if (expenses != null) {
+          _globalExpenses = expenses;
+          _expensesLoaded = true;
+          _expensesSyncedAt = syncedAt('expensesSyncedAt');
+        }
+      }
+      notifyListenersSafe();
+    } catch (e) {
+      logger.e('restore chicken cache failed', error: e);
+      unawaited(storageService.clearChickenCache());
+    } finally {
+      _restoringCache = false;
+    }
+  }
+
+  // --- Offline writes -------------------------------------------------------
+  // Editing works with no connection: the change goes into the local lists (and
+  // from there into the cache) straight away, and the matching server write is
+  // parked in [_queue] until the server can be reached again.
+
+  static const _syncRetryInterval = Duration(seconds: 30);
+
+  final ChickenSyncQueue _queue = ChickenSyncQueue();
+
+  Timer? _syncRetryTimer;
+  bool _syncing = false;
+  int _discardedChanges = 0;
+
+  /// How many local changes are still waiting to reach the server.
+  int get pendingChangeCount => _queue.length;
+
+  /// True while queued changes are being pushed.
+  bool get isSyncing => _syncing;
+
+  /// Changes the server refused when they were finally replayed (a record that
+  /// no longer exists, a rule that rejects them). They are gone from the queue;
+  /// the count is kept so the user can be told rather than left guessing.
+  int get discardedChangeCount => _discardedChanges;
+
+  void acknowledgeDiscardedChanges() {
+    if (_discardedChanges == 0) return;
+    _discardedChanges = 0;
+    notifyListenersSafe();
+  }
+
+  /// Whether [error] means the write never reached the server, so it is worth
+  /// keeping and retrying. Anything the server actually answered — a constraint
+  /// violation, an RLS denial, a row that is not there — is a real rejection
+  /// and must not be queued, or it would be retried forever.
+  static bool isOfflineError(Object error) {
+    if (error is AuthRetryableFetchException) return true;
+    if (error is PostgrestException || error is AuthException) return false;
+    // Bugs (a bad cast, our own "matched no row" StateError) are Errors, never
+    // Exceptions. Retrying one forever would wedge the queue, and a wedged
+    // queue stops every later change and every refresh.
+    if (error is Error) return false;
+    // SocketException, http ClientException, TimeoutException, ...
+    return true;
+  }
+
+  Future<void>? _syncTask;
+
+  /// Pushes queued writes to the server, oldest first. Cheap to call often: it
+  /// returns immediately when there is nothing queued.
+  ///
+  /// A second caller joins the push already in flight instead of walking past
+  /// it — the screens load their sections in the same frame, and a caller that
+  /// did not wait would find a queue still draining and skip its fetch.
+  Future<void> syncPending() {
+    if (_queue.isEmpty || !_auth.isSignedIn) return Future.value();
+    return _syncTask ??= _runSync();
+  }
+
+  Future<void> _runSync() async {
+    _syncing = true;
+    notifyListenersSafe();
+    try {
+      final discarded = await _queue.drain(
+        _repository.apply,
+        isOffline: isOfflineError,
+      );
+      _discardedChanges += discarded;
+      if (discarded > 0) {
+        // Those writes are never landing. The guard that hides a just-deleted
+        // batch was only meant to cover a delete in flight, so drop it: the
+        // next fetch has to be able to bring the record back.
+        _pendingDeletedBatchIds.clear();
+      }
+    } catch (e) {
+      logger.e('sync of offline chicken changes failed', error: e);
+    } finally {
+      _syncTask = null;
+      _syncing = false;
+      _scheduleSyncRetry();
+      notifyListenersSafe();
+    }
+  }
+
+  /// Keeps retrying on a timer while anything is queued, so a connection that
+  /// comes back while the app is open is picked up without the user acting.
+  void _scheduleSyncRetry() {
+    _syncRetryTimer?.cancel();
+    if (_queue.isEmpty) return;
+    _syncRetryTimer = Timer(_syncRetryInterval, () async {
+      await syncPending();
+      // Back online: the loads that were skipped while changes were queued now
+      // have to happen, or the screen keeps showing pre-outage data.
+      if (_queue.isEmpty && !isDispose) unawaited(refreshData());
+    });
+  }
+
+  void _queueOps(Iterable<PendingOp> ops) {
+    _queue.add(ops, _auth.userId);
+    _scheduleSyncRetry();
+    notifyListenersSafe();
+  }
+
+  /// Every change goes through [notifyListenersSafe], so the cache is written
+  /// from there — debounced, because a single action can notify several times.
+  @override
+  void notifyListenersSafe() {
+    super.notifyListenersSafe();
+    if (_restoringCache || isDispose) return;
+    _cacheSaveTimer?.cancel();
+    _cacheSaveTimer = Timer(_cacheSaveDelay, _saveCache);
+  }
+
+  void _saveCache() {
+    if (!_auth.isSignedIn) return;
+    // Only sections that have actually been fetched are cached; a section that
+    // was never loaded must not be persisted as an empty list.
+    try {
+      // The timestamps are the last successful *fetch* of each section, not the
+      // time of this write, so the "data as of …" notice stays truthful even
+      // after the user edits records locally.
+      final data = {
+        'version': _cacheVersion,
+        'userId': _auth.userId,
+        if (_batchesLoaded) ...{
+          'batches': _batches,
+          'batchesSyncedAt': _batchesSyncedAt?.toIso8601String(),
+        },
+        if (_cockSalesLoaded) ...{
+          'cockSales': _globalCockSales,
+          'cockSalesSyncedAt': _cockSalesSyncedAt?.toIso8601String(),
+        },
+        if (_expensesLoaded) ...{
+          'expenses': _globalExpenses,
+          'expensesSyncedAt': _expensesSyncedAt?.toIso8601String(),
+        },
+      };
+      unawaited(storageService.setChickenCache(jsonEncode(data)));
+    } catch (e) {
+      logger.e('save chicken cache failed', error: e);
+    }
+  }
+
   bool _batchesLoaded = false;
   bool _cockSalesLoaded = false;
   bool _expensesLoaded = false;
@@ -151,23 +395,74 @@ class ChickenViewModel extends CoreViewModel {
   bool _expensesFetching = false;
   bool get isExpensesFetching => _expensesFetching;
 
+  // --- Freshness ------------------------------------------------------------
+  // When each section last came back from the API, and whether the most recent
+  // attempt failed. A failed refresh leaves the cached data on screen, so the
+  // screens use this to say the data is stale instead of passing it off as new.
+
+  DateTime? _batchesSyncedAt;
+  DateTime? _cockSalesSyncedAt;
+  DateTime? _expensesSyncedAt;
+
+  bool _batchesRefreshFailed = false;
+  bool _cockSalesRefreshFailed = false;
+  bool _expensesRefreshFailed = false;
+
+  ChickenSyncStatus get batchesSync =>
+      (refreshFailed: _batchesRefreshFailed, syncedAt: _batchesSyncedAt);
+
+  ChickenSyncStatus get cockSalesSync =>
+      (refreshFailed: _cockSalesRefreshFailed, syncedAt: _cockSalesSyncedAt);
+
+  ChickenSyncStatus get expensesSync =>
+      (refreshFailed: _expensesRefreshFailed, syncedAt: _expensesSyncedAt);
+
+  /// Combined status of every section, for screens (statistics) that mix them:
+  /// stale as soon as one section is, dated by the oldest one.
+  ChickenSyncStatus get overallSync {
+    final times = [
+      if (_batchesLoaded) _batchesSyncedAt,
+      if (_cockSalesLoaded) _cockSalesSyncedAt,
+      if (_expensesLoaded) _expensesSyncedAt,
+    ];
+    return (
+      refreshFailed:
+          _batchesRefreshFailed ||
+          _cockSalesRefreshFailed ||
+          _expensesRefreshFailed,
+      syncedAt: times.contains(null)
+          ? null
+          : times.fold<DateTime?>(
+              null,
+              (oldest, t) => oldest == null || t!.isBefore(oldest) ? t : oldest,
+            ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _restoreFromCache();
     // This view model lives app-wide and initState runs on every screen mount,
     // so only subscribe once. Data is (re)loaded on sign-in because screens may
     // already be built (empty) while the login screen is shown.
-    _authSub ??= supabase.auth.onAuthStateChange.listen((state) {
+    _authSub ??= _auth.changes.listen((state) {
       switch (state.event) {
+        case AuthChangeEvent.initialSession:
+          // The persisted session is restored asynchronously, so this is often
+          // the first moment the cache can be matched against a user.
+          _restoreFromCache();
         case AuthChangeEvent.signedIn:
+          _restoreFromCache();
+          // Cached sections are already on screen: refresh them silently.
           if (_batchesRequested) {
-            unawaited(loadBatches(showLoading: true));
+            unawaited(loadBatches(showLoading: !_batchesLoaded));
           }
           if (_cockSalesRequested) {
-            unawaited(loadCockSales(showLoading: true));
+            unawaited(loadCockSales(showLoading: !_cockSalesLoaded));
           }
           if (_expensesRequested) {
-            unawaited(loadExpenses(showLoading: true));
+            unawaited(loadExpenses(showLoading: !_expensesLoaded));
           }
         case AuthChangeEvent.signedOut:
           _batches = [];
@@ -176,6 +471,18 @@ class ChickenViewModel extends CoreViewModel {
           _batchesLoaded = false;
           _cockSalesLoaded = false;
           _expensesLoaded = false;
+          _batchesSyncedAt = null;
+          _cockSalesSyncedAt = null;
+          _expensesSyncedAt = null;
+          _batchesRefreshFailed = false;
+          _cockSalesRefreshFailed = false;
+          _expensesRefreshFailed = false;
+          _cacheSaveTimer?.cancel();
+          _syncRetryTimer?.cancel();
+          // The cache goes, the queue stays: it holds work the user believes is
+          // saved, and it is replayed when the same account signs back in.
+          unawaited(storageService.clearChickenCache());
+          _cacheRestored = false;
           notifyListenersSafe();
           unawaited(_syncVaccinationNotifications());
         default:
@@ -188,14 +495,19 @@ class ChickenViewModel extends CoreViewModel {
   void dispose() {
     _authSub?.cancel();
     _highlightTimer?.cancel();
+    _syncRetryTimer?.cancel();
+    // Flush a pending write so the last change still makes it to the cache.
+    if (_cacheSaveTimer?.isActive ?? false) {
+      _cacheSaveTimer!.cancel();
+      _saveCache();
+    }
     super.dispose();
   }
 
   @override
   void initData() {
     super.initData();
-    if (supabase.auth.currentSession == null &&
-        vaccinationNotificationsEnabled) {
+    if (!_auth.isSignedIn && vaccinationNotificationsEnabled) {
       unawaited(notificationService.cancelVaccinationNotifications());
     }
   }
@@ -223,7 +535,11 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> loadBatches({bool showLoading = false}) async {
-    if (supabase.auth.currentSession == null) return;
+    if (!_auth.isSignedIn) return;
+    await syncPending();
+    // Changes that have not reached the server yet are the newer truth: a fetch
+    // now would overwrite them with a snapshot that predates them.
+    if (_queue.isNotEmpty) return;
     _batchesFetching = true;
     if (showLoading) _batchesLoading = true;
     notifyListenersSafe();
@@ -240,8 +556,11 @@ class ChickenViewModel extends CoreViewModel {
                 .where((b) => !_pendingDeletedBatchIds.contains(b.id))
                 .toList();
       _batchesLoaded = true;
+      _batchesSyncedAt = DateTime.now();
+      _batchesRefreshFailed = false;
     } catch (e) {
       logger.e("load chicken batches failed", error: e);
+      _batchesRefreshFailed = true;
     } finally {
       _batchesLoading = false;
       _batchesFetching = false;
@@ -252,15 +571,22 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> loadCockSales({bool showLoading = false}) async {
-    if (supabase.auth.currentSession == null) return;
+    if (!_auth.isSignedIn) return;
+    await syncPending();
+    // Changes that have not reached the server yet are the newer truth: a fetch
+    // now would overwrite them with a snapshot that predates them.
+    if (_queue.isNotEmpty) return;
     _cockSalesFetching = true;
     if (showLoading) _cockSalesLoading = true;
     notifyListenersSafe();
     try {
       _globalCockSales = await _repository.getGlobalCockSales();
       _cockSalesLoaded = true;
+      _cockSalesSyncedAt = DateTime.now();
+      _cockSalesRefreshFailed = false;
     } catch (e) {
       logger.e("load cock sales failed", error: e);
+      _cockSalesRefreshFailed = true;
     } finally {
       _cockSalesLoading = false;
       _cockSalesFetching = false;
@@ -269,15 +595,22 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> loadExpenses({bool showLoading = false}) async {
-    if (supabase.auth.currentSession == null) return;
+    if (!_auth.isSignedIn) return;
+    await syncPending();
+    // Changes that have not reached the server yet are the newer truth: a fetch
+    // now would overwrite them with a snapshot that predates them.
+    if (_queue.isNotEmpty) return;
     _expensesFetching = true;
     if (showLoading) _expensesLoading = true;
     notifyListenersSafe();
     try {
       _globalExpenses = await _repository.getGlobalExpenses();
       _expensesLoaded = true;
+      _expensesSyncedAt = DateTime.now();
+      _expensesRefreshFailed = false;
     } catch (e) {
       logger.e("load global expenses failed", error: e);
+      _expensesRefreshFailed = true;
     } finally {
       _expensesLoading = false;
       _expensesFetching = false;
@@ -292,6 +625,65 @@ class ChickenViewModel extends CoreViewModel {
       if (_cockSalesLoaded) loadCockSales(),
       if (_expensesLoaded) loadExpenses(),
     ]);
+  }
+
+  /// Sends a change that was already applied to the local lists to the server.
+  ///
+  /// Three outcomes: it lands; the server cannot be reached, in which case the
+  /// write is queued and the local change stands (this is what makes offline
+  /// editing work); or the server rejects it, in which case [rollback] undoes
+  /// the local change — memory, and the cache written from it, must never keep
+  /// a record the server refused — and the error is rethrown for the caller to
+  /// surface.
+  Future<void> _commit(
+    String action,
+    List<PendingOp> ops, {
+    required VoidCallback rollback,
+  }) async {
+    // Anything already queued has to land first, or this write could reach the
+    // server ahead of the change it builds on.
+    if (_queue.isNotEmpty) {
+      _queueOps(ops);
+      return;
+    }
+    for (var i = 0; i < ops.length; i++) {
+      try {
+        await _repository.apply(ops[i]);
+      } catch (e) {
+        if (isOfflineError(e)) {
+          // Queue what is left. Anything already sent was an update, which is
+          // harmless to repeat, so the remainder is enough.
+          _queueOps(ops.skip(i));
+          return;
+        }
+        logger.e("$action failed", error: e);
+        rollback();
+        notifyListenersSafe();
+        rethrow;
+      }
+    }
+  }
+
+  /// Rollback that puts [previous] back in place of the edited batch.
+  VoidCallback _restoreBatch(ChickenBatch previous) => () {
+    final index = _batches.indexWhere((b) => b.id == previous.id);
+    if (index != -1) _batches[index] = previous;
+  };
+
+  /// Applies [edit] to the batch with [batchId] and pushes the change to the
+  /// server, restoring the previous batch if the write is rejected.
+  Future<void> _editBatch(
+    String batchId,
+    String action,
+    ChickenBatch Function(ChickenBatch batch) edit,
+    List<PendingOp> ops,
+  ) async {
+    final index = _batches.indexWhere((e) => e.id == batchId);
+    if (index == -1) return;
+    final previous = _batches[index];
+    _batches[index] = edit(previous);
+    notifyListenersSafe();
+    await _commit(action, ops, rollback: _restoreBatch(previous));
   }
 
   Future<ChickenBatch> addBatch({
@@ -313,195 +705,243 @@ class ChickenViewModel extends CoreViewModel {
       _batches,
       compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
     );
-    await _repository.insertBatch(newBatch);
     notifyListenersSafe();
+    await _commit(
+      "insert chicken batch",
+      [_repository.insertBatchOp(newBatch)],
+      rollback: () => _batches.removeWhere((b) => b.id == newBatch.id),
+    );
     await _syncVaccinationNotifications();
     return newBatch;
   }
 
   Future<void> updateBatch(ChickenBatch batch) async {
     final index = _batches.indexWhere((e) => e.id == batch.id);
-    if (index != -1) {
-      final previousBatch = _batches[index];
-      // Dates are lunar values; measure the shift in real (solar) days so the
-      // vaccination schedule moves by the same physical amount.
-      final incubationDateDelta = LunarCalendar.lunarDateTimeToSolar(
-        batch.incubationDate,
-      ).difference(
-        LunarCalendar.lunarDateTimeToSolar(previousBatch.incubationDate),
-      );
-      final updatedBatch = incubationDateDelta == Duration.zero
-          ? batch
-          : batch.shiftVaccinationSchedule(incubationDateDelta);
+    if (index == -1) return;
+    final previousBatch = _batches[index];
+    // Dates are lunar values; measure the shift in real (solar) days so the
+    // vaccination schedule moves by the same physical amount.
+    final incubationDateDelta =
+        LunarCalendar.lunarDateTimeToSolar(batch.incubationDate).difference(
+          LunarCalendar.lunarDateTimeToSolar(previousBatch.incubationDate),
+        );
+    final updatedBatch = incubationDateDelta == Duration.zero
+        ? batch
+        : batch.shiftVaccinationSchedule(incubationDateDelta);
 
-      _batches[index] = updatedBatch;
-      await _repository.updateBatch(updatedBatch);
-      if (incubationDateDelta != Duration.zero) {
-        await _repository.updateVaccinationDates(updatedBatch.vaccinations);
-      }
-      notifyListenersSafe();
-      await _syncVaccinationNotifications();
-    }
+    _batches[index] = updatedBatch;
+    notifyListenersSafe();
+    await _commit("update chicken batch", [
+      _repository.updateBatchOp(updatedBatch),
+      if (incubationDateDelta != Duration.zero)
+        ..._repository.updateVaccinationDateOps(updatedBatch.vaccinations),
+    ], rollback: _restoreBatch(previousBatch));
+    await _syncVaccinationNotifications();
   }
 
   Future<void> deleteBatch(String id) async {
     final batch = _batches.firstWhereOrNull((e) => e.id == id);
-    if (batch != null) {
-      _batches.removeWhere((e) => e.id == id);
-      // Guard against an in-flight load re-adding this batch before the server
-      // delete has settled. The guard is cleared by a later load once the
-      // server confirms the batch is gone.
-      _pendingDeletedBatchIds.add(id);
-      notifyListenersSafe();
-      try {
-        await _repository.deleteBatch(id);
-      } catch (e) {
-        logger.e("delete chicken batch failed", error: e);
-        // Delete failed: stop guarding and restore the batch locally.
+    if (batch == null) return;
+    _batches.removeWhere((e) => e.id == id);
+    // Guard against an in-flight load re-adding this batch before the server
+    // delete has settled. The guard is cleared by a later load once the
+    // server confirms the batch is gone.
+    _pendingDeletedBatchIds.add(id);
+    notifyListenersSafe();
+    await _commit(
+      "delete chicken batch",
+      [_repository.deleteBatchOp(id)],
+      rollback: () {
+        // Rejected: stop guarding and restore the batch locally.
         _pendingDeletedBatchIds.remove(id);
         _batches.add(batch);
         mergeSort(
           _batches,
           compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
         );
-        notifyListenersSafe();
-        return;
-      }
-      await _syncVaccinationNotifications();
-    }
+      },
+    );
+    await _syncVaccinationNotifications();
   }
 
-  Future<void> addExpense(String batchId, Expense expense) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedExpenses = List<Expense>.from(_batches[index].expenses)
-        ..add(expense);
-      _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
-      await _repository.insertExpense(batchId, expense);
-      notifyListenersSafe();
-    }
+  Future<void> addExpense(String batchId, Expense expense) {
+    return _editBatch(
+      batchId,
+      "insert expense",
+      (batch) => batch.copyWith(expenses: [...batch.expenses, expense]),
+      [_repository.insertExpenseOp(batchId, expense)],
+    );
   }
 
-  Future<void> updateExpense(String batchId, Expense expense) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedExpenses = _batches[index].expenses
-          .map((e) => e.id == expense.id ? expense : e)
-          .toList();
-      _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
-      await _repository.updateExpense(expense);
-      notifyListenersSafe();
-    }
+  Future<void> updateExpense(String batchId, Expense expense) {
+    return _editBatch(
+      batchId,
+      "update expense",
+      (batch) => batch.copyWith(
+        expenses: batch.expenses
+            .map((e) => e.id == expense.id ? expense : e)
+            .toList(),
+      ),
+      [_repository.updateExpenseOp(expense)],
+    );
   }
 
-  Future<void> deleteExpense(String batchId, String expenseId) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedExpenses = _batches[index].expenses
-          .where((e) => e.id != expenseId)
-          .toList();
-      _batches[index] = _batches[index].copyWith(expenses: updatedExpenses);
-      await _repository.deleteExpense(expenseId);
-      notifyListenersSafe();
-    }
+  Future<void> deleteExpense(String batchId, String expenseId) {
+    return _editBatch(
+      batchId,
+      "delete expense",
+      (batch) => batch.copyWith(
+        expenses: batch.expenses.where((e) => e.id != expenseId).toList(),
+      ),
+      [_repository.deleteExpenseOp(expenseId)],
+    );
   }
 
-  Future<void> addBatchSale(String batchId, BatchSale sale) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedSales = List<BatchSale>.from(_batches[index].sales)
-        ..add(sale);
-      updatedSales.sort((a, b) => a.date.compareTo(b.date));
-      _batches[index] = _batches[index].copyWith(sales: updatedSales);
-      await _repository.insertBatchSale(batchId, sale);
-      notifyListenersSafe();
-    }
+  Future<void> addBatchSale(String batchId, BatchSale sale) {
+    return _editBatch(
+      batchId,
+      "insert batch sale",
+      (batch) => batch.copyWith(
+        sales: [...batch.sales, sale]..sort((a, b) => a.date.compareTo(b.date)),
+      ),
+      [_repository.insertBatchSaleOp(batchId, sale)],
+    );
   }
 
-  Future<void> updateBatchSale(String batchId, BatchSale sale) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedSales =
-          _batches[index].sales
-              .map((s) => s.id == sale.id ? sale : s)
-              .toList()
-            ..sort((a, b) => a.date.compareTo(b.date));
-      _batches[index] = _batches[index].copyWith(sales: updatedSales);
-      await _repository.updateBatchSale(sale);
-      notifyListenersSafe();
-    }
+  Future<void> updateBatchSale(String batchId, BatchSale sale) {
+    return _editBatch(
+      batchId,
+      "update batch sale",
+      (batch) => batch.copyWith(
+        sales: batch.sales.map((s) => s.id == sale.id ? sale : s).toList()
+          ..sort((a, b) => a.date.compareTo(b.date)),
+      ),
+      [_repository.updateBatchSaleOp(sale)],
+    );
   }
 
-  Future<void> deleteBatchSale(String batchId, String saleId) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedSales = _batches[index].sales
-          .where((s) => s.id != saleId)
-          .toList();
-      _batches[index] = _batches[index].copyWith(sales: updatedSales);
-      await _repository.deleteBatchSale(saleId);
-      notifyListenersSafe();
-    }
+  Future<void> deleteBatchSale(String batchId, String saleId) {
+    return _editBatch(
+      batchId,
+      "delete batch sale",
+      (batch) => batch.copyWith(
+        sales: batch.sales.where((s) => s.id != saleId).toList(),
+      ),
+      [_repository.deleteBatchSaleOp(saleId)],
+    );
   }
 
-  Future<void> addCockSale(String batchId, CockSale sale) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      final updatedSales = List<CockSale>.from(_batches[index].cockSales)
-        ..add(sale);
-      _batches[index] = _batches[index].copyWith(cockSales: updatedSales);
-      await _repository.insertCockSale(batchId, sale);
-      notifyListenersSafe();
-    }
+  Future<void> addCockSale(String batchId, CockSale sale) {
+    return _editBatch(
+      batchId,
+      "insert cock sale",
+      (batch) => batch.copyWith(cockSales: [...batch.cockSales, sale]),
+      [_repository.insertCockSaleOp(batchId, sale)],
+    );
   }
 
   Future<void> addGlobalCockSale(CockSale sale) async {
     // Front of the list so a same-date sale shows on top (stable sort keeps it).
     _globalCockSales.insert(0, sale);
-    await _repository.insertCockSale(null, sale);
     notifyListenersSafe();
+    await _commit(
+      "insert global cock sale",
+      [_repository.insertCockSaleOp(null, sale)],
+      rollback: () => _globalCockSales.removeWhere((s) => s.id == sale.id),
+    );
   }
 
   Future<void> updateGlobalCockSale(CockSale sale) async {
     final index = _globalCockSales.indexWhere((item) => item.id == sale.id);
     if (index == -1) return;
-    await _repository.updateGlobalCockSale(sale);
+    final previous = _globalCockSales[index];
     _globalCockSales[index] = sale;
     notifyListenersSafe();
+    await _commit(
+      "update global cock sale",
+      [_repository.updateCockSaleOp(sale, globalRecord: true)],
+      rollback: () {
+        final at = _globalCockSales.indexWhere((item) => item.id == sale.id);
+        if (at != -1) _globalCockSales[at] = previous;
+      },
+    );
   }
 
   Future<void> deleteGlobalCockSale(String id) async {
-    await _repository.deleteGlobalCockSale(id);
-    _globalCockSales.removeWhere((sale) => sale.id == id);
+    final index = _globalCockSales.indexWhere((sale) => sale.id == id);
+    if (index == -1) return;
+    final removed = _globalCockSales.removeAt(index);
     notifyListenersSafe();
+    await _commit(
+      "delete global cock sale",
+      [_repository.deleteCockSaleOp(id, globalRecord: true)],
+      rollback: () => _globalCockSales.insert(
+        index.clamp(0, _globalCockSales.length),
+        removed,
+      ),
+    );
   }
 
   Future<void> addGlobalExpense(Expense expense) async {
-    await _repository.insertExpense(null, expense);
     _globalExpenses.insert(0, expense);
     notifyListenersSafe();
+    await _commit(
+      "insert global expense",
+      [_repository.insertExpenseOp(null, expense)],
+      rollback: () => _globalExpenses.removeWhere((e) => e.id == expense.id),
+    );
   }
 
   Future<void> updateGlobalExpense(Expense expense) async {
     final index = _globalExpenses.indexWhere((item) => item.id == expense.id);
     if (index == -1) return;
-    await _repository.updateGlobalExpense(expense);
+    final previous = _globalExpenses[index];
     _globalExpenses[index] = expense;
     notifyListenersSafe();
+    await _commit(
+      "update global expense",
+      [_repository.updateExpenseOp(expense, globalRecord: true)],
+      rollback: () {
+        final at = _globalExpenses.indexWhere((item) => item.id == expense.id);
+        if (at != -1) _globalExpenses[at] = previous;
+      },
+    );
   }
 
   Future<void> deleteGlobalExpense(String id) async {
-    await _repository.deleteGlobalExpense(id);
-    _globalExpenses.removeWhere((expense) => expense.id == id);
+    final index = _globalExpenses.indexWhere((expense) => expense.id == id);
+    if (index == -1) return;
+    final removed = _globalExpenses.removeAt(index);
     notifyListenersSafe();
+    await _commit(
+      "delete global expense",
+      [_repository.deleteExpenseOp(id, globalRecord: true)],
+      rollback: () => _globalExpenses.insert(
+        index.clamp(0, _globalExpenses.length),
+        removed,
+      ),
+    );
+  }
+
+  /// Bulk actions cannot run while local changes are still queued: they rewrite
+  /// data the queued writes refer to.
+  void _requireEverythingSynced(String action) {
+    if (_queue.isEmpty) return;
+    throw StateError(
+      'Còn ${_queue.length} thay đổi chưa đồng bộ. '
+      'Hãy kết nối mạng và đợi đồng bộ xong trước khi $action.',
+    );
   }
 
   /// Imports data from the JSON format described in [ChickenImportService].
   /// Returns the number of imported records, or throws on invalid input.
   Future<int> importFromJson(String jsonString) async {
     final data = ChickenImportService.parse(jsonString);
-    final userId = supabase.auth.currentUser?.id;
+    final userId = _auth.userId;
     if (userId == null) throw StateError('Bạn cần đăng nhập trước khi import.');
+    // A bulk write on top of unsynced local changes would be impossible to
+    // reconcile afterwards, so the queue has to be empty first.
+    _requireEverythingSynced('import');
 
     _isImporting = true;
     _importProgress = 0;
@@ -526,9 +966,10 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<int> deleteAllData() async {
-    if (supabase.auth.currentUser == null) {
+    if (_auth.userId == null) {
       throw StateError('Bạn cần đăng nhập trước khi xóa dữ liệu.');
     }
+    _requireEverythingSynced('xóa dữ liệu');
 
     final deletedCount = await _repository.deleteAllData();
     await refreshData();
@@ -536,28 +977,27 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> toggleVaccination(String batchId, String vaccinationId) async {
-    final index = _batches.indexWhere((e) => e.id == batchId);
-    if (index != -1) {
-      Vaccination? toggled;
-      final updatedVaccinations = _batches[index].vaccinations.map((v) {
-        if (v.id == vaccinationId) {
-          toggled = v.copyWith(isCompleted: !v.isCompleted);
-          return toggled!;
-        }
-        return v;
-      }).toList();
-      _batches[index] = _batches[index].copyWith(
-        vaccinations: updatedVaccinations,
-      );
-      if (toggled != null) {
-        await _repository.setVaccinationCompleted(
-          vaccinationId,
-          toggled!.isCompleted,
-        );
-      }
-      notifyListenersSafe();
-      await _syncVaccinationNotifications();
-    }
+    final batch = _batches.firstWhereOrNull((e) => e.id == batchId);
+    final current = batch?.vaccinations.firstWhereOrNull(
+      (v) => v.id == vaccinationId,
+    );
+    if (current == null) return;
+    final isCompleted = !current.isCompleted;
+    await _editBatch(
+      batchId,
+      "toggle vaccination",
+      (batch) => batch.copyWith(
+        vaccinations: batch.vaccinations
+            .map(
+              (v) => v.id == vaccinationId
+                  ? v.copyWith(isCompleted: isCompleted)
+                  : v,
+            )
+            .toList(),
+      ),
+      [_repository.setVaccinationCompletedOp(vaccinationId, isCompleted)],
+    );
+    await _syncVaccinationNotifications();
   }
 
   List<Vaccination> _getDefaultVaccinationSchedule(DateTime incubationDate) {
@@ -645,9 +1085,8 @@ class ChickenViewModel extends CoreViewModel {
   void _accumulateStats(_MutableStats? Function(DateTime date) bucketOf) {
     // Stored dates are lunar values. In lunar mode the buckets are lunar
     // year/month; in solar mode convert first so stats group by solar dates.
-    DateTime bucketDate(DateTime date) => _useLunarCalendar
-        ? date
-        : LunarCalendar.lunarDateTimeToSolar(date);
+    DateTime bucketDate(DateTime date) =>
+        _useLunarCalendar ? date : LunarCalendar.lunarDateTimeToSolar(date);
 
     void addSale(CockSale sale) {
       final bucket = bucketOf(bucketDate(sale.date));
@@ -673,6 +1112,10 @@ class ChickenViewModel extends CoreViewModel {
     _globalExpenses.forEach(addExpense);
   }
 }
+
+/// How fresh a section's data is: when it last came back from the API (null if
+/// it never did) and whether the latest refresh attempt failed.
+typedef ChickenSyncStatus = ({bool refreshFailed, DateTime? syncedAt});
 
 typedef ChickenStats = ({
   double batchRevenue,
