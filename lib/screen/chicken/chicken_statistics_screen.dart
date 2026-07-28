@@ -6,6 +6,7 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -74,14 +75,15 @@ class _ChickenStatisticsScreenState
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
           final isLoading =
-              vm.isBatchesLoading ||
-              vm.isCockSalesLoading ||
-              vm.isExpensesLoading;
+              vm.isBatchesFetching ||
+              vm.isCockSalesFetching ||
+              vm.isExpensesFetching;
           return Column(
             children: [
               isLoading
                   ? const LinearProgressIndicator(minHeight: 2)
                   : const SizedBox(height: 2),
+              ChickenStaleBanner(selector: (vm) => vm.overallSync),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,

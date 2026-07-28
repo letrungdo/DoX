@@ -678,5 +678,38 @@
         "type": "String"
       }
     }
-  }
+  },
+  "dataAsOf": "Dữ liệu lúc {time} — chưa cập nhật được",
+  "@dataAsOf": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingChanges": "{count} thay đổi chờ đồng bộ — đang lưu trên máy",
+  "@pendingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncingChanges": "Đang đồng bộ {count} thay đổi...",
+  "@syncingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changesDiscarded": "{count} thay đổi không đồng bộ được và đã bị bỏ qua",
+  "@changesDiscarded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "refreshFailedNoData": "Không tải được dữ liệu"
 }

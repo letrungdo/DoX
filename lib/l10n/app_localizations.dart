@@ -1963,6 +1963,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ports: {ports}'**
   String portsLabel(String ports);
+
+  /// No description provided for @dataAsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Data from {time} — couldn\'t refresh'**
+  String dataAsOf(String time);
+
+  /// No description provided for @pendingChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes waiting to sync — saved on this device'**
+  String pendingChanges(int count);
+
+  /// No description provided for @syncingChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing {count} changes...'**
+  String syncingChanges(int count);
+
+  /// No description provided for @changesDiscarded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes could not be synced and were dropped'**
+  String changesDiscarded(int count);
+
+  /// No description provided for @refreshFailedNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load data'**
+  String get refreshFailedNoData;
 }
 
 class _AppLocalizationsDelegate
