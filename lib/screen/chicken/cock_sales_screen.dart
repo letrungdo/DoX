@@ -6,6 +6,7 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
+import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
@@ -42,6 +43,10 @@ class _CockSalesScreenState
       ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   SaleCategory? _filter;
   int _selectedYear = DateTime.now().year;
+
+  /// The year to ask the server for; null when the picker is on "all", which
+  /// is the one case that needs every year.
+  int? get _yearFilter => _selectedYear == 0 ? null : _selectedYear;
   final _scrollController = ScrollController();
 
   @override
@@ -67,13 +72,13 @@ class _CockSalesScreenState
   @override
   void initData() {
     super.initData();
-    vm.ensureCockSalesLoaded();
+    vm.ensureLoaded({ChickenSection.globalCockSales}, year: _yearFilter);
   }
 
   @override
   void onResume() {
     super.onResume();
-    vm.ensureCockSalesLoaded();
+    vm.ensureLoaded({ChickenSection.globalCockSales}, year: _yearFilter);
   }
 
   @override
@@ -83,7 +88,7 @@ class _CockSalesScreenState
       appBar: DoAppBar(
         title: l10n.sellRoosterMeat,
         bottom: AppBarLoadingBar<ChickenViewModel>(
-          selector: (vm) => vm.isCockSalesFetching,
+          selector: (vm) => vm.isFetching,
         ),
         actions: [
           IconButton(
@@ -96,7 +101,7 @@ class _CockSalesScreenState
         builder: (context, vm, child) {
           final years = {
             DateTime.now().year,
-            ...vm.globalCockSales.map((sale) => vm.displayYear(sale.date)),
+            ...vm.yearsFor({ChickenSection.globalCockSales}),
           }.toList()..sort((a, b) => b.compareTo(a));
           final sortedSales = vm.globalCockSales
               .where(
@@ -112,7 +117,9 @@ class _CockSalesScreenState
 
           return Column(
             children: [
-              ChickenStaleBanner(selector: (vm) => vm.cockSalesSync),
+              const ChickenStaleBanner(
+                sections: {ChickenSection.globalCockSales},
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(
@@ -121,8 +128,14 @@ class _CockSalesScreenState
                       selectedYear: _selectedYear,
                       years: years,
                       includeAll: true,
-                      onChanged: (year) =>
-                          setState(() => _selectedYear = year),
+                      onChanged: (year) {
+                        setState(() => _selectedYear = year);
+                        // Another year means another read: the server only
+                        // sent the one that was selected.
+                        vm.ensureLoaded({
+                          ChickenSection.globalCockSales,
+                        }, year: _yearFilter);
+                      },
                     ),
                   ],
                 ),
@@ -179,7 +192,8 @@ class _CockSalesScreenState
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => vm.loadCockSales(showLoading: true),
+                  onRefresh: () =>
+                      vm.loadData(sections: {ChickenSection.globalCockSales}),
                   child: sortedSales.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -187,7 +201,7 @@ class _CockSalesScreenState
                             children: [
                               SizedBox(
                                 height: constraints.maxHeight,
-                                child: vm.isCockSalesLoading
+                                child: vm.isLoading
                                     ? const SizedBox.shrink()
                                     : Column(
                                         mainAxisAlignment:

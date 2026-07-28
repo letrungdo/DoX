@@ -20,7 +20,7 @@ abstract class ScreenState<S extends StatefulScreen, V extends CoreViewModel>
 
   /// Called when the app returns to the foreground *and* this screen is the one
   /// currently visible to the user. Override to re-fetch the screen's data
-  /// (e.g. `vm.ensureBatchesLoaded()`).
+  /// (e.g. `vm.ensureLoaded()`).
   void onResume() {}
 
   @override

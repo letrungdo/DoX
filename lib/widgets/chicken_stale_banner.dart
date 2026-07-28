@@ -1,4 +1,5 @@
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -25,10 +26,11 @@ typedef _BannerState = ({
 /// current, which matters most when the same account is used on two devices.
 /// Renders nothing when everything is in sync.
 class ChickenStaleBanner extends StatelessWidget {
-  const ChickenStaleBanner({super.key, required this.selector});
+  const ChickenStaleBanner({super.key, required this.sections});
 
-  /// Which section's freshness to watch, e.g. `(vm) => vm.batchesSync`.
-  final ChickenSyncStatus Function(ChickenViewModel vm) selector;
+  /// The sections the screen shows, so it only reports on data that is
+  /// actually in front of the user.
+  final Set<ChickenSection> sections;
 
   static String _formatSyncedAt(DateTime time) {
     final now = DateTime.now();
@@ -41,7 +43,7 @@ class ChickenStaleBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Selector<ChickenViewModel, _BannerState>(
       selector: (_, vm) {
-        final status = selector(vm);
+        final status = vm.syncStatusFor(sections);
         return (
           pending: vm.pendingChangeCount,
           syncing: vm.isSyncing,

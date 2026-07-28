@@ -59,6 +59,11 @@ class ChickenViewModel extends CoreViewModel {
   List<Expense> _globalExpenses = [];
   List<Expense> get globalExpenses => _globalExpenses;
 
+  // The suggestion lists below read across sections. A screen only fetches the
+  // section it shows, so the other sections are whatever the last load or the
+  // restored cache left in memory — recent enough for suggestions, and never
+  // empty in practice because the cache holds every section it has ever seen.
+
   /// Distinct, non-empty notes in the order given, keeping the first occurrence
   /// — callers pass records sorted newest-first so recent notes come first.
   List<String> _distinctNotes(Iterable<String?> notes) {
@@ -150,7 +155,7 @@ class ChickenViewModel extends CoreViewModel {
   // The screens show the data cached from the previous session right away and
   // refresh from the API in the background, so opening the tab is never empty.
 
-  static const _cacheVersion = 1;
+  static const _cacheVersion = 3;
   static const _cacheSaveDelay = Duration(milliseconds: 500);
 
   bool _cacheRestored = false;
@@ -186,35 +191,49 @@ class ChickenViewModel extends CoreViewModel {
             .toList(growable: true);
       }
 
-      DateTime? syncedAt(String key) =>
-          DateTime.tryParse(data[key] as String? ?? '');
+      final syncedAt = (data['syncedAt'] as Map?) ?? const {};
+      final years = (data['years'] as Map?) ?? const {};
+      for (final section in ChickenSection.values) {
+        final stored = years[section.name] as List?;
+        if (stored != null) {
+          _serverYears[section] = stored.map((y) => (y as num).toInt()).toSet();
+        }
+      }
+      void restore<T>(
+        ChickenSection section,
+        String key,
+        T Function(Map<String, dynamic>) fromJson,
+        void Function(List<T> value) assign,
+      ) {
+        // A section already fetched from the server wins: never fall back to
+        // the cache if a load won the race with the session restore.
+        if (_loadedSections.contains(section)) return;
+        final restored = decode(key, fromJson);
+        if (restored == null) return;
+        assign(restored);
+        _loadedSections.add(section);
+        final at = DateTime.tryParse(syncedAt[section.name] as String? ?? '');
+        if (at != null) _syncedAt[section] = at;
+      }
 
-      // A section already fetched from the API wins: never fall back to stale
-      // data if a load happened to win the race with the session restore.
-      if (!_batchesLoaded) {
-        final batches = decode('batches', ChickenBatch.fromJson);
-        if (batches != null) {
-          _batches = batches;
-          _batchesLoaded = true;
-          _batchesSyncedAt = syncedAt('batchesSyncedAt');
-        }
-      }
-      if (!_cockSalesLoaded) {
-        final cockSales = decode('cockSales', CockSale.fromJson);
-        if (cockSales != null) {
-          _globalCockSales = cockSales;
-          _cockSalesLoaded = true;
-          _cockSalesSyncedAt = syncedAt('cockSalesSyncedAt');
-        }
-      }
-      if (!_expensesLoaded) {
-        final expenses = decode('expenses', Expense.fromJson);
-        if (expenses != null) {
-          _globalExpenses = expenses;
-          _expensesLoaded = true;
-          _expensesSyncedAt = syncedAt('expensesSyncedAt');
-        }
-      }
+      restore<ChickenBatch>(
+        ChickenSection.batches,
+        'batches',
+        ChickenBatch.fromJson,
+        (value) => _batches = value,
+      );
+      restore<CockSale>(
+        ChickenSection.globalCockSales,
+        'cockSales',
+        CockSale.fromJson,
+        (value) => _globalCockSales = value,
+      );
+      restore<Expense>(
+        ChickenSection.globalExpenses,
+        'expenses',
+        Expense.fromJson,
+        (value) => _globalExpenses = value,
+      );
       notifyListenersSafe();
     } catch (e) {
       logger.e('restore chicken cache failed', error: e);
@@ -316,7 +335,9 @@ class ChickenViewModel extends CoreViewModel {
       await syncPending();
       // Back online: the loads that were skipped while changes were queued now
       // have to happen, or the screen keeps showing pre-outage data.
-      if (_queue.isEmpty && !isDispose) unawaited(refreshData());
+      if (_queue.isEmpty && !isDispose) {
+        unawaited(loadData(sections: _requestedSections));
+      }
     });
   }
 
@@ -337,28 +358,30 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   void _saveCache() {
-    if (!_auth.isSignedIn) return;
-    // Only sections that have actually been fetched are cached; a section that
-    // was never loaded must not be persisted as an empty list.
+    // Nothing worth caching until the first successful fetch: an empty list
+    // must never be stored as if it were the user's data.
+    if (!_auth.isSignedIn || _loadedSections.isEmpty) return;
     try {
-      // The timestamps are the last successful *fetch* of each section, not the
-      // time of this write, so the "data as of …" notice stays truthful even
-      // after the user edits records locally.
+      // The timestamps are the last successful *fetch* of each section, not
+      // the time of this write, so the "data as of …" notice stays truthful
+      // even after the user edits records locally. Only sections that really
+      // came back from the server are stored: an empty list that just means
+      // "never fetched" must not come back looking like the user's data.
+      bool has(ChickenSection section) => _loadedSections.contains(section);
       final data = {
         'version': _cacheVersion,
         'userId': _auth.userId,
-        if (_batchesLoaded) ...{
-          'batches': _batches,
-          'batchesSyncedAt': _batchesSyncedAt?.toIso8601String(),
+        'syncedAt': {
+          for (final entry in _syncedAt.entries)
+            entry.key.name: entry.value.toIso8601String(),
         },
-        if (_cockSalesLoaded) ...{
-          'cockSales': _globalCockSales,
-          'cockSalesSyncedAt': _cockSalesSyncedAt?.toIso8601String(),
+        'years': {
+          for (final entry in _serverYears.entries)
+            entry.key.name: entry.value.toList(),
         },
-        if (_expensesLoaded) ...{
-          'expenses': _globalExpenses,
-          'expensesSyncedAt': _expensesSyncedAt?.toIso8601String(),
-        },
+        if (has(ChickenSection.batches)) 'batches': _batches,
+        if (has(ChickenSection.globalCockSales)) 'cockSales': _globalCockSales,
+        if (has(ChickenSection.globalExpenses)) 'expenses': _globalExpenses,
       };
       unawaited(storageService.setChickenCache(jsonEncode(data)));
     } catch (e) {
@@ -366,76 +389,61 @@ class ChickenViewModel extends CoreViewModel {
     }
   }
 
-  bool _batchesLoaded = false;
-  bool _cockSalesLoaded = false;
-  bool _expensesLoaded = false;
+  // Sections are tracked one by one because screens fetch only what they show.
+  final Set<ChickenSection> _loadedSections = {};
 
-  // Sections requested by a screen at least once; reloaded again on sign-in.
-  bool _batchesRequested = false;
-  bool _cockSalesRequested = false;
-  bool _expensesRequested = false;
+  /// Sections a screen has asked for at least once, so they are worth
+  /// reloading on sign-in and after an offline queue is pushed.
+  final Set<ChickenSection> _requestedSections = {};
 
-  bool _batchesLoading = false;
-  bool get isBatchesLoading => _batchesLoading;
+  /// The year each section was last fetched with; null means "all years".
+  final Map<ChickenSection, int?> _loadedYear = {};
 
-  bool _cockSalesLoading = false;
-  bool get isCockSalesLoading => _cockSalesLoading;
+  final Map<ChickenSection, DateTime> _syncedAt = {};
+  final Set<ChickenSection> _failedSections = {};
 
-  bool _expensesLoading = false;
-  bool get isExpensesLoading => _expensesLoading;
+  /// Every year the server holds records for, per section. Kept separate from
+  /// the loaded data because a year-filtered load only brings back one year and
+  /// the year pickers still have to offer the rest.
+  final Map<ChickenSection, Set<int>> _serverYears = {};
 
-  // True while a fetch is in flight (including silent refreshes), used to drive
-  // the thin progress bar under the app bar.
-  bool _batchesFetching = false;
-  bool get isBatchesFetching => _batchesFetching;
+  /// Years to offer in the year picker of a screen showing [sections]: what the
+  /// server holds, plus whatever is in memory (a batch added offline for a new
+  /// year has to show up before it is ever fetched back).
+  Set<int> yearsFor(Set<ChickenSection> sections) => {
+    for (final section in sections) ...?_serverYears[section],
+    if (sections.contains(ChickenSection.batches))
+      for (final batch in _batches)
+        displayYear(batch.actualHatchDate ?? batch.expectedHatchDate),
+    if (sections.contains(ChickenSection.globalCockSales))
+      for (final sale in _globalCockSales) displayYear(sale.date),
+    if (sections.contains(ChickenSection.globalExpenses))
+      for (final expense in _globalExpenses) displayYear(expense.date),
+  };
 
-  bool _cockSalesFetching = false;
-  bool get isCockSalesFetching => _cockSalesFetching;
+  bool _loading = false;
 
-  bool _expensesFetching = false;
-  bool get isExpensesFetching => _expensesFetching;
+  /// True only while loading something that is not on screen yet — this is what
+  /// drives the spinner.
+  bool get isLoading => _loading;
 
-  // --- Freshness ------------------------------------------------------------
-  // When each section last came back from the API, and whether the most recent
-  // attempt failed. A failed refresh leaves the cached data on screen, so the
-  // screens use this to say the data is stale instead of passing it off as new.
+  bool _fetching = false;
 
-  DateTime? _batchesSyncedAt;
-  DateTime? _cockSalesSyncedAt;
-  DateTime? _expensesSyncedAt;
+  /// True while any fetch is in flight, silent refreshes included; drives the
+  /// thin progress bar under the app bar.
+  bool get isFetching => _fetching;
 
-  bool _batchesRefreshFailed = false;
-  bool _cockSalesRefreshFailed = false;
-  bool _expensesRefreshFailed = false;
-
-  ChickenSyncStatus get batchesSync =>
-      (refreshFailed: _batchesRefreshFailed, syncedAt: _batchesSyncedAt);
-
-  ChickenSyncStatus get cockSalesSync =>
-      (refreshFailed: _cockSalesRefreshFailed, syncedAt: _cockSalesSyncedAt);
-
-  ChickenSyncStatus get expensesSync =>
-      (refreshFailed: _expensesRefreshFailed, syncedAt: _expensesSyncedAt);
-
-  /// Combined status of every section, for screens (statistics) that mix them:
-  /// stale as soon as one section is, dated by the oldest one.
-  ChickenSyncStatus get overallSync {
-    final times = [
-      if (_batchesLoaded) _batchesSyncedAt,
-      if (_cockSalesLoaded) _cockSalesSyncedAt,
-      if (_expensesLoaded) _expensesSyncedAt,
-    ];
+  /// How fresh [sections] are: when the oldest of them last came back from the
+  /// server, and whether the latest attempt for any of them failed. A failed
+  /// refresh leaves the cached copy on screen, so the screens say so instead of
+  /// passing it off as current.
+  ChickenSyncStatus syncStatusFor(Set<ChickenSection> sections) {
+    final times = sections.map((s) => _syncedAt[s]).toList();
     return (
-      refreshFailed:
-          _batchesRefreshFailed ||
-          _cockSalesRefreshFailed ||
-          _expensesRefreshFailed,
+      refreshFailed: sections.any(_failedSections.contains),
       syncedAt: times.contains(null)
           ? null
-          : times.fold<DateTime?>(
-              null,
-              (oldest, t) => oldest == null || t!.isBefore(oldest) ? t : oldest,
-            ),
+          : times.reduce((oldest, t) => t!.isBefore(oldest!) ? t : oldest),
     );
   }
 
@@ -454,29 +462,17 @@ class ChickenViewModel extends CoreViewModel {
           _restoreFromCache();
         case AuthChangeEvent.signedIn:
           _restoreFromCache();
-          // Cached sections are already on screen: refresh them silently.
-          if (_batchesRequested) {
-            unawaited(loadBatches(showLoading: !_batchesLoaded));
-          }
-          if (_cockSalesRequested) {
-            unawaited(loadCockSales(showLoading: !_cockSalesLoaded));
-          }
-          if (_expensesRequested) {
-            unawaited(loadExpenses(showLoading: !_expensesLoaded));
-          }
+          // Cached data is already on screen: refresh it silently.
+          unawaited(loadData(sections: _requestedSections));
         case AuthChangeEvent.signedOut:
           _batches = [];
           _globalCockSales = [];
           _globalExpenses = [];
-          _batchesLoaded = false;
-          _cockSalesLoaded = false;
-          _expensesLoaded = false;
-          _batchesSyncedAt = null;
-          _cockSalesSyncedAt = null;
-          _expensesSyncedAt = null;
-          _batchesRefreshFailed = false;
-          _cockSalesRefreshFailed = false;
-          _expensesRefreshFailed = false;
+          _loadedSections.clear();
+          _loadedYear.clear();
+          _syncedAt.clear();
+          _failedSections.clear();
+          _serverYears.clear();
           _cacheSaveTimer?.cancel();
           _syncRetryTimer?.cancel();
           // The cache goes, the queue stays: it holds work the user believes is
@@ -512,119 +508,165 @@ class ChickenViewModel extends CoreViewModel {
     }
   }
 
-  /// Called when a screen showing batches opens: always re-fetches; shows the
-  /// spinner only on the first load, later entries refresh silently.
-  Future<void> ensureBatchesLoaded() async {
-    _batchesRequested = true;
-    if (_batchesLoading) return;
-    await loadBatches(showLoading: !_batchesLoaded);
+  /// Called when a chicken screen opens, with the sections that screen shows
+  /// and the year it is filtered to (null for all years). Always re-fetches,
+  /// but shows the spinner only when the data is not on screen yet — later
+  /// entries refresh behind what is already there.
+  Future<void> ensureLoaded(Set<ChickenSection> sections, {int? year}) async {
+    _requestedSections.addAll(sections);
+    final missing = sections.where(
+      (s) => !_loadedSections.contains(s) || _loadedYear[s] != year,
+    );
+    await loadData(
+      sections: sections,
+      year: year,
+      showLoading: missing.isNotEmpty && !_loadedSections.containsAll(sections),
+    );
   }
 
-  /// Same as [ensureBatchesLoaded] but for global cock sales.
-  Future<void> ensureCockSalesLoaded() async {
-    _cockSalesRequested = true;
-    if (_cockSalesLoading) return;
-    await loadCockSales(showLoading: !_cockSalesLoaded);
+  Future<void>? _loadTask;
+  Set<ChickenSection> _loadTaskSections = const {};
+  int? _loadTaskYear;
+
+  /// Fetches [sections] (all of them when not given), narrowed to [year].
+  ///
+  /// Concurrent callers share one fetch when the one already running covers
+  /// what they need: the screens mount together often enough (a detail screen
+  /// over its list, a resume landing on a tab switch) that fetching the same
+  /// payload twice would be the normal case rather than the exception.
+  Future<void> loadData({
+    Set<ChickenSection>? sections,
+    int? year,
+    bool showLoading = false,
+  }) {
+    if (!_auth.isSignedIn) return Future.value();
+    final wanted = sections ?? ChickenSection.values.toSet();
+    if (wanted.isEmpty) return Future.value();
+
+    final inFlight = _loadTask;
+    // An unfiltered read covers every year, so it also answers a narrower one.
+    final coversYear = _loadTaskYear == null || _loadTaskYear == year;
+    if (inFlight != null && coversYear && _loadTaskSections.containsAll(wanted)) {
+      return inFlight;
+    }
+
+    late final Future<void> task;
+    task = _load(wanted, year: year, showLoading: showLoading).whenComplete(() {
+      if (identical(_loadTask, task)) {
+        _loadTask = null;
+        _loadTaskSections = const {};
+        _loadTaskYear = null;
+      }
+    });
+    _loadTask = task;
+    _loadTaskSections = wanted;
+    _loadTaskYear = year;
+    return task;
   }
 
-  /// Same as [ensureBatchesLoaded] but for global expenses.
-  Future<void> ensureExpensesLoaded() async {
-    _expensesRequested = true;
-    if (_expensesLoading) return;
-    await loadExpenses(showLoading: !_expensesLoaded);
+  /// Merges a year-filtered read into what is already in memory.
+  ///
+  /// The server answers for stored years `[year - 1, year]`, so records outside
+  /// that window were never part of the answer and have to survive — otherwise
+  /// switching the year filter would throw away every other year. Within the
+  /// window the server is the authority.
+  List<T> _mergeYearWindow<T>(
+    List<T> fetched,
+    List<T> existing,
+    int? year,
+    int Function(T) storedYear,
+    String Function(T) idOf,
+  ) {
+    if (year == null) return fetched;
+    final fetchedIds = fetched.map(idOf).toSet();
+    return [
+      ...existing.where(
+        (item) =>
+            !fetchedIds.contains(idOf(item)) &&
+            (storedYear(item) < year - 1 || storedYear(item) > year),
+      ),
+      ...fetched,
+    ];
   }
 
-  Future<void> loadBatches({bool showLoading = false}) async {
-    if (!_auth.isSignedIn) return;
+  Future<void> _load(
+    Set<ChickenSection> sections, {
+    required int? year,
+    required bool showLoading,
+  }) async {
     await syncPending();
     // Changes that have not reached the server yet are the newer truth: a fetch
     // now would overwrite them with a snapshot that predates them.
     if (_queue.isNotEmpty) return;
-    _batchesFetching = true;
-    if (showLoading) _batchesLoading = true;
+
+    _fetching = true;
+    if (showLoading) _loading = true;
     notifyListenersSafe();
     try {
-      final fetched = await _repository.getBatches();
-      if (_pendingDeletedBatchIds.isNotEmpty) {
-        // Once the server no longer returns a deleted batch, stop guarding it.
-        final fetchedIds = fetched.map((b) => b.id).toSet();
-        _pendingDeletedBatchIds.removeWhere((id) => !fetchedIds.contains(id));
+      final data = await _repository.getChickenData(
+        sections: sections,
+        year: year,
+      );
+      final batches = data.batches;
+      if (batches != null) {
+        if (_pendingDeletedBatchIds.isNotEmpty) {
+          // Once the server no longer returns a deleted batch, stop guarding it.
+          final fetchedIds = batches.map((b) => b.id).toSet();
+          _pendingDeletedBatchIds.removeWhere((id) => !fetchedIds.contains(id));
+        }
+        _batches = _mergeYearWindow(
+          batches.where((b) => !_pendingDeletedBatchIds.contains(b.id)).toList(),
+          _batches,
+          year,
+          (b) => b.incubationDate.year,
+          (b) => b.id,
+        );
+        mergeSort(
+          _batches,
+          compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
+        );
       }
-      _batches = _pendingDeletedBatchIds.isEmpty
-          ? fetched
-          : fetched
-                .where((b) => !_pendingDeletedBatchIds.contains(b.id))
-                .toList();
-      _batchesLoaded = true;
-      _batchesSyncedAt = DateTime.now();
-      _batchesRefreshFailed = false;
+      if (data.globalCockSales != null) {
+        _globalCockSales = _mergeYearWindow(
+          data.globalCockSales!,
+          _globalCockSales,
+          year,
+          (s) => s.date.year,
+          (s) => s.id,
+        );
+        mergeSort(_globalCockSales, compare: (a, b) => b.date.compareTo(a.date));
+      }
+      if (data.globalExpenses != null) {
+        _globalExpenses = _mergeYearWindow(
+          data.globalExpenses!,
+          _globalExpenses,
+          year,
+          (e) => e.date.year,
+          (e) => e.id,
+        );
+        mergeSort(_globalExpenses, compare: (a, b) => b.date.compareTo(a.date));
+      }
+      _serverYears.addAll(data.years);
+
+      final now = DateTime.now();
+      for (final section in sections) {
+        _loadedSections.add(section);
+        _loadedYear[section] = year;
+        _syncedAt[section] = now;
+        _failedSections.remove(section);
+      }
     } catch (e) {
-      logger.e("load chicken batches failed", error: e);
-      _batchesRefreshFailed = true;
+      logger.e("load chicken data failed", error: e);
+      _failedSections.addAll(sections);
     } finally {
-      _batchesLoading = false;
-      _batchesFetching = false;
+      _loading = false;
+      _fetching = false;
       notifyListenersSafe();
     }
     // Scheduling local notifications can be slow; keep it off the UI path.
-    unawaited(_syncVaccinationNotifications());
-  }
-
-  Future<void> loadCockSales({bool showLoading = false}) async {
-    if (!_auth.isSignedIn) return;
-    await syncPending();
-    // Changes that have not reached the server yet are the newer truth: a fetch
-    // now would overwrite them with a snapshot that predates them.
-    if (_queue.isNotEmpty) return;
-    _cockSalesFetching = true;
-    if (showLoading) _cockSalesLoading = true;
-    notifyListenersSafe();
-    try {
-      _globalCockSales = await _repository.getGlobalCockSales();
-      _cockSalesLoaded = true;
-      _cockSalesSyncedAt = DateTime.now();
-      _cockSalesRefreshFailed = false;
-    } catch (e) {
-      logger.e("load cock sales failed", error: e);
-      _cockSalesRefreshFailed = true;
-    } finally {
-      _cockSalesLoading = false;
-      _cockSalesFetching = false;
-      notifyListenersSafe();
+    if (sections.contains(ChickenSection.batches)) {
+      unawaited(_syncVaccinationNotifications());
     }
-  }
-
-  Future<void> loadExpenses({bool showLoading = false}) async {
-    if (!_auth.isSignedIn) return;
-    await syncPending();
-    // Changes that have not reached the server yet are the newer truth: a fetch
-    // now would overwrite them with a snapshot that predates them.
-    if (_queue.isNotEmpty) return;
-    _expensesFetching = true;
-    if (showLoading) _expensesLoading = true;
-    notifyListenersSafe();
-    try {
-      _globalExpenses = await _repository.getGlobalExpenses();
-      _expensesLoaded = true;
-      _expensesSyncedAt = DateTime.now();
-      _expensesRefreshFailed = false;
-    } catch (e) {
-      logger.e("load global expenses failed", error: e);
-      _expensesRefreshFailed = true;
-    } finally {
-      _expensesLoading = false;
-      _expensesFetching = false;
-      notifyListenersSafe();
-    }
-  }
-
-  /// Refreshes every section that has been loaded before.
-  Future<void> refreshData() async {
-    await Future.wait([
-      if (_batchesLoaded) loadBatches(),
-      if (_cockSalesLoaded) loadCockSales(),
-      if (_expensesLoaded) loadExpenses(),
-    ]);
   }
 
   /// Sends a change that was already applied to the local lists to the server.
@@ -957,7 +999,7 @@ class ChickenViewModel extends CoreViewModel {
           notifyListenersSafe();
         },
       );
-      await refreshData();
+      await loadData();
       return data.totalRecords;
     } finally {
       _isImporting = false;
@@ -972,7 +1014,7 @@ class ChickenViewModel extends CoreViewModel {
     _requireEverythingSynced('xóa dữ liệu');
 
     final deletedCount = await _repository.deleteAllData();
-    await refreshData();
+    await loadData();
     return deletedCount;
   }
 

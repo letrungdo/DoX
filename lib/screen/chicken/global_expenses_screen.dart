@@ -6,6 +6,7 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
+import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -34,6 +35,10 @@ class GlobalExpensesScreen extends StatefulScreen implements AutoRouteWrapper {
 class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
   String _fmt(DateTime date) => ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   int _selectedYear = DateTime.now().year;
+
+  /// The year to ask the server for; null when the picker is on "all", which
+  /// is the one case that needs every year.
+  int? get _yearFilter => _selectedYear == 0 ? null : _selectedYear;
   final _scrollController = ScrollController();
 
   @override
@@ -55,13 +60,13 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
   @override
   void initData() {
     super.initData();
-    vm.ensureExpensesLoaded();
+    vm.ensureLoaded({ChickenSection.globalExpenses}, year: _yearFilter);
   }
 
   @override
   void onResume() {
     super.onResume();
-    vm.ensureExpensesLoaded();
+    vm.ensureLoaded({ChickenSection.globalExpenses}, year: _yearFilter);
   }
 
   @override
@@ -70,7 +75,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
-        bottom: AppBarLoadingBar<ChickenViewModel>(selector: (vm) => vm.isExpensesFetching),
+        bottom: AppBarLoadingBar<ChickenViewModel>(selector: (vm) => vm.isFetching),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
@@ -80,7 +85,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final years = {DateTime.now().year, ...vm.globalExpenses.map((expense) => vm.displayYear(expense.date))}.toList()
+          final years = {DateTime.now().year, ...vm.yearsFor({ChickenSection.globalExpenses})}.toList()
             ..sort((a, b) => b.compareTo(a));
           final expenses = vm.globalExpenses.where((expense) {
             return _selectedYear == 0 || vm.displayYear(expense.date) == _selectedYear;
@@ -93,7 +98,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
 
           return Column(
             children: [
-              ChickenStaleBanner(selector: (vm) => vm.expensesSync),
+              const ChickenStaleBanner(sections: {ChickenSection.globalExpenses}),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(
@@ -102,7 +107,14 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                       selectedYear: _selectedYear,
                       years: years,
                       includeAll: true,
-                      onChanged: (year) => setState(() => _selectedYear = year),
+                      onChanged: (year) {
+                        setState(() => _selectedYear = year);
+                        // Another year means another read: the server only
+                        // sent the one that was selected.
+                        vm.ensureLoaded({
+                          ChickenSection.globalExpenses,
+                        }, year: _yearFilter);
+                      },
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -131,7 +143,8 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => vm.loadExpenses(showLoading: true),
+                  onRefresh: () =>
+                      vm.loadData(sections: {ChickenSection.globalExpenses}),
                   child: expenses.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -139,7 +152,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                             children: [
                               SizedBox(
                                 height: constraints.maxHeight,
-                                child: vm.isExpensesLoading
+                                child: vm.isLoading
                                     ? const SizedBox.shrink()
                                     : Column(
                                         mainAxisAlignment: MainAxisAlignment.center,

@@ -32,19 +32,21 @@ class _FakeAuth extends ChickenAuth {
   void emit(AuthState state) => _changes.add(state);
 }
 
-/// Repository whose reads return [batches] and whose writes either land in
-/// [applied] or throw [writeFailure], so both the offline queue and the
-/// rollback path can be driven from a test.
+/// Repository whose single read returns [batches] / [globalExpenses] and whose
+/// writes either land in [applied] or throw [writeFailure], so both the offline
+/// queue and the rollback path can be driven from a test.
 class _FakeRepository extends ChickenRepository {
   List<ChickenBatch> batches = [];
+  List<CockSale> globalCockSales = [];
+  List<Expense> globalExpenses = [];
   Object? readFailure;
   Object? writeFailure;
 
   /// Stands in for network latency: without it a fake write resolves in a
   /// single microtask, which is faster than any real request and hides races.
   Duration applyDelay = Duration.zero;
-  int getBatchesCalls = 0;
-  int getGlobalCockSalesCalls = 0;
+
+  int getDataCalls = 0;
   final applied = <PendingOp>[];
 
   /// Fails every call as if there were no connection.
@@ -58,20 +60,44 @@ class _FakeRepository extends ChickenRepository {
     writeFailure = null;
   }
 
-  @override
-  Future<List<ChickenBatch>> getBatches() async {
-    getBatchesCalls++;
-    if (readFailure != null) throw readFailure!;
-    // A copy, like the real repository: the view model mutates the list it is
-    // handed, and it must not reach back into what the server holds.
-    return List.of(batches);
-  }
+  /// What each call asked for, so a test can prove a screen does not pull data
+  /// it never shows.
+  final requestedSections = <Set<ChickenSection>>[];
+  final requestedYears = <int?>[];
+
+  /// Years the server claims to hold, for the year pickers.
+  Map<ChickenSection, Set<int>> years = const {};
 
   @override
-  Future<List<CockSale>> getGlobalCockSales() async {
-    getGlobalCockSalesCalls++;
+  Future<ChickenData> getChickenData({
+    Set<ChickenSection>? sections,
+    int? year,
+  }) async {
+    getDataCalls++;
+    final wanted = sections ?? ChickenSection.values.toSet();
+    requestedSections.add(wanted);
+    requestedYears.add(year);
     if (readFailure != null) throw readFailure!;
-    return [];
+
+    /// The server answers for stored years [year - 1, year]; see the SQL.
+    bool inWindow(DateTime date) =>
+        year == null || (date.year >= year - 1 && date.year <= year);
+
+    // Copies, like the real repository: the view model mutates the lists it is
+    // handed, and it must not reach back into what the server holds. A section
+    // that was not asked for comes back null, not empty.
+    return (
+      batches: wanted.contains(ChickenSection.batches)
+          ? batches.where((b) => inWindow(b.incubationDate)).toList()
+          : null,
+      globalCockSales: wanted.contains(ChickenSection.globalCockSales)
+          ? globalCockSales.where((s) => inWindow(s.date)).toList()
+          : null,
+      globalExpenses: wanted.contains(ChickenSection.globalExpenses)
+          ? globalExpenses.where((e) => inWindow(e.date)).toList()
+          : null,
+      years: years,
+    );
   }
 
   @override
@@ -116,13 +142,13 @@ String _cache({
   required String userId,
   required List<ChickenBatch> batches,
   required DateTime syncedAt,
-  int version = 1,
+  int version = 3,
 }) {
   return jsonEncode({
     'version': version,
     'userId': userId,
     'batches': batches,
-    'batchesSyncedAt': syncedAt.toIso8601String(),
+    'syncedAt': {'batches': syncedAt.toIso8601String()},
   });
 }
 
@@ -153,8 +179,8 @@ void main() {
       vm.initState();
 
       expect(vm.batches.single.id, 'batch-1');
-      expect(vm.batchesSync.syncedAt, syncedAt);
-      expect(vm.batchesSync.refreshFailed, isFalse);
+      expect(vm.syncStatusFor({ChickenSection.batches}).syncedAt, syncedAt);
+      expect(vm.syncStatusFor({ChickenSection.batches}).refreshFailed, isFalse);
       vm.dispose();
     });
 
@@ -228,14 +254,21 @@ void main() {
 
         final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
         vm.initState();
-        await vm.ensureBatchesLoaded();
+        await vm.ensureLoaded({ChickenSection.batches});
 
-        expect(repository.getBatchesCalls, 1);
+        expect(repository.getDataCalls, 1);
         expect(vm.batches.single.id, 'batch-1', reason: 'cached data stays');
-        expect(vm.batchesSync.refreshFailed, isTrue);
-        expect(vm.batchesSync.syncedAt, syncedAt, reason: 'still the old time');
+        expect(
+          vm.syncStatusFor({ChickenSection.batches}).refreshFailed,
+          isTrue,
+        );
+        expect(
+          vm.syncStatusFor({ChickenSection.batches}).syncedAt,
+          syncedAt,
+          reason: 'still the old time',
+        );
         // The spinner must not run over data that is already on screen.
-        expect(vm.isBatchesLoading, isFalse);
+        expect(vm.isLoading, isFalse);
         vm.dispose();
       },
     );
@@ -254,17 +287,23 @@ void main() {
           ..readFailure = const SocketException('offline');
         final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
         vm.initState();
-        await vm.ensureBatchesLoaded();
-        expect(vm.batchesSync.refreshFailed, isTrue);
+        await vm.ensureLoaded({ChickenSection.batches});
+        expect(
+          vm.syncStatusFor({ChickenSection.batches}).refreshFailed,
+          isTrue,
+        );
 
         repository
           ..readFailure = null
           ..batches = [_batch(id: 'batch-2')];
-        await vm.loadBatches();
+        await vm.loadData(sections: {ChickenSection.batches});
 
         expect(vm.batches.single.id, 'batch-2');
-        expect(vm.batchesSync.refreshFailed, isFalse);
-        expect(vm.batchesSync.syncedAt, isNotNull);
+        expect(
+          vm.syncStatusFor({ChickenSection.batches}).refreshFailed,
+          isFalse,
+        );
+        expect(vm.syncStatusFor({ChickenSection.batches}).syncedAt, isNotNull);
         vm.dispose();
       },
     );
@@ -275,7 +314,7 @@ void main() {
       final repository = _FakeRepository()..batches = [_batch()];
       final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
       vm.initState();
-      await vm.ensureBatchesLoaded();
+      await vm.ensureLoaded({ChickenSection.batches});
 
       // dispose() flushes the debounced write.
       vm.dispose();
@@ -286,7 +325,7 @@ void main() {
       final data = jsonDecode(raw!) as Map<String, dynamic>;
       expect(data['userId'], 'user-1');
       expect((data['batches'] as List).single['id'], 'batch-1');
-      expect(data['batchesSyncedAt'], isNotNull);
+      expect((data['syncedAt'] as Map)['batches'], isNotNull);
     });
 
     test('drops the cache on sign-out', () async {
@@ -294,7 +333,7 @@ void main() {
       final auth = _FakeAuth();
       final vm = ChickenViewModel(repository: repository, auth: auth);
       vm.initState();
-      await vm.ensureBatchesLoaded();
+      await vm.ensureLoaded({ChickenSection.batches});
       vm.dispose();
       await Future<void>.delayed(const Duration(milliseconds: 10));
       expect(storageService.getChickenCache(), isNotNull);
@@ -318,7 +357,7 @@ void main() {
       final repository = _FakeRepository()..batches = [_batch()];
       final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
       vm.initState();
-      await vm.ensureBatchesLoaded();
+      await vm.ensureLoaded({ChickenSection.batches});
 
       repository.writeFailure = PostgrestException(
         message: 'row level security',
@@ -341,7 +380,7 @@ void main() {
       final repository = _FakeRepository()..batches = [_batch()];
       final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
       vm.initState();
-      await vm.ensureBatchesLoaded();
+      await vm.ensureLoaded({ChickenSection.batches});
 
       await vm.addExpense('batch-1', _expense());
 
@@ -354,7 +393,7 @@ void main() {
       final repository = _FakeRepository()..batches = [_batch()];
       final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
       vm.initState();
-      await vm.ensureBatchesLoaded();
+      await vm.ensureLoaded({ChickenSection.batches});
 
       repository.writeFailure = PostgrestException(message: 'nope');
       await vm.addExpense('batch-1', _expense()).catchError((_) {});
@@ -380,7 +419,7 @@ void main() {
         auth: auth ?? _FakeAuth(),
       );
       vm.initState();
-      await vm.ensureBatchesLoaded();
+      await vm.ensureLoaded({ChickenSection.batches});
       return (vm, repository);
     }
 
@@ -408,7 +447,7 @@ void main() {
       expect(vm.pendingChangeCount, 3);
 
       repository.goOnline();
-      await vm.loadBatches();
+      await vm.loadData(sections: {ChickenSection.batches});
 
       expect(vm.pendingChangeCount, 0);
       expect(
@@ -430,7 +469,7 @@ void main() {
         repository
           ..readFailure = null
           ..batches = [_batch()];
-        await vm.loadBatches();
+        await vm.loadData(sections: {ChickenSection.batches});
 
         expect(
           vm.batches.single.expenses.single.id,
@@ -479,7 +518,7 @@ void main() {
       );
 
       repository.goOnline();
-      await restarted.loadBatches();
+      await restarted.loadData();
       expect(restarted.pendingChangeCount, 0);
       expect(repository.applied.single.target, 'expenses');
       restarted.dispose();
@@ -516,7 +555,7 @@ void main() {
         repository
           ..readFailure = null
           ..writeFailure = PostgrestException(message: 'gone', code: '23503');
-        await vm.loadBatches();
+        await vm.loadData(sections: {ChickenSection.batches});
 
         expect(vm.pendingChangeCount, 0, reason: 'it can never succeed');
         expect(vm.discardedChangeCount, 1);
@@ -545,7 +584,7 @@ void main() {
       );
       restarted.initState();
       repository.goOnline();
-      await restarted.loadBatches();
+      await restarted.loadData();
 
       final op = repository.applied.single;
       expect(op.action, PendingOpAction.rpc);
@@ -581,7 +620,7 @@ void main() {
       expect(vm.pendingChangeCount, 2);
 
       repository.goOnline();
-      await vm.loadExpenses();
+      await vm.loadData(sections: {ChickenSection.batches});
 
       expect(
         repository.applied.every((op) => op.globalRecord),
@@ -591,30 +630,43 @@ void main() {
       vm.dispose();
     });
 
-    test(
-      'two sections loading at once both refresh after the queue drains',
-      () async {
-        final (vm, repository) = await loadedVm();
-        repository.goOffline();
-        await vm.addExpense('batch-1', _expense());
-        repository
-          ..goOnline()
-          ..applyDelay = const Duration(milliseconds: 20);
-        final batchLoadsBefore = repository.getBatchesCalls;
+    test('a load started while a sync is running still fetches', () async {
+      final (vm, repository) = await loadedVm();
+      repository.goOffline();
+      await vm.addExpense('batch-1', _expense());
+      repository
+        ..goOnline()
+        ..applyDelay = const Duration(milliseconds: 20);
+      final fetchesBefore = repository.getDataCalls;
 
-        // The statistics screen asks for every section in the same frame.
-        await Future.wait([vm.loadBatches(), vm.loadCockSales()]);
+      // The retry timer can start a push at any moment; a load that lands in
+      // the middle of one must wait for it, not decide there is nothing to do.
+      unawaited(vm.syncPending());
+      await vm.loadData(sections: {ChickenSection.batches});
 
-        expect(vm.pendingChangeCount, 0);
-        expect(repository.getBatchesCalls, batchLoadsBefore + 1);
-        expect(
-          repository.getGlobalCockSalesCalls,
-          1,
-          reason: 'a load that waited for the sync must still fetch afterwards',
-        );
-        vm.dispose();
-      },
-    );
+      expect(vm.pendingChangeCount, 0);
+      expect(repository.getDataCalls, fetchesBefore + 1);
+      vm.dispose();
+    });
+
+    test('screens opening together share one fetch', () async {
+      final (vm, repository) = await loadedVm();
+      repository.applyDelay = const Duration(milliseconds: 20);
+      final fetchesBefore = repository.getDataCalls;
+
+      // A detail screen mounting over its list asks twice in the same frame.
+      await Future.wait([
+        vm.loadData(sections: {ChickenSection.batches}),
+        vm.loadData(sections: {ChickenSection.batches}),
+      ]);
+
+      expect(
+        repository.getDataCalls,
+        fetchesBefore + 1,
+        reason: 'one payload serves both callers',
+      );
+      vm.dispose();
+    });
 
     test(
       'a delete the server refuses stops hiding the batch locally',
@@ -628,7 +680,7 @@ void main() {
         repository
           ..readFailure = null
           ..writeFailure = PostgrestException(message: 'gone', code: '23503');
-        await vm.loadBatches();
+        await vm.loadData(sections: {ChickenSection.batches});
 
         expect(vm.discardedChangeCount, 1);
         expect(
@@ -657,7 +709,7 @@ void main() {
       );
 
       repository.goOnline();
-      await vm.loadCockSales();
+      await vm.loadData(sections: {ChickenSection.batches});
       expect(repository.applied.last.payload['amount'], 3);
       vm.dispose();
     });
@@ -669,6 +721,197 @@ void main() {
 
       await expectLater(vm.deleteAllData(), throwsA(isA<StateError>()));
       vm.dispose();
+    });
+  });
+
+  group('section filtering', () {
+    test('a screen only asks for the sections it shows', () async {
+      final repository = _FakeRepository()..batches = [_batch()];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      await vm.ensureLoaded({ChickenSection.globalCockSales});
+
+      expect(repository.requestedSections.single, {
+        ChickenSection.globalCockSales,
+      });
+      vm.dispose();
+    });
+
+    test('a section that was not fetched keeps whatever it had', () async {
+      final repository = _FakeRepository()
+        ..batches = [_batch()]
+        ..globalExpenses = [_expense()];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded(ChickenSection.values.toSet());
+      expect(vm.globalExpenses, hasLength(1));
+
+      // The server drops the expense, but a batches-only load must not notice.
+      repository.globalExpenses = [];
+      await vm.loadData(sections: {ChickenSection.batches});
+
+      expect(
+        vm.globalExpenses,
+        hasLength(1),
+        reason: 'a null section means "not asked for", not "empty"',
+      );
+      vm.dispose();
+    });
+
+    test('freshness is reported per section', () async {
+      final repository = _FakeRepository()..batches = [_batch()];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches});
+
+      // Only the cock sales fail to refresh.
+      repository.readFailure = const SocketException('offline');
+      await vm.loadData(sections: {ChickenSection.globalCockSales});
+
+      expect(
+        vm.syncStatusFor({ChickenSection.batches}).refreshFailed,
+        isFalse,
+        reason: 'the batches screen has nothing to apologise for',
+      );
+      expect(
+        vm.syncStatusFor({ChickenSection.globalCockSales}).refreshFailed,
+        isTrue,
+      );
+      vm.dispose();
+    });
+
+    test('only fetched sections are cached', () async {
+      final repository = _FakeRepository()..batches = [_batch()];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches});
+      vm.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      final data =
+          jsonDecode(storageService.getChickenCache()!) as Map<String, dynamic>;
+      expect(data['batches'], isNotNull);
+      expect(
+        data.containsKey('cockSales'),
+        isFalse,
+        reason: 'never fetched, so an empty list would be a lie',
+      );
+    });
+  });
+
+  group('year filter', () {
+    ChickenBatch batchIn(int year, {String? id}) => ChickenBatch(
+      id: id ?? 'batch-$year',
+      name: 'Bầy $year',
+      incubationDate: DateTime(year, 6, 1),
+      quantity: 10,
+    );
+
+    test('the selected year is passed to the server', () async {
+      final repository = _FakeRepository()..batches = [batchIn(2026)];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+
+      expect(repository.requestedYears.single, 2026);
+      vm.dispose();
+    });
+
+    test('switching year keeps the years already fetched', () async {
+      final repository = _FakeRepository()
+        ..batches = [batchIn(2024), batchIn(2026)];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2024);
+      expect(vm.batches.map((b) => b.id), ['batch-2024']);
+
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+
+      expect(
+        vm.batches.map((b) => b.id),
+        containsAll(['batch-2024', 'batch-2026']),
+        reason: 'a narrowed read must not wipe the years it did not cover',
+      );
+      vm.dispose();
+    });
+
+    test('within the fetched window the server wins', () async {
+      final repository = _FakeRepository()
+        ..batches = [batchIn(2025), batchIn(2026)];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+      expect(vm.batches, hasLength(2), reason: 'window is [2025, 2026]');
+
+      // 2025 is deleted on the server; a 2026 read covers it, so it must go.
+      repository.batches = [batchIn(2026)];
+      await vm.loadData(sections: {ChickenSection.batches}, year: 2026);
+
+      expect(vm.batches.map((b) => b.id), ['batch-2026']);
+      vm.dispose();
+    });
+
+    test('an unfiltered read replaces everything', () async {
+      final repository = _FakeRepository()
+        ..batches = [batchIn(2020), batchIn(2026)];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+      expect(vm.batches.map((b) => b.id), ['batch-2026']);
+
+      repository.batches = [batchIn(2020)];
+      await vm.loadData(sections: {ChickenSection.batches});
+
+      expect(
+        vm.batches.map((b) => b.id),
+        ['batch-2020'],
+        reason: 'asking for every year makes the answer authoritative',
+      );
+      vm.dispose();
+    });
+
+    test('the year picker offers years that were never fetched', () async {
+      final repository = _FakeRepository()
+        ..batches = [batchIn(2026)]
+        ..years = {
+          ChickenSection.batches: {2019, 2026},
+        };
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+
+      expect(
+        vm.yearsFor({ChickenSection.batches}),
+        containsAll([2019, 2026]),
+        reason: 'otherwise the filter can never reach an older year',
+      );
+      vm.dispose();
+    });
+
+    test('the picker still lists years offline, from the cache', () async {
+      final repository = _FakeRepository()
+        ..batches = [batchIn(2026)]
+        ..years = {
+          ChickenSection.batches: {2019, 2026},
+        };
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+      vm.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      final offline = ChickenViewModel(
+        repository: _FakeRepository()..goOffline(),
+        auth: _FakeAuth(),
+      );
+      offline.initState();
+
+      expect(offline.yearsFor({ChickenSection.batches}), containsAll([2019]));
+      offline.dispose();
     });
   });
 }

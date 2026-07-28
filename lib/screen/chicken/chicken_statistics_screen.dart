@@ -3,6 +3,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -39,17 +40,13 @@ class _ChickenStatisticsScreenState
   @override
   void initData() {
     super.initData();
-    vm.ensureBatchesLoaded();
-    vm.ensureCockSalesLoaded();
-    vm.ensureExpensesLoaded();
+    vm.ensureLoaded(ChickenSection.values.toSet());
   }
 
   @override
   void onResume() {
     super.onResume();
-    vm.ensureBatchesLoaded();
-    vm.ensureCockSalesLoaded();
-    vm.ensureExpensesLoaded();
+    vm.ensureLoaded(ChickenSection.values.toSet());
   }
 
   @override
@@ -74,16 +71,12 @@ class _ChickenStatisticsScreenState
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final isLoading =
-              vm.isBatchesFetching ||
-              vm.isCockSalesFetching ||
-              vm.isExpensesFetching;
           return Column(
             children: [
-              isLoading
+              vm.isFetching
                   ? const LinearProgressIndicator(minHeight: 2)
                   : const SizedBox(height: 2),
-              ChickenStaleBanner(selector: (vm) => vm.overallSync),
+              ChickenStaleBanner(sections: ChickenSection.values.toSet()),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
