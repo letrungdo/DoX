@@ -69,6 +69,20 @@ class _StorageService {
     return prefs.remove(StorageKey.chickenCache);
   }
 
+  /// When chicken records were last added/edited, as a JSON string; see
+  /// [ChickenRecentChanges].
+  String? getChickenRecentChanges() {
+    return prefs.getString(StorageKey.chickenRecentChanges);
+  }
+
+  Future<bool> setChickenRecentChanges(String value) {
+    return prefs.setString(StorageKey.chickenRecentChanges, value);
+  }
+
+  Future<bool> clearChickenRecentChanges() {
+    return prefs.remove(StorageKey.chickenRecentChanges);
+  }
+
   /// Chicken writes that have not reached the server yet, as a JSON string;
   /// see [ChickenSyncQueue].
   String? getChickenSyncQueue() {

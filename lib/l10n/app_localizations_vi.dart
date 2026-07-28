@@ -681,6 +681,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soldRemainingLabel => 'Đã bán / còn lại';
 
   @override
+  String get remainingLabel => 'Còn lại';
+
+  @override
   String soldRemainingValue(int sold, int remaining) {
     return '$sold / $remaining con';
   }
@@ -722,6 +725,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String expensesSectionTitle(String amount) {
     return 'Chi phí (Tổng: $amount)';
   }
+
+  @override
+  String get expensesTitle => 'Chi phí';
 
   @override
   String get noExpensesYet => 'Chưa có chi phí nào.';
@@ -1082,4 +1088,24 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get refreshFailedNoData => 'Không tải được dữ liệu';
+
+  @override
+  String get lowPriceWarningTitle => 'Kiểm tra lại giá';
+
+  @override
+  String lowPriceWarningMessage(String price) {
+    return '$price hơi thấp. Bạn có nhập thiếu số 0 không?';
+  }
+
+  @override
+  String get badgeNew => 'Mới';
+
+  @override
+  String get badgeUpdated => 'Đã sửa';
+
+  @override
+  String get lowPriceWarningEdit => 'Sửa lại giá';
+
+  @override
+  String get lowPriceWarningSaveAnyway => 'Vẫn lưu';
 }

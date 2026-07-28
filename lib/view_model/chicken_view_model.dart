@@ -10,6 +10,7 @@ import 'package:do_x/model/chicken/pending_op.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/services/chicken_import_service.dart';
+import 'package:do_x/services/chicken_recent_changes.dart';
 import 'package:do_x/services/chicken_sync_queue.dart';
 import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -123,24 +124,12 @@ class ChickenViewModel extends CoreViewModel {
     await storageService.setChickenLunarDisplay(value);
   }
 
-  String? _highlightedId;
+  final ChickenRecentChanges _recentChanges = ChickenRecentChanges();
 
-  /// Id of a freshly added record to highlight briefly in the lists. Shared by
-  /// all chicken screens (they observe this view model).
-  String? get highlightedId => _highlightedId;
-
-  Timer? _highlightTimer;
-
-  /// Highlights [id] for a short moment, then clears it.
-  void flashHighlight(String id) {
-    _highlightTimer?.cancel();
-    _highlightedId = id;
-    notifyListenersSafe();
-    _highlightTimer = Timer(const Duration(milliseconds: 2500), () {
-      _highlightedId = null;
-      notifyListenersSafe();
-    });
-  }
+  /// Badge a record should show in the lists ("new" / "edited"), or null when it
+  /// has not changed recently. Keyed by record id, so it works for batches,
+  /// sales and expenses alike.
+  RecordChange? changeBadgeOf(String id) => _recentChanges.statusOf(id);
 
   /// Year of a stored (lunar) [date] in the currently displayed calendar:
   /// the lunar year in lunar mode, the solar year in solar mode. Used by the
@@ -450,6 +439,7 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initState() {
     super.initState();
+    _recentChanges.restore();
     _restoreFromCache();
     // This view model lives app-wide and initState runs on every screen mount,
     // so only subscribe once. Data is (re)loaded on sign-in because screens may
@@ -478,6 +468,8 @@ class ChickenViewModel extends CoreViewModel {
           // The cache goes, the queue stays: it holds work the user believes is
           // saved, and it is replayed when the same account signs back in.
           unawaited(storageService.clearChickenCache());
+          // The badges describe this account's records, so they go with them.
+          _recentChanges.clear();
           _cacheRestored = false;
           notifyListenersSafe();
           unawaited(_syncVaccinationNotifications());
@@ -490,7 +482,6 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void dispose() {
     _authSub?.cancel();
-    _highlightTimer?.cancel();
     _syncRetryTimer?.cancel();
     // Flush a pending write so the last change still makes it to the cache.
     if (_cacheSaveTimer?.isActive ?? false) {
@@ -741,6 +732,7 @@ class ChickenViewModel extends CoreViewModel {
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
     _batches.insert(0, newBatch);
+    _recentChanges.markAdded(newBatch.id);
     // Stable sort so a batch added with the same incubation date as an existing
     // one stays on top (it was just inserted at the front).
     mergeSort(
@@ -772,6 +764,7 @@ class ChickenViewModel extends CoreViewModel {
         : batch.shiftVaccinationSchedule(incubationDateDelta);
 
     _batches[index] = updatedBatch;
+    _recentChanges.markUpdated(updatedBatch.id);
     notifyListenersSafe();
     await _commit("update chicken batch", [
       _repository.updateBatchOp(updatedBatch),
@@ -785,6 +778,7 @@ class ChickenViewModel extends CoreViewModel {
     final batch = _batches.firstWhereOrNull((e) => e.id == id);
     if (batch == null) return;
     _batches.removeWhere((e) => e.id == id);
+    _recentChanges.forget(id);
     // Guard against an in-flight load re-adding this batch before the server
     // delete has settled. The guard is cleared by a later load once the
     // server confirms the batch is gone.
@@ -807,6 +801,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addExpense(String batchId, Expense expense) {
+    _recentChanges.markAdded(expense.id);
     return _editBatch(
       batchId,
       "insert expense",
@@ -816,6 +811,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> updateExpense(String batchId, Expense expense) {
+    _recentChanges.markUpdated(expense.id);
     return _editBatch(
       batchId,
       "update expense",
@@ -829,6 +825,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> deleteExpense(String batchId, String expenseId) {
+    _recentChanges.forget(expenseId);
     return _editBatch(
       batchId,
       "delete expense",
@@ -840,6 +837,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addBatchSale(String batchId, BatchSale sale) {
+    _recentChanges.markAdded(sale.id);
     return _editBatch(
       batchId,
       "insert batch sale",
@@ -851,6 +849,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> updateBatchSale(String batchId, BatchSale sale) {
+    _recentChanges.markUpdated(sale.id);
     return _editBatch(
       batchId,
       "update batch sale",
@@ -863,6 +862,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> deleteBatchSale(String batchId, String saleId) {
+    _recentChanges.forget(saleId);
     return _editBatch(
       batchId,
       "delete batch sale",
@@ -874,6 +874,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addCockSale(String batchId, CockSale sale) {
+    _recentChanges.markAdded(sale.id);
     return _editBatch(
       batchId,
       "insert cock sale",
@@ -885,6 +886,7 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> addGlobalCockSale(CockSale sale) async {
     // Front of the list so a same-date sale shows on top (stable sort keeps it).
     _globalCockSales.insert(0, sale);
+    _recentChanges.markAdded(sale.id);
     notifyListenersSafe();
     await _commit(
       "insert global cock sale",
@@ -898,6 +900,7 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final previous = _globalCockSales[index];
     _globalCockSales[index] = sale;
+    _recentChanges.markUpdated(sale.id);
     notifyListenersSafe();
     await _commit(
       "update global cock sale",
@@ -913,6 +916,7 @@ class ChickenViewModel extends CoreViewModel {
     final index = _globalCockSales.indexWhere((sale) => sale.id == id);
     if (index == -1) return;
     final removed = _globalCockSales.removeAt(index);
+    _recentChanges.forget(id);
     notifyListenersSafe();
     await _commit(
       "delete global cock sale",
@@ -926,6 +930,7 @@ class ChickenViewModel extends CoreViewModel {
 
   Future<void> addGlobalExpense(Expense expense) async {
     _globalExpenses.insert(0, expense);
+    _recentChanges.markAdded(expense.id);
     notifyListenersSafe();
     await _commit(
       "insert global expense",
@@ -939,6 +944,7 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final previous = _globalExpenses[index];
     _globalExpenses[index] = expense;
+    _recentChanges.markUpdated(expense.id);
     notifyListenersSafe();
     await _commit(
       "update global expense",
@@ -954,6 +960,7 @@ class ChickenViewModel extends CoreViewModel {
     final index = _globalExpenses.indexWhere((expense) => expense.id == id);
     if (index == -1) return;
     final removed = _globalExpenses.removeAt(index);
+    _recentChanges.forget(id);
     notifyListenersSafe();
     await _commit(
       "delete global expense",
@@ -1014,6 +1021,8 @@ class ChickenViewModel extends CoreViewModel {
     _requireEverythingSynced('xóa dữ liệu');
 
     final deletedCount = await _repository.deleteAllData();
+    // Nothing is left to badge.
+    _recentChanges.clear();
     await loadData();
     return deletedCount;
   }

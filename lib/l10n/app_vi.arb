@@ -391,6 +391,7 @@
   "deleteThisBatch": "Xóa lứa gà này",
   "initialQuantity": "Số lượng ban đầu",
   "soldRemainingLabel": "Đã bán / còn lại",
+  "remainingLabel": "Còn lại",
   "soldRemainingValue": "{sold} / {remaining} con",
   "@soldRemainingValue": {
     "placeholders": {
@@ -440,6 +441,7 @@
       }
     }
   },
+  "expensesTitle": "Chi phí",
   "noExpensesYet": "Chưa có chi phí nào.",
   "saleAndProfit": "Bán gà & Lợi nhuận",
   "notSoldHint": "Gà chưa bán. Có thể bán một lứa thành nhiều đợt.",
@@ -711,5 +713,18 @@
       }
     }
   },
-  "refreshFailedNoData": "Không tải được dữ liệu"
+  "refreshFailedNoData": "Không tải được dữ liệu",
+  "lowPriceWarningTitle": "Kiểm tra lại giá",
+  "lowPriceWarningMessage": "{price} hơi thấp. Bạn có nhập thiếu số 0 không?",
+  "@lowPriceWarningMessage": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeNew": "Mới",
+  "badgeUpdated": "Đã sửa",
+  "lowPriceWarningEdit": "Sửa lại giá",
+  "lowPriceWarningSaveAnyway": "Vẫn lưu"
 }

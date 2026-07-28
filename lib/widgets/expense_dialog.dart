@@ -4,6 +4,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
@@ -56,6 +57,15 @@ Future<void> showExpenseDialog(
           if (amount <= 0) {
             setState(() => amountError = l10n.errorEnterAmount);
             return;
+          }
+          // Likely a missing zero, not a real amount: confirm before saving.
+          if (amount < kSuspiciousPriceThreshold) {
+            final saveAnyway = await confirmSuspiciousPrice(
+              context,
+              amount,
+              icon: _expenseAsset(selectedType),
+            );
+            if (!saveAnyway || !context.mounted) return;
           }
           final result = Expense(
             id: expense?.id ?? const Uuid().v4(),
