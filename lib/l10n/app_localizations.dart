@@ -422,6 +422,18 @@ abstract class AppLocalizations {
   /// **'Add account'**
   String get addAccount;
 
+  /// No description provided for @savedAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved accounts'**
+  String get savedAccounts;
+
+  /// No description provided for @forgetAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the saved account {name}? You will need to type the password again next time.'**
+  String forgetAccountConfirm(String name);
+
   /// No description provided for @removeAccountConfirm.
   ///
   /// In en, this message translates to:

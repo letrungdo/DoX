@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/electric/electric_models.dart';
 import 'package:do_x/repository/client/error_handler.dart';
@@ -22,6 +23,15 @@ class ElectricViewModel extends CoreViewModel {
 
   int _activeIndex = 0;
   int get activeIndex => _activeIndex;
+
+  List<ElectricAccount> _savedAccounts = [];
+
+  /// Previously logged-in accounts that aren't currently signed in — offered as
+  /// one-tap shortcuts on the login form / add-account dialog.
+  List<ElectricAccount> get availableSavedAccounts {
+    final signedIn = _accounts.map((a) => a.username).toSet();
+    return _savedAccounts.where((a) => !signedIn.contains(a.username)).toList();
+  }
 
   ElectricAccount? get activeAccount => _accounts.isEmpty ? null : _accounts[_activeIndex];
 
@@ -107,6 +117,9 @@ class ElectricViewModel extends CoreViewModel {
 
   Future<void> _init() async {
     _accounts = await secureStorage.getCpcAccounts();
+    _savedAccounts = await secureStorage.getCpcSavedAccounts();
+    // Accounts signed in before this feature existed aren't in the saved list yet.
+    await _rememberAccounts(_accounts);
     if (_accounts.isEmpty) {
       _setStatus(ElectricStatus.loggedOut);
       return;
@@ -130,17 +143,61 @@ class ElectricViewModel extends CoreViewModel {
       showAppError(context, res.error ?? ConnectionError(type: ApiErrorType.unauthorized));
       return;
     }
-    final account = ElectricAccount(username: username, password: password, accessToken: res.data?.accessToken);
+    final saved = _savedAccounts.firstWhereOrNull((a) => a.username == username);
+    final account = ElectricAccount(
+      username: username,
+      password: password,
+      accessToken: res.data?.accessToken,
+      // Show the cached chip labels while the fresh data is still loading.
+      customerName: saved?.customerName,
+      contractType: saved?.contractType,
+    );
     _accounts = [..._accounts, account];
     _activeIndex = _accounts.length - 1;
     await secureStorage.saveCpcAccounts(_accounts);
+    await _rememberAccounts([account]);
     _setStatus(ElectricStatus.loggedIn);
     await _fetchAccount(account, showLoading: true);
+  }
+
+  /// Signs in again with the credentials stored for a previously used account.
+  Future<void> loginSavedAccount(ElectricAccount saved) {
+    return addAccount(username: saved.username, password: saved.password);
+  }
+
+  /// Drops a stored account so it stops being offered as a shortcut.
+  Future<void> forgetSavedAccount(ElectricAccount saved) async {
+    _savedAccounts = _savedAccounts.where((a) => a.username != saved.username).toList();
+    await secureStorage.saveCpcSavedAccounts(_savedAccounts);
+    notifyListenersSafe();
+  }
+
+  /// Upserts accounts into the saved list, keeping the freshest credentials and
+  /// chip labels. Logging out doesn't remove them from here.
+  Future<void> _rememberAccounts(List<ElectricAccount> accounts) async {
+    if (accounts.isEmpty) return;
+    final usernames = accounts.map((a) => a.username).toSet();
+    final remaining = _savedAccounts.where((a) => !usernames.contains(a.username));
+    _savedAccounts = [
+      ...remaining,
+      ...accounts.map(
+        (a) => ElectricAccount(
+          username: a.username,
+          password: a.password,
+          customerName: a.displayName == a.username ? a.customerName : a.displayName,
+          contractType: a.contractTypeDisplay,
+        ),
+      ),
+    ];
+    await secureStorage.saveCpcSavedAccounts(_savedAccounts);
   }
 
   Future<void> removeActiveAccount() async {
     final account = activeAccount;
     if (account == null) return;
+    // Logging out only drops the session; the credentials stay in the saved
+    // list so the account can be picked again.
+    await _rememberAccounts([account]);
     _accounts = [..._accounts]..removeAt(_activeIndex);
     if (_activeIndex >= _accounts.length) _activeIndex = _accounts.isEmpty ? 0 : _accounts.length - 1;
     await secureStorage.saveCpcAccounts(_accounts);
@@ -197,6 +254,10 @@ class ElectricViewModel extends CoreViewModel {
       );
       if (auth.isError || auth.data?.accessToken == null) {
         if (identical(account, activeAccount)) await removeActiveAccount();
+        // The stored password no longer works, so it isn't worth offering as a
+        // shortcut — drop it (after the logout re-saved it) and make the user
+        // type it again.
+        await forgetSavedAccount(account);
         return;
       }
       account.accessToken = auth.data?.accessToken;
@@ -229,6 +290,7 @@ class ElectricViewModel extends CoreViewModel {
     account.customerName = customer.customerName ?? account.customerName;
     account.contractType = account.detail?.contractType ?? account.contractType;
     await secureStorage.saveCpcAccounts(_accounts);
+    await _rememberAccounts([account]);
   }
 
   Future<void> _getCustomerDetail(ElectricAccount account, String customerCode) async {

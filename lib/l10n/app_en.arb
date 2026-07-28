@@ -61,6 +61,13 @@
   "seriesThisYear": "This year",
   "seriesLastYear": "Same period last year",
   "addAccount": "Add account",
+  "savedAccounts": "Saved accounts",
+  "forgetAccountConfirm": "Remove the saved account {name}? You will need to type the password again next time.",
+  "@forgetAccountConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "removeAccountConfirm": "Sign {name} out of the app?",
   "@removeAccountConfirm": {
     "placeholders": {
