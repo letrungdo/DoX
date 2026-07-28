@@ -175,6 +175,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addAccount => 'Add account';
 
   @override
+  String get savedAccounts => 'Saved accounts';
+
+  @override
+  String forgetAccountConfirm(String name) {
+    return 'Remove the saved account $name? You will need to type the password again next time.';
+  }
+
+  @override
   String removeAccountConfirm(String name) {
     return 'Sign $name out of the app?';
   }

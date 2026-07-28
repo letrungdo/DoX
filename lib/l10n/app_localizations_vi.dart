@@ -175,6 +175,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addAccount => 'Thêm tài khoản';
 
   @override
+  String get savedAccounts => 'Tài khoản đã lưu';
+
+  @override
+  String forgetAccountConfirm(String name) {
+    return 'Xóa tài khoản $name đã lưu? Lần sau sẽ phải nhập lại mật khẩu.';
+  }
+
+  @override
   String removeAccountConfirm(String name) {
     return 'Đăng xuất tài khoản $name khỏi ứng dụng?';
   }

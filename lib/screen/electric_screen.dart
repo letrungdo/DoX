@@ -5,6 +5,7 @@ import 'package:do_x/extensions/num_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/electric/electric_models.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
@@ -127,7 +128,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         builder: (context, status, _) {
           return switch (status) {
             ElectricStatus.loading => const Center(child: CircularProgressIndicator.adaptive()),
-            ElectricStatus.loggedOut => _LoginForm(onSubmit: _login),
+            ElectricStatus.loggedOut => _LoginForm(
+              onSubmit: _login,
+              onForgetSavedAccount: _confirmForgetSavedAccount,
+            ),
             ElectricStatus.loggedIn => Column(
               children: [
                 Selector<ElectricViewModel, bool>(
@@ -179,10 +183,40 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     if (confirmed == true) await vm.removeActiveAccount();
   }
 
+  /// Asks before dropping stored credentials; true when they were removed.
+  Future<bool> _confirmForgetSavedAccount(ElectricAccount account) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(l10n.forgetAccountConfirm(account.displayName)),
+        actions: [
+          DialogActionButton(
+            text: l10n.cancel,
+            kind: DialogActionKind.cancel,
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          DialogActionButton(
+            text: l10n.delete,
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return false;
+    await vm.forgetSavedAccount(account);
+    return true;
+  }
+
   Future<void> _showAddAccountDialog(AppLocalizations l10n) async {
     final credentials = await showDialog<({String username, String password})>(
       context: context,
-      builder: (context) => const _AddAccountDialog(),
+      // The dialog sits above this screen's provider, so the saved accounts are
+      // passed in instead of read from the view model.
+      builder: (context) => _AddAccountDialog(
+        savedAccounts: vm.availableSavedAccounts,
+        onForgetSavedAccount: _confirmForgetSavedAccount,
+      ),
     );
     if (credentials == null) return;
     _login(credentials.username, credentials.password);
@@ -715,9 +749,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
 
 /// Full-screen form shown when no account is logged in yet.
 class _LoginForm extends StatefulWidget {
-  const _LoginForm({required this.onSubmit});
+  const _LoginForm({required this.onSubmit, required this.onForgetSavedAccount});
 
   final void Function(String username, String password) onSubmit;
+  final Future<bool> Function(ElectricAccount account) onForgetSavedAccount;
 
   @override
   State<_LoginForm> createState() => _LoginFormState();
@@ -762,6 +797,22 @@ class _LoginFormState extends State<_LoginForm> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
+              // Consumer, not Selector: the getter builds a fresh list every
+              // call, so there is nothing stable to compare against.
+              Consumer<ElectricViewModel>(
+                builder: (context, vm, _) {
+                  final savedAccounts = vm.availableSavedAccounts;
+                  if (savedAccounts.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: _SavedAccountPicker(
+                      accounts: savedAccounts,
+                      onSelect: (account) => widget.onSubmit(account.username, account.password),
+                      onForget: widget.onForgetSavedAccount,
+                    ),
+                  );
+                },
+              ),
               TextField(
                 controller: _usernameController,
                 autocorrect: false,
@@ -795,7 +846,10 @@ class _LoginFormState extends State<_LoginForm> {
 
 /// Small username/password dialog used to add another account tab.
 class _AddAccountDialog extends StatefulWidget {
-  const _AddAccountDialog();
+  const _AddAccountDialog({required this.savedAccounts, required this.onForgetSavedAccount});
+
+  final List<ElectricAccount> savedAccounts;
+  final Future<bool> Function(ElectricAccount account) onForgetSavedAccount;
 
   @override
   State<_AddAccountDialog> createState() => _AddAccountDialogState();
@@ -805,6 +859,15 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  /// Local copy so forgetting an account updates the dialog right away.
+  late List<ElectricAccount> _savedAccounts = widget.savedAccounts;
+
+  Future<void> _forget(ElectricAccount account) async {
+    final removed = await widget.onForgetSavedAccount(account);
+    if (!removed || !mounted) return;
+    setState(() => _savedAccounts = _savedAccounts.where((a) => a.username != account.username).toList());
+  }
 
   @override
   void dispose() {
@@ -824,29 +887,49 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       title: Text(l10n.addAccount),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _usernameController,
-            autocorrect: false,
-            decoration: cuteInputDecoration(context, l10n.username),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            autocorrect: false,
-            onSubmitted: (_) => _submit(),
-            decoration: cuteInputDecoration(context, l10n.password).copyWith(
-              suffixIcon: IconButton(
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+      // AlertDialog sizes itself to the content's intrinsic width, so without a
+      // width here the dialog stays narrow and insetPadding has no visible
+      // effect. Narrow screens clamp this down to the available width.
+      content: SizedBox(
+        width: 440,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_savedAccounts.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: _SavedAccountPicker(
+                  accounts: _savedAccounts,
+                  onSelect: (account) =>
+                      Navigator.pop(context, (username: account.username, password: account.password)),
+                  onForget: _forget,
+                ),
+              ),
+            TextField(
+              controller: _usernameController,
+              autocorrect: false,
+              decoration: cuteInputDecoration(context, l10n.username),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              autocorrect: false,
+              onSubmitted: (_) => _submit(),
+              decoration: cuteInputDecoration(context, l10n.password).copyWith(
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         DialogActionButton(
@@ -859,6 +942,85 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
           onPressed: _submit,
         ),
       ],
+    );
+  }
+}
+
+/// Chips for accounts logged in before, so signing back in is one tap instead
+/// of retyping the credentials. The trailing ✕ forgets the stored password.
+class _SavedAccountPicker extends StatelessWidget {
+  const _SavedAccountPicker({
+    required this.accounts,
+    required this.onSelect,
+    required this.onForget,
+  });
+
+  final List<ElectricAccount> accounts;
+  final void Function(ElectricAccount account) onSelect;
+  final Future<void> Function(ElectricAccount account) onForget;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = context.theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.savedAccounts, style: context.textTheme.secondary.size13),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: accounts.map((account) => _chip(context, scheme, account)).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _chip(BuildContext context, ColorScheme scheme, ElectricAccount account) {
+    return Material(
+      color: scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => onSelect(account),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.account_circle_rounded, size: 18, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    account.displayName,
+                    style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  Text(
+                    account.username,
+                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 10.5),
+                  ),
+                ],
+              ),
+              IconButton(
+                onPressed: () => onForget(account),
+                iconSize: 16,
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                padding: EdgeInsets.zero,
+                color: scheme.onSurfaceVariant,
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -54,6 +54,13 @@
   "seriesThisYear": "Năm nay",
   "seriesLastYear": "Cùng kỳ năm trước",
   "addAccount": "Thêm tài khoản",
+  "savedAccounts": "Tài khoản đã lưu",
+  "forgetAccountConfirm": "Xóa tài khoản {name} đã lưu? Lần sau sẽ phải nhập lại mật khẩu.",
+  "@forgetAccountConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "removeAccountConfirm": "Đăng xuất tài khoản {name} khỏi ứng dụng?",
   "@removeAccountConfirm": {
     "placeholders": {

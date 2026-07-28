@@ -43,9 +43,22 @@ class _SecureStorageService {
     return _secureStorage.write(key: StorageKey.supabaseAccount, value: jsonEncode({'email': email, 'password': password}));
   }
 
-  Future<List<ElectricAccount>> getCpcAccounts() async {
+  Future<List<ElectricAccount>> getCpcAccounts() => _readCpcAccounts(StorageKey.cpcAccounts);
+
+  Future<void> saveCpcAccounts(List<ElectricAccount> accounts) {
+    return _writeCpcAccounts(StorageKey.cpcAccounts, accounts);
+  }
+
+  /// Accounts kept after logout so they can be signed in again with one tap.
+  Future<List<ElectricAccount>> getCpcSavedAccounts() => _readCpcAccounts(StorageKey.cpcSavedAccounts);
+
+  Future<void> saveCpcSavedAccounts(List<ElectricAccount> accounts) {
+    return _writeCpcAccounts(StorageKey.cpcSavedAccounts, accounts);
+  }
+
+  Future<List<ElectricAccount>> _readCpcAccounts(String key) async {
     try {
-      final raw = await _secureStorage.read(key: StorageKey.cpcAccounts);
+      final raw = await _secureStorage.read(key: key);
       if (raw == null) return [];
       final list = jsonDecode(raw) as List<dynamic>;
       return list.map((e) => ElectricAccount.fromJson(e)).toList();
@@ -54,9 +67,9 @@ class _SecureStorageService {
     }
   }
 
-  Future<void> saveCpcAccounts(List<ElectricAccount> accounts) {
+  Future<void> _writeCpcAccounts(String key, List<ElectricAccount> accounts) {
     return _secureStorage.write(
-      key: StorageKey.cpcAccounts,
+      key: key,
       value: jsonEncode(accounts.map((e) => e.toJson()).toList()),
     );
   }

@@ -6,6 +6,10 @@ class StorageKey {
   static const supabaseAccount = "supabaseAccount";
   static const cpcAccounts = "cpcAccounts";
 
+  /// Credentials of every CPC account ever logged in, kept after logout so it
+  /// can be picked again without retyping the password.
+  static const cpcSavedAccounts = "cpcSavedAccounts";
+
   // SharedPreferences
   static const themeMode = "themeMode";
   static const tabIndex = "tabIndex";
