@@ -10,6 +10,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/model/chicken/expense.dart';
+import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
@@ -17,8 +18,10 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
+import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
@@ -124,25 +127,24 @@ class _ChickenBatchDetailScreenState
   Widget _buildBody(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoSection(batch),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _buildSaleSection(batch),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _buildExpenseSection(batch),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _buildVaccinationSection(batch),
-          const SizedBox(height: 40),
+          const SizedBox(height: 28),
           Center(
-            child: TextButton(
+            child: TextButton.icon(
               onPressed: () => _confirmDelete(batch),
-              child: Text(
-                l10n.deleteThisBatch,
-                style: const TextStyle(color: Colors.red),
-              ),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: Text(l10n.deleteThisBatch),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ),
         ],
@@ -150,58 +152,292 @@ class _ChickenBatchDetailScreenState
     );
   }
 
-  Widget _buildInfoSection(ChickenBatch batch) {
-    final l10n = AppLocalizations.of(context);
+  /// A rounded card holding one section, with a small icon + title header and
+  /// an optional trailing widget (a total, a count or an add button).
+  Widget _buildSectionCard({
+    required Widget icon,
+    required String title,
+    Widget? trailing,
+    Color? color,
+    required List<Widget> children,
+  }) {
     return Card(
+      color: color,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                icon,
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    batch.name,
-                    style: context.theme.textTheme.headlineSmall?.copyWith(
+                    title,
+                    style: context.theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 20),
-                  onPressed: () => _showEditInfoDialog(batch),
+                if (trailing != null) trailing,
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Small tinted square holding a section's svg icon.
+  Widget _buildIconBadge(SvgGenImage asset, {double size = 22}) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: context.theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: asset.svg(width: size, height: size),
+    );
+  }
+
+  /// Tinted, rounded edit affordance. Used everywhere a row or card opens an
+  /// edit dialog, so the action reads the same way in every section.
+  Widget _buildEditButton(VoidCallback onTap, {double size = 18}) {
+    final color = context.theme.colorScheme.primary;
+    return Material(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: Icon(Icons.edit_outlined, size: size, color: color),
+        ),
+      ),
+    );
+  }
+
+  /// One of the three headline numbers (initial / sold / remaining).
+  Widget _buildStatTile(String value, String label, {Color? valueColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: context.theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.6,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: context.theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Colored pill summarising the batch state (age, or days left to hatch).
+  Widget _buildStatusChip(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
+    final hatched = batch.ageInDays >= 0;
+    final color = hatched ? context.theme.colorScheme.primary : Colors.orange;
+    final text = hatched
+        ? ChickenDate.formatAge(l10n, batch.ageInDays)
+        : l10n.notHatchedYet(-batch.ageInDays);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            hatched ? Icons.cake_outlined : Icons.hourglass_bottom,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A label/value line prefixed with a muted icon.
+  Widget _buildIconInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: context.theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(ChickenBatch batch) {
+    final l10n = AppLocalizations.of(context);
+    final hatched = batch.ageInDays >= 0;
+    final hasSales = batch.sales.isNotEmpty;
+    final soldOut = hasSales && batch.remainingQuantity <= 0;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _buildIconBadge(
+                  hatched ? Assets.images.chickCute : Assets.images.eggCute,
+                  size: 30,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        batch.name,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Badge next to the age pill, on the same line.
+                      Row(
+                        children: [
+                          _buildStatusChip(batch),
+                          ChickenChangeBadge(vm.changeBadgeOf(batch.id)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _buildEditButton(
+                    () => _showEditInfoDialog(batch),
+                    size: 20,
+                  ),
                 ),
               ],
             ),
-            const Divider(),
-            _buildRowInfo(l10n.initialQuantity, "${batch.quantity}"),
-            if (batch.sales.isNotEmpty)
-              _buildRowInfo(
-                l10n.soldRemainingLabel,
-                l10n.soldRemainingValue(
-                  batch.soldQuantity,
-                  batch.remainingQuantity,
-                ),
+            Padding(
+              padding: const EdgeInsets.only(right: 6, top: 14),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatTile(
+                          "${batch.quantity}",
+                          l10n.initialQuantity,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatTile(
+                          "${batch.soldQuantity}",
+                          l10n.soldLabel,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatTile(
+                          "${batch.remainingQuantity}",
+                          l10n.remainingLabel,
+                          valueColor: soldOut
+                              ? context.theme.colorScheme.onSurfaceVariant
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (hasSales && batch.quantity > 0) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (batch.soldQuantity / batch.quantity).clamp(
+                          0.0,
+                          1.0,
+                        ),
+                        minHeight: 6,
+                        backgroundColor:
+                            context.theme.colorScheme.surfaceContainerHighest,
+                        color: soldOut
+                            ? Colors.green
+                            : context.theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  _buildIconInfoRow(
+                    Icons.egg_outlined,
+                    l10n.incubationDay,
+                    _fmt(batch.incubationDate),
+                  ),
+                  if (batch.actualHatchDate == null)
+                    _buildIconInfoRow(
+                      Icons.event_outlined,
+                      l10n.expectedHatch,
+                      _fmt(batch.expectedHatchDate),
+                    )
+                  else
+                    _buildIconInfoRow(
+                      Icons.event_available_outlined,
+                      l10n.actualHatchDateLabel,
+                      _fmt(batch.actualHatchDate!),
+                    ),
+                ],
               ),
-            _buildRowInfo(l10n.incubationDay, _fmt(batch.incubationDate)),
-            if (batch.actualHatchDate == null)
-              _buildRowInfo(l10n.expectedHatch, _fmt(batch.expectedHatchDate))
-            else
-              _buildRowInfo(
-                l10n.actualHatchDateLabel,
-                _fmt(batch.actualHatchDate!),
-              ),
-            if (batch.ageInDays >= 0)
-              _buildRowInfo(l10n.ageLabel, l10n.daysCount(batch.ageInDays))
-            else
-              _buildRowInfo(
-                l10n.statusLabel,
-                l10n.notHatchedYet(-batch.ageInDays),
-                color: Colors.orange,
-              ),
+            ),
           ],
         ),
       ),
@@ -210,75 +446,174 @@ class _ChickenBatchDetailScreenState
 
   Widget _buildVaccinationSection(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.vaccinationSchedule,
-          style: context.theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+    final done = batch.vaccinations.where((v) => v.isCompleted).length;
+    final total = batch.vaccinations.length;
+    return _buildSectionCard(
+      icon: _buildIconBadge(Assets.images.medicineCute),
+      title: l10n.vaccinationSchedule,
+      trailing: total == 0
+          ? null
+          : Text(
+              "$done/$total",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: done == total
+                    ? Colors.green
+                    : context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+      children: batch.vaccinations
+          .map((v) => _buildVaccinationRow(batch, v))
+          .toList(),
+    );
+  }
+
+  Widget _buildVaccinationRow(ChickenBatch batch, Vaccination v) {
+    final overdue =
+        !v.isCompleted &&
+        LunarCalendar.lunarDateTimeToSolar(
+          v.scheduledDate,
+        ).isBefore(DateTime.now());
+    final accent = v.isCompleted
+        ? Colors.green
+        : overdue
+        ? Colors.red
+        : context.theme.colorScheme.onSurfaceVariant;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        vm.setCurrentContext(context);
+        unawaited(_runWrite(vm.toggleVaccination(batch.id, v.id)));
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        child: Row(
+          children: [
+            Icon(
+              v.isCompleted
+                  ? Icons.check_circle
+                  : overdue
+                  ? Icons.error_outline
+                  : Icons.radio_button_unchecked,
+              size: 20,
+              color: accent,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                v.title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: v.isCompleted
+                      ? context.theme.colorScheme.onSurfaceVariant
+                      : null,
+                  decoration: v.isCompleted ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _fmt(v.scheduledDate),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: overdue ? FontWeight.bold : FontWeight.normal,
+                color: overdue
+                    ? Colors.red
+                    : context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        ...batch.vaccinations.map(
-          (v) => CheckboxListTile(
-            title: Text(v.title),
-            subtitle: Text(l10n.dateValue(_fmt(v.scheduledDate))),
-            value: v.isCompleted,
-            onChanged: (val) {
-              vm.setCurrentContext(context);
-              unawaited(_runWrite(vm.toggleVaccination(batch.id, v.id)));
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildExpenseSection(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _buildSectionCard(
+      icon: _buildIconBadge(Assets.images.feedCute),
+      title: l10n.expensesTitle,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "${batch.totalExpenses.toCurrency()}đ",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: context.colors.money,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _showExpenseDialog(batch),
+          ),
+        ],
+      ),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              l10n.expensesSectionTitle("${batch.totalExpenses.toCurrency()}đ"),
-              style: context.theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+        if (batch.expenses.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              l10n.noExpensesYet,
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () => _showExpenseDialog(batch),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (batch.expenses.isEmpty) Text(l10n.noExpensesYet),
+          ),
         ...batch.expenses.map(
-          (e) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              onTap: () => _showExpenseDialog(batch, expense: e),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: context.theme.colorScheme.outlineVariant,
-                ),
-              ),
-              leading: _getExpenseSvg(e.type),
-              title: Text(_getExpenseLabel(e.type)),
-              subtitle: Text(
-                "${_fmt(e.date)}${e.note != null ? ' - ${e.note}' : ''}",
-              ),
-              trailing: Text(
-                "${e.amount.toCurrency()}đ",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: context.colors.money,
-                ),
+          (e) => InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => _showExpenseDialog(batch, expense: e),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
+              child: Row(
+                children: [
+                  _getExpenseSvg(e.type),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            ChickenChangeBadge(
+                              vm.changeBadgeOf(e.id),
+                              compact: true,
+                              leading: true,
+                            ),
+                            Flexible(
+                              child: Text(
+                                _getExpenseLabel(e.type),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${_fmt(e.date)}${e.note != null ? ' · ${e.note}' : ''}",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "${e.amount.toCurrency()}đ",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.money,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -293,176 +628,235 @@ class _ChickenBatchDetailScreenState
     final soldOut = hasSold && batch.remainingQuantity <= 0;
     final isDark = context.theme.brightness == Brightness.dark;
 
-    // Theme-aware colors
-    final soldColor = isDark
-        ? Colors.green[900]?.withValues(alpha: 0.3)
-        : Colors.green[50];
-    final pendingColor = isDark
-        ? Colors.amber[900]?.withValues(alpha: 0.3)
-        : Colors.amber[50];
+    // Theme-aware tint: green once the batch is sold out, amber while there are
+    // still chickens left to sell.
+    final cardColor = soldOut
+        ? (isDark
+              ? Colors.green[900]?.withValues(alpha: 0.25)
+              : Colors.green[50])
+        : (isDark
+              ? Colors.amber[900]?.withValues(alpha: 0.22)
+              : Colors.amber[50]);
 
-    return Card(
-      color: soldOut ? soldColor : pendingColor,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.saleAndProfit,
-              style: context.theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+    return _buildSectionCard(
+      color: cardColor,
+      icon: _buildIconBadge(Assets.images.coinCute),
+      title: l10n.saleAndProfit,
+      trailing: hasSold
+          ? Text(
+              l10n.saleCount(batch.sales.length),
+              style: TextStyle(
+                fontSize: 12,
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
+      children: [
+        if (!hasSold) ...[
+          Text(
+            l10n.notSoldHint,
+            style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 10),
+          _buildSummaryBox([
+            _buildRowInfo(
+              l10n.suggestedPrice,
+              l10n.pricePerChicken(
+                "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ",
+              ),
+              color: context.colors.money,
+              isBold: true,
+            ),
+          ]),
+        ] else ...[
+          ...batch.sales.map((sale) => _buildSaleRow(batch, sale)),
+          const SizedBox(height: 4),
+          _buildSummaryBox([
+            _buildRowInfo(
+              l10n.soldLabel,
+              l10n.soldAndRemaining(
+                batch.soldQuantity,
+                batch.remainingQuantity,
               ),
             ),
-            const Divider(),
-            if (!hasSold) ...[
-              Text(l10n.notSoldHint),
-              const SizedBox(height: 8),
+            _buildRowInfo(
+              l10n.totalRevenueLabel,
+              "${batch.totalSaleAmount.toCurrency()}đ",
+            ),
+            if (batch.totalCockSales > 0)
               _buildRowInfo(
-                l10n.suggestedPrice,
-                l10n.pricePerChicken(
-                  "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ",
-                ),
+                l10n.cockRevenue,
+                "${batch.totalCockSales.toCurrency()}đ",
               ),
-            ] else ...[
-              ...batch.sales.map(
-                (sale) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => _showSaleDialog(batch, sale: sale),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: context.theme.colorScheme.outlineVariant,
+            _buildRowInfo(
+              l10n.totalExpensesLabel,
+              "-${batch.totalExpenses.toCurrency()}đ",
+            ),
+            const Divider(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.profitUpper,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  "${batch.profit.toCurrency()}đ",
+                  style: context.theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: batch.profit >= 0
+                        ? context.colors.money
+                        : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ]),
+        ],
+        // Sold out: nothing left to sell, so hide the record button.
+        if (!soldOut) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showSaleDialog(batch),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.recordNewSale),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Rounded panel used for the money summary inside a tinted section card.
+  Widget _buildSummaryBox(List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.theme.colorScheme.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildSaleRow(ChickenBatch batch, BatchSale sale) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showSaleDialog(batch, sale: sale),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          decoration: BoxDecoration(
+            color: context.theme.colorScheme.surface.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(12),
+            // Stronger outline + soft shadow so each sale round reads as its
+            // own tappable card on top of the tinted section.
+            border: Border.all(
+              color: context.colors.money.withValues(alpha: 0.45),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ChickenChangeBadge(
+                          vm.changeBadgeOf(sale.id),
+                          compact: true,
+                          leading: true,
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        Flexible(
+                          child: Text.rich(
+                            TextSpan(
                               children: [
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
-                                      ),
-                                      _buildSaleAgeSpan(
-                                        l10n.statusDaysOld(
-                                          batch.ageInDaysAt(sale.date),
-                                        ),
-                                        batch.ageInDaysAt(sale.date),
-                                      ),
-                                    ],
-                                  ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                TextSpan(
+                                  text:
+                                      "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
                                 ),
-                                const SizedBox(height: 3),
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: _fmt(sale.date),
-                                        style: TextStyle(
-                                          color: context
-                                              .theme
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
-                                      ),
-                                      if (sale.quantity > 0) ...[
-                                        TextSpan(
-                                          text: " · ",
-                                          style: TextStyle(
-                                            color: context
-                                                .theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: l10n.pricePerChicken(
-                                            "${(sale.amount / sale.quantity).round().toCurrency()}đ",
-                                          ),
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            color: context.colors.money,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
+                                _buildSaleAgeSpan(
+                                  l10n.statusDaysOld(
+                                    batch.ageInDaysAt(sale.date),
                                   ),
-                                  style: const TextStyle(fontSize: 12),
+                                  batch.ageInDaysAt(sale.date),
                                 ),
                               ],
                             ),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Assets.images.coinCute.svg(width: 24, height: 24),
-                              const SizedBox(height: 2),
-                              Text(
-                                "${sale.amount.toCurrency()}đ",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: context.colors.money,
-                                ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: _fmt(sale.date),
+                            style: TextStyle(
+                              color: context.theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          if (sale.quantity > 0) ...[
+                            TextSpan(
+                              text: " · ",
+                              style: TextStyle(
+                                color:
+                                    context.theme.colorScheme.onSurfaceVariant,
                               ),
-                            ],
-                          ),
+                            ),
+                            TextSpan(
+                              text: l10n.pricePerChicken(
+                                "${(sale.amount / sale.quantity).round().toCurrency()}đ",
+                              ),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: context.colors.money,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
+                      style: const TextStyle(fontSize: 12),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              const Divider(),
-              _buildRowInfo(
-                l10n.soldLabel,
-                l10n.soldAndRemaining(
-                  batch.soldQuantity,
-                  batch.remainingQuantity,
+              const SizedBox(width: 8),
+              Text(
+                "${sale.amount.toCurrency()}đ",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.money,
                 ),
               ),
-              _buildRowInfo(
-                l10n.totalRevenueLabel,
-                "${batch.totalSaleAmount.toCurrency()}đ",
-              ),
-              _buildRowInfo(
-                l10n.totalExpensesLabel,
-                "-${batch.totalExpenses.toCurrency()}đ",
-              ),
-              const Divider(),
-              _buildRowInfo(
-                l10n.profitUpper,
-                "${batch.profit.toCurrency()}đ",
-                color: batch.profit >= 0 ? context.colors.money : Colors.red,
-                isBold: true,
-              ),
+              const SizedBox(width: 8),
+              // Edit affordance: same target as tapping the row itself.
+              _buildEditButton(() => _showSaleDialog(batch, sale: sale)),
             ],
-            // Sold out: nothing left to sell, so hide the record button.
-            if (!soldOut) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _showSaleDialog(batch),
-                  child: Text(l10n.recordNewSale),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -646,7 +1040,7 @@ class _ChickenBatchDetailScreenState
                   _confirmDeleteSale(batch, sale);
                 }
               : null,
-          onConfirm: () {
+          onConfirm: () async {
             final amount = totalAmountController.text.toMoney() ?? 0;
             final qty = int.tryParse(qtyController.text) ?? 0;
             if (qty <= 0 || qty > maxQuantity || amount <= 0) {
@@ -659,6 +1053,16 @@ class _ChickenBatchDetailScreenState
                 amountError = amount <= 0 ? l10n.errorEnterAmount : null;
               });
               return;
+            }
+            // A price per chicken below the threshold is most likely a missing
+            // zero, so ask before saving it.
+            final unitPrice = (amount / qty).round();
+            if (unitPrice < kSuspiciousPriceThreshold) {
+              final saveAnyway = await confirmSuspiciousPrice(
+                context,
+                unitPrice,
+              );
+              if (!saveAnyway || !context.mounted) return;
             }
             final newSale = BatchSale(
               id: sale?.id ?? const Uuid().v4(),

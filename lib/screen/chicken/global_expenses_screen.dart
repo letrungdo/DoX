@@ -14,6 +14,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
+import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
@@ -182,10 +183,19 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                           itemBuilder: (context, index) {
                             final expense = expenses[index];
                             return ChickenListTileCard(
-                              color: expense.id == vm.highlightedId ? context.theme.colorScheme.primary.withValues(alpha: 0.18) : null,
                               onTap: () => _showExpenseDialog(expense),
                               leading: _expenseSvg(expense.type),
-                              title: Text(expense.note ?? _expenseLabel(expense.type), style: const TextStyle(fontWeight: FontWeight.w600)),
+                              title: Row(
+                                children: [
+                                  ChickenChangeBadge(vm.changeBadgeOf(expense.id), leading: true),
+                                  Flexible(
+                                    child: Text(
+                                      expense.note ?? _expenseLabel(expense.type),
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               subtitle: Text("${_fmt(expense.date)} · ${_expenseLabel(expense.type)}"),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
@@ -222,7 +232,6 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
             await vm.updateGlobalExpense(updatedExpense);
           } else {
             await vm.addGlobalExpense(updatedExpense);
-            vm.flashHighlight(updatedExpense.id);
             _scrollToTop();
           }
           return true;

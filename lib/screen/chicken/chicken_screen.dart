@@ -19,6 +19,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
+import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
@@ -398,12 +399,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         batch.expenses.isNotEmpty ||
         batch.cockSales.isNotEmpty;
 
-    // Freshly added rows get a highlight; otherwise: sold out → red,
-    // partially sold → green, not sold → default card color.
+    // Sold out → red, partially sold → green, not sold → default card color.
     final isDark = context.theme.brightness == Brightness.dark;
-    final Color? cardColor = batch.id == vm.highlightedId
-        ? context.theme.colorScheme.primary.withValues(alpha: 0.18)
-        : isSoldOut
+    final Color? cardColor = isSoldOut
         ? (isDark ? Colors.red[900]?.withValues(alpha: 0.38) : Colors.red[100])
         : isPartiallySold
         ? (isDark ? Colors.green[900]?.withValues(alpha: 0.24) : Colors.green[50])
@@ -445,23 +443,35 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             child: Text(
               batch.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
+              maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              statusText,
-              style: TextStyle(
-                fontSize: 11,
-                color: statusColor,
-                fontWeight: FontWeight.w600,
+          const SizedBox(width: 8),
+          // Badge sits above the age pill, in the same right-hand column.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ChickenChangeBadge(vm.changeBadgeOf(batch.id)),
+              if (vm.changeBadgeOf(batch.id) != null)
+                const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -729,17 +739,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     }
   }
 
-  /// Adds a batch and highlights it. If the insert fails the view model has
-  /// already removed it again locally, so the user is told it wasn't saved.
+  /// Adds a batch. If the insert fails the view model has already removed it
+  /// again locally, so the user is told it wasn't saved.
   Future<void> _addBatch(String name, DateTime incubationDate, int qty) async {
     final l10n = AppLocalizations.of(context);
     try {
-      final batch = await vm.addBatch(
+      await vm.addBatch(
         name: name,
         incubationDate: incubationDate,
         quantity: qty,
       );
-      vm.flashHighlight(batch.id);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

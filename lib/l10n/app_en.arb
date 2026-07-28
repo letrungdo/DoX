@@ -412,6 +412,7 @@
   "deleteThisBatch": "Delete this batch",
   "initialQuantity": "Initial quantity",
   "soldRemainingLabel": "Sold / remaining",
+  "remainingLabel": "Remaining",
   "soldRemainingValue": "{sold} / {remaining}",
   "@soldRemainingValue": {
     "placeholders": {
@@ -461,6 +462,7 @@
       }
     }
   },
+  "expensesTitle": "Expenses",
   "noExpensesYet": "No expenses yet.",
   "saleAndProfit": "Sales & Profit",
   "notSoldHint": "Not sold yet. A batch can be sold in multiple rounds.",
@@ -732,5 +734,18 @@
       }
     }
   },
-  "refreshFailedNoData": "Couldn't load data"
+  "refreshFailedNoData": "Couldn't load data",
+  "lowPriceWarningTitle": "Double-check the price",
+  "lowPriceWarningMessage": "{price} looks unusually low. Did you miss a zero?",
+  "@lowPriceWarningMessage": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeNew": "New",
+  "badgeUpdated": "Edited",
+  "lowPriceWarningEdit": "Fix the price",
+  "lowPriceWarningSaveAnyway": "Save anyway"
 }

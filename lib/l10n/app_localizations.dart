@@ -1310,6 +1310,12 @@ abstract class AppLocalizations {
   /// **'Sold / remaining'**
   String get soldRemainingLabel;
 
+  /// No description provided for @remainingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remainingLabel;
+
   /// No description provided for @soldRemainingValue.
   ///
   /// In en, this message translates to:
@@ -1375,6 +1381,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expenses (Total: {amount})'**
   String expensesSectionTitle(String amount);
+
+  /// No description provided for @expensesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses'**
+  String get expensesTitle;
 
   /// No description provided for @noExpensesYet.
   ///
@@ -1993,6 +2005,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load data'**
   String get refreshFailedNoData;
+
+  /// No description provided for @lowPriceWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Double-check the price'**
+  String get lowPriceWarningTitle;
+
+  /// No description provided for @lowPriceWarningMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} looks unusually low. Did you miss a zero?'**
+  String lowPriceWarningMessage(String price);
+
+  /// No description provided for @badgeNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get badgeNew;
+
+  /// No description provided for @badgeUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get badgeUpdated;
+
+  /// No description provided for @lowPriceWarningEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix the price'**
+  String get lowPriceWarningEdit;
+
+  /// No description provided for @lowPriceWarningSaveAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Save anyway'**
+  String get lowPriceWarningSaveAnyway;
 }
 
 class _AppLocalizationsDelegate

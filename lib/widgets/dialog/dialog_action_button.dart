@@ -11,6 +11,7 @@ class DialogActionButton extends StatelessWidget {
     this.kind = DialogActionKind.primary,
     this.icon,
     this.textStyle,
+    this.loading = false,
   });
 
   final String text;
@@ -19,9 +20,40 @@ class DialogActionButton extends StatelessWidget {
   final IconData? icon;
   final TextStyle? textStyle;
 
+  /// Shows a spinner in place of the label; the button is not tappable while it
+  /// is set, so a slow action cannot be started twice.
+  final bool loading;
+
+  Widget _spinner(Color color) => SizedBox(
+    height: 18,
+    width: 18,
+    child: CircularProgressIndicator(strokeWidth: 2, color: color),
+  );
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    if (loading) {
+      return switch (kind) {
+        DialogActionKind.cancel ||
+        DialogActionKind.destructiveOutline => OutlinedButton(
+          onPressed: null,
+          child: _spinner(scheme.onSurface),
+        ),
+        DialogActionKind.primary => FilledButton(
+          onPressed: null,
+          child: _spinner(scheme.onSurface),
+        ),
+        DialogActionKind.destructive => FilledButton(
+          style: FilledButton.styleFrom(
+            disabledBackgroundColor: scheme.error.withValues(alpha: 0.6),
+            disabledForegroundColor: scheme.onError,
+          ),
+          onPressed: null,
+          child: _spinner(scheme.onError),
+        ),
+      };
+    }
     final destructiveStyle = FilledButton.styleFrom(
       backgroundColor: scheme.error,
       foregroundColor: scheme.onError,

@@ -15,8 +15,10 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
+import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
@@ -249,10 +251,6 @@ class _CockSalesScreenState
                             final isMeat = sale.category == SaleCategory.meat;
                             final color = isMeat ? Colors.brown : Colors.red;
                             return ChickenListTileCard(
-                              color: sale.id == vm.highlightedId
-                                  ? context.theme.colorScheme.primary
-                                        .withValues(alpha: 0.18)
-                                  : null,
                               onTap: () => _showSaleDialog(sale),
                               leading: CircleAvatar(
                                 radius: 22,
@@ -263,11 +261,21 @@ class _CockSalesScreenState
                                             : Assets.images.roosterCute)
                                         .svg(width: 28, height: 28),
                               ),
-                              title: Text(
-                                sale.note,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              title: Row(
+                                children: [
+                                  ChickenChangeBadge(
+                                    vm.changeBadgeOf(sale.id),
+                                    leading: true,
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      sale.note,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               subtitle: Text(
                                 "${_fmt(sale.date)} · ${isMeat ? l10n.meatChicken : l10n.fightingChicken}",
@@ -326,6 +334,11 @@ class _CockSalesScreenState
               setState(() => amountError = l10n.errorEnterAmount);
               return;
             }
+            // Likely a missing zero, not a real price: confirm before saving.
+            if (amount < kSuspiciousPriceThreshold) {
+              final saveAnyway = await confirmSuspiciousPrice(context, amount);
+              if (!saveAnyway || !context.mounted) return;
+            }
             final updatedSale = CockSale(
               id: sale?.id ?? const Uuid().v4(),
               amount: amount,
@@ -342,7 +355,6 @@ class _CockSalesScreenState
                 await vm.updateGlobalCockSale(updatedSale);
               } else {
                 await vm.addGlobalCockSale(updatedSale);
-                vm.flashHighlight(updatedSale.id);
                 _scrollToTop();
               }
               if (context.mounted) Navigator.pop(context);

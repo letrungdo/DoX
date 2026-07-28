@@ -26,6 +26,9 @@ class StorageKey {
   /// Chicken writes made while offline, waiting to be pushed to the server.
   static const chickenSyncQueue = "chickenSyncQueue";
 
+  /// When chicken records were last added/edited, for the "new"/"edited" badges.
+  static const chickenRecentChanges = "chickenRecentChanges";
+
   // Pending in-background app update (resumable across app restarts).
   static const pendingUpdateVersion = "pendingUpdateVersion";
   static const pendingUpdateUrl = "pendingUpdateUrl";

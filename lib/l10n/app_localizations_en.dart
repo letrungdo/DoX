@@ -681,6 +681,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soldRemainingLabel => 'Sold / remaining';
 
   @override
+  String get remainingLabel => 'Remaining';
+
+  @override
   String soldRemainingValue(int sold, int remaining) {
     return '$sold / $remaining';
   }
@@ -722,6 +725,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String expensesSectionTitle(String amount) {
     return 'Expenses (Total: $amount)';
   }
+
+  @override
+  String get expensesTitle => 'Expenses';
 
   @override
   String get noExpensesYet => 'No expenses yet.';
@@ -1083,4 +1089,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get refreshFailedNoData => 'Couldn\'t load data';
+
+  @override
+  String get lowPriceWarningTitle => 'Double-check the price';
+
+  @override
+  String lowPriceWarningMessage(String price) {
+    return '$price looks unusually low. Did you miss a zero?';
+  }
+
+  @override
+  String get badgeNew => 'New';
+
+  @override
+  String get badgeUpdated => 'Edited';
+
+  @override
+  String get lowPriceWarningEdit => 'Fix the price';
+
+  @override
+  String get lowPriceWarningSaveAnyway => 'Save anyway';
 }
