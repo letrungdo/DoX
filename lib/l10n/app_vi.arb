@@ -577,6 +577,40 @@
   "cockRevenue": "Doanh thu gà đá",
   "meatRevenue": "Doanh thu gà thịt",
   "profitLabel": "Lợi nhuận",
+  "profitMargin": "Tỷ suất lợi nhuận",
+  "revenueVsExpense": "Doanh thu & chi phí",
+  "revenueBreakdown": "Cấu phần doanh thu",
+  "monthlyDetails": "Chi tiết theo tháng",
+  "yearlyDetails": "Chi tiết theo năm",
+  "averagePerMonth": "TB / tháng",
+  "averagePerYear": "TB / năm",
+  "bestMonth": "Tháng cao nhất",
+  "bestYear": "Năm cao nhất",
+  "allYearsLabel": "Tất cả các năm",
+  "monthShort": "T{month}",
+  "@monthShort": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "activeMonths": "{count, plural, other{{count} tháng có dữ liệu}}",
+  "@activeMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activeYears": "{count, plural, other{{count} năm có dữ liệu}}",
+  "@activeYears": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "errorEnterAmount": "Vui lòng nhập số tiền",
   "errorEnterQuantity": "Vui lòng nhập số lượng",
   "errorQuantityExceedsRemaining": "Chỉ còn {remaining} con để bán",

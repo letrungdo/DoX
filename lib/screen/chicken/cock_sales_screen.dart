@@ -170,7 +170,9 @@ class _CockSalesScreenState
                   children: [
                     Text(
                       l10n.saleCount(sortedSales.length),
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     Text.rich(
                       TextSpan(
@@ -223,7 +225,10 @@ class _CockSalesScreenState
                                                     _selectedYear,
                                                   ),
                                             style: TextStyle(
-                                              color: Colors.grey[600],
+                                              color: context
+                                                  .theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                             ),
                                           ),
                                           if (vm.globalCockSales.isEmpty) ...[
@@ -249,12 +254,25 @@ class _CockSalesScreenState
                           itemBuilder: (context, index) {
                             final sale = sortedSales[index];
                             final isMeat = sale.category == SaleCategory.meat;
-                            final color = isMeat ? Colors.brown : Colors.red;
+                            final accent = isMeat
+                                ? context.colors.meat
+                                : context.colors.danger;
+                            final accentSoft = isMeat
+                                ? context.colors.meatSoft
+                                : context.colors.dangerSoft;
                             return ChickenListTileCard(
                               onTap: () => _showSaleDialog(sale),
-                              leading: CircleAvatar(
-                                radius: 22,
-                                backgroundColor: color.withValues(alpha: 0.12),
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: accentSoft,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: accent.withValues(alpha: 0.28),
+                                  ),
+                                ),
                                 child:
                                     (isMeat
                                             ? Assets.images.drumstickCute
@@ -277,8 +295,54 @@ class _CockSalesScreenState
                                   ),
                                 ],
                               ),
-                              subtitle: Text(
-                                "${_fmt(sale.date)} · ${isMeat ? l10n.meatChicken : l10n.fightingChicken}",
+                              // Category as a colored tag rather than a word in
+                              // the date line: the kind of sale is the thing
+                              // being scanned for down the list.
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: accentSoft,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: accent.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isMeat
+                                            ? l10n.meatChicken
+                                            : l10n.fightingChicken,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          height: 1.2,
+                                          fontWeight: FontWeight.w700,
+                                          color: accent,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        _fmt(sale.date),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: context
+                                              .theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               trailing: Text(
                                 "${sale.amount.toCurrency()}đ",
@@ -319,7 +383,9 @@ class _CockSalesScreenState
               ? Assets.images.drumstickCute
               : Assets.images.roosterCute,
           title: isEditing ? l10n.editSale : l10n.enterCockSale,
-          accent: category == SaleCategory.meat ? Colors.brown : Colors.red,
+          accent: category == SaleCategory.meat
+              ? context.colors.meat
+              : context.colors.danger,
           confirmText: isEditing ? l10n.update : l10n.save,
           destructiveText: isEditing ? l10n.delete : null,
           onDestructive: isEditing
@@ -428,7 +494,7 @@ class _CockSalesScreenState
             ? Assets.images.drumstickCute
             : Assets.images.roosterCute,
         title: l10n.deleteSaleRecord,
-        accent: Colors.red,
+        accent: context.colors.danger,
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),

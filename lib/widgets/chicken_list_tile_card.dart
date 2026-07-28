@@ -16,6 +16,7 @@ class ChickenListTileCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.color,
+    this.borderColor,
   });
 
   final Widget title;
@@ -28,11 +29,22 @@ class ChickenListTileCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final Color? color;
 
+  /// Outline that replaces the card theme's neutral one. Used with [color] so a
+  /// tinted card is framed in its own hue instead of a grey that muddies it.
+  final Color? borderColor;
+
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: margin,
       color: color,
+      shape: borderColor == null
+          ? null
+          : RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: borderColor!),
+            ),
+      elevation: borderColor == null ? null : 0,
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: contentPadding,

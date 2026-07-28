@@ -1706,6 +1706,84 @@ abstract class AppLocalizations {
   /// **'Profit'**
   String get profitLabel;
 
+  /// No description provided for @profitMargin.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit margin'**
+  String get profitMargin;
+
+  /// No description provided for @revenueVsExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue vs expense'**
+  String get revenueVsExpense;
+
+  /// No description provided for @revenueBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue breakdown'**
+  String get revenueBreakdown;
+
+  /// No description provided for @monthlyDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly breakdown'**
+  String get monthlyDetails;
+
+  /// No description provided for @yearlyDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly breakdown'**
+  String get yearlyDetails;
+
+  /// No description provided for @averagePerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg / month'**
+  String get averagePerMonth;
+
+  /// No description provided for @averagePerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg / year'**
+  String get averagePerYear;
+
+  /// No description provided for @bestMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Best month'**
+  String get bestMonth;
+
+  /// No description provided for @bestYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Best year'**
+  String get bestYear;
+
+  /// No description provided for @allYearsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'All years'**
+  String get allYearsLabel;
+
+  /// No description provided for @monthShort.
+  ///
+  /// In en, this message translates to:
+  /// **'M{month}'**
+  String monthShort(int month);
+
+  /// No description provided for @activeMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 month with data} other{{count} months with data}}'**
+  String activeMonths(int count);
+
+  /// No description provided for @activeYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 year with data} other{{count} years with data}}'**
+  String activeYears(int count);
+
   /// No description provided for @errorEnterAmount.
   ///
   /// In en, this message translates to:

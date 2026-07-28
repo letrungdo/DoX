@@ -12,4 +12,20 @@ extension ContextExtensions on BuildContext {
   DoTextTheme get textTheme => theme.extension<DoTextTheme>()!;
 
   String get loadingId => "${AppConst.loadingIdPrefix}$hashCode";
+
+  /// Error snack bar tinted from the color scheme. A raw `Colors.red` bar keeps
+  /// the theme's light-on-dark content color, which is unreadable in light mode.
+  SnackBar errorSnackBar(String message) {
+    final scheme = theme.colorScheme;
+    return SnackBar(
+      content: Text(
+        message,
+        style: TextStyle(
+          color: scheme.onErrorContainer,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      backgroundColor: scheme.errorContainer,
+    );
+  }
 }

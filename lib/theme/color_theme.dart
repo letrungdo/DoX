@@ -6,6 +6,16 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
     required this.disabled,
     required this.iconColor,
     required this.money,
+    required this.success,
+    required this.successSoft,
+    required this.warning,
+    required this.warningSoft,
+    required this.danger,
+    required this.dangerSoft,
+    required this.info,
+    required this.infoSoft,
+    required this.meat,
+    required this.meatSoft,
   });
 
   final Color buttonBg;
@@ -15,11 +25,44 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
   /// Shared color for money/price texts across screens.
   final Color money;
 
+  /// Semantic accents, used for text, icons and borders. Each one is picked to
+  /// stay readable on its own theme's surfaces: deep shades in light mode
+  /// (raw `Colors.green`/`Colors.orange` wash out on white), bright shades in
+  /// dark mode.
+  final Color success;
+  final Color warning;
+  final Color danger;
+  final Color info;
+
+  /// Accent for meat chicken records. Deliberately not a brown: it sits next to
+  /// [warning] (expense) in the statistics chart, and two warm tones there were
+  /// impossible to tell apart.
+  final Color meat;
+
+  /// Opaque low-contrast fills that pair with the accent of the same name.
+  /// Opaque rather than `accent.withValues(alpha: ...)` so a tint keeps its hue
+  /// when it lands on a card that is itself tinted.
+  final Color successSoft;
+  final Color warningSoft;
+  final Color dangerSoft;
+  final Color infoSoft;
+  final Color meatSoft;
+
   static final light = ColorTheme(
     buttonBg: Colors.white, //
     disabled: const Color(0xFFBFC9C5),
     iconColor: const Color(0xFF435A55),
     money: const Color(0xFF00897B),
+    success: const Color(0xFF12703A),
+    successSoft: const Color(0xFFE7F5EC),
+    warning: const Color(0xFFA34A08),
+    warningSoft: const Color(0xFFFDF2E2),
+    danger: const Color(0xFFB3261E),
+    dangerSoft: const Color(0xFFFCEBE9),
+    info: const Color(0xFF1D6F8B),
+    infoSoft: const Color(0xFFE6F1F6),
+    meat: const Color(0xFF6D28D9),
+    meatSoft: const Color(0xFFF1EBFD),
   );
 
   static final dark = ColorTheme(
@@ -27,6 +70,16 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
     disabled: const Color(0xFF3F4946),
     iconColor: const Color(0xFFDDE5E1),
     money: const Color(0xFF2DD4BF),
+    success: const Color(0xFF6EDFA6),
+    successSoft: const Color(0xFF16332A),
+    warning: const Color(0xFFFFB871),
+    warningSoft: const Color(0xFF3A2A17),
+    danger: const Color(0xFFFF8A80),
+    dangerSoft: const Color(0xFF3A1F1E),
+    info: const Color(0xFF8ECBE6),
+    infoSoft: const Color(0xFF17303A),
+    meat: const Color(0xFFC4B5FD),
+    meatSoft: const Color(0xFF2A2340),
   );
 
   @override
@@ -35,12 +88,32 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
     Color? disabled,
     Color? iconColor, //
     Color? money,
+    Color? success,
+    Color? successSoft,
+    Color? warning,
+    Color? warningSoft,
+    Color? danger,
+    Color? dangerSoft,
+    Color? info,
+    Color? infoSoft,
+    Color? meat,
+    Color? meatSoft,
   }) {
     return ColorTheme(
       buttonBg: buttonBg ?? this.buttonBg, //
       disabled: disabled ?? this.disabled,
       iconColor: iconColor ?? this.iconColor,
       money: money ?? this.money,
+      success: success ?? this.success,
+      successSoft: successSoft ?? this.successSoft,
+      warning: warning ?? this.warning,
+      warningSoft: warningSoft ?? this.warningSoft,
+      danger: danger ?? this.danger,
+      dangerSoft: dangerSoft ?? this.dangerSoft,
+      info: info ?? this.info,
+      infoSoft: infoSoft ?? this.infoSoft,
+      meat: meat ?? this.meat,
+      meatSoft: meatSoft ?? this.meatSoft,
     );
   }
 
@@ -54,6 +127,16 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
       disabled: Color.lerp(disabled, other.disabled, t)!,
       iconColor: Color.lerp(iconColor, other.iconColor, t)!,
       money: Color.lerp(money, other.money, t)!,
+      success: Color.lerp(success, other.success, t)!,
+      successSoft: Color.lerp(successSoft, other.successSoft, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      warningSoft: Color.lerp(warningSoft, other.warningSoft, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
+      dangerSoft: Color.lerp(dangerSoft, other.dangerSoft, t)!,
+      info: Color.lerp(info, other.info, t)!,
+      infoSoft: Color.lerp(infoSoft, other.infoSoft, t)!,
+      meat: Color.lerp(meat, other.meat, t)!,
+      meatSoft: Color.lerp(meatSoft, other.meatSoft, t)!,
     );
   }
 }

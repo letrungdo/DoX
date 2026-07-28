@@ -3,13 +3,32 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class CuteBarChartItem {
-  const CuteBarChartItem({required this.label, this.value, this.compareValue});
+  const CuteBarChartItem({
+    required this.label,
+    this.value,
+    this.compareValue,
+    this.segments = const [],
+  });
 
   final String label;
   final double? value;
 
   /// Optional second series (e.g. same period last year).
   final double? compareValue;
+
+  /// Optional breakdown of [value], drawn bottom-up as stacked slices instead
+  /// of one solid bar. Slices whose sum differs from [value] are not adjusted:
+  /// the bar's height always comes from [value], so heights stay comparable
+  /// across groups.
+  final List<CuteBarSegment> segments;
+}
+
+/// One slice of a stacked bar.
+class CuteBarSegment {
+  const CuteBarSegment(this.color, this.value);
+
+  final Color color;
+  final double value;
 }
 
 /// Bar chart matching the app theme: thin bars with 4px rounded tops, a 2px
@@ -194,7 +213,11 @@ class _BarChartPainter extends CustomPainter {
         _drawBar(canvas, x, item.compareValue, maxValue, plotHeight, barWidth, compareColor!);
         x += barWidth + _barGap;
       }
-      _drawBar(canvas, x, item.value, maxValue, plotHeight, barWidth, primaryColor);
+      if (item.segments.isEmpty) {
+        _drawBar(canvas, x, item.value, maxValue, plotHeight, barWidth, primaryColor);
+      } else {
+        _drawStackedBar(canvas, x, item, maxValue, plotHeight, barWidth);
+      }
     }
 
     // Recessive baseline on top of the bars' feet.
@@ -221,6 +244,53 @@ class _BarChartPainter extends CustomPainter {
     canvas.drawRRect(rect, Paint()..color = color);
   }
 
+  /// Same footprint as [_drawBar], sliced by [CuteBarChartItem.segments]. Only
+  /// the topmost slice gets rounded corners, so the stack reads as one bar.
+  void _drawStackedBar(
+    Canvas canvas,
+    double x,
+    CuteBarChartItem item,
+    double maxValue,
+    double plotHeight,
+    double width,
+  ) {
+    final total = item.value ?? 0;
+    if (total <= 0) return;
+    final barHeight = (total / maxValue) * (plotHeight - 6);
+    if (barHeight <= 0) return;
+
+    final slices = item.segments.where((s) => s.value > 0).toList();
+    if (slices.isEmpty) return;
+    final sliceTotal = slices.fold<double>(0, (sum, s) => sum + s.value);
+
+    var bottom = plotHeight;
+    for (var i = 0; i < slices.length; i++) {
+      final slice = slices[i];
+      // The last slice takes whatever pixels are left, so rounding never
+      // leaves a hairline gap at the top of the bar.
+      final isTop = i == slices.length - 1;
+      final height = isTop
+          ? bottom - (plotHeight - barHeight)
+          : (slice.value / sliceTotal) * barHeight;
+      if (height <= 0) continue;
+      final rect = Rect.fromLTWH(x, bottom - height, width, height);
+      final paint = Paint()..color = slice.color;
+      if (isTop) {
+        canvas.drawRRect(
+          RRect.fromRectAndCorners(
+            rect,
+            topLeft: const Radius.circular(4),
+            topRight: const Radius.circular(4),
+          ),
+          paint,
+        );
+      } else {
+        canvas.drawRect(rect, paint);
+      }
+      bottom -= height;
+    }
+  }
+
   void _drawLabels(Canvas canvas, Size size, double groupWidth, double plotHeight) {
     // Thin the labels out when groups get narrow instead of colliding.
     final step = math.max(1, (items.length / (size.width / 34)).ceil());
@@ -241,6 +311,7 @@ class _BarChartPainter extends CustomPainter {
     return oldDelegate.items != items ||
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.primaryColor != primaryColor ||
-        oldDelegate.compareColor != compareColor;
+        oldDelegate.compareColor != compareColor ||
+        oldDelegate.labelStyle != labelStyle;
   }
 }

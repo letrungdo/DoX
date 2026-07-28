@@ -162,7 +162,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                                           const SizedBox(height: 16),
                                           Text(
                                             vm.globalExpenses.isEmpty ? l10n.noCommonExpenses : l10n.noCommonExpensesInYear(_selectedYear),
-                                            style: TextStyle(color: Colors.grey[600]),
+                                            style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
                                           ),
                                           if (vm.globalExpenses.isEmpty) ...[
                                             const SizedBox(height: 16),
@@ -239,7 +239,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
           if (mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text(l10n.saveCommonExpenseFailed(error.toString())), backgroundColor: Colors.red));
+            ).showSnackBar(context.errorSnackBar(l10n.saveCommonExpenseFailed(error.toString())));
           }
           return false;
         }
@@ -254,7 +254,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
       builder: (context) => CuteDialog(
         icon: Assets.images.feedCute,
         title: l10n.deleteCommonExpense,
-        accent: Colors.red,
+        accent: context.colors.danger,
         confirmText: l10n.delete,
         isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),
@@ -271,7 +271,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.deleteCommonExpenseFailed(error.toString())), backgroundColor: Colors.red));
+        ).showSnackBar(context.errorSnackBar(l10n.deleteCommonExpenseFailed(error.toString())));
       }
     }
   }

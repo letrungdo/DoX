@@ -1,3 +1,4 @@
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -27,7 +28,7 @@ Future<bool> confirmSuspiciousPrice(
       builder: (context) => CuteDialog(
         icon: icon ?? Assets.images.coinCute,
         title: l10n.lowPriceWarningTitle,
-        accent: Colors.orange,
+        accent: context.colors.warning,
         cancelText: l10n.lowPriceWarningEdit,
         confirmText: l10n.lowPriceWarningSaveAnyway,
         onConfirm: () => Navigator.pop(context, true),
