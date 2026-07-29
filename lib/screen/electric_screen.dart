@@ -146,19 +146,19 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        // Actions are raised buttons: the 8px the dialog leaves between them
-        // is inside their shadow reach, so one button's lit rim lands on the
-        // next one's shade.
-        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         title: Text(l10n.logout),
         content: Text(l10n.removeAccountConfirm(name)),
         actions: [
-          DialogActionButton(
-            text: l10n.cancel,
-            kind: DialogActionKind.cancel,
-            onPressed: () => Navigator.pop(context, false),
+          DialogActions(
+            children: [
+              DialogActionButton(
+                text: l10n.cancel,
+                kind: DialogActionKind.cancel,
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              DialogActionButton(text: l10n.logout, onPressed: () => Navigator.pop(context, true)),
+            ],
           ),
-          DialogActionButton(text: l10n.logout, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -171,18 +171,18 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        // Actions are raised buttons: the 8px the dialog leaves between them
-        // is inside their shadow reach, so one button's lit rim lands on the
-        // next one's shade.
-        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         content: Text(l10n.forgetAccountConfirm(account.displayName)),
         actions: [
-          DialogActionButton(
-            text: l10n.cancel,
-            kind: DialogActionKind.cancel,
-            onPressed: () => Navigator.pop(context, false),
+          DialogActions(
+            children: [
+              DialogActionButton(
+                text: l10n.cancel,
+                kind: DialogActionKind.cancel,
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              DialogActionButton(text: l10n.delete, onPressed: () => Navigator.pop(context, true)),
+            ],
           ),
-          DialogActionButton(text: l10n.delete, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -836,10 +836,6 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      // Actions are raised buttons: the 8px the dialog leaves between them
-      // is inside their shadow reach, so one button's lit rim lands on the
-      // next one's shade.
-      buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -885,8 +881,16 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
         ),
       ),
       actions: [
-        DialogActionButton(text: l10n.cancel, kind: DialogActionKind.cancel, onPressed: () => Navigator.pop(context)),
-        DialogActionButton(text: l10n.login, onPressed: _submit),
+        DialogActions(
+          children: [
+            DialogActionButton(
+              text: l10n.cancel,
+              kind: DialogActionKind.cancel,
+              onPressed: () => Navigator.pop(context),
+            ),
+            DialogActionButton(text: l10n.login, onPressed: _submit),
+          ],
+        ),
       ],
     );
   }

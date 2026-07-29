@@ -130,8 +130,7 @@ mixin MyLifeOverlays on CoreViewModel {
   static const Color blueBlues = Color(0xFF174378);
 
   // Make a custom ColorSwatch to name map from the above custom colors.
-  final Map<ColorSwatch<Object>, String>
-  colorsNameMap = <ColorSwatch<Object>, String>{
+  final Map<ColorSwatch<Object>, String> colorsNameMap = <ColorSwatch<Object>, String>{
     ColorTools.createPrimarySwatch(guidePrimary): 'Guide Purple',
     ColorTools.createPrimarySwatch(guidePrimaryVariant): 'Guide Purple Variant',
     ColorTools.createAccentSwatch(guideSecondary): 'Guide Teal',
@@ -149,15 +148,9 @@ mixin MyLifeOverlays on CoreViewModel {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          // Actions are raised buttons: the 8px the dialog leaves between them
-          // is inside their shadow reach, so one button's lit rim lands on the
-          // next one's shade.
-          buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
           titlePadding: const EdgeInsets.all(0),
           contentPadding: const EdgeInsets.all(0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           content: SingleChildScrollView(
             child: ColorPicker(
               color: tempColor,
@@ -170,21 +163,10 @@ mixin MyLifeOverlays on CoreViewModel {
               spacing: 5,
               runSpacing: 5,
               wheelDiameter: 155,
-              heading: Text(
-                'Select color',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              subheading: Text(
-                'Select color shade',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              wheelSubheading: Text(
-                'Selected color and its shades',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-                longPressMenu: true,
-              ),
+              heading: Text('Select color', style: Theme.of(context).textTheme.titleSmall),
+              subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleSmall),
+              wheelSubheading: Text('Selected color and its shades', style: Theme.of(context).textTheme.titleSmall),
+              copyPasteBehavior: const ColorPickerCopyPasteBehavior(longPressMenu: true),
               materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
               colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
               colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
@@ -200,31 +182,38 @@ mixin MyLifeOverlays on CoreViewModel {
             ),
           ),
           actions: <Widget>[
-            DialogActionButton(
-              text: 'Reset',
-              kind: DialogActionKind.destructiveOutline,
-              onPressed: () {
-                overlayBgColor = null;
-                overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
-                notifyListeners();
-                Navigator.of(context).pop(true);
-              },
-            ),
-            DialogActionButton(
-              text: 'Cancel',
-              kind: DialogActionKind.cancel,
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-            ),
-            DialogActionButton(
-              text: 'OK',
-              onPressed: () {
-                overlayBgColor = tempColor;
-                overlayTextColor = tempColor.getTextColor()!;
-                notifyListeners();
-                Navigator.of(context).pop(true);
-              },
+            // Three buttons: an equal share of this dialog's width would squeeze
+            // the labels, so they keep their own width here.
+            DialogActions(
+              expand: false,
+              children: [
+                DialogActionButton(
+                  text: 'Reset',
+                  kind: DialogActionKind.destructiveOutline,
+                  onPressed: () {
+                    overlayBgColor = null;
+                    overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
+                    notifyListeners();
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+                DialogActionButton(
+                  text: 'Cancel',
+                  kind: DialogActionKind.cancel,
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                ),
+                DialogActionButton(
+                  text: 'OK',
+                  onPressed: () {
+                    overlayBgColor = tempColor;
+                    overlayTextColor = tempColor.getTextColor()!;
+                    notifyListeners();
+                    Navigator.of(context).pop(true);
+                  },
+                ),
+              ],
             ),
           ],
         );

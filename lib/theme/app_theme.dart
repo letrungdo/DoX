@@ -117,7 +117,9 @@ class AppTheme {
         elevation: 0,
         shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+        // The action buttons are raised: the top gap has to clear their lit rim
+        // so it does not land on the message above.
+        actionsPadding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),

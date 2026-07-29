@@ -36,29 +36,29 @@ Future<ActionButtonType?> showAppDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        // Actions are raised buttons: the 8px the dialog leaves between them
-        // is inside their shadow reach, so one button's lit rim lands on the
-        // next one's shade.
-        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         title: Text(title ?? ""),
         content: Text(message ?? ""),
-        actions: actions
-            ?.map(
-              (e) => DialogActionButton(
-                text: e.text,
-                textStyle: e.textStyle,
-                kind: e.type == ActionButtonType.cancel
-                    ? DialogActionKind.cancel
-                    : DialogActionKind.primary,
-                onPressed: () {
-                  e.onPressed?.call(context);
-                  if (e.autoClose) {
-                    context.pop(e.type);
-                  }
-                }, //
-              ),
-            )
-            .toList(),
+        actions: actions == null
+            ? null
+            : [
+                DialogActions(
+                  children: actions
+                      .map(
+                        (e) => DialogActionButton(
+                          text: e.text,
+                          textStyle: e.textStyle,
+                          kind: e.type == ActionButtonType.cancel ? DialogActionKind.cancel : DialogActionKind.primary,
+                          onPressed: () {
+                            e.onPressed?.call(context);
+                            if (e.autoClose) {
+                              context.pop(e.type);
+                            }
+                          }, //
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
       );
     },
   );
