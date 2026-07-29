@@ -50,6 +50,15 @@ class MarketDetailViewModel extends CoreViewModel {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  /// Number of bars requests in flight. Counted rather than flagged so a stale
+  /// request finishing (e.g. cancelled by an interval switch) can't clear the
+  /// state of the one that replaced it.
+  int _inFlight = 0;
+
+  /// True while any bars request is running, whatever triggered it — this is
+  /// what the app bar sync icon watches.
+  bool get isFetching => _inFlight > 0;
+
   @override
   void initState() {
     _fxRateService = context.read<FxRateService>();
@@ -88,10 +97,18 @@ class MarketDetailViewModel extends CoreViewModel {
   }
 
   Future<void> fetchBars({bool showLoading = false}) async {
-    if (showLoading) {
-      _isLoading = true;
+    _inFlight++;
+    if (showLoading) _isLoading = true;
+    notifyListenersSafe();
+    try {
+      await _fetchBars();
+    } finally {
+      _inFlight--;
       notifyListenersSafe();
     }
+  }
+
+  Future<void> _fetchBars() async {
     final res = await _fxRateService.getBars(
       code: code,
       timeframe: _interval.timeframe,

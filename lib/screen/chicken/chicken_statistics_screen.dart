@@ -10,12 +10,18 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 /// One bucket of the statistics screen: a period (a month or a year) and the
 /// figures accumulated in it.
-typedef _Period = ({int key, String label, String shortLabel, ChickenStats data});
+typedef _Period = ({
+  int key,
+  String label,
+  String shortLabel,
+  ChickenStats data,
+});
 
 @RoutePage()
 class ChickenStatisticsScreen extends StatefulScreen
@@ -36,10 +42,27 @@ class _ChickenStatisticsScreenState
   late TabController _tabController;
   int _selectedYear = DateTime.now().year;
 
+  /// Only the monthly tab is year-filtered, so only it needs to be scrolled
+  /// back to the top when the year changes.
+  final _monthlyScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  /// Waits a frame so the newly selected year is laid out before scrolling.
+  void _scrollMonthlyToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_monthlyScrollController.hasClients) {
+        _monthlyScrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -57,6 +80,7 @@ class _ChickenStatisticsScreenState
   @override
   void dispose() {
     _tabController.dispose();
+    _monthlyScrollController.dispose();
     super.dispose();
   }
 
@@ -68,8 +92,9 @@ class _ChickenStatisticsScreenState
   Color get _cockColor => context.colors.danger;
   Color get _meatColor => context.colors.meat;
 
-  String _compact(double value) =>
-      value.toCompactCurrency(locale: Localizations.localeOf(context).toString());
+  String _compact(double value) => value.toCompactCurrency(
+    locale: Localizations.localeOf(context).toString(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +102,9 @@ class _ChickenStatisticsScreenState
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.profitStatistics,
+        titleSuffix: AppBarSyncIcon<ChickenViewModel>(
+          selector: (vm) => vm.isFetching,
+        ),
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -89,9 +117,6 @@ class _ChickenStatisticsScreenState
         builder: (context, vm, child) {
           return Column(
             children: [
-              vm.isFetching
-                  ? const LinearProgressIndicator(minHeight: 2)
-                  : const SizedBox(height: 2),
               ChickenStaleBanner(sections: ChickenSection.values.toSet()),
               Expanded(
                 child: TabBarView(
@@ -144,7 +169,12 @@ class _ChickenStatisticsScreenState
               YearFilter(
                 selectedYear: _selectedYear,
                 years: years,
-                onChanged: (val) => setState(() => _selectedYear = val),
+                onChanged: (val) {
+                  setState(() => _selectedYear = val);
+                  // A different year is a different list — start it from the
+                  // top instead of keeping the old scroll offset.
+                  _scrollMonthlyToTop();
+                },
               ),
             ],
           ),
@@ -153,6 +183,7 @@ class _ChickenStatisticsScreenState
           child: active.isEmpty
               ? _buildEmpty(l10n.noDataInYear(_selectedYear))
               : _buildStatsList(
+                  controller: _monthlyScrollController,
                   periods: active.reversed.toList(),
                   chartPeriods: chartMonths,
                   headline: "${l10n.yearPrefix} $_selectedYear ($cal)",
@@ -253,6 +284,7 @@ class _ChickenStatisticsScreenState
   /// [periods] is newest-first (reading order); [chartPeriods] is oldest-first
   /// so the chart's x-axis runs forward in time.
   Widget _buildStatsList({
+    ScrollController? controller,
     required List<_Period> periods,
     required List<_Period> chartPeriods,
     required String headline,
@@ -262,9 +294,12 @@ class _ChickenStatisticsScreenState
     required String detailsLabel,
   }) {
     final total = _totalOf(periods.map((p) => p.data));
-    final best = periods.reduce((a, b) => b.data.profit > a.data.profit ? b : a);
+    final best = periods.reduce(
+      (a, b) => b.data.profit > a.data.profit ? b : a,
+    );
 
     return ListView(
+      controller: controller,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         _buildSummaryCard(
@@ -295,7 +330,7 @@ class _ChickenStatisticsScreenState
         Text(
           text.toUpperCase(),
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
             color: _scheme.onSurfaceVariant,
@@ -357,7 +392,7 @@ class _ChickenStatisticsScreenState
                     Text(
                       subhead,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: _scheme.onSurfaceVariant,
                       ),
                     ),
@@ -375,26 +410,37 @@ class _ChickenStatisticsScreenState
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            l10n.profitLabel.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-              color: _scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "${total.profit.toCurrency()}đ",
-              style: context.theme.textTheme.headlineMedium?.copyWith(
-                color: accent,
-                fontWeight: FontWeight.w800,
+          // Label and figure share one line; the figure shrinks to fit instead
+          // of wrapping when the number gets long.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                l10n.profitLabel.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: _scheme.onSurfaceVariant,
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "${total.profit.toCurrency()}đ",
+                    maxLines: 1,
+                    style: context.theme.textTheme.headlineMedium?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           Row(
@@ -423,7 +469,7 @@ class _ChickenStatisticsScreenState
             Text(
               l10n.revenueBreakdown,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: _scheme.onSurfaceVariant,
               ),
@@ -431,33 +477,7 @@ class _ChickenStatisticsScreenState
             const SizedBox(height: 8),
             _buildStackedBar(total, height: 12),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 14,
-              runSpacing: 6,
-              children: [
-                if (total.batchRevenue != 0)
-                  _buildLegend(
-                    _chickColor,
-                    l10n.batchRevenue,
-                    total.batchRevenue,
-                    revenue,
-                  ),
-                if (total.cockRevenue != 0)
-                  _buildLegend(
-                    _cockColor,
-                    l10n.cockRevenue,
-                    total.cockRevenue,
-                    revenue,
-                  ),
-                if (total.meatRevenue != 0)
-                  _buildLegend(
-                    _meatColor,
-                    l10n.meatRevenue,
-                    total.meatRevenue,
-                    revenue,
-                  ),
-              ],
-            ),
+            _buildLegendList(total, revenue, spacing: 6),
           ],
           const SizedBox(height: 14),
           Divider(height: 1, color: _scheme.outlineVariant),
@@ -573,7 +593,7 @@ class _ChickenStatisticsScreenState
                   child: Text(
                     period.shortLabel,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: _scheme.primary,
                     ),
@@ -583,7 +603,10 @@ class _ChickenStatisticsScreenState
                 Expanded(
                   child: Text(
                     period.label,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 _buildTag(
@@ -599,33 +622,7 @@ class _ChickenStatisticsScreenState
               const SizedBox(height: 12),
               _buildStackedBar(data),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 4,
-                children: [
-                  if (data.batchRevenue != 0)
-                    _buildLegend(
-                      _chickColor,
-                      l10n.batchRevenue,
-                      data.batchRevenue,
-                      revenue,
-                    ),
-                  if (data.cockRevenue != 0)
-                    _buildLegend(
-                      _cockColor,
-                      l10n.cockRevenue,
-                      data.cockRevenue,
-                      revenue,
-                    ),
-                  if (data.meatRevenue != 0)
-                    _buildLegend(
-                      _meatColor,
-                      l10n.meatRevenue,
-                      data.meatRevenue,
-                      revenue,
-                    ),
-                ],
-              ),
+              _buildLegendList(data, revenue, spacing: 4),
             ],
             const SizedBox(height: 10),
             Row(
@@ -670,7 +667,7 @@ class _ChickenStatisticsScreenState
         const SizedBox(width: 5),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: _scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 12, color: _scheme.onSurfaceVariant),
         ),
       ],
     );
@@ -688,13 +685,13 @@ class _ChickenStatisticsScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: accent),
+            Icon(icon, size: 15, color: accent),
             const SizedBox(width: 4),
           ],
           Text(
             text,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: accent,
             ),
@@ -747,7 +744,78 @@ class _ChickenStatisticsScreenState
   /// One revenue source: swatch, name, then its amount and its share. Both
   /// figures are shown — the share says how it compares, the amount is what the
   /// user actually books.
-  Widget _buildLegend(Color color, String label, double value, double total) {
+  /// The revenue split as one legend per line, every label padded to the widest
+  /// name so the figures start at the same x.
+  Widget _buildLegendList(
+    ChickenStats data,
+    double revenue, {
+    required double spacing,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final sources = <(Color, String, double)>[
+      if (data.batchRevenue != 0)
+        (_chickColor, l10n.batchRevenue, data.batchRevenue),
+      if (data.cockRevenue != 0)
+        (_cockColor, l10n.cockRevenue, data.cockRevenue),
+      if (data.meatRevenue != 0)
+        (_meatColor, l10n.meatRevenue, data.meatRevenue),
+    ];
+    // Measured over all three names, not just the ones this card shows, so the
+    // figures start at the same x on every card.
+    final labelWidth = _legendLabelWidth([
+      l10n.batchRevenue,
+      l10n.cockRevenue,
+      l10n.meatRevenue,
+    ]);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (index, source) in sources.indexed) ...[
+          if (index > 0) SizedBox(height: spacing),
+          _buildLegend(
+            source.$1,
+            source.$2,
+            source.$3,
+            revenue,
+            labelWidth: labelWidth,
+          ),
+        ],
+      ],
+    );
+  }
+
+  static const _legendLabelStyle = TextStyle(fontSize: 13);
+
+  /// The widest of the revenue-source names, so every legend reserves the same
+  /// room for its label and the figures line up in a column.
+  double _legendLabelWidth(List<String> labels) {
+    final scaler = MediaQuery.textScalerOf(context);
+    // The Text widgets merge the ambient default style (font family, height),
+    // so measuring with the bare style would come out narrow and clip the
+    // longest name to an ellipsis.
+    final style = DefaultTextStyle.of(context).style.merge(_legendLabelStyle);
+    var widest = 0.0;
+    for (final label in labels) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: Directionality.of(context),
+        maxLines: 1,
+        textScaler: scaler,
+      )..layout();
+      if (painter.width > widest) widest = painter.width;
+    }
+    // Round up: a fractional shortfall is enough to trigger the ellipsis.
+    return widest.ceilToDouble();
+  }
+
+  Widget _buildLegend(
+    Color color,
+    String label,
+    double value,
+    double total, {
+    double? labelWidth,
+  }) {
     final percent = total > 0 ? (value / total * 100).round() : 0;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -756,21 +824,29 @@ class _ChickenStatisticsScreenState
         const SizedBox(width: 5),
         // The source names are long ("Doanh thu gà đá"); the label gives way
         // before the figure does.
-        Flexible(
+        SizedBox(
+          width: labelWidth,
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: _scheme.onSurfaceVariant),
+            style: _legendLabelStyle.copyWith(color: _scheme.onSurfaceVariant),
           ),
         ),
         const SizedBox(width: 5),
-        Text(
-          "${value.toCurrency()}đ · $percent%",
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: color,
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "${value.toCurrency()}đ · $percent%",
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
           ),
         ),
       ],
@@ -797,7 +873,7 @@ class _ChickenStatisticsScreenState
         children: [
           Row(
             children: [
-              Icon(icon, size: 13, color: accent),
+              Icon(icon, size: 15, color: accent),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -805,7 +881,7 @@ class _ChickenStatisticsScreenState
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     color: _scheme.onSurfaceVariant,
                   ),
                 ),
@@ -819,7 +895,7 @@ class _ChickenStatisticsScreenState
             child: Text(
               "${value.toCurrency()}đ",
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: FontWeight.w800,
                 color: accent,
               ),
@@ -836,7 +912,7 @@ class _ChickenStatisticsScreenState
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: _scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 12, color: _scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 2),
         FittedBox(
@@ -845,7 +921,7 @@ class _ChickenStatisticsScreenState
           child: Text(
             value,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: accent,
             ),
@@ -860,7 +936,7 @@ class _ChickenStatisticsScreenState
       children: [
         Text(
           "$label ",
-          style: TextStyle(fontSize: 12, color: _scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 13, color: _scheme.onSurfaceVariant),
         ),
         Flexible(
           child: Text(
@@ -868,7 +944,7 @@ class _ChickenStatisticsScreenState
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: accent,
             ),

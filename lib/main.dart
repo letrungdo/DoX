@@ -31,6 +31,10 @@ void main() {
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown, //
       ]);
+      // Draw behind the status bar and the (gesture) navigation bar so the
+      // app's own background/bottom nav colour shows through instead of the
+      // system's default bar colour.
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       await Future.wait([
         storageService.init(),
         appInfo.init(),

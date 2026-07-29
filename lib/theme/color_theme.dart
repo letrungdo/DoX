@@ -50,19 +50,19 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
 
   static final light = ColorTheme(
     buttonBg: Colors.white, //
-    disabled: const Color(0xFFBFC9C5),
-    iconColor: const Color(0xFF435A55),
-    money: const Color(0xFF00897B),
-    success: const Color(0xFF12703A),
-    successSoft: const Color(0xFFE7F5EC),
-    warning: const Color(0xFFA34A08),
-    warningSoft: const Color(0xFFFDF2E2),
-    danger: const Color(0xFFB3261E),
-    dangerSoft: const Color(0xFFFCEBE9),
-    info: const Color(0xFF1D6F8B),
-    infoSoft: const Color(0xFFE6F1F6),
-    meat: const Color(0xFF6D28D9),
-    meatSoft: const Color(0xFFF1EBFD),
+    disabled: const Color(0xFFA7B5B0),
+    iconColor: const Color(0xFF2E4540),
+    money: const Color(0xFF00695C),
+    success: const Color(0xFF0B5A2C),
+    successSoft: const Color(0xFFD6EDDF),
+    warning: const Color(0xFF853A04),
+    warningSoft: const Color(0xFFF8E5CB),
+    danger: const Color(0xFF8F1D17),
+    dangerSoft: const Color(0xFFF7DAD7),
+    info: const Color(0xFF135A73),
+    infoSoft: const Color(0xFFD4E6EE),
+    meat: const Color(0xFF5620AE),
+    meatSoft: const Color(0xFFE4DAFB),
   );
 
   static final dark = ColorTheme(

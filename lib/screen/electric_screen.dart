@@ -16,6 +16,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -101,23 +102,18 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.electricityTitle,
+        titleSuffix: AppBarSyncIcon<ElectricViewModel>(
+          selector: (vm) => vm.isFetching,
+        ),
         actions: [
           Selector<ElectricViewModel, ElectricStatus>(
             selector: (_, vm) => vm.status,
             builder: (context, status, _) {
               if (status != ElectricStatus.loggedIn) return const SizedBox.shrink();
-              return Row(
-                children: [
-                  IconButton(
-                    onPressed: () => vm.onRefresh(showLoading: true), //
-                    icon: const Icon(Icons.refresh_rounded, size: 27),
-                  ),
-                  IconButton(
-                    tooltip: l10n.logout,
-                    onPressed: () => _confirmRemoveAccount(l10n),
-                    icon: const Icon(Icons.logout_rounded, size: 24),
-                  ),
-                ],
+              return IconButton(
+                tooltip: l10n.logout,
+                onPressed: () => _confirmRemoveAccount(l10n),
+                icon: const Icon(Icons.logout_rounded, size: 24),
               );
             },
           ),
@@ -132,23 +128,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               onSubmit: _login,
               onForgetSavedAccount: _confirmForgetSavedAccount,
             ),
-            ElectricStatus.loggedIn => Column(
-              children: [
-                Selector<ElectricViewModel, bool>(
-                  selector: (_, vm) => vm.isLoading,
-                  builder: (context, isLoading, _) {
-                    return isLoading
-                        ? const LinearProgressIndicator(minHeight: 2)
-                        : const SizedBox(height: 2);
-                  },
-                ),
-                Expanded(
-                  child: RefreshIndicator.adaptive(
-                    onRefresh: () => vm.onRefresh(showLoading: true), //
-                    child: _buildContent(l10n),
-                  ),
-                ),
-              ],
+            ElectricStatus.loggedIn => RefreshIndicator.adaptive(
+              onRefresh: () => vm.onRefresh(showLoading: true), //
+              child: _buildContent(l10n),
             ),
           };
         },

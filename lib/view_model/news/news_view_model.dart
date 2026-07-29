@@ -25,8 +25,8 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   bool _isLoading = false;
 
   /// True only during an explicitly-requested load (first load or a manual
-  /// reload). Background refreshes on tab switch / resume leave this false so
-  /// the top progress bar stays hidden.
+  /// reload). Background refreshes on tab switch / resume leave this false.
+  /// The app bar spinner watches [isFetching] instead, so any fetch shows up.
   bool get isLoading => _isLoading;
 
   @override
@@ -80,28 +80,31 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
       );
       return;
     }
-    _goldPrices = res.data ?? [];
+    // Same as the FX rates: hold on to the previous table when a fetch fails.
+    final data = res.data;
+    if (data == null) return;
+    _goldPrices = data;
     notifyListenersSafe();
   }
 
   // All JPY→VND rates are stored in one Supabase table, so a single query
   // fetches every source at once instead of one request per source.
+  //
+  // The rates already on screen are kept until the new ones arrive — a reload
+  // shouldn't blank out values that are still perfectly readable.
   Future<void> _getFxRates() async {
-    _googleRate = null;
-    _smileRate = null;
-    _moneyGramRate = null;
-    _dcomRate = null;
-    notifyListenersSafe();
     final res = await fxRateService.getFxRates(cancelToken: cancelToken);
     if (res.isCancelByUser) {
       return;
     }
-    final rates = res.data ?? {};
-    _googleRate = rates['google_jpy_vnd'].formatUnit();
-    _smileRate = rates['smile_jpy_vnd'].formatUnit();
-    _moneyGramRate = rates['moneygram_jpy_vnd'].formatUnit();
-    _dcomRate = rates['dcom_jpy_vnd'].formatUnit();
-    notifyListenersSafe();
+    final rates = res.data;
+    if (rates != null) {
+      _googleRate = rates['google_jpy_vnd'].formatUnit();
+      _smileRate = rates['smile_jpy_vnd'].formatUnit();
+      _moneyGramRate = rates['moneygram_jpy_vnd'].formatUnit();
+      _dcomRate = rates['dcom_jpy_vnd'].formatUnit();
+      notifyListenersSafe();
+    }
     if (res.isError) {
       showAppError(
         // ignore: use_build_context_synchronously

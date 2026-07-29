@@ -20,7 +20,7 @@ import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
-import 'package:do_x/widgets/text/text_loading.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -136,30 +136,11 @@ class _NewsScreenState<V extends NewsViewModel>
       child: Scaffold(
         appBar: DoAppBar(
           title: l10n.news, //
-          actions: [
-            IconButton(
-              onPressed: () => vm.onRefresh(showLoading: true), //
-              icon: const Icon(Icons.refresh_rounded, size: 27),
-            ),
-          ],
+          titleSuffix: AppBarSyncIcon<V>(selector: (vm) => vm.isFetching),
         ),
-        body: Column(
-          children: [
-            Selector<V, bool>(
-              selector: (_, vm) => vm.isLoading,
-              builder: (context, isLoading, _) {
-                return isLoading
-                    ? const LinearProgressIndicator(minHeight: 2)
-                    : const SizedBox(height: 2);
-              },
-            ),
-            Expanded(
-              child: RefreshIndicator.adaptive(
-                onRefresh: () => vm.onRefresh(showLoading: true), //
-                child: _buildBody(l10n),
-              ),
-            ),
-          ],
+        body: RefreshIndicator.adaptive(
+          onRefresh: () => vm.onRefresh(showLoading: true), //
+          child: _buildBody(l10n),
         ),
       ),
     );
@@ -269,39 +250,32 @@ class _NewsScreenState<V extends NewsViewModel>
     String? Function(V vm) selector,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: softColor, //
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        spacing: 6,
         children: [
-          Row(
-            spacing: 5,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              Expanded(
-                child: AutoSizeText(
-                  name,
-                  maxLines: 1,
-                  style: context.textTheme.title.size13.medium.fit,
-                ),
-              ),
-            ],
+          // Expanded, not Flexible: it pushes the rate to the right edge and
+          // gives the label the leftover width to shrink into.
+          Expanded(
+            child: AutoSizeText(
+              name,
+              maxLines: 1,
+              style: context.textTheme.title.size13.medium.fit,
+            ),
           ),
-          const SizedBox(height: 2),
           Selector<V, String?>(
             selector: (_, vm) => selector(vm),
             builder: (context, value, _) {
-              return TextLoading(
-                value,
-                minHeight: 18,
+              // Blank until the first value lands: a dash next to a spinning
+              // sync icon reads as "no data" rather than "still loading".
+              return AutoSizeText(
+                value ?? "",
+                maxLines: 1,
                 style: context.textTheme.primary.size15.bold.fit.textColor(
                   color,
                 ),

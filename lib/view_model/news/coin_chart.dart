@@ -110,7 +110,6 @@ mixin CoinChartMixin on CoreViewModel {
   Map<MarketCode, ChartData> coinChartMap = {};
 
   Future<void> getMarket() async {
-    coinChartMap = {};
     notifyInInitState();
     final res = await fxRateService.getMarket(cancelToken: cancelToken);
     if (res.isCancelByUser) {
@@ -125,6 +124,9 @@ mixin CoinChartMixin on CoreViewModel {
       );
       return;
     }
+    // Built aside and swapped in at the end: clearing the map up front made
+    // every row disappear for the duration of a refresh.
+    final map = <MarketCode, ChartData>{};
     final data = res.data ?? [];
     for (final e in data) {
       final code = e.code;
@@ -138,13 +140,14 @@ mixin CoinChartMixin on CoreViewModel {
       final chartData = window.map((candle) => candle.close).toList();
       final times = window.map((candle) => candle.date).toList();
 
-      coinChartMap[code] = ChartData(
+      map[code] = ChartData(
         chartData: chartData,
         times: times,
         price: window.lastOrNull?.close,
         color: _trendColor(chartData),
       );
     }
+    coinChartMap = map;
     notifyListenersSafe();
   }
 }

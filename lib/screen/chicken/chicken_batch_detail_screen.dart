@@ -17,7 +17,7 @@ import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
@@ -100,7 +100,7 @@ class _ChickenBatchDetailScreenState
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.batchDetailTitle,
-        bottom: AppBarLoadingBar<ChickenViewModel>(
+        titleSuffix: AppBarSyncIcon<ChickenViewModel>(
           selector: (vm) => vm.isFetching,
         ),
       ),
@@ -407,6 +407,10 @@ class _ChickenBatchDetailScreenState
                         child: _buildStatTile(
                           "${batch.soldQuantity}",
                           l10n.soldLabel,
+                          // Same green as the "sold" number in the sale summary.
+                          valueColor: batch.soldQuantity > 0
+                              ? context.colors.success
+                              : context.theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -414,9 +418,11 @@ class _ChickenBatchDetailScreenState
                         child: _buildStatTile(
                           "${batch.remainingQuantity}",
                           l10n.remainingLabel,
-                          valueColor: soldOut
-                              ? context.theme.colorScheme.onSurfaceVariant
-                              : null,
+                          // Same amber as the "remaining" number in the sale
+                          // summary, so the two agree at a glance.
+                          valueColor: batch.remainingQuantity > 0
+                              ? context.colors.warning
+                              : context.theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -697,6 +703,14 @@ class _ChickenBatchDetailScreenState
                 batch.soldQuantity,
                 batch.remainingQuantity,
               ),
+              // Sold count in green, what is left in amber: the two numbers
+              // mean opposite things and shouldn't blend together.
+              highlightNumbers: [
+                context.colors.success,
+                batch.remainingQuantity > 0
+                    ? context.colors.warning
+                    : context.theme.colorScheme.onSurfaceVariant,
+              ],
             ),
             _buildRowInfo(
               l10n.totalRevenueLabel,
@@ -825,10 +839,15 @@ class _ChickenBatchDetailScreenState
                           child: Text.rich(
                             TextSpan(
                               children: [
-                                TextSpan(
-                                  text:
-                                      "${sale.quantity > 0 ? l10n.chickenQuantity(sale.quantity) : l10n.chickenSale}${sale.note != null ? ' - ${sale.note}' : ''}",
-                                ),
+                                if (sale.quantity > 0)
+                                  ..._highlightNumberSpans(
+                                    l10n.chickenQuantity(sale.quantity),
+                                    [context.theme.colorScheme.primary],
+                                  )
+                                else
+                                  TextSpan(text: l10n.chickenSale),
+                                if (sale.note != null)
+                                  TextSpan(text: " - ${sale.note}"),
                                 _buildSaleAgeSpan(
                                   l10n.statusDaysOld(
                                     batch.ageInDaysAt(sale.date),
@@ -978,12 +997,47 @@ class _ChickenBatchDetailScreenState
     );
   }
 
+  /// Splits a localized string so its digit groups stand out from the wording
+  /// around them — "12 con, còn 8 con" reads as counts first, words second.
+  ///
+  /// [colors] is applied per number in order; the last entry repeats once the
+  /// numbers outnumber it.
+  List<InlineSpan> _highlightNumberSpans(String text, List<Color> colors) {
+    final spans = <InlineSpan>[];
+    var last = 0;
+    var index = 0;
+    for (final match in RegExp(r'\d+').allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: text.substring(last, match.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: match[0],
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            color: colors[index.clamp(0, colors.length - 1)],
+          ),
+        ),
+      );
+      last = match.end;
+      index++;
+    }
+    if (last < text.length) spans.add(TextSpan(text: text.substring(last)));
+    return spans;
+  }
+
   Widget _buildRowInfo(
     String label,
     String value, {
     Color? color,
     bool isBold = false,
+    List<Color>? highlightNumbers,
   }) {
+    final valueStyle = TextStyle(
+      color: color,
+      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -993,13 +1047,15 @@ class _ChickenBatchDetailScreenState
             label,
             style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
+          if (highlightNumbers != null)
+            Text.rich(
+              TextSpan(
+                children: _highlightNumberSpans(value, highlightNumbers),
+              ),
+              style: valueStyle,
+            )
+          else
+            Text(value, style: valueStyle),
         ],
       ),
     );
