@@ -75,9 +75,7 @@ class _LunarCalendarPickerDialogState
         MediaQuery.sizeOf(context).width - insetHorizontal * 2;
     final contentWidth = availableWidth < 460.0 ? availableWidth : 460.0;
     return AlertDialog(
-      // Actions are raised buttons: the 8px the dialog leaves between them
-      // is inside their shadow reach, so one button's lit rim lands on the
-      // next one's shade.
+      // Flat text buttons here, so the default action spacing is fine.
       buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
       insetPadding: const EdgeInsets.symmetric(
         horizontal: insetHorizontal,

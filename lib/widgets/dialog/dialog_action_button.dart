@@ -4,6 +4,44 @@ import 'package:flutter/material.dart';
 
 enum DialogActionKind { cancel, primary, destructive, destructiveOutline }
 
+/// Lays a dialog's buttons out as one row, spaced far enough apart for their
+/// shadows.
+///
+/// [AlertDialog] packs its actions into an [OverflowBar] that leaves only a few
+/// pixels between them — well inside the reach of a [NeuButton]'s rims (offset
+/// plus blur is ~14dp at the button's depth), so the right-hand button paints
+/// over the left one's shade and the pair reads as clipped. Pass this as the
+/// dialog's single action instead: the buttons share the width evenly with a gap
+/// that clears both rims, and one button no longer overlaps the next.
+class DialogActions extends StatelessWidget {
+  const DialogActions({super.key, required this.children, this.expand = true});
+
+  final List<Widget> children;
+
+  /// Split the row's width evenly between the buttons. Turn it off when there
+  /// are enough of them that an equal share would squeeze the labels; they then
+  /// hug their own width and sit at the trailing edge.
+  final bool expand;
+
+  /// Clears the shaded rim of the button on its left (~14dp) with a little air
+  /// to spare.
+  static const gap = 18.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: expand ? MainAxisAlignment.start : MainAxisAlignment.end,
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) const SizedBox(width: gap),
+          expand ? Expanded(child: children[i]) : children[i],
+        ],
+      ],
+    );
+  }
+}
+
 /// A semantic action button shared by modal and dialog surfaces.
 ///
 /// Built on [NeuButton], so save/cancel/delete carry the same raised-to-pressed
@@ -58,10 +96,7 @@ class DialogActionButton extends StatelessWidget {
               child: SizedBox(
                 height: 18,
                 width: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: context.colors.disabled,
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.disabled),
               ),
             )
           : _label(),
@@ -75,10 +110,7 @@ class DialogActionButton extends StatelessWidget {
     return Center(
       child: icon == null
           ? label
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [Icon(icon), const SizedBox(width: 8), label],
-            ),
+          : Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon), const SizedBox(width: 8), label]),
     );
   }
 }
