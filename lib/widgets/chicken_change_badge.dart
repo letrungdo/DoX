@@ -1,6 +1,7 @@
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/chicken_recent_changes.dart';
+import 'package:do_x/theme/text_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Small pill marking a record that was added ("New", red) or edited
@@ -39,19 +40,16 @@ class ChickenChangeBadge extends StatelessWidget {
           : const EdgeInsets.only(left: 6),
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 5 : 6,
-        vertical: compact ? 1 : 2,
+        vertical: compact ? 2 : 3,
       ),
       decoration: BoxDecoration(
         color: tint,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         isNew ? l10n.badgeNew : l10n.badgeUpdated,
-        style: TextStyle(
+        style: DoTextTheme.pill.copyWith(
           fontSize: compact ? 9 : 10,
-          height: 1.2,
-          fontWeight: FontWeight.w700,
           color: color,
         ),
       ),

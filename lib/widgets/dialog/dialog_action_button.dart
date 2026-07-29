@@ -1,8 +1,21 @@
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
 
 enum DialogActionKind { cancel, primary, destructive, destructiveOutline }
 
 /// A semantic action button shared by modal and dialog surfaces.
+///
+/// Built on [NeuButton], so save/cancel/delete carry the same raised-to-pressed
+/// cue as the rest of the app. What used to separate the kinds was the button
+/// *class* — filled vs outlined — which put an outline on the cancel and the
+/// secondary destructive variant; the fill carries that difference now:
+///
+/// * [DialogActionKind.primary] — the accent fill,
+/// * [DialogActionKind.cancel] — the plain surface, lifted like any panel,
+/// * [DialogActionKind.destructive] — filled with the error colour,
+/// * [DialogActionKind.destructiveOutline] — surface fill with an error label,
+///   for a destructive action that is not the dialog's main one.
 class DialogActionButton extends StatelessWidget {
   const DialogActionButton({
     super.key,
@@ -24,96 +37,48 @@ class DialogActionButton extends StatelessWidget {
   /// is set, so a slow action cannot be started twice.
   final bool loading;
 
-  Widget _spinner(Color color) => SizedBox(
-    height: 18,
-    width: 18,
-    child: CircularProgressIndicator(strokeWidth: 2, color: color),
-  );
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    if (loading) {
-      return switch (kind) {
-        DialogActionKind.cancel ||
-        DialogActionKind.destructiveOutline => OutlinedButton(
-          onPressed: null,
-          child: _spinner(scheme.onSurface),
-        ),
-        DialogActionKind.primary => FilledButton(
-          onPressed: null,
-          child: _spinner(scheme.onSurface),
-        ),
-        DialogActionKind.destructive => FilledButton(
-          style: FilledButton.styleFrom(
-            disabledBackgroundColor: scheme.error.withValues(alpha: 0.6),
-            disabledForegroundColor: scheme.onError,
-          ),
-          onPressed: null,
-          child: _spinner(scheme.onError),
-        ),
-      };
-    }
-    final destructiveStyle = FilledButton.styleFrom(
-      backgroundColor: scheme.error,
-      foregroundColor: scheme.onError,
-      disabledBackgroundColor: scheme.onSurface.withValues(alpha: 0.12),
-      disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.38),
-    );
-    final destructiveOutlineStyle = OutlinedButton.styleFrom(
-      foregroundColor: scheme.error,
-      side: BorderSide(color: scheme.error.withValues(alpha: 0.72)),
-    );
-
-    return switch (kind) {
-      DialogActionKind.cancel =>
-        icon == null
-            ? OutlinedButton(
-                onPressed: onPressed,
-                child: Text(text, style: textStyle),
-              )
-            : OutlinedButton.icon(
-                onPressed: onPressed,
-                icon: Icon(icon),
-                label: Text(text, style: textStyle),
-              ),
-      DialogActionKind.primary =>
-        icon == null
-            ? FilledButton(
-                onPressed: onPressed,
-                child: Text(text, style: textStyle),
-              )
-            : FilledButton.icon(
-                onPressed: onPressed,
-                icon: Icon(icon),
-                label: Text(text, style: textStyle),
-              ),
-      DialogActionKind.destructive =>
-        icon == null
-            ? FilledButton(
-                style: destructiveStyle,
-                onPressed: onPressed,
-                child: Text(text, style: textStyle),
-              )
-            : FilledButton.icon(
-                style: destructiveStyle,
-                onPressed: onPressed,
-                icon: Icon(icon),
-                label: Text(text, style: textStyle),
-              ),
-      DialogActionKind.destructiveOutline =>
-        icon == null
-            ? OutlinedButton(
-                style: destructiveOutlineStyle,
-                onPressed: onPressed,
-                child: Text(text, style: textStyle),
-              )
-            : OutlinedButton.icon(
-                style: destructiveOutlineStyle,
-                onPressed: onPressed,
-                icon: Icon(icon),
-                label: Text(text, style: textStyle),
-              ),
+    final (Color? accent, Color? foreground) = switch (kind) {
+      DialogActionKind.primary => (scheme.primary, scheme.onPrimary),
+      DialogActionKind.destructive => (scheme.error, scheme.onError),
+      DialogActionKind.destructiveOutline => (null, scheme.error),
+      DialogActionKind.cancel => (null, null),
     };
+
+    return NeuButton(
+      onPressed: loading ? null : onPressed,
+      accent: accent,
+      foreground: foreground,
+      radius: 14,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+      child: loading
+          ? Center(
+              child: SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: context.colors.disabled,
+                ),
+              ),
+            )
+          : _label(),
+    );
+  }
+
+  /// Centred: these usually sit in an `Expanded`, and a raw `Text` would hug
+  /// the left edge of the stretched button.
+  Widget _label() {
+    final label = Text(text, style: textStyle);
+    return Center(
+      child: icon == null
+          ? label
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [Icon(icon), const SizedBox(width: 8), label],
+            ),
+    );
   }
 }

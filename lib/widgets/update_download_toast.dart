@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/update_controller.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
 /// A small fixed toast that shows the background APK download progress and,
@@ -61,54 +63,52 @@ class _ToastCard extends StatelessWidget {
 
     return SafeArea(
       minimum: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        elevation: 6,
-        borderRadius: BorderRadius.circular(12),
-        color: scheme.surfaceContainerHigh,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-          child: Row(
-            children: [
-              _leadingIcon(scheme, isDone, isError),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isError ? scheme.error : null,
+      child: NeuCard(
+        radius: 12,
+        // Floats over the page, so it lifts a little higher than a normal card.
+        depth: 1.3,
+        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        child: Row(
+          children: [
+            _leadingIcon(scheme, isDone, isError),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isError ? scheme.error : null,
+                    ),
+                  ),
+                  if (!isDone && !isError) ...[
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
                       ),
                     ),
-                    if (!isDone && !isError) ...[
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 6,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        progress != null
-                            ? "${(progress! * 100).toStringAsFixed(0)}%"
-                            : l10n.preparing,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      progress != null
+                          ? "${(progress! * 100).toStringAsFixed(0)}%"
+                          : l10n.preparing,
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
-                ),
+                ],
               ),
-              const SizedBox(width: 4),
-              _trailing(context, l10n, isDone, isError),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            _trailing(context, l10n, isDone, isError),
+          ],
         ),
       ),
     );
@@ -134,12 +134,12 @@ class _ToastCard extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FilledButton(
+          NeuButton(
             onPressed: updateController.install,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              visualDensity: VisualDensity.compact,
-            ),
+            accent: Theme.of(context).colorScheme.primary,
+            radius: 12,
+            depth: 0.6,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             child: Text(l10n.install),
           ),
           _closeButton(),

@@ -64,9 +64,7 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
-            children: [
-              _buildBody(context, l10n),
-            ],
+            children: [_buildBody(context, l10n)],
           ).webConstrainedBox(),
         ),
       ),
@@ -252,7 +250,9 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        // A hint is not a panel: the flat sunken fill is how this design says
+        // "sits in the page" rather than "lifted off it".
+        color: context.neu.sunken,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

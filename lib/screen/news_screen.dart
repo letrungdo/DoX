@@ -22,6 +22,7 @@ import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -161,8 +162,10 @@ class _NewsScreenState<V extends NewsViewModel>
               horizontalPadding = (screenWidth - maxContentWidth) / 2;
             }
             return SliverPadding(
+              // 16, not 15: a card's shadow reaches ~17px, so a tighter page
+              // padding lets the viewport clip the first/last card's rim.
               padding: EdgeInsets.symmetric(
-                vertical: 15,
+                vertical: 16,
                 horizontal: horizontalPadding,
               ), //
               sliver: SliverList(
@@ -235,11 +238,13 @@ class _NewsScreenState<V extends NewsViewModel>
         (vm) => vm.dcomRate,
       ),
     ];
+    // 14, not 8: the tiles are raised panels now, and a gap narrower than their
+    // shadow reach lets one tile's lit rim land on the next one's shade.
     return Column(
-      spacing: 8,
+      spacing: 14,
       children: [
-        Row(spacing: 8, children: [tiles[0].expaned(1), tiles[1].expaned(1)]),
-        Row(spacing: 8, children: [tiles[2].expaned(1), tiles[3].expaned(1)]),
+        Row(spacing: 14, children: [tiles[0].expaned(1), tiles[1].expaned(1)]),
+        Row(spacing: 14, children: [tiles[2].expaned(1), tiles[3].expaned(1)]),
       ],
     );
   }
@@ -250,13 +255,11 @@ class _NewsScreenState<V extends NewsViewModel>
     Color softColor,
     String? Function(V vm) selector,
   ) {
-    return Container(
+    return NeuCard(
+      color: softColor,
+      radius: 10,
+      depth: 0.5,
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: softColor, //
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
       child: Row(
         spacing: 6,
         children: [
@@ -498,7 +501,9 @@ class _NewsScreenState<V extends NewsViewModel>
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: iconColor?.withValues(alpha: 0.12),
+          color: iconColor == null
+              ? null
+              : context.neuTint(iconColor, amount: 0.14),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(iconData, size: 20, color: iconColor),
@@ -596,7 +601,7 @@ class _SectionHeader extends StatelessWidget {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
+            color: context.neuTint(color, amount: 0.14),
             borderRadius: BorderRadius.circular(9),
           ),
           child: Icon(icon, size: 17, color: color),
@@ -611,7 +616,7 @@ class _SectionHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: context.neuTint(color, amount: 0.14),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(

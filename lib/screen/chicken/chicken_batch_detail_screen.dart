@@ -13,6 +13,7 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -27,7 +28,9 @@ import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -198,7 +201,7 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.all(6),
       // Opaque so the badge keeps the same look on the tinted section cards.
-      decoration: context.neu.raised(radius: 10, depth: 0.45),
+      decoration: context.neuRaised(radius: 10, depth: 0.45),
       child: asset.svg(width: size, height: size),
     );
   }
@@ -207,17 +210,16 @@ class _ChickenBatchDetailScreenState
   /// edit dialog, so the action reads the same way in every section.
   Widget _buildEditButton(VoidCallback onTap, {double size = 18}) {
     final color = context.theme.colorScheme.primary;
-    return Material(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(7),
-          child: Icon(Icons.edit_outlined, size: size, color: color),
-        ),
-      ),
+    // A raised tile that sinks when held, like every other control: the flat
+    // tinted Material it used to be had no press cue of its own.
+    return NeuButton(
+      onPressed: onTap,
+      accent: context.neuTint(color),
+      foreground: color,
+      radius: 10,
+      depth: 0.4,
+      padding: const EdgeInsets.all(7),
+      child: Icon(Icons.edit_outlined, size: size, color: color),
     );
   }
 
@@ -228,7 +230,7 @@ class _ChickenBatchDetailScreenState
   Widget _buildStatTile(String value, String label, {Color? valueColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: context.neu.raised(radius: 12, depth: 0.5),
+      decoration: context.neuRaised(radius: 12, depth: 0.5),
       child: Column(
         children: [
           Text(
@@ -265,11 +267,10 @@ class _ChickenBatchDetailScreenState
         ? ChickenDate.formatAge(l10n, batch.ageInDays)
         : l10n.notHatchedYet(-batch.ageInDays);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: context.theme.colorScheme.surface,
+        color: context.neuTint(color),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -282,7 +283,7 @@ class _ChickenBatchDetailScreenState
           const SizedBox(width: 4),
           Text(
             text,
-            style: TextStyle(
+            style: DoTextTheme.pill.copyWith(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: color,
@@ -333,7 +334,11 @@ class _ChickenBatchDetailScreenState
             Row(
               children: [
                 _buildIconBadge(
-                  hatched ? Assets.images.chickCute : Assets.images.eggCute,
+                  !hatched
+                      ? Assets.images.eggCute
+                      : soldOut
+                      ? Assets.images.henCute
+                      : Assets.images.chickCute,
                   size: 30,
                 ),
                 const SizedBox(width: 12),
@@ -738,12 +743,22 @@ class _ChickenBatchDetailScreenState
         // Sold out: nothing left to sell, so hide the record button.
         if (!soldOut) ...[
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showSaleDialog(batch),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(l10n.recordNewSale),
+          NeuButton(
+            onPressed: () => _showSaleDialog(batch),
+            accent: context.theme.colorScheme.primary,
+            expand: true,
+            radius: 14,
+            // Centre: the button stretches, so the row has to be centred inside
+            // it rather than sitting at the left edge.
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add, size: 18),
+                  const SizedBox(width: 8),
+                  Text(l10n.recordNewSale),
+                ],
+              ),
             ),
           ),
         ],
@@ -757,7 +772,7 @@ class _ChickenBatchDetailScreenState
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       // Opaque base fill, so the section's tint can't bleed through and dull
       // the numbers on it.
-      decoration: context.neu.raised(radius: 12, depth: 0.5),
+      decoration: context.neuRaised(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,
@@ -768,116 +783,101 @@ class _ChickenBatchDetailScreenState
   Widget _buildSaleRow(ChickenBatch batch, BatchSale sale) {
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+      // 12, not 8: each round is a raised panel now, and a tighter gap lets one
+      // round's lit rim sit on the shade of the one above it.
+      padding: const EdgeInsets.only(bottom: 12),
+      // Its own raised panel on top of the tinted section, instead of the
+      // outline plus hand-rolled drop shadow it used to carry.
+      child: NeuCard(
+        radius: 12,
+        depth: 0.6,
         onTap: () => _showSaleDialog(batch, sale: sale),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-          decoration: BoxDecoration(
-            color: context.theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            // Outline + soft shadow so each sale round reads as its own
-            // tappable card on top of the tinted section.
-            border: Border.all(
-              color: context.colors.money.withValues(alpha: 0.35),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: context.theme.colorScheme.shadow.withValues(alpha: 0.07),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        ChickenChangeBadge(
-                          vm.changeBadgeOf(sale.id),
-                          compact: true,
-                          leading: true,
-                        ),
-                        Flexible(
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                if (sale.quantity > 0)
-                                  ..._highlightNumberSpans(
-                                    l10n.chickenQuantity(sale.quantity),
-                                    [context.theme.colorScheme.primary],
-                                  )
-                                else
-                                  TextSpan(text: l10n.chickenSale),
-                                if (sale.note != null)
-                                  TextSpan(text: " - ${sale.note}"),
-                                _buildSaleAgeSpan(
-                                  l10n.statusDaysOld(
-                                    batch.ageInDaysAt(sale.date),
-                                  ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      ChickenChangeBadge(
+                        vm.changeBadgeOf(sale.id),
+                        compact: true,
+                        leading: true,
+                      ),
+                      Flexible(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              if (sale.quantity > 0)
+                                ..._highlightNumberSpans(
+                                  l10n.chickenQuantity(sale.quantity),
+                                  [context.theme.colorScheme.primary],
+                                )
+                              else
+                                TextSpan(text: l10n.chickenSale),
+                              if (sale.note != null)
+                                TextSpan(text: " - ${sale.note}"),
+                              _buildSaleAgeSpan(
+                                l10n.statusDaysOld(
                                   batch.ageInDaysAt(sale.date),
                                 ),
-                              ],
-                            ),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                batch.ageInDaysAt(sale.date),
+                              ),
+                            ],
+                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: _fmt(sale.date),
+                          style: TextStyle(
+                            color: context.theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text.rich(
-                      TextSpan(
-                        children: [
+                        if (sale.quantity > 0) ...[
                           TextSpan(
-                            text: _fmt(sale.date),
+                            text: " · ",
                             style: TextStyle(
                               color: context.theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          if (sale.quantity > 0) ...[
-                            TextSpan(
-                              text: " · ",
-                              style: TextStyle(
-                                color:
-                                    context.theme.colorScheme.onSurfaceVariant,
-                              ),
+                          TextSpan(
+                            text: l10n.pricePerChicken(
+                              "${(sale.amount / sale.quantity).round().toCurrency()}đ",
                             ),
-                            TextSpan(
-                              text: l10n.pricePerChicken(
-                                "${(sale.amount / sale.quantity).round().toCurrency()}đ",
-                              ),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: context.colors.money,
-                              ),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: context.colors.money,
                             ),
-                          ],
+                          ),
                         ],
-                      ),
-                      style: const TextStyle(fontSize: 12),
+                      ],
                     ),
-                  ],
-                ),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                "${sale.amount.toCurrency()}đ",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: context.colors.money,
-                ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              "${sale.amount.toCurrency()}đ",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: context.colors.money,
               ),
-              const SizedBox(width: 8),
-              // Edit affordance: same target as tapping the row itself.
-              _buildEditButton(() => _showSaleDialog(batch, sale: sale)),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            // Edit affordance: same target as tapping the row itself.
+            _buildEditButton(() => _showSaleDialog(batch, sale: sale)),
+          ],
         ),
       ),
     );

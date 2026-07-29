@@ -36,6 +36,10 @@ Future<ActionButtonType?> showAppDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
+        // Actions are raised buttons: the 8px the dialog leaves between them
+        // is inside their shadow reach, so one button's lit rim lands on the
+        // next one's shade.
+        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         title: Text(title ?? ""),
         content: Text(message ?? ""),
         actions: actions

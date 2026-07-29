@@ -1,4 +1,5 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 
 /// Raised neumorphic panel — the replacement for [Card] across the app.
@@ -49,9 +50,10 @@ class _NeuCardState extends State<NeuCard> {
   Widget build(BuildContext context) {
     final neu = context.neu;
     final radius = BorderRadius.circular(widget.radius);
-    // Pressing flattens the panel towards the surface rather than moving it, so
-    // nothing shifts under the finger.
-    final depth = _pressed ? widget.depth * 0.3 : widget.depth;
+    // What this card is drawn on: an untinted card takes that colour, so one
+    // nested in a tinted card stays in the card's colour rather than the page's.
+    final background = NeuSurface.of(context);
+    final fill = widget.color ?? neu.panelOn(background);
 
     Widget? content = widget.child;
     if (widget.padding != null) {
@@ -84,10 +86,15 @@ class _NeuCardState extends State<NeuCard> {
       clipBehavior: widget.clipBehavior,
       decoration: neu.raised(
         radius: widget.radius,
-        depth: depth,
+        depth: widget.depth,
         color: widget.color,
+        background: background,
+        // Held down, the two rims swap and the panel reads as pressed into the
+        // page — nothing moves under the finger.
+        inset: _pressed,
       ),
-      child: content,
+      // Cards nested in this one sit on its fill, not on the scaffold.
+      child: NeuSurface(color: fill, child: content),
     );
   }
 }

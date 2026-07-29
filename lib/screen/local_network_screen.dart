@@ -2,6 +2,8 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/local_network_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +22,7 @@ class LocalNetworkView extends StatelessWidget {
           onRefresh: vm.scan,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(15, 16, 15, 28),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
               _buildSummary(context, vm),
               const SizedBox(height: 14),
@@ -41,7 +43,7 @@ class LocalNetworkView extends StatelessWidget {
               else
                 for (final device in vm.devices) ...[
                   _buildDeviceCard(context, device),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                 ],
               const SizedBox(height: 4),
               Text(
@@ -158,19 +160,16 @@ class LocalNetworkView extends StatelessWidget {
         ? Colors.green
         : context.theme.colorScheme.primary;
 
-    return Container(
+    return NeuCard(
+      radius: 12,
+      color: context.neuTint(color, amount: 0.08),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
       child: Row(
         spacing: 12,
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: color.withValues(alpha: 0.12),
+            backgroundColor: context.neuTint(color, amount: 0.14),
             foregroundColor: color,
             child: Icon(_deviceIcon(device), size: 22),
           ),
@@ -237,7 +236,7 @@ class LocalNetworkView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: context.neuTint(color, amount: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

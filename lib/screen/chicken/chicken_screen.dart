@@ -11,6 +11,7 @@ import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -26,10 +27,12 @@ import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
+import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -210,7 +213,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                           color: context.theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Divider(
                           height: 1,
@@ -242,7 +245,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                             context.router.push(const GlobalExpensesRoute()),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: _buildFeatureCard(
                         icon: Assets.images.roosterCute.svg(
@@ -260,7 +263,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(
                   children: [
                     YearFilter(
@@ -280,32 +283,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       },
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: "${l10n.totalLabel}: ",
-                                style: TextStyle(
-                                  color: context
-                                      .theme
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                              ),
-                              TextSpan(
-                                text: "${totalRevenue.toCurrency()}đ",
-                                style: TextStyle(color: context.colors.money),
-                              ),
-                            ],
-                          ),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
+                    Expanded(child: TotalAmountText(totalRevenue)),
                   ],
                 ),
               ),
@@ -348,7 +326,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       : ListView(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                           children: items,
                         ),
                 ),
@@ -382,7 +360,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             decoration: BoxDecoration(
               color: accentSoft,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: accent.withValues(alpha: 0.28)),
             ),
             child: icon,
           ),
@@ -392,10 +369,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
           Icon(
@@ -437,7 +411,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
     final (statusText, statusColor) = !isHatched
         ? (
-            l10n.statusWaitingHatch(ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar)),
+            l10n.statusWaitingHatch(
+              ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar),
+            ),
             colors.warning,
           )
         : isSoldOut
@@ -445,7 +421,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         : (ChickenDate.formatAge(l10n, batch.ageInDays), colors.success);
 
     return ChickenListTileCard(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       color: cardColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       title: Row(
@@ -477,23 +453,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ChickenChangeBadge(vm.changeBadgeOf(batch.id)),
-              if (vm.changeBadgeOf(batch.id) != null)
-                const SizedBox(height: 4),
+              if (vm.changeBadgeOf(batch.id) != null) const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: context.theme.colorScheme.surface,
+                  // Tinted fill instead of an outline: the pill carries its
+                  // colour the same way every other chip in the app does.
+                  color: context.neuTint(statusColor),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: statusColor.withValues(alpha: 0.35),
-                  ),
                 ),
                 child: Text(
                   statusText,
-                  style: TextStyle(
+                  style: DoTextTheme.pill.copyWith(
                     fontSize: 11,
                     color: statusColor,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -524,7 +497,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                     children: [
                       _buildBatchInfo(
                         Icons.calendar_today_rounded,
-                        l10n.hatchedOnDate(ChickenDate.format(hatchDate, useLunar: useLunar)),
+                        l10n.hatchedOnDate(
+                          ChickenDate.format(hatchDate, useLunar: useLunar),
+                        ),
                         alignment: MainAxisAlignment.end,
                       ),
                       if (batch.lastSaleDate != null) ...[
@@ -532,7 +507,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                         _buildBatchInfo(
                           Icons.sell_rounded,
                           l10n.soldOnDate(
-                            ChickenDate.format(batch.lastSaleDate!, useLunar: useLunar),
+                            ChickenDate.format(
+                              batch.lastSaleDate!,
+                              useLunar: useLunar,
+                            ),
                           ),
                           alignment: MainAxisAlignment.end,
                         ),
@@ -610,21 +588,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
   Widget _buildMoneyBadge(String label, double amount, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        // Opaque surface rather than a translucent tint: these badges also sit
-        // on tinted cards, where a translucent fill turns muddy.
-        color: context.theme.colorScheme.surface,
+        // Opaque tint of the badge's own colour, blended onto whatever card it
+        // sits on — a translucent fill turns muddy on the tinted rows.
+        color: context.neuTint(color),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.32)),
       ),
       child: Text(
         "$label ${amount.toCurrency()}đ",
-        style: TextStyle(
-          fontSize: 12,
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
+        style: DoTextTheme.pill.copyWith(fontSize: 12, color: color),
       ),
     );
   }
@@ -680,6 +653,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             builder: (context, vm, child) {
               final percent = (vm.importProgress * 100).round();
               return AlertDialog(
+                // Actions are raised buttons: the 8px the dialog leaves between them
+                // is inside their shadow reach, so one button's lit rim lands on the
+                // next one's shade.
+                buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
                 title: Text(AppLocalizations.of(context).importingData),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -729,6 +706,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         return PopScope(
           canPop: false,
           child: AlertDialog(
+            // Actions are raised buttons: the 8px the dialog leaves between them
+            // is inside their shadow reach, so one button's lit rim lands on the
+            // next one's shade.
+            buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
             title: Text(l10n.deletingData),
             content: Row(
               children: [

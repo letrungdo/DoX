@@ -1,5 +1,6 @@
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
 /// Year filter: a label plus a tappable pill that opens a bottom sheet to pick
@@ -88,32 +89,25 @@ class YearFilter extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(width: 8),
-        InkWell(
-          borderRadius: BorderRadius.circular(20),
+        NeuCard(
+          radius: 20,
+          depth: 0.5,
           onTap: () => _openSheet(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: context.theme.colorScheme.outlineVariant,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _labelFor(l10n, selectedYear),
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _labelFor(l10n, selectedYear),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  size: 20,
-                  color: context.theme.colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down,
+                size: 20,
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
       ],

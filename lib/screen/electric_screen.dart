@@ -17,6 +17,9 @@ import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +38,7 @@ class _ChartColors {
   static Color compare(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? compareDark : compareLight;
 }
+
 @RoutePage()
 class ElectricScreen extends StatefulScreen implements AutoRouteWrapper {
   const ElectricScreen({super.key});
@@ -102,9 +106,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.electricityTitle,
-        titleSuffix: AppBarSyncIcon<ElectricViewModel>(
-          selector: (vm) => vm.isFetching,
-        ),
+        titleSuffix: AppBarSyncIcon<ElectricViewModel>(selector: (vm) => vm.isFetching),
         actions: [
           Selector<ElectricViewModel, ElectricStatus>(
             selector: (_, vm) => vm.status,
@@ -124,10 +126,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         builder: (context, status, _) {
           return switch (status) {
             ElectricStatus.loading => const Center(child: CircularProgressIndicator.adaptive()),
-            ElectricStatus.loggedOut => _LoginForm(
-              onSubmit: _login,
-              onForgetSavedAccount: _confirmForgetSavedAccount,
-            ),
+            ElectricStatus.loggedOut => _LoginForm(onSubmit: _login, onForgetSavedAccount: _confirmForgetSavedAccount),
             ElectricStatus.loggedIn => RefreshIndicator.adaptive(
               onRefresh: () => vm.onRefresh(showLoading: true), //
               child: _buildContent(l10n),
@@ -147,6 +146,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        // Actions are raised buttons: the 8px the dialog leaves between them
+        // is inside their shadow reach, so one button's lit rim lands on the
+        // next one's shade.
+        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         title: Text(l10n.logout),
         content: Text(l10n.removeAccountConfirm(name)),
         actions: [
@@ -155,10 +158,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
             kind: DialogActionKind.cancel,
             onPressed: () => Navigator.pop(context, false),
           ),
-          DialogActionButton(
-            text: l10n.logout,
-            onPressed: () => Navigator.pop(context, true),
-          ),
+          DialogActionButton(text: l10n.logout, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -171,6 +171,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        // Actions are raised buttons: the 8px the dialog leaves between them
+        // is inside their shadow reach, so one button's lit rim lands on the
+        // next one's shade.
+        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         content: Text(l10n.forgetAccountConfirm(account.displayName)),
         actions: [
           DialogActionButton(
@@ -178,10 +182,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
             kind: DialogActionKind.cancel,
             onPressed: () => Navigator.pop(context, false),
           ),
-          DialogActionButton(
-            text: l10n.delete,
-            onPressed: () => Navigator.pop(context, true),
-          ),
+          DialogActionButton(text: l10n.delete, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -195,10 +196,8 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       context: context,
       // The dialog sits above this screen's provider, so the saved accounts are
       // passed in instead of read from the view model.
-      builder: (context) => _AddAccountDialog(
-        savedAccounts: vm.availableSavedAccounts,
-        onForgetSavedAccount: _confirmForgetSavedAccount,
-      ),
+      builder: (context) =>
+          _AddAccountDialog(savedAccounts: vm.availableSavedAccounts, onForgetSavedAccount: _confirmForgetSavedAccount),
     );
     if (credentials == null) return;
     _login(credentials.username, credentials.password);
@@ -218,7 +217,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               horizontalPadding = (screenWidth - maxContentWidth) / 2;
             }
             return SliverPadding(
-              padding: EdgeInsets.symmetric(vertical: 15, horizontal: horizontalPadding),
+              // 16, not 15: a card's shadow reaches ~17px, so a tighter page padding
+              // lets the scroll viewport clip the rim of the first and last card.
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: horizontalPadding),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _buildAccountTabs(l10n),
@@ -256,7 +257,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
   /// Gray placeholders mirroring the real sections while the first fetch of
   /// an account is running (the progress bar on top provides the motion).
   Widget _buildSkeleton() {
-    final color = context.theme.colorScheme.surfaceContainerHigh;
+    // Flat sunken fill, so the placeholders read as holes rather than as the
+    // raised panels they are standing in for.
+    final color = context.neu.sunken;
 
     Widget box({required double height, double? width}) {
       return Container(
@@ -268,7 +271,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
 
     Widget tileRow() {
       return Row(
-        spacing: 8,
+        spacing: 14,
         children: [
           Expanded(child: box(height: 56)),
           Expanded(child: box(height: 56)),
@@ -300,8 +303,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         final activeIndex = vm.activeIndex;
         final scheme = context.theme.colorScheme;
         return Wrap(
-          spacing: 5,
-          runSpacing: 5,
+          // 10, not 5: these are raised chips, and their shadows need room
+          // between them or each chip's lit rim lands on its neighbour's shade.
+          spacing: 10,
+          runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             for (var i = 0; i < accounts.length; i++)
@@ -312,20 +317,12 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
                 selected: i == activeIndex,
                 onTap: () => vm.switchAccount(i),
               ),
-            Material(
-              color: scheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide.none,
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => _showAddAccountDialog(l10n),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  child: Icon(Icons.person_add_alt_1_rounded, size: 18, color: scheme.onSurface),
-                ),
-              ),
+            NeuCard(
+              radius: 14,
+              depth: 0.5,
+              onTap: () => _showAddAccountDialog(l10n),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              child: Icon(Icons.person_add_alt_1_rounded, size: 18, color: scheme.onSurface),
             ),
           ],
         );
@@ -341,37 +338,25 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     required VoidCallback onTap,
   }) {
     final foreground = selected ? scheme.onTertiary : scheme.onSurface;
-    return Material(
-      color: selected ? scheme.tertiary : scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide.none,
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: foreground,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 13,
-                ),
-              ),
-              if (subtitle != null && subtitle.isNotEmpty)
-                Text(
-                  subtitle,
-                  style: TextStyle(color: foreground.withValues(alpha: 0.75), fontSize: 10.5),
-                ),
-            ],
+    // Selection is carried by the fill, the way it is on the neumorphic cards:
+    // an outline next to the shadow pair reads as a competing border.
+    return NeuCard(
+      radius: 14,
+      depth: 0.5,
+      color: selected ? scheme.tertiary : null,
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: foreground, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, fontSize: 13),
           ),
-        ),
+          if (subtitle != null && subtitle.isNotEmpty)
+            Text(subtitle, style: TextStyle(color: foreground.withValues(alpha: 0.75), fontSize: 10.5)),
+        ],
       ),
     );
   }
@@ -380,14 +365,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     return Selector<ElectricViewModel, ElectricCustomer?>(
       selector: (_, vm) => vm.customer,
       builder: (context, customer, _) {
-        final scheme = context.theme.colorScheme;
-        return Container(
-          width: double.infinity,
+        return NeuCard(
+          radius: 14,
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(14),
-          ),
           child: Row(
             children: [
               Container(
@@ -441,17 +421,11 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               children: [
                 Row(
                   spacing: 8,
-                  children: [
-                    _buildUsageTile(l10n.today, today),
-                    _buildUsageTile(l10n.yesterday, yesterday),
-                  ],
+                  children: [_buildUsageTile(l10n.today, today), _buildUsageTile(l10n.yesterday, yesterday)],
                 ),
                 Row(
                   spacing: 8,
-                  children: [
-                    _buildUsageTile(l10n.thisMonth, thisMonth),
-                    _buildUsageTile(l10n.lastMonth, lastMonth),
-                  ],
+                  children: [_buildUsageTile(l10n.thisMonth, thisMonth), _buildUsageTile(l10n.lastMonth, lastMonth)],
                 ),
               ],
             );
@@ -477,12 +451,13 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
   Widget _buildUsageTile(String label, num? kwh) {
     final accent = _ChartColors.current(context);
     return Expanded(
-      child: Container(
+      // Opaque blend rather than a translucent tint: a raised panel's shadows
+      // would otherwise show through its own fill.
+      child: NeuCard(
+        radius: 12,
+        depth: 0.6,
+        color: Color.alphaBlend(accent.withValues(alpha: 0.08), context.neu.base),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
         child: Column(
           children: [
             Text(label, style: context.textTheme.secondary.size13, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -491,9 +466,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               TextSpan(
                 text: kwh.formatUnit(digit: 1),
                 style: context.textTheme.primary.bold,
-                children: [
-                  TextSpan(text: " kWh", style: context.textTheme.secondary.size13),
-                ],
+                children: [TextSpan(text: " kWh", style: context.textTheme.secondary.size13)],
               ),
             ),
           ],
@@ -559,13 +532,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               formatValue: (v) => "${v.formatUnit()} kWh",
             ),
             const SizedBox(height: 10),
-            ...items.map(
-              (item) => _buildMonthlyItem(
-                l10n,
-                item,
-                highlighted: _isSameMonth(item, highlightedMonth),
-              ),
-            ),
+            ...items.map((item) => _buildMonthlyItem(l10n, item, highlighted: _isSameMonth(item, highlightedMonth))),
           ],
         );
       },
@@ -597,7 +564,11 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 4),
           Text(label, style: context.textTheme.secondary.size13),
         ],
@@ -614,22 +585,22 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     );
   }
 
-  Widget _buildMonthlyItem(
-    AppLocalizations l10n,
-    ElectricMonthlyUsage item, {
-    required bool highlighted,
-  }) {
+  Widget _buildMonthlyItem(AppLocalizations l10n, ElectricMonthlyUsage item, {required bool highlighted}) {
     final highlightColor = _ChartColors.current(context);
     return AnimatedContainer(
       key: highlighted ? _highlightedMonthlyItemKey : null,
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(vertical: 2),
       padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
-      decoration: BoxDecoration(
-        color: highlighted ? highlightColor.withValues(alpha: 0.14) : Colors.transparent,
-        border: highlighted ? Border.all(color: highlightColor, width: 1.5) : null,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      // The focused month lifts off the list as a tinted raised panel; the old
+      // outline competed with the shadow pair around it.
+      decoration: highlighted
+          ? context.neuRaised(
+              radius: 12,
+              depth: 0.6,
+              color: Color.alphaBlend(highlightColor.withValues(alpha: 0.16), context.neu.base),
+            )
+          : const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(12))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -703,10 +674,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(
-            flex: 4,
-            child: Text(time, style: context.textTheme.secondary.size13),
-          ),
+          Expanded(flex: 4, child: Text(time, style: context.textTheme.secondary.size13)),
           Expanded(
             flex: 3,
             child: Text(
@@ -773,11 +741,7 @@ class _LoginFormState extends State<_LoginForm> {
             children: [
               Icon(Icons.electric_bolt_rounded, size: 56, color: _ChartColors.compare(context)),
               const SizedBox(height: 12),
-              Text(
-                l10n.electricLoginTitle,
-                style: context.textTheme.primary.size16.bold,
-                textAlign: TextAlign.center,
-              ),
+              Text(l10n.electricLoginTitle, style: context.textTheme.primary.size16.bold, textAlign: TextAlign.center),
               const SizedBox(height: 24),
               // Consumer, not Selector: the getter builds a fresh list every
               // call, so there is nothing stable to compare against.
@@ -814,9 +778,12 @@ class _LoginFormState extends State<_LoginForm> {
                 ),
               ),
               const SizedBox(height: 24),
-              FilledButton(
+              NeuButton(
                 onPressed: _submit, //
-                child: Text(l10n.login),
+                accent: context.theme.colorScheme.primary,
+                expand: true,
+                radius: 14,
+                child: Center(child: Text(l10n.login)),
               ),
             ],
           ),
@@ -869,6 +836,10 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AlertDialog(
+      // Actions are raised buttons: the 8px the dialog leaves between them
+      // is inside their shadow reach, so one button's lit rim lands on the
+      // next one's shade.
+      buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -914,15 +885,8 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
         ),
       ),
       actions: [
-        DialogActionButton(
-          text: l10n.cancel,
-          kind: DialogActionKind.cancel,
-          onPressed: () => Navigator.pop(context),
-        ),
-        DialogActionButton(
-          text: l10n.login,
-          onPressed: _submit,
-        ),
+        DialogActionButton(text: l10n.cancel, kind: DialogActionKind.cancel, onPressed: () => Navigator.pop(context)),
+        DialogActionButton(text: l10n.login, onPressed: _submit),
       ],
     );
   }
@@ -931,11 +895,7 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
 /// Chips for accounts logged in before, so signing back in is one tap instead
 /// of retyping the credentials. The trailing ✕ forgets the stored password.
 class _SavedAccountPicker extends StatelessWidget {
-  const _SavedAccountPicker({
-    required this.accounts,
-    required this.onSelect,
-    required this.onForget,
-  });
+  const _SavedAccountPicker({required this.accounts, required this.onSelect, required this.onForget});
 
   final List<ElectricAccount> accounts;
   final void Function(ElectricAccount account) onSelect;
@@ -951,8 +911,8 @@ class _SavedAccountPicker extends StatelessWidget {
         Text(l10n.savedAccounts, style: context.textTheme.secondary.size13),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 6,
-          runSpacing: 6,
+          spacing: 10,
+          runSpacing: 10,
           children: accounts.map((account) => _chip(context, scheme, account)).toList(),
         ),
       ],
@@ -960,48 +920,37 @@ class _SavedAccountPicker extends StatelessWidget {
   }
 
   Widget _chip(BuildContext context, ColorScheme scheme, ElectricAccount account) {
-    return Material(
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide.none,
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => onSelect(account),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
-          child: Row(
+    return NeuCard(
+      radius: 14,
+      depth: 0.5,
+      onTap: () => onSelect(account),
+      padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.account_circle_rounded, size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.account_circle_rounded, size: 18, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    account.displayName,
-                    style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                  Text(
-                    account.username,
-                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 10.5),
-                  ),
-                ],
+              Text(
+                account.displayName,
+                style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13),
               ),
-              IconButton(
-                onPressed: () => onForget(account),
-                iconSize: 16,
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                padding: EdgeInsets.zero,
-                color: scheme.onSurfaceVariant,
-                icon: const Icon(Icons.close_rounded),
-              ),
+              Text(account.username, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 10.5)),
             ],
           ),
-        ),
+          IconButton(
+            onPressed: () => onForget(account),
+            iconSize: 16,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+            color: scheme.onSurfaceVariant,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
       ),
     );
   }

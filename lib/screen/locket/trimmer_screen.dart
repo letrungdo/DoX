@@ -129,6 +129,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     final downscale = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        // Actions are raised buttons: the 8px the dialog leaves between them
+        // is inside their shadow reach, so one button's lit rim lands on the
+        // next one's shade.
+        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         title: Text(l10n.videoTooLargeTitle),
         content: Text(l10n.videoTooLargeMessage(sizeMb.toStringAsFixed(1))),
         actions: [
@@ -368,6 +372,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                     child: export ? child : null,
                   ),
                   child: AlertDialog(
+                    // Actions are raised buttons: the 8px the dialog leaves between them
+                    // is inside their shadow reach, so one button's lit rim lands on the
+                    // next one's shade.
+                    buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
                     title: ValueListenableBuilder(
                       valueListenable: _exportingProgress,
                       builder: (_, double value, _) => Text(

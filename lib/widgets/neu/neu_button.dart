@@ -1,9 +1,10 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 
-/// A neumorphic pill that flattens onto the surface while held.
+/// A neumorphic pill that sinks into the surface while held.
 ///
-/// Losing the shadow pair on press is the affordance: without borders or
+/// The two rims swapping on press is the affordance: without borders or
 /// elevation, that flip is what tells the user the thing is a control. [accent]
 /// tints the fill for primary actions; a plain button keeps the surface colour.
 class NeuButton extends StatefulWidget {
@@ -12,6 +13,7 @@ class NeuButton extends StatefulWidget {
     required this.child,
     this.onPressed,
     this.accent,
+    this.foreground,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
     this.radius = 16,
     this.depth = 0.85,
@@ -23,6 +25,11 @@ class NeuButton extends StatefulWidget {
 
   /// Fill for primary actions. `null` keeps the shared surface colour.
   final Color? accent;
+
+  /// Label/icon colour. Defaults to what reads on [accent] (or on the surface
+  /// when there is none) — pass it when the accent is not the primary colour,
+  /// e.g. a destructive action filled with `scheme.error`.
+  final Color? foreground;
 
   final EdgeInsetsGeometry padding;
   final double radius;
@@ -44,10 +51,12 @@ class _NeuButtonState extends State<NeuButton> {
     final scheme = context.theme.colorScheme;
     final enabled = widget.onPressed != null;
     final borderRadius = BorderRadius.circular(widget.radius);
-    final fill = widget.accent ?? neu.base;
-    final foreground = widget.accent == null
-        ? (enabled ? scheme.onSurface : context.colors.disabled)
-        : scheme.onPrimary;
+    final background = NeuSurface.of(context);
+    final fill = widget.accent ?? neu.panelOn(background);
+    final foreground = !enabled
+        ? context.colors.disabled
+        : widget.foreground ??
+              (widget.accent == null ? scheme.onSurface : scheme.onPrimary);
 
     Widget content = DefaultTextStyle.merge(
       style: TextStyle(
@@ -72,9 +81,15 @@ class _NeuButtonState extends State<NeuButton> {
         decoration: BoxDecoration(
           color: enabled ? fill : neu.sunken,
           borderRadius: borderRadius,
-          boxShadow: _pressed || !enabled
+          boxShadow: !enabled
               ? null
-              : neu.raisedShadows(depth: widget.depth, tint: widget.accent),
+              : neu.raisedShadows(
+                  fill: fill,
+                  depth: widget.depth,
+                  // Held down, the rims swap: the button reads as pressed into
+                  // the surface instead of losing its shadows altogether.
+                  inset: _pressed,
+                ),
         ),
         child: content,
       ),

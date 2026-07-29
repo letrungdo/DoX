@@ -20,7 +20,7 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: DoAppBar(title: l10n.settings),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           _buildSettingCard(
             icon: Icons.language_rounded,
@@ -47,7 +47,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _buildSettingCard(
             icon: Icons.palette_outlined,
             color: Theme.of(context).colorScheme.primary,
@@ -77,7 +77,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Selector<ChickenViewModel, bool>(
             selector: (_, vm) => vm.vaccinationNotificationsEnabled,
             builder: (context, enabled, _) => _buildSettingCard(
@@ -92,7 +92,7 @@ class SettingsScreen extends StatelessWidget {
               onTap: () => _setVaccinationReminder(context, l10n, !enabled),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Selector<ChickenViewModel, bool>(
             selector: (_, vm) => vm.useLunarCalendar,
             builder: (context, useLunar, _) => _buildSettingCard(
@@ -109,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _buildSettingCard(
             icon: Icons.electric_bolt_rounded,
             color: Colors.amber.shade700,
@@ -126,7 +126,7 @@ class SettingsScreen extends StatelessWidget {
               !appVm.electricReminderEnabled,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _buildTabOrderCard(context, l10n, appVm),
         ],
       ),

@@ -149,6 +149,10 @@ mixin LocketOverlays on CoreViewModel {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
+          // Actions are raised buttons: the 8px the dialog leaves between them
+          // is inside their shadow reach, so one button's lit rim lands on the
+          // next one's shade.
+          buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
           titlePadding: const EdgeInsets.all(0),
           contentPadding: const EdgeInsets.all(0),
           shape: RoundedRectangleBorder(

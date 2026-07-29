@@ -9,6 +9,8 @@ import 'package:do_x/view_model/wifi_management_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/text_field.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
@@ -57,7 +59,10 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           isScrollable: true,
           tabAlignment: TabAlignment.center,
           tabs: [
-            Tab(icon: const Icon(Icons.settings_ethernet), text: l10n.tabReboot),
+            Tab(
+              icon: const Icon(Icons.settings_ethernet),
+              text: l10n.tabReboot,
+            ),
             Tab(icon: const Icon(Icons.speed_rounded), text: l10n.tabSpeed),
             Tab(icon: const Icon(Icons.lan_outlined), text: l10n.tabDevices),
           ],
@@ -104,7 +109,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
 
   Widget _buildWifiTab(AppLocalizations l10n, V vm) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 16,
@@ -135,7 +140,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
 
   Widget _buildSpeedTab(AppLocalizations l10n, V vm) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: _buildSpeedTestSection(l10n, vm),
     );
   }
@@ -143,7 +148,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   Widget _buildSpeedTestSection(AppLocalizations l10n, V vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 12,
+      spacing: 16,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -208,16 +213,12 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     required Color color,
     required AppLocalizations l10n,
   }) {
-    return Container(
+    return NeuCard(
+      radius: 14,
+      // A row under test lifts higher instead of taking a thicker outline.
+      depth: isTesting ? 1.2 : 0.8,
+      color: context.neuTint(color, amount: isTesting ? 0.16 : 0.1),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isTesting ? color : color.withValues(alpha: 0.25),
-          width: isTesting ? 1.5 : 1,
-        ),
-      ),
       child: Row(
         spacing: 14,
         children: [
@@ -310,7 +311,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          border: Border.all(color: context.theme.colorScheme.outlineVariant),
+          color: context.neu.sunken,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -347,9 +348,8 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: context.neuTint(color, amount: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         spacing: 8,
@@ -531,8 +531,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        color: context.neuTint(color, amount: 0.14),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -580,8 +579,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             padding: const EdgeInsets.all(12),
             constraints: const BoxConstraints(maxHeight: 250),
             decoration: BoxDecoration(
+              // Console keeps its own near-black; the outline goes, since the
+              // colour step off the page is already the boundary.
               color: const Color(0xFF1E1E1E),
-              border: Border.all(color: const Color(0xFF333333)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: SingleChildScrollView(

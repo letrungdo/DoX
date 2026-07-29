@@ -1,4 +1,5 @@
 import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -139,7 +140,8 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
       right: 0,
       bottom: mq.viewInsets.bottom,
       child: Material(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: context.neu.base,
+        shadowColor: context.neu.darkShadow,
         elevation: 8,
         child: SafeArea(
           top: false,
