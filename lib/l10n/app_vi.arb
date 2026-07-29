@@ -398,7 +398,7 @@
   "batchDetailTitle": "Chi tiết lứa gà",
   "batchNotFound": "Không tìm thấy thông tin lứa gà.",
   "deleteThisBatch": "Xóa lứa gà này",
-  "initialQuantity": "Số lượng ban đầu",
+  "initialQuantity": "Số lượng",
   "soldRemainingLabel": "Đã bán / còn lại",
   "remainingLabel": "Còn lại",
   "soldRemainingValue": "{sold} / {remaining} con",

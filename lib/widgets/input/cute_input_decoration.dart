@@ -11,11 +11,11 @@ InputDecoration cuteInputDecoration(
   String? errorText,
 }) {
   final scheme = Theme.of(context).colorScheme;
+  // Sunken fill, no resting outline: the recess is what marks the field as an
+  // input, and only focus is worth a visible line.
   OutlineInputBorder border([BorderSide? side]) => OutlineInputBorder(
     borderRadius: BorderRadius.circular(14),
-    borderSide:
-        side ??
-        BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+    borderSide: side ?? BorderSide.none,
   );
   return InputDecoration(
     labelText: label,

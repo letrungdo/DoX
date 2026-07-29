@@ -49,7 +49,7 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
   final Color meatSoft;
 
   static final light = ColorTheme(
-    buttonBg: Colors.white, //
+    buttonBg: const Color(0xFFE7F1ED), //
     disabled: const Color(0xFFA7B5B0),
     iconColor: const Color(0xFF2E4540),
     money: const Color(0xFF00695C),
@@ -66,7 +66,7 @@ class ColorTheme extends ThemeExtension<ColorTheme> {
   );
 
   static final dark = ColorTheme(
-    buttonBg: const Color(0xFF19211F), //
+    buttonBg: const Color(0xFF16201E), //
     disabled: const Color(0xFF3F4946),
     iconColor: const Color(0xFFDDE5E1),
     money: const Color(0xFF2DD4BF),

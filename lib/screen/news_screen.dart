@@ -21,6 +21,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -289,7 +290,7 @@ class _NewsScreenState<V extends NewsViewModel>
 
   Widget _buildGoldCard(AppLocalizations l10n) {
     final headerStyle = context.textTheme.title.size13.medium;
-    return Card(
+    return NeuCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         child: Column(
@@ -332,7 +333,7 @@ class _NewsScreenState<V extends NewsViewModel>
   }
 
   Widget _buildMarketCard() {
-    return Card(
+    return NeuCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         child: Selector<V, List<MarketCode>>(

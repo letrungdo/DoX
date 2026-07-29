@@ -689,7 +689,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get deleteThisBatch => 'Xóa lứa gà này';
 
   @override
-  String get initialQuantity => 'Số lượng ban đầu';
+  String get initialQuantity => 'Số lượng';
 
   @override
   String get soldRemainingLabel => 'Đã bán / còn lại';

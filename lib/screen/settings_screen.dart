@@ -4,6 +4,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -188,7 +189,7 @@ class SettingsScreen extends StatelessWidget {
     AppViewModel appVm,
   ) {
     final tabs = appVm.tabOrder;
-    return Card(
+    return NeuCard(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -274,7 +275,7 @@ class SettingsScreen extends StatelessWidget {
     required Widget trailing,
     VoidCallback? onTap,
   }) {
-    return Card(
+    return NeuCard(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: ListTile(

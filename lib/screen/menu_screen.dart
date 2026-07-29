@@ -10,8 +10,8 @@ import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -57,9 +57,12 @@ class _MenuScreenState<V extends MenuViewModel>
       appBar: DoAppBar(
         title: l10n.menu,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
+          NeuIconButton(
+            icon: Icons.settings_rounded,
             tooltip: l10n.settings,
+            // Sized to the 44dp toolbar: a full-size button would leave the
+            // shadow pair no room to breathe.
+            size: 34,
             onPressed: () => context.pushRoute(const SettingsRoute()),
           ),
         ],
@@ -90,74 +93,59 @@ class _MenuScreenState<V extends MenuViewModel>
   }
 
   Widget _buildMainActions(AppLocalizations l10n) {
-    return ElevatedButtonTheme(
-      data: _buttonTheme(),
-      child: Column(
-        spacing: 8,
-        children: [
-          DoButton(
-            onPressed: () {
-              context.pushRoute(const WifiManagementRoute());
-            },
-            child: _buildMenuAction(Icons.wifi_rounded, l10n.wifiManagement),
-          ),
-          DoButton(
-            onPressed: () {
-              context.pushRoute(const FengShuiCompassRoute());
-            },
-            child: _buildMenuAction(
-              Icons.explore_rounded,
-              l10n.fengShuiCompass,
-            ),
-          ),
-          DoButton(
-            onPressed: () {
-              showAboutDialog(
-                applicationVersion: appInfo.version, //
-                applicationIcon: Assets.images.appIcon.image(),
-                context: context,
-              );
-            },
-            child: _buildMenuAction(Icons.info_outline_rounded, l10n.about),
-          ),
-        ],
-      ),
+    return Column(
+      spacing: 12,
+      children: [
+        _menuButton(
+          Icons.wifi_rounded,
+          l10n.wifiManagement,
+          () => context.pushRoute(const WifiManagementRoute()),
+        ),
+        _menuButton(
+          Icons.explore_rounded,
+          l10n.fengShuiCompass,
+          () => context.pushRoute(const FengShuiCompassRoute()),
+        ),
+        _menuButton(Icons.info_outline_rounded, l10n.about, () {
+          showAboutDialog(
+            applicationVersion: appInfo.version, //
+            applicationIcon: Assets.images.appIcon.image(),
+            context: context,
+          );
+        }),
+      ],
     );
   }
 
   Widget _buildBottomActions(AppLocalizations l10n) {
-    return ElevatedButtonTheme(
-      data: _buttonTheme(),
-      child: _buildSupabaseAccountControl(l10n),
-    );
+    return _buildSupabaseAccountControl(l10n);
   }
 
-  ElevatedButtonThemeData _buttonTheme() {
-    return ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 52),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        alignment: Alignment.center,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      ),
+  /// Full-width neumorphic row. The menu is nothing but actions, so it is where
+  /// the raised-to-sunken press cue does the most work.
+  Widget _menuButton(IconData icon, String label, VoidCallback onPressed) {
+    return NeuButton(
+      onPressed: onPressed,
+      expand: true,
+      radius: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      child: _buildMenuAction(icon, label),
     );
   }
 
   Widget _buildSupabaseAccountControl(AppLocalizations l10n) {
     final user = supabase.auth.currentUser;
     if (user == null) {
-      return DoButton(
-        onPressed: () => context.pushRoute(const AppLoginRoute()),
-        child: _buildMenuAction(Icons.login_rounded, l10n.loginDoX),
+      return _menuButton(
+        Icons.login_rounded,
+        l10n.loginDoX,
+        () => context.pushRoute(const AppLoginRoute()),
       );
     }
-    return DoButton(
-      onPressed: () => _confirmSignOut(l10n),
-      child: _buildMenuAction(
-        Icons.logout_rounded,
-        "${l10n.logout} (${user.email})",
-      ),
+    return _menuButton(
+      Icons.logout_rounded,
+      "${l10n.logout} (${user.email})",
+      () => _confirmSignOut(l10n),
     );
   }
 

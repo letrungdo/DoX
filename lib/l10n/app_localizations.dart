@@ -1325,7 +1325,7 @@ abstract class AppLocalizations {
   /// No description provided for @initialQuantity.
   ///
   /// In en, this message translates to:
-  /// **'Initial quantity'**
+  /// **'Quantity'**
   String get initialQuantity;
 
   /// No description provided for @soldRemainingLabel.

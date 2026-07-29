@@ -11,6 +11,7 @@ import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -510,7 +511,7 @@ class _ChickenStatisticsScreenState
   Widget _buildChartCard(List<_Period> periods) {
     final l10n = AppLocalizations.of(context);
     final colors = context.colors;
-    return Card(
+    return NeuCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
@@ -573,7 +574,7 @@ class _ChickenStatisticsScreenState
     final isUp = data.profit >= 0;
     final accent = isUp ? colors.success : colors.danger;
 
-    return Card(
+    return NeuCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
@@ -861,13 +862,7 @@ class _ChickenStatisticsScreenState
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(
-        color: _scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _scheme.outlineVariant.withValues(alpha: 0.7),
-        ),
-      ),
+      decoration: context.neu.raised(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

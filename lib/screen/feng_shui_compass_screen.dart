@@ -7,6 +7,7 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/feng_shui.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
@@ -183,7 +184,7 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
     FengShuiDirection sitting,
   ) {
     final scheme = context.theme.colorScheme;
-    return Card(
+    return NeuCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),

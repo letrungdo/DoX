@@ -210,12 +210,10 @@ class _IntervalSelector extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final fg = selected ? scheme.onSecondaryContainer : scheme.onSurface;
     return Material(
-      color: selected ? scheme.secondaryContainer : Colors.transparent,
-      shape: StadiumBorder(
-        side: BorderSide(
-          color: selected ? Colors.transparent : scheme.outlineVariant,
-        ),
-      ),
+      // Unselected segments are a sunken well rather than an outlined pill —
+      // the neumorphic way to show "not active".
+      color: selected ? scheme.secondaryContainer : scheme.surfaceContainerLow,
+      shape: const StadiumBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

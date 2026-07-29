@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/enum/app_tab.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.gr.dart';
@@ -137,31 +138,36 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             _requireLoginForInitialChickenTab(context, tabsRouter, tabs);
 
             return Scaffold(
-              bottomNavigationBar: BottomNavigationBar(
-                currentIndex: tabsRouter.activeIndex.clamp(0, routes.length - 1),
-                onTap: (value) async {
-                  if (tabs[value] == AppTab.chicken && supabase.auth.currentSession == null) {
-                    await context.pushRoute(const AppLoginRoute());
-                    if (supabase.auth.currentSession == null) return;
-                  }
-                  if (value == tabsRouter.activeIndex) {
-                    // If the tab has a detail screen pushed on its nested
-                    // stack, re-tapping goes back one level instead of
-                    // reloading the tab's root.
-                    final innerRouter = tabsRouter.stackRouterOfIndex(value);
-                    if (innerRouter != null && innerRouter.canPop()) {
-                      await innerRouter.maybePop();
+              // Flush with the scaffold, no shade: an upward shadow here read as
+              // a seam across the whole screen instead of a lifted bar.
+              bottomNavigationBar: ColoredBox(
+                color: context.neu.base,
+                child: BottomNavigationBar(
+                  currentIndex: tabsRouter.activeIndex.clamp(0, routes.length - 1),
+                  onTap: (value) async {
+                    if (tabs[value] == AppTab.chicken && supabase.auth.currentSession == null) {
+                      await context.pushRoute(const AppLoginRoute());
+                      if (supabase.auth.currentSession == null) return;
+                    }
+                    if (value == tabsRouter.activeIndex) {
+                      // If the tab has a detail screen pushed on its nested
+                      // stack, re-tapping goes back one level instead of
+                      // reloading the tab's root.
+                      final innerRouter = tabsRouter.stackRouterOfIndex(value);
+                      if (innerRouter != null && innerRouter.canPop()) {
+                        await innerRouter.maybePop();
+                        return;
+                      }
+                      await vm.handleTabReselect(routes[value].routeName);
                       return;
                     }
+                    tabsRouter.setActiveIndex(value);
+                    storageService.setTabIndex(value);
+                    // Switching to another tab re-fetches that tab's data.
                     await vm.handleTabReselect(routes[value].routeName);
-                    return;
-                  }
-                  tabsRouter.setActiveIndex(value);
-                  storageService.setTabIndex(value);
-                  // Switching to another tab re-fetches that tab's data.
-                  await vm.handleTabReselect(routes[value].routeName);
-                },
-                items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
+                  },
+                  items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
+                ),
               ),
               body: Stack(
                 children: [

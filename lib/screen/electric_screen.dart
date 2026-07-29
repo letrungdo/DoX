@@ -316,7 +316,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               color: scheme.surfaceContainerLow,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+                side: BorderSide.none,
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
@@ -345,7 +345,7 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       color: selected ? scheme.tertiary : scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: selected ? BorderSide.none : BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+        side: BorderSide.none,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -964,7 +964,7 @@ class _SavedAccountPicker extends StatelessWidget {
       color: scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+        side: BorderSide.none,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),

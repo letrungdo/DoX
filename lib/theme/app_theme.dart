@@ -1,4 +1,5 @@
 import 'package:do_x/theme/color_theme.dart';
+import 'package:do_x/theme/neu_theme.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,14 +8,16 @@ class AppTheme {
   AppTheme._();
 
   static const _seed = Color(0xFF2DD4BF);
-  static const _lightBackground = Color(0xFFE7F1ED);
-  static const _darkBackground = Color(0xFF0D1513);
 
   static final ThemeData lightTheme = _buildTheme(Brightness.light);
   static final ThemeData darkTheme = _buildTheme(Brightness.dark);
 
   static ThemeData _buildTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
+    // Neumorphism only reads when panels share the scaffold's colour, so the
+    // background comes straight from the neumorphic tokens and every surface
+    // below is derived from them.
+    final neu = isDark ? NeuTheme.dark : NeuTheme.light;
     final baseScheme = ColorScheme.fromSeed(
       seedColor: _seed,
       brightness: brightness,
@@ -33,30 +36,28 @@ class AppTheme {
       onSecondary: isDark ? const Color(0xFF1C3531) : Colors.white,
       tertiary: isDark ? const Color(0xFF37718B) : const Color(0xFF1F4E5C),
       onTertiary: Colors.white,
-      surface: isDark ? const Color(0xFF151D1B) : Colors.white,
+      // Panels must be the same colour as the scaffold, so the only steps left
+      // are the sunken well and two slightly lifted tints for nested blocks.
+      surface: neu.base,
       onSurface: isDark ? const Color(0xFFDDE5E1) : const Color(0xFF0C1211),
       onSurfaceVariant: isDark
           ? const Color(0xFFBFC9C5)
           : const Color(0xFF3D4A47),
-      surfaceContainerLowest: isDark ? const Color(0xFF080F0D) : Colors.white,
-      surfaceContainerLow: isDark
-          ? const Color(0xFF151D1B)
-          : const Color(0xFFE4EFEB),
-      surfaceContainer: isDark
-          ? const Color(0xFF19211F)
-          : const Color(0xFFD9E7E2),
+      surfaceContainerLowest: neu.sunken,
+      surfaceContainerLow: neu.sunken,
+      surfaceContainer: neu.base,
       surfaceContainerHigh: isDark
-          ? const Color(0xFF232B29)
-          : const Color(0xFFCDDED8),
+          ? const Color(0xFF1E2826)
+          : const Color(0xFFEFF6F3),
       surfaceContainerHighest: isDark
-          ? const Color(0xFF2E3634)
-          : const Color(0xFFC2D5CF),
+          ? const Color(0xFF27322F)
+          : const Color(0xFFF6FAF8),
       outline: isDark ? const Color(0xFF89938F) : const Color(0xFF556059),
       outlineVariant: isDark
           ? const Color(0xFF3F4946)
           : const Color(0xFFA7B5B0),
     );
-    final background = isDark ? _darkBackground : _lightBackground;
+    final background = neu.base;
     // Transparent system bars: with edge-to-edge the app paints behind them, so
     // the gesture navigation area picks up the bottom nav's colour.
     final systemOverlayStyle = SystemUiOverlayStyle(
@@ -100,24 +101,22 @@ class AppTheme {
         actionsIconTheme: IconThemeData(color: scheme.onSurface, size: 23),
         systemOverlayStyle: systemOverlayStyle,
       ),
+      // Cards are drawn by `NeuCard`, which paints its own shadow pair. This
+      // theme only covers stray Material [Card]s: flat and borderless, so they
+      // don't reintroduce an outline next to a neumorphic panel.
       cardTheme: CardThemeData(
-        color: scheme.surface,
+        color: neu.base,
         surfaceTintColor: Colors.transparent,
-        elevation: isDark ? 0 : 1,
-        shadowColor: scheme.shadow.withValues(alpha: 0.10),
+        elevation: 0,
         margin: EdgeInsets.zero,
-        shape: rounded16.copyWith(
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.55),
-          ),
-        ),
+        shape: rounded16,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: scheme.surface,
+        backgroundColor: neu.base,
         surfaceTintColor: Colors.transparent,
-        elevation: 8,
-        shadowColor: scheme.shadow.withValues(alpha: 0.24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
         actionsPadding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
@@ -130,7 +129,11 @@ class AppTheme {
           foregroundColor: scheme.onPrimary,
           disabledBackgroundColor: scheme.onSurface.withValues(alpha: 0.12),
           disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.38),
-          elevation: 0,
+          // Material can only drop a directional shadow, not a neumorphic pair
+          // — enough to keep themed buttons lifted. `NeuButton` is the
+          // full-fidelity version, with the press-to-sink cue.
+          elevation: 4,
+          shadowColor: neu.darkShadow,
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           shape: rounded14,
@@ -148,9 +151,14 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: scheme.primary,
+          backgroundColor: neu.base,
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          side: BorderSide(color: scheme.outlineVariant),
+          // The outline is exactly what neumorphism replaces; a lifted
+          // same-colour pill carries the secondary action instead.
+          side: BorderSide.none,
+          elevation: 3,
+          shadowColor: neu.darkShadow,
           shape: rounded14,
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
@@ -175,9 +183,12 @@ class AppTheme {
           ),
         ),
       ),
+      // Inputs are the concave half of the language: sunken fill, no resting
+      // outline. Only focus draws a line, because a colour-only focus cue is
+      // too weak on a surface this low-contrast.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerLow,
+        fillColor: neu.sunken,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 15,
@@ -196,9 +207,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.65),
-          ),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -216,7 +225,7 @@ class AppTheme {
       dropdownMenuTheme: DropdownMenuThemeData(
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: scheme.surfaceContainerLow,
+          fillColor: neu.sunken,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -239,24 +248,27 @@ class AppTheme {
           color: scheme.onSurfaceVariant,
         ),
       ),
+      // A hard rule reads as a seam between two same-coloured panels, so
+      // dividers are dialled down; separation comes from the shadows.
       dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant.withValues(alpha: 0.70),
+        color: scheme.outlineVariant.withValues(alpha: isDark ? 0.28 : 0.40),
         thickness: 1,
         space: 24,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: scheme.surfaceContainer,
+        backgroundColor: neu.sunken,
         selectedColor: scheme.primaryContainer,
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         labelStyle: textTheme.labelLarge!,
       ),
       switchTheme: SwitchThemeData(
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? scheme.primary
-              : scheme.surfaceContainerHighest,
+              : neu.sunken,
         ),
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
@@ -314,9 +326,9 @@ class AppTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
-        elevation: 2,
-        focusElevation: 3,
-        hoverElevation: 3,
+        elevation: 6,
+        focusElevation: 6,
+        hoverElevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -334,12 +346,13 @@ class AppTheme {
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
-        linearTrackColor: scheme.primaryContainer,
-        circularTrackColor: scheme.surfaceContainerHighest,
+        linearTrackColor: neu.sunken,
+        circularTrackColor: neu.sunken,
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: scheme.surfaceContainer,
+        color: neu.base,
         surfaceTintColor: Colors.transparent,
+        shadowColor: neu.darkShadow,
         elevation: 6,
         shape: rounded14,
         textStyle: textTheme.bodyMedium,
@@ -347,6 +360,7 @@ class AppTheme {
       extensions: [
         isDark ? ColorTheme.dark : ColorTheme.light,
         isDark ? DoTextTheme.dark : DoTextTheme.light,
+        neu,
       ],
     );
   }

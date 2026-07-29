@@ -689,7 +689,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteThisBatch => 'Delete this batch';
 
   @override
-  String get initialQuantity => 'Initial quantity';
+  String get initialQuantity => 'Quantity';
 
   @override
   String get soldRemainingLabel => 'Sold / remaining';
