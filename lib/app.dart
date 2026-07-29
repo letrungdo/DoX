@@ -14,6 +14,7 @@ import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 class MyApp extends StatefulWidget {
@@ -91,6 +92,19 @@ class _MyAppState extends State<MyApp> {
             routerConfig: appRouter.config(
               navigatorObservers: () => [MyObserver()],
             ),
+            // The system navigation bar style is resolved from the region at
+            // the bottom of the screen, which an AppBar never covers, so it has
+            // to be annotated at the root of the app.
+            builder: (context, child) {
+              final style = Theme.of(context).appBarTheme.systemOverlayStyle;
+              if (child == null || style == null) {
+                return child ?? const SizedBox.shrink();
+              }
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: style,
+                child: child,
+              );
+            },
           );
         },
       ),

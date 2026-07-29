@@ -5,6 +5,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   const DoAppBar({
     super.key,
     this.title, //
+    this.titleSuffix,
     this.height = Dimens.appBarHeight,
     this.leading,
     this.leadingWidth,
@@ -13,6 +14,10 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.bottom,
   });
   final String? title;
+
+  /// Sits right after [title], e.g. an `AppBarSyncIcon` that spins while data
+  /// is being fetched.
+  final Widget? titleSuffix;
   final double height;
   final Widget? leading;
   final List<Widget>? actions;
@@ -33,9 +38,22 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
 class _DoAppBarState extends State<DoAppBar> {
   @override
   Widget build(BuildContext context) {
+    final title = widget.title;
+    final titleSuffix = widget.titleSuffix;
     return AppBar(
       backgroundColor: widget.backgroundColor,
-      title: widget.title != null ? Text(widget.title!) : null,
+      title: title == null
+          ? null
+          : titleSuffix == null
+          ? Text(title)
+          : Row(
+              spacing: 8,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+                titleSuffix,
+              ],
+            ),
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,
       actions: widget.actions,

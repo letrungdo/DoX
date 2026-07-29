@@ -1,12 +1,13 @@
 import 'package:do_x/theme/color_theme.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTheme {
   AppTheme._();
 
   static const _seed = Color(0xFF2DD4BF);
-  static const _lightBackground = Color(0xFFF4FAF8);
+  static const _lightBackground = Color(0xFFE7F1ED);
   static const _darkBackground = Color(0xFF0D1513);
 
   static final ThemeData lightTheme = _buildTheme(Brightness.light);
@@ -20,39 +21,54 @@ class AppTheme {
       dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
     );
     final scheme = baseScheme.copyWith(
-      primary: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF00897B),
+      primary: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF00695C),
       onPrimary: isDark ? const Color(0xFF003731) : Colors.white,
       primaryContainer: isDark
           ? const Color(0xFF005047)
-          : const Color(0xFF99F6E4),
+          : const Color(0xFF5EEAD4),
       onPrimaryContainer: isDark
           ? const Color(0xFF99F6E4)
           : const Color(0xFF00201C),
-      secondary: isDark ? const Color(0xFFB1CCC6) : const Color(0xFF4A635E),
+      secondary: isDark ? const Color(0xFFB1CCC6) : const Color(0xFF35504B),
       onSecondary: isDark ? const Color(0xFF1C3531) : Colors.white,
-      tertiary: isDark ? const Color(0xFF37718B) : const Color(0xFF336575),
+      tertiary: isDark ? const Color(0xFF37718B) : const Color(0xFF1F4E5C),
       onTertiary: Colors.white,
       surface: isDark ? const Color(0xFF151D1B) : Colors.white,
-      onSurface: isDark ? const Color(0xFFDDE5E1) : const Color(0xFF171D1B),
+      onSurface: isDark ? const Color(0xFFDDE5E1) : const Color(0xFF0C1211),
+      onSurfaceVariant: isDark
+          ? const Color(0xFFBFC9C5)
+          : const Color(0xFF3D4A47),
       surfaceContainerLowest: isDark ? const Color(0xFF080F0D) : Colors.white,
       surfaceContainerLow: isDark
           ? const Color(0xFF151D1B)
-          : const Color(0xFFF0F8F5),
+          : const Color(0xFFE4EFEB),
       surfaceContainer: isDark
           ? const Color(0xFF19211F)
-          : const Color(0xFFEAF2EF),
+          : const Color(0xFFD9E7E2),
       surfaceContainerHigh: isDark
           ? const Color(0xFF232B29)
-          : const Color(0xFFE4ECE9),
+          : const Color(0xFFCDDED8),
       surfaceContainerHighest: isDark
           ? const Color(0xFF2E3634)
-          : const Color(0xFFDDE5E2),
-      outline: isDark ? const Color(0xFF89938F) : const Color(0xFF6F7975),
+          : const Color(0xFFC2D5CF),
+      outline: isDark ? const Color(0xFF89938F) : const Color(0xFF556059),
       outlineVariant: isDark
           ? const Color(0xFF3F4946)
-          : const Color(0xFFBFC9C5),
+          : const Color(0xFFA7B5B0),
     );
     final background = isDark ? _darkBackground : _lightBackground;
+    // Transparent system bars: with edge-to-edge the app paints behind them, so
+    // the gesture navigation area picks up the bottom nav's colour.
+    final systemOverlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarBrightness: brightness,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: isDark
+          ? Brightness.light
+          : Brightness.dark,
+    );
     final textTheme = _textTheme(scheme);
     final rounded14 = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
@@ -82,6 +98,7 @@ class AppTheme {
         ),
         iconTheme: IconThemeData(color: scheme.onSurface, size: 23),
         actionsIconTheme: IconThemeData(color: scheme.onSurface, size: 23),
+        systemOverlayStyle: systemOverlayStyle,
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,
@@ -258,9 +275,9 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surface,
+        backgroundColor: background,
         surfaceTintColor: Colors.transparent,
-        elevation: 2,
+        elevation: 0,
         height: 68,
         indicatorColor: scheme.primary.withValues(alpha: 0.12),
         indicatorShape: RoundedRectangleBorder(
@@ -286,13 +303,13 @@ class AppTheme {
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: scheme.surface,
+        backgroundColor: background,
         selectedItemColor: scheme.primary,
         unselectedItemColor: scheme.onSurfaceVariant,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primaryContainer,

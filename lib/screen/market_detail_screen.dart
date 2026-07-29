@@ -12,6 +12,7 @@ import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/news/market_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/candle_chart_view.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -52,55 +53,36 @@ class _MarketDetailScreenState
     return Scaffold(
       appBar: DoAppBar(
         title: widget.code.getName(),
-        actions: [
-          IconButton(
-            onPressed: () => vm.onRefresh(),
-            icon: const Icon(Icons.refresh_rounded, size: 27),
-          ),
-        ],
+        titleSuffix: AppBarSyncIcon<MarketDetailViewModel>(
+          selector: (vm) => vm.isFetching,
+        ),
       ),
-      body: Column(
-        children: [
-          Selector<MarketDetailViewModel, bool>(
-            selector: (_, vm) => vm.isLoading,
-            builder: (context, isLoading, _) {
-              return isLoading
-                  ? const LinearProgressIndicator(minHeight: 2)
-                  : const SizedBox(height: 2);
-            },
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: Dimens.webMaxWidth,
-                  ),
-                  child: Consumer<MarketDetailViewModel>(
-                    builder: (context, vm, _) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildHeader(vm),
-                          const SizedBox(height: 16),
-                          _IntervalSelector(
-                            value: vm.interval,
-                            onChanged: vm.changeInterval,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildChart(vm),
-                          const SizedBox(height: 24),
-                          _buildStats(vm),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: Dimens.webMaxWidth),
+            child: Consumer<MarketDetailViewModel>(
+              builder: (context, vm, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeader(vm),
+                    const SizedBox(height: 16),
+                    _IntervalSelector(
+                      value: vm.interval,
+                      onChanged: vm.changeInterval,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildChart(vm),
+                    const SizedBox(height: 24),
+                    _buildStats(vm),
+                  ],
+                );
+              },
             ),
           ),
-        ],
+        ),
       ),
     );
   }

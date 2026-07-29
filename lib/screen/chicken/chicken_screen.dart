@@ -16,7 +16,7 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
@@ -128,7 +128,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.chickenManagement,
-        bottom: AppBarLoadingBar<ChickenViewModel>(
+        titleSuffix: AppBarSyncIcon<ChickenViewModel>(
           selector: (vm) => vm.isFetching,
         ),
         actions: [
@@ -268,6 +268,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                       includeAll: true,
                       onChanged: (year) {
                         setState(() => _selectedYear = year);
+                        // A different year is a different list — start it from
+                        // the top instead of keeping the old scroll offset.
+                        _scrollToTop();
                         // Another year means another read: the server only
                         // sent the one that was selected.
                         vm.ensureLoaded({

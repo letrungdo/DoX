@@ -11,7 +11,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/app_bar/app_bar_loading_bar.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
@@ -76,7 +76,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
-        bottom: AppBarLoadingBar<ChickenViewModel>(selector: (vm) => vm.isFetching),
+        titleSuffix: AppBarSyncIcon<ChickenViewModel>(selector: (vm) => vm.isFetching),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
@@ -110,6 +110,9 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                       includeAll: true,
                       onChanged: (year) {
                         setState(() => _selectedYear = year);
+                        // A different year is a different list — start it from
+                        // the top instead of keeping the old scroll offset.
+                        _scrollToTop();
                         // Another year means another read: the server only
                         // sent the one that was selected.
                         vm.ensureLoaded({
