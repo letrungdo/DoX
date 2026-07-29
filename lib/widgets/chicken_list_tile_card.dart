@@ -1,9 +1,11 @@
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
 /// A shared rounded card for chicken feature lists.
 ///
-/// Clipping at the [Card] level keeps ListTile's tap and long-press ink
-/// highlights inside the card's rounded shape.
+/// Taps are handled by the surrounding [NeuCard] rather than the [ListTile], so
+/// the whole panel sinks while held — the neumorphic press cue — instead of only
+/// the tile showing an ink highlight.
 class ChickenListTileCard extends StatelessWidget {
   const ChickenListTileCard({
     super.key,
@@ -16,7 +18,6 @@ class ChickenListTileCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.color,
-    this.borderColor,
   });
 
   final Widget title;
@@ -27,25 +28,18 @@ class ChickenListTileCard extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  /// Tint that carries the row's state. Neumorphic cards have no border, so the
+  /// fill is the only place that signal can live.
   final Color? color;
-
-  /// Outline that replaces the card theme's neutral one. Used with [color] so a
-  /// tinted card is framed in its own hue instead of a grey that muddies it.
-  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return NeuCard(
       margin: margin,
       color: color,
-      shape: borderColor == null
-          ? null
-          : RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor!),
-            ),
-      elevation: borderColor == null ? null : 0,
-      clipBehavior: Clip.antiAlias,
+      radius: 16,
+      onTap: onTap,
+      onLongPress: onLongPress,
       child: ListTile(
         contentPadding: contentPadding,
         minVerticalPadding: 4,
@@ -54,8 +48,6 @@ class ChickenListTileCard extends StatelessWidget {
         title: title,
         subtitle: subtitle,
         trailing: trailing,
-        onTap: onTap,
-        onLongPress: onLongPress,
       ),
     );
   }

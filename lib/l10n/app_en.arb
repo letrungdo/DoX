@@ -419,7 +419,7 @@
   "batchDetailTitle": "Batch details",
   "batchNotFound": "Batch not found.",
   "deleteThisBatch": "Delete this batch",
-  "initialQuantity": "Initial quantity",
+  "initialQuantity": "Quantity",
   "soldRemainingLabel": "Sold / remaining",
   "remainingLabel": "Remaining",
   "soldRemainingValue": "{sold} / {remaining}",

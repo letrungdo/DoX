@@ -38,9 +38,7 @@ class CuteSegmentedButton<T> extends StatelessWidget {
       color: selected ? scheme.tertiary : scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: selected
-            ? BorderSide.none
-            : BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+        side: BorderSide.none,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),

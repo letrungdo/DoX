@@ -6,6 +6,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -115,7 +116,7 @@ class _LunarScreenState extends State<LunarScreen> {
   }
 
   Widget _buildCalendarCard(BuildContext context) {
-    return Card(
+    return NeuCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
@@ -322,7 +323,7 @@ class _LunarScreenState extends State<LunarScreen> {
     final tide = LunarCalendar.tideLabel(lunar.day);
     final goodHours = LunarCalendar.goodHours(s.day, s.month, s.year);
 
-    return Card(
+    return NeuCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),

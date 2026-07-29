@@ -27,6 +27,7 @@ import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -161,60 +162,43 @@ class _ChickenBatchDetailScreenState
     required String title,
     Widget? trailing,
     Color? color,
-    Color? borderColor,
     required List<Widget> children,
   }) {
-    return Card(
+    return NeuCard(
       color: color,
-      elevation: borderColor == null ? null : 0,
-      shape: borderColor == null
-          ? null
-          : RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                icon,
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: context.theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+      radius: 16,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              icon,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: context.theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (trailing != null) trailing,
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
       ),
     );
   }
 
-  /// Small tinted square holding a section's svg icon.
+  /// Small square holding a section's svg icon, lifted off the card.
   Widget _buildIconBadge(SvgGenImage asset, {double size = 22}) {
     return Container(
       padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        // Opaque so the badge keeps the same look on the tinted section cards.
-        color: context.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: context.theme.colorScheme.outlineVariant.withValues(
-            alpha: 0.8,
-          ),
-        ),
-      ),
+      // Opaque so the badge keeps the same look on the tinted section cards.
+      decoration: context.neu.raised(radius: 10, depth: 0.45),
       child: asset.svg(width: size, height: size),
     );
   }
@@ -238,18 +222,13 @@ class _ChickenBatchDetailScreenState
   }
 
   /// One of the three headline numbers (initial / sold / remaining).
+  ///
+  /// Nested inside a raised card, so it gets a shallow lift of its own rather
+  /// than a deep one that would compete with the card it sits on.
   Widget _buildStatTile(String value, String label, {Color? valueColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: BoxDecoration(
-        color: context.theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: context.theme.colorScheme.outlineVariant.withValues(
-            alpha: 0.7,
-          ),
-        ),
-      ),
+      decoration: context.neu.raised(radius: 12, depth: 0.5),
       child: Column(
         children: [
           Text(
@@ -345,7 +324,7 @@ class _ChickenBatchDetailScreenState
     final hatched = batch.ageInDays >= 0;
     final hasSales = batch.sales.isNotEmpty;
     final soldOut = hasSales && batch.remainingQuantity <= 0;
-    return Card(
+    return NeuCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
         child: Column(
@@ -657,14 +636,12 @@ class _ChickenBatchDetailScreenState
 
     // Theme-aware tint: green once the batch is sold out, amber while there are
     // still chickens left to sell.
-    final accent = soldOut ? context.colors.success : context.colors.warning;
     final cardColor = soldOut
         ? context.colors.successSoft
         : context.colors.warningSoft;
 
     return _buildSectionCard(
       color: cardColor,
-      borderColor: accent.withValues(alpha: 0.30),
       icon: _buildIconBadge(Assets.images.coinCute),
       title: l10n.saleAndProfit,
       trailing: hasSold
@@ -778,17 +755,9 @@ class _ChickenBatchDetailScreenState
   Widget _buildSummaryBox(List<Widget> children) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        // Opaque panel: a half-transparent one let the section tint bleed
-        // through and dulled the numbers on it.
-        color: context.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: context.theme.colorScheme.outlineVariant.withValues(
-            alpha: 0.7,
-          ),
-        ),
-      ),
+      // Opaque base fill, so the section's tint can't bleed through and dull
+      // the numbers on it.
+      decoration: context.neu.raised(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,

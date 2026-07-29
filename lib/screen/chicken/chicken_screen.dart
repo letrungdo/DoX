@@ -29,6 +29,7 @@ import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -366,48 +367,45 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     required Color accentSoft,
     required VoidCallback onTap,
   }) {
-    return Card(
+    // The tap belongs to the card, not to an inner InkWell: that way the whole
+    // panel flattens while held and the ripple is clipped to its rounded shape.
+    return NeuCard(
       margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: accentSoft,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accent.withValues(alpha: 0.28)),
-                ),
-                child: icon,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: context.theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.7,
-                ),
-              ),
-            ],
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accentSoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: accent.withValues(alpha: 0.28)),
+            ),
+            child: icon,
           ),
-        ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: context.theme.colorScheme.onSurfaceVariant.withValues(
+              alpha: 0.7,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -436,11 +434,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         : isPartiallySold
         ? colors.successSoft
         : null;
-    final Color? cardBorder = isSoldOut
-        ? colors.danger.withValues(alpha: 0.30)
-        : isPartiallySold
-        ? colors.success.withValues(alpha: 0.30)
-        : null;
 
     final (statusText, statusColor) = !isHatched
         ? (
@@ -454,7 +447,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return ChickenListTileCard(
       margin: const EdgeInsets.only(bottom: 12),
       color: cardColor,
-      borderColor: cardBorder,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       title: Row(
         children: [
