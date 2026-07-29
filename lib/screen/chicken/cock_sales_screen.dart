@@ -8,12 +8,14 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
@@ -24,6 +26,7 @@ import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
+import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -177,23 +180,7 @@ class _CockSalesScreenState
                         color: context.theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "${l10n.totalLabel}: ",
-                            style: TextStyle(
-                              color: context.theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          TextSpan(
-                            text: "${total.toCurrency()}đ",
-                            style: TextStyle(color: context.colors.money),
-                          ),
-                        ],
-                      ),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    Expanded(child: TotalAmountText(total)),
                   ],
                 ),
               ),
@@ -236,8 +223,13 @@ class _CockSalesScreenState
                                           ),
                                           if (vm.globalCockSales.isEmpty) ...[
                                             const SizedBox(height: 16),
-                                            ElevatedButton(
-                                              onPressed: () => _showSaleDialog(),
+                                            NeuButton(
+                                              onPressed: () =>
+                                                  _showSaleDialog(),
+                                              accent: context
+                                                  .theme
+                                                  .colorScheme
+                                                  .primary,
                                               child: Text(l10n.enterFirstSale),
                                             ),
                                           ],
@@ -250,10 +242,10 @@ class _CockSalesScreenState
                       : ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                           itemCount: sortedSales.length,
                           separatorBuilder: (_, _) =>
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                           itemBuilder: (context, index) {
                             final sale = sortedSales[index];
                             final isMeat = sale.category == SaleCategory.meat;
@@ -272,9 +264,6 @@ class _CockSalesScreenState
                                 decoration: BoxDecoration(
                                   color: accentSoft,
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: accent.withValues(alpha: 0.28),
-                                  ),
                                 ),
                                 child:
                                     (isMeat
@@ -313,9 +302,6 @@ class _CockSalesScreenState
                                       decoration: BoxDecoration(
                                         color: accentSoft,
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: accent.withValues(alpha: 0.3),
-                                        ),
                                       ),
                                       child: Text(
                                         isMeat
@@ -349,9 +335,7 @@ class _CockSalesScreenState
                               ),
                               trailing: Text(
                                 "${sale.amount.toCurrency()}đ",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                style: DoTextTheme.listAmount.copyWith(
                                   color: context.colors.money,
                                 ),
                               ),
@@ -374,7 +358,8 @@ class _CockSalesScreenState
       text: sale == null ? '' : sale.amount.toCurrency(),
     );
     final noteController = TextEditingController(text: sale?.note ?? '');
-    DateTime saleDate = sale?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
+    DateTime saleDate =
+        sale?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
     SaleCategory category = sale?.category ?? SaleCategory.fighting;
     String? amountError;
 

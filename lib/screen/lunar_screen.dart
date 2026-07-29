@@ -7,6 +7,7 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -102,7 +103,7 @@ class _LunarScreenState extends State<LunarScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               _buildCalendarCard(context),
@@ -137,7 +138,11 @@ class _LunarScreenState extends State<LunarScreen> {
     final title = DateFormat.yMMMM(localeName).format(_focusedDay);
 
     // Lunar year label from the 1st of the focused month.
-    final lunar = LunarCalendar.solarToLunar(1, _focusedDay.month, _focusedDay.year);
+    final lunar = LunarCalendar.solarToLunar(
+      1,
+      _focusedDay.month,
+      _focusedDay.year,
+    );
     final canChiYear = LunarCalendar.canChiOfYear(lunar.year);
 
     return Row(
@@ -202,9 +207,7 @@ class _LunarScreenState extends State<LunarScreen> {
       onPageChanged: (focusedDay) => setState(() => _focusedDay = focusedDay),
       calendarBuilders: CalendarBuilders(
         dowBuilder: (context, day) {
-          final label = _capitalize(
-            DateFormat.E(localeName).format(day),
-          );
+          final label = _capitalize(DateFormat.E(localeName).format(day));
           return Center(
             child: Text(
               label,
@@ -257,11 +260,13 @@ class _LunarScreenState extends State<LunarScreen> {
       margin: const EdgeInsets.all(2),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isSelected ? scheme.primaryContainer : null,
-        border: Border.all(
-          color: isToday ? scheme.primary : Colors.transparent,
-          width: 1.4,
-        ),
+        // Selected is the strong fill, today a soft tint of the same colour —
+        // the outline it used to carry was the only border on the screen.
+        color: isSelected
+            ? scheme.primaryContainer
+            : isToday
+            ? context.neuTint(scheme.primary, amount: 0.14)
+            : null,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -271,13 +276,15 @@ class _LunarScreenState extends State<LunarScreen> {
             '${date.day}',
             style: TextStyle(
               fontSize: 20,
+              // Tight line box on both numbers, no gap widget: most of what
+              // used to separate solar from lunar was the fonts' own leading.
+              height: 1.05,
               fontWeight: isToday || isSelected
                   ? FontWeight.w700
                   : FontWeight.w500,
               color: isSelected ? scheme.onPrimaryContainer : solarColor,
             ),
           ),
-          const SizedBox(height: 2),
           Text.rich(
             TextSpan(
               children: [
@@ -299,6 +306,7 @@ class _LunarScreenState extends State<LunarScreen> {
             ),
             style: TextStyle(
               fontSize: 14,
+              height: 1.05,
               color: (isSelected ? scheme.onPrimaryContainer : lunarColor)
                   .withValues(alpha: isOutside ? 0.4 : 1),
             ),
@@ -317,7 +325,12 @@ class _LunarScreenState extends State<LunarScreen> {
     final canChiMonth = LunarCalendar.canChiOfMonth(lunar.month, lunar.year);
     final canChiYear = LunarCalendar.canChiOfYear(lunar.year);
     final leapSuffix = lunar.isLeap ? ' (${l10n.lunarLeapMonth})' : '';
-    final quality = LunarCalendar.dayQuality(s.day, s.month, s.year, lunar.month);
+    final quality = LunarCalendar.dayQuality(
+      s.day,
+      s.month,
+      s.year,
+      lunar.month,
+    );
     final canChiHour = LunarCalendar.canChiOfZiHour(s.day, s.month, s.year);
     final solarTerm = LunarCalendar.solarTerm(s.day, s.month, s.year);
     final tide = LunarCalendar.tideLabel(lunar.day);
@@ -374,9 +387,7 @@ class _LunarScreenState extends State<LunarScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: [
-                for (final h in goodHours) _hourChip(context, h),
-              ],
+              children: [for (final h in goodHours) _hourChip(context, h)],
             ),
           ],
         ),
@@ -395,7 +406,7 @@ class _LunarScreenState extends State<LunarScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: context.neuTint(color, amount: 0.14),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -410,10 +421,7 @@ class _LunarScreenState extends State<LunarScreen> {
             ),
           ),
           const SizedBox(width: 6),
-          Text(
-            star,
-            style: TextStyle(color: color, fontSize: 11),
-          ),
+          Text(star, style: TextStyle(color: color, fontSize: 11)),
         ],
       ),
     );
@@ -424,9 +432,8 @@ class _LunarScreenState extends State<LunarScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.10),
+        color: context.neuTint(scheme.primary, amount: 0.14),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
@@ -451,10 +458,7 @@ class _LunarScreenState extends State<LunarScreen> {
       children: [
         SizedBox(
           width: 96,
-          child: Text(
-            label,
-            style: TextStyle(color: scheme.onSurfaceVariant),
-          ),
+          child: Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
         ),
         Expanded(
           child: Text(

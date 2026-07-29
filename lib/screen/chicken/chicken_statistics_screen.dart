@@ -5,6 +5,7 @@ import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
@@ -12,6 +13,7 @@ import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -164,7 +166,7 @@ class _ChickenStatisticsScreenState
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Row(
             children: [
               YearFilter(
@@ -301,7 +303,7 @@ class _ChickenStatisticsScreenState
 
     return ListView(
       controller: controller,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
         _buildSummaryCard(
           headline: headline,
@@ -319,7 +321,7 @@ class _ChickenStatisticsScreenState
         const SizedBox(height: 8),
         for (final period in periods) ...[
           _buildPeriodCard(period),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
         ],
       ],
     );
@@ -361,20 +363,9 @@ class _ChickenStatisticsScreenState
     final accent = isUp ? colors.money : colors.danger;
     final margin = revenue > 0 ? total.profit / revenue * 100 : null;
 
-    return Container(
+    return NeuCard(
+      radius: 20,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: _scheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accent.withValues(alpha: 0.32)),
-        boxShadow: [
-          BoxShadow(
-            color: _scheme.shadow.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -678,9 +669,8 @@ class _ChickenStatisticsScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _scheme.surface,
+        color: context.neuTint(accent),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -691,11 +681,7 @@ class _ChickenStatisticsScreenState
           ],
           Text(
             text,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: accent,
-            ),
+            style: DoTextTheme.pill.copyWith(fontSize: 13, color: accent),
           ),
         ],
       ),
@@ -862,7 +848,7 @@ class _ChickenStatisticsScreenState
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: context.neu.raised(radius: 12, depth: 0.5),
+      decoration: context.neuRaised(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

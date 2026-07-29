@@ -1,5 +1,6 @@
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -74,6 +75,10 @@ class _LunarCalendarPickerDialogState
         MediaQuery.sizeOf(context).width - insetHorizontal * 2;
     final contentWidth = availableWidth < 460.0 ? availableWidth : 460.0;
     return AlertDialog(
+      // Actions are raised buttons: the 8px the dialog leaves between them
+      // is inside their shadow reach, so one button's lit rim lands on the
+      // next one's shade.
+      buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
       insetPadding: const EdgeInsets.symmetric(
         horizontal: insetHorizontal,
         vertical: 24,
@@ -238,11 +243,13 @@ class _LunarCalendarPickerDialogState
       margin: const EdgeInsets.all(2),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isSelected ? scheme.primaryContainer : null,
-        border: Border.all(
-          color: isToday ? scheme.primary : Colors.transparent,
-          width: 1.4,
-        ),
+        // Same rule as the calendar screen: selected is the strong fill, today a
+        // soft tint of it, and nothing is outlined.
+        color: isSelected
+            ? scheme.primaryContainer
+            : isToday
+            ? context.neuTint(scheme.primary, amount: 0.14)
+            : null,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -252,13 +259,14 @@ class _LunarCalendarPickerDialogState
             '${date.day}',
             style: TextStyle(
               fontSize: 20,
+              // Same tight pairing as the calendar screen's cells.
+              height: 1.05,
               fontWeight: isToday || isSelected
                   ? FontWeight.w700
                   : FontWeight.w500,
               color: isSelected ? scheme.onPrimaryContainer : solarColor,
             ),
           ),
-          const SizedBox(height: 1),
           Text.rich(
             TextSpan(
               children: [
@@ -280,6 +288,7 @@ class _LunarCalendarPickerDialogState
             ),
             style: TextStyle(
               fontSize: 14,
+              height: 1.05,
               color: (isSelected ? scheme.onPrimaryContainer : lunarColor)
                   .withValues(alpha: isOutside ? 0.4 : 1),
             ),

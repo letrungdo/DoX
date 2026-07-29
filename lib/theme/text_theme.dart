@@ -22,6 +22,22 @@ class DoTextTheme extends ThemeExtension<DoTextTheme> {
     letterSpacing: 0,
   );
 
+  /// Text inside a small pill/badge. `height: 1` with even leading centres the
+  /// glyph box in the pill — with the font's default line height the descent
+  /// pushes the label visibly low inside such tight padding. Callers add
+  /// `fontSize` and `color`.
+  static const pill = TextStyle(
+    height: 1,
+    leadingDistribution: TextLeadingDistribution.even,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// The money figure on a list row (a sale, an expense). Callers add `color`.
+  static const listAmount = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+  );
+
   static final light = DoTextTheme(
     primary: baseStyle.textColor(black500Color),
     secondary: baseStyle.textColor(black500Color),

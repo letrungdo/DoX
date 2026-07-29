@@ -8,17 +8,20 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
+import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -86,8 +89,10 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
       ),
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
-          final years = {DateTime.now().year, ...vm.yearsFor({ChickenSection.globalExpenses})}.toList()
-            ..sort((a, b) => b.compareTo(a));
+          final years = {
+            DateTime.now().year,
+            ...vm.yearsFor({ChickenSection.globalExpenses}),
+          }.toList()..sort((a, b) => b.compareTo(a));
           final expenses = vm.globalExpenses.where((expense) {
             return _selectedYear == 0 || vm.displayYear(expense.date) == _selectedYear;
           }).toList();
@@ -115,40 +120,17 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                         _scrollToTop();
                         // Another year means another read: the server only
                         // sent the one that was selected.
-                        vm.ensureLoaded({
-                          ChickenSection.globalExpenses,
-                        }, year: _yearFilter);
+                        vm.ensureLoaded({ChickenSection.globalExpenses}, year: _yearFilter);
                       },
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: "${l10n.totalLabel}: ",
-                                style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
-                              ),
-                              TextSpan(
-                                text: "${total.toCurrency()}đ",
-                                style: TextStyle(color: context.colors.money),
-                              ),
-                            ],
-                          ),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
+                    Expanded(child: TotalAmountText(total)),
                   ],
                 ),
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () =>
-                      vm.loadData(sections: {ChickenSection.globalExpenses}),
+                  onRefresh: () => vm.loadData(sections: {ChickenSection.globalExpenses}),
                   child: expenses.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -164,12 +146,18 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                                           Assets.images.feedCute.svg(width: 72, height: 72),
                                           const SizedBox(height: 16),
                                           Text(
-                                            vm.globalExpenses.isEmpty ? l10n.noCommonExpenses : l10n.noCommonExpensesInYear(_selectedYear),
+                                            vm.globalExpenses.isEmpty
+                                                ? l10n.noCommonExpenses
+                                                : l10n.noCommonExpensesInYear(_selectedYear),
                                             style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
                                           ),
                                           if (vm.globalExpenses.isEmpty) ...[
                                             const SizedBox(height: 16),
-                                            ElevatedButton(onPressed: () => _showExpenseDialog(), child: Text(l10n.addFirstExpense)),
+                                            NeuButton(
+                                              onPressed: () => _showExpenseDialog(),
+                                              accent: context.theme.colorScheme.primary,
+                                              child: Text(l10n.addFirstExpense),
+                                            ),
                                           ],
                                         ],
                                       ),
@@ -180,9 +168,9 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                       : ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                           itemCount: expenses.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          separatorBuilder: (_, _) => const SizedBox(height: 14),
                           itemBuilder: (context, index) {
                             final expense = expenses[index];
                             return ChickenListTileCard(
@@ -202,7 +190,7 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                               subtitle: Text("${_fmt(expense.date)} · ${_expenseLabel(expense.type)}"),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.colors.money),
+                                style: DoTextTheme.listAmount.copyWith(color: context.colors.money),
                               ),
                             );
                           },
@@ -262,7 +250,10 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
         isDestructive: true,
         onConfirm: () => Navigator.pop(context, true),
         children: [
-          Text(l10n.confirmDeleteCommonExpense(_fmt(expense.date), '${expense.amount.toCurrency()}đ'), textAlign: TextAlign.center),
+          Text(
+            l10n.confirmDeleteCommonExpense(_fmt(expense.date), '${expense.amount.toCurrency()}đ'),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

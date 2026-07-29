@@ -77,7 +77,7 @@ class _MenuScreenState<V extends MenuViewModel>
           SliverFillRemaining(
             hasScrollBody: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               child: Column(
                 children: [
                   _buildMainActions(l10n).webConstrainedBox(),
@@ -94,7 +94,8 @@ class _MenuScreenState<V extends MenuViewModel>
 
   Widget _buildMainActions(AppLocalizations l10n) {
     return Column(
-      spacing: 12,
+      // 16: these are raised rows, so the gap has to clear their shadow reach.
+      spacing: 16,
       children: [
         _menuButton(
           Icons.wifi_rounded,
@@ -153,6 +154,10 @@ class _MenuScreenState<V extends MenuViewModel>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        // Actions are raised buttons: the 8px the dialog leaves between them
+        // is inside their shadow reach, so one button's lit rim lands on the
+        // next one's shade.
+        buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
         title: Text(l10n.confirmLogout),
         content: Text(l10n.confirmLogoutMessage),
         actions: [

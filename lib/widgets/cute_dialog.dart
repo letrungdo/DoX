@@ -137,7 +137,7 @@ class _CuteDialogState extends State<CuteDialog> {
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -207,7 +207,7 @@ class _CuteDialogState extends State<CuteDialog> {
                       ),
                     ),
                     if (confirmText != null) ...[
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: DialogActionButton(
                           text: confirmText,
