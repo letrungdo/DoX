@@ -4,6 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   // 2025 nhuận tháng 6: tháng 6 thường rồi tới tháng 6 nhuận.
   group('leap month of 2025', () {
+    test('reports the leap month number', () {
+      expect(LunarCalendar.leapMonthOfYear(2025), 6);
+      expect(LunarCalendar.leapMonthOfYear(2024), isNull);
+    });
+
     test('the regular sixth month', () {
       expect(LunarCalendar.lunarToSolar(8, 6, 2025), DateTime(2025, 7, 2));
     });

@@ -48,7 +48,7 @@ class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
-  int _selectedYear = DateTime.now().year;
+  late int _selectedYear;
 
   /// The year to ask the server for; null when the picker is on "all", which
   /// is the one case that needs every year.
@@ -59,8 +59,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
 
   @override
   void initState() {
-    _tabReselectHandler = _handleTabReselect;
     super.initState();
+    _selectedYear = vm.currentDisplayYear();
+    _tabReselectHandler = _handleTabReselect;
   }
 
   @override
@@ -172,7 +173,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
           final years = {
-            DateTime.now().year,
+            vm.currentDisplayYear(),
             ...vm.yearsFor({ChickenSection.batches}),
           }.toList()..sort((a, b) => b.compareTo(a));
           final batches = _selectedYear == 0

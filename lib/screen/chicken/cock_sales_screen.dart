@@ -47,12 +47,18 @@ class _CockSalesScreenState
   String _fmt(DateTime date) =>
       ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   SaleCategory? _filter;
-  int _selectedYear = DateTime.now().year;
+  late int _selectedYear;
 
   /// The year to ask the server for; null when the picker is on "all", which
   /// is the one case that needs every year.
   int? get _yearFilter => _selectedYear == 0 ? null : _selectedYear;
   final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedYear = vm.currentDisplayYear();
+  }
 
   @override
   void dispose() {
@@ -105,7 +111,7 @@ class _CockSalesScreenState
       body: Consumer<ChickenViewModel>(
         builder: (context, vm, child) {
           final years = {
-            DateTime.now().year,
+            vm.currentDisplayYear(),
             ...vm.yearsFor({ChickenSection.globalCockSales}),
           }.toList()..sort((a, b) => b.compareTo(a));
           final sortedSales = vm.globalCockSales

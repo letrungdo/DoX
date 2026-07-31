@@ -147,6 +147,10 @@ class ChickenViewModel extends CoreViewModel {
       ? LunarCalendar.solarToLunar(date.day, date.month, date.year).year
       : date.year;
 
+  /// The year containing today in the calendar currently shown by the app.
+  /// [now] is injectable so the lunar-new-year boundary can be tested.
+  int currentDisplayYear([DateTime? now]) => displayYear(now ?? DateTime.now());
+
   StreamSubscription<AuthState>? _authSub;
 
   // --- Local cache ----------------------------------------------------------
@@ -1140,12 +1144,22 @@ class ChickenViewModel extends CoreViewModel {
     }
   }
 
-  Map<int, ChickenStats> getMonthlyStats(int year) {
-    final stats = <int, _MutableStats>{
-      for (int i = 1; i <= 12; i++) i: _MutableStats(),
+  Map<ChickenMonth, ChickenStats> getMonthlyStats(int year) {
+    final leapMonth = _useLunarCalendar
+        ? LunarCalendar.leapMonthOfYear(year)
+        : null;
+    final stats = <ChickenMonth, _MutableStats>{
+      for (int month = 1; month <= 12; month++) ...{
+        (month: month, isLeap: false): _MutableStats(),
+        if (month == leapMonth) (month: month, isLeap: true): _MutableStats(),
+      },
     };
-    _accumulateStats((date) => date.year == year ? stats[date.month]! : null);
-    return stats.map((m, val) => MapEntry(m, val.toRecord()));
+    _accumulateStats(
+      (date) => date.year == year
+          ? stats[(month: date.month, isLeap: date.isLeap)]!
+          : null,
+    );
+    return stats.map((month, val) => MapEntry(month, val.toRecord()));
   }
 
   Map<int, ChickenStats> getYearlyStats() {
@@ -1156,11 +1170,18 @@ class ChickenViewModel extends CoreViewModel {
     return stats.map((y, val) => MapEntry(y, val.toRecord()));
   }
 
-  void _accumulateStats(_MutableStats? Function(DateTime date) bucketOf) {
-    // Stored dates are solar. In lunar mode the buckets are lunar year/month,
-    // so convert first; in solar mode the date is already the bucket.
-    DateTime bucketDate(DateTime date) =>
-        _useLunarCalendar ? LunarCalendar.solarToLunarDateTime(date) : date;
+  void _accumulateStats(
+    _MutableStats? Function(_ChickenStatsDate date) bucketOf,
+  ) {
+    // Keep the leap flag in the bucket. Converting through a DateTime would
+    // collapse the regular and leap occurrences of the same lunar month.
+    _ChickenStatsDate bucketDate(DateTime date) {
+      if (!_useLunarCalendar) {
+        return (year: date.year, month: date.month, isLeap: false);
+      }
+      final lunar = LunarCalendar.solarToLunar(date.day, date.month, date.year);
+      return (year: lunar.year, month: lunar.month, isLeap: lunar.isLeap);
+    }
 
     void addSale(CockSale sale) {
       final bucket = bucketOf(bucketDate(sale.date));
@@ -1198,6 +1219,13 @@ typedef ChickenStats = ({
   double expense,
   double profit,
 });
+
+/// A month in the currently displayed calendar. Solar months never use
+/// [isLeap]; a lunar leap year contains both `(month: 6, isLeap: false)` and
+/// `(month: 6, isLeap: true)`, for example.
+typedef ChickenMonth = ({int month, bool isLeap});
+
+typedef _ChickenStatsDate = ({int year, int month, bool isLeap});
 
 class _MutableStats {
   double batchRevenue = 0;

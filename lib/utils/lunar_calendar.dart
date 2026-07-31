@@ -280,6 +280,19 @@ class LunarCalendar {
     return DateTime(l.year, l.month, l.day);
   }
 
+  /// The number of the leap month in [year], or null when the lunar year has
+  /// twelve months. The leap month follows the regular month with the same
+  /// number.
+  static int? leapMonthOfYear(int year) {
+    for (var month = 1; month <= 12; month++) {
+      if (lunarToSolar(1, month, year, isLeap: true) !=
+          lunarToSolar(1, month, year)) {
+        return month;
+      }
+    }
+    return null;
+  }
+
   /// Number of days (29 or 30) in a given lunar month.
   static int daysInLunarMonth(int month, int year, {bool isLeap = false}) {
     // If lunar day 30 exists it round-trips to day 30 of the same month;

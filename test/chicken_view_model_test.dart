@@ -939,4 +939,53 @@ void main() {
       offline.dispose();
     });
   });
+
+  group('lunar periods', () {
+    setUp(() => storageService.setChickenLunarDisplay(true));
+
+    test('regular and leap occurrences of one month stay separate', () async {
+      final repository = _FakeRepository()
+        ..globalCockSales = [
+          CockSale(
+            id: 'regular-six',
+            note: 'tháng 6 thường',
+            amount: 100000,
+            date: DateTime(2025, 7, 2),
+          ),
+          CockSale(
+            id: 'leap-six',
+            note: 'tháng 6 nhuận',
+            amount: 200000,
+            date: DateTime(2025, 8, 1),
+          ),
+        ];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.globalCockSales});
+
+      final stats = vm.getMonthlyStats(2025);
+
+      expect(stats, hasLength(13));
+      expect(stats[(month: 6, isLeap: false)]!.cockRevenue, 100000);
+      expect(stats[(month: 6, isLeap: true)]!.cockRevenue, 200000);
+      expect(stats.keys.toList().sublist(5, 8), [
+        (month: 6, isLeap: false),
+        (month: 6, isLeap: true),
+        (month: 7, isLeap: false),
+      ]);
+      vm.dispose();
+    });
+
+    test('today before lunar new year belongs to the previous year', () {
+      final vm = ChickenViewModel(
+        repository: _FakeRepository(),
+        auth: _FakeAuth(),
+      );
+      vm.initState();
+
+      expect(vm.currentDisplayYear(DateTime(2026, 1, 20)), 2025);
+
+      vm.dispose();
+    });
+  });
 }
