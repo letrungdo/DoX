@@ -67,7 +67,11 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   }
 
   /// Nav item backed by a Material [IconData] for tabs without a cute SVG.
-  BottomNavigationBarItem _navItemIcon(IconData icon, Color color, String label) {
+  BottomNavigationBarItem _navItemIcon(
+    IconData icon,
+    Color color,
+    String label,
+  ) {
     return BottomNavigationBarItem(
       icon: Icon(icon, size: 26, color: Colors.grey),
       activeIcon: Icon(icon, size: 26, color: color),
@@ -103,12 +107,17 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
 
   /// Route guards don't run for tab routes, so when the app starts directly
   /// on the chicken tab we have to require login here.
-  void _requireLoginForInitialChickenTab(BuildContext context, TabsRouter tabsRouter, List<AppTab> tabs) {
+  void _requireLoginForInitialChickenTab(
+    BuildContext context,
+    TabsRouter tabsRouter,
+    List<AppTab> tabs,
+  ) {
     if (_checkedInitialAuth) return;
     _checkedInitialAuth = true;
 
     final index = tabsRouter.activeIndex;
-    final isChicken = index >= 0 && index < tabs.length && tabs[index] == AppTab.chicken;
+    final isChicken =
+        index >= 0 && index < tabs.length && tabs[index] == AppTab.chicken;
     if (!isChicken || supabase.auth.currentSession != null) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -132,7 +141,8 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
         return AutoTabsRouter(
           key: ValueKey('main-tabs-${tabs.map((e) => e.name).join('-')}'),
           routes: routes,
-          transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
+          transitionBuilder: (context, child, animation) =>
+              FadeTransition(opacity: animation, child: child),
           builder: (context, child) {
             final tabsRouter = AutoTabsRouter.of(context);
             _requireLoginForInitialChickenTab(context, tabsRouter, tabs);
@@ -143,9 +153,13 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
               bottomNavigationBar: ColoredBox(
                 color: context.neu.base,
                 child: BottomNavigationBar(
-                  currentIndex: tabsRouter.activeIndex.clamp(0, routes.length - 1),
+                  currentIndex: tabsRouter.activeIndex.clamp(
+                    0,
+                    routes.length - 1,
+                  ),
                   onTap: (value) async {
-                    if (tabs[value] == AppTab.chicken && supabase.auth.currentSession == null) {
+                    if (tabs[value] == AppTab.chicken &&
+                        supabase.auth.currentSession == null) {
                       await context.pushRoute(const AppLoginRoute());
                       if (supabase.auth.currentSession == null) return;
                     }

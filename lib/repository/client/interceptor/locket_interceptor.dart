@@ -12,7 +12,10 @@ class LocketInterceptor extends BaseInterceptor {
   ClientType get clientType => ClientType.locket;
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     await FirebaseUtil.refreshTokenIfNeed();
 
     options.headers.addAll({

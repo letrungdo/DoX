@@ -32,7 +32,8 @@ class MenuScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, V> {
+class _MenuScreenState<V extends MenuViewModel>
+    extends ScreenState<MenuScreen, V> {
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
@@ -96,8 +97,16 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
       // 16: these are raised rows, so the gap has to clear their shadow reach.
       spacing: 16,
       children: [
-        _menuButton(Icons.wifi_rounded, l10n.wifiManagement, () => context.pushRoute(const WifiManagementRoute())),
-        _menuButton(Icons.explore_rounded, l10n.fengShuiCompass, () => context.pushRoute(const FengShuiCompassRoute())),
+        _menuButton(
+          Icons.wifi_rounded,
+          l10n.wifiManagement,
+          () => context.pushRoute(const WifiManagementRoute()),
+        ),
+        _menuButton(
+          Icons.explore_rounded,
+          l10n.fengShuiCompass,
+          () => context.pushRoute(const FengShuiCompassRoute()),
+        ),
         _menuButton(Icons.info_outline_rounded, l10n.about, () {
           showAboutDialog(
             applicationVersion: appInfo.version, //
@@ -128,9 +137,17 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
   Widget _buildSupabaseAccountControl(AppLocalizations l10n) {
     final user = supabase.auth.currentUser;
     if (user == null) {
-      return _menuButton(Icons.login_rounded, l10n.loginDoX, () => context.pushRoute(const AppLoginRoute()));
+      return _menuButton(
+        Icons.login_rounded,
+        l10n.loginDoX,
+        () => context.pushRoute(const AppLoginRoute()),
+      );
     }
-    return _menuButton(Icons.logout_rounded, "${l10n.logout} (${user.email})", () => _confirmSignOut(l10n));
+    return _menuButton(
+      Icons.logout_rounded,
+      "${l10n.logout} (${user.email})",
+      () => _confirmSignOut(l10n),
+    );
   }
 
   void _confirmSignOut(AppLocalizations l10n) async {
@@ -147,7 +164,10 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
                 kind: DialogActionKind.cancel,
                 onPressed: () => Navigator.pop(context, false),
               ),
-              DialogActionButton(text: l10n.logout, onPressed: () => Navigator.pop(context, true)),
+              DialogActionButton(
+                text: l10n.logout,
+                onPressed: () => Navigator.pop(context, true),
+              ),
             ],
           ),
         ],
@@ -160,9 +180,14 @@ class _MenuScreenState<V extends MenuViewModel> extends ScreenState<MenuScreen, 
   Widget _buildMenuAction(IconData icon, String label) {
     return Row(
       children: [
-        SizedBox.square(dimension: 32, child: Center(child: Icon(icon, size: 26))),
+        SizedBox.square(
+          dimension: 32,
+          child: Center(child: Icon(icon, size: 26)),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+        Expanded(
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
     );
   }

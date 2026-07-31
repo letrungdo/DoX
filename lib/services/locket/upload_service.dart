@@ -20,7 +20,8 @@ class UploadService {
     'x-goog-upload-command': 'upload, finalize',
     'upload-incomplete': '?1',
     'upload-draft-interop-version': '6',
-    'user-agent': 'com.locket.Locket/1.121.1 iPhone/18.3.2 hw/iPhone17_3 (GTMSUF/1)',
+    'user-agent':
+        'com.locket.Locket/1.121.1 iPhone/18.3.2 hw/iPhone17_3 (GTMSUF/1)',
   };
 
   Future<String> _initUploadImage({
@@ -38,7 +39,8 @@ class UploadService {
     };
 
     final response = await dio.post(
-      "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName".withProxy(), //
+      "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName"
+          .withProxy(), //
       data: body,
       options: Options(
         headers: {
@@ -75,7 +77,8 @@ class UploadService {
     };
 
     final response = await dio.post(
-      "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName".withProxy(), //
+      "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName"
+          .withProxy(), //
       data: body,
       options: Options(
         headers: {
@@ -86,7 +89,8 @@ class UploadService {
           'x-goog-upload-content-length': fileSize,
           'accept-language': 'vi-VN,vi;q=0.9',
           'x-firebase-storage-version': 'ios/10.13.0',
-          'user-agent': 'com.locket.Locket/1.43.1 iPhone/17.3 hw/iPhone15_3 (GTMSUF/1)',
+          'user-agent':
+              'com.locket.Locket/1.43.1 iPhone/17.3 hw/iPhone15_3 (GTMSUF/1)',
           'x-goog-upload-content-type': 'video/mp4',
           'x-firebase-gmpid': '1:641029076083:ios:cc8eb46290d69b234fa609',
         },
@@ -106,7 +110,9 @@ class UploadService {
     required String imgName,
     CancelToken? cancelToken,
   }) async {
-    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName".withProxy();
+    final getUrl =
+        "https://firebasestorage.googleapis.com/v0/b/locket-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName"
+            .withProxy();
 
     final response = await dio.get(
       getUrl, //
@@ -121,7 +127,9 @@ class UploadService {
     required String videoName,
     CancelToken? cancelToken,
   }) async {
-    final getUrl = "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName".withProxy();
+    final getUrl =
+        "https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName"
+            .withProxy();
 
     final response = await dio.get(
       getUrl, //
@@ -196,7 +204,8 @@ class UploadService {
   }
 
   String _generateName({required FileType type}) {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
     final idBuffer = StringBuffer();
     for (int i = 0; i < 20; i++) {

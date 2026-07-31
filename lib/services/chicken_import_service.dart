@@ -12,16 +12,29 @@ class ChickenImportData {
   final List<CockSale> globalSales;
   final List<Expense> globalExpenses;
 
-  ChickenImportData({required this.batches, required this.globalSales, required this.globalExpenses});
+  ChickenImportData({
+    required this.batches,
+    required this.globalSales,
+    required this.globalExpenses,
+  });
 
   int get totalRecords =>
       batches.length +
       globalSales.length +
       globalExpenses.length +
-      batches.fold(0, (sum, b) => sum + b.sales.length + b.vaccinations.length + b.expenses.length + b.cockSales.length);
+      batches.fold(
+        0,
+        (sum, b) =>
+            sum +
+            b.sales.length +
+            b.vaccinations.length +
+            b.expenses.length +
+            b.cockSales.length,
+      );
 }
 
-/// Parses the chicken import JSON format (all ids are generated on import):
+/// Parses the chicken import JSON format (all ids are generated on import).
+/// Every date in the file is a solar (Gregorian) date, the same as storage:
 /// {
 ///   "batches": [{ "name", "incubationDate", "quantity", "actualHatchDate"?,
 ///                 "sales"?: [{"date", "amount", "quantity"?, "note"?}],
@@ -36,10 +49,26 @@ class ChickenImportService {
 
   static ChickenImportData parse(String jsonString) {
     final root = jsonDecode(jsonString) as Map<String, dynamic>;
-    final batches = ((root['batches'] as List?) ?? []).map((e) => _parseBatch(e)).toList();
-    final globalSales = ((root['cockSales'] as List?) ?? []).map((e) => _parseSale(e)).toList();
-    final globalExpenses = ((root['expenses'] as List?) ?? []).map((e) => _parseExpense(e)).toList();
-    return ChickenImportData(batches: batches, globalSales: globalSales, globalExpenses: globalExpenses);
+    if (root['dateCalendar'] != 'solar') {
+      throw const FormatException(
+        'File import cũ chưa xác nhận ngày dương (dateCalendar=solar). '
+        'Không thể import vì ngày âm không lưu được cờ tháng nhuận.',
+      );
+    }
+    final batches = ((root['batches'] as List?) ?? [])
+        .map((e) => _parseBatch(e))
+        .toList();
+    final globalSales = ((root['cockSales'] as List?) ?? [])
+        .map((e) => _parseSale(e))
+        .toList();
+    final globalExpenses = ((root['expenses'] as List?) ?? [])
+        .map((e) => _parseExpense(e))
+        .toList();
+    return ChickenImportData(
+      batches: batches,
+      globalSales: globalSales,
+      globalExpenses: globalExpenses,
+    );
   }
 
   static ChickenBatch _parseBatch(Map<String, dynamic> json) {
@@ -49,10 +78,18 @@ class ChickenImportService {
       incubationDate: DateTime.parse(json['incubationDate'] as String),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       actualHatchDate: _date(json['actualHatchDate']),
-      sales: ((json['sales'] as List?) ?? []).map((e) => _parseBatchSale(e)).toList(),
-      vaccinations: ((json['vaccinations'] as List?) ?? []).map((e) => _parseVaccination(e)).toList(),
-      expenses: ((json['expenses'] as List?) ?? []).map((e) => _parseExpense(e)).toList(),
-      cockSales: ((json['cockSales'] as List?) ?? []).map((e) => _parseSale(e)).toList(),
+      sales: ((json['sales'] as List?) ?? [])
+          .map((e) => _parseBatchSale(e))
+          .toList(),
+      vaccinations: ((json['vaccinations'] as List?) ?? [])
+          .map((e) => _parseVaccination(e))
+          .toList(),
+      expenses: ((json['expenses'] as List?) ?? [])
+          .map((e) => _parseExpense(e))
+          .toList(),
+      cockSales: ((json['cockSales'] as List?) ?? [])
+          .map((e) => _parseSale(e))
+          .toList(),
     );
   }
 
@@ -64,12 +101,13 @@ class ChickenImportService {
     note: json['note'] as String?,
   );
 
-  static Vaccination _parseVaccination(Map<String, dynamic> json) => Vaccination(
-    id: _uuid.v4(),
-    title: json['title'] as String,
-    scheduledDate: DateTime.parse(json['date'] as String),
-    isCompleted: json['completed'] as bool? ?? false,
-  );
+  static Vaccination _parseVaccination(Map<String, dynamic> json) =>
+      Vaccination(
+        id: _uuid.v4(),
+        title: json['title'] as String,
+        scheduledDate: DateTime.parse(json['date'] as String),
+        isCompleted: json['completed'] as bool? ?? false,
+      );
 
   static Expense _parseExpense(Map<String, dynamic> json) => Expense(
     id: _uuid.v4(),
@@ -84,8 +122,11 @@ class ChickenImportService {
     note: json['note'] as String? ?? '',
     amount: (json['amount'] as num).toDouble(),
     date: DateTime.parse(json['date'] as String),
-    category: SaleCategory.values.asNameMap()[json['category']] ?? SaleCategory.fighting,
+    category:
+        SaleCategory.values.asNameMap()[json['category']] ??
+        SaleCategory.fighting,
   );
 
-  static DateTime? _date(dynamic value) => value == null ? null : DateTime.parse(value as String);
+  static DateTime? _date(dynamic value) =>
+      value == null ? null : DateTime.parse(value as String);
 }

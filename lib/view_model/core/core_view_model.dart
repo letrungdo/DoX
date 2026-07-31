@@ -6,7 +6,8 @@ import 'package:do_x/widgets/dialog/src/dialog_widget.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:flutter/material.dart';
 
-abstract class CoreViewModel with ChangeNotifier, CancelRequestMixin, AppErrorMixin {
+abstract class CoreViewModel
+    with ChangeNotifier, CancelRequestMixin, AppErrorMixin {
   late BuildContext context;
 
   bool _isDispose = false;

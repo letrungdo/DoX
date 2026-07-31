@@ -9,7 +9,10 @@ class LocationService {
 
   Future<String?> getLocationName(Position position) async {
     try {
-      final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
       final place = placemarks.firstOrNull;
       if (place == null) return "";
       return "${place.street}, ${place.locality}";
@@ -31,7 +34,8 @@ class LocationService {
 
   Future<String> getCurrentTimeZone() async {
     try {
-      _currentTimeZone ??= (await FlutterTimezone.getLocalTimezone()).identifier;
+      _currentTimeZone ??=
+          (await FlutterTimezone.getLocalTimezone()).identifier;
     } catch (e) {
       logger.e(e.toString(), error: e);
     }
@@ -66,7 +70,9 @@ class LocationService {
 
     if (permission == LocationPermission.deniedForever) {
       // Permissions are denied forever, handle appropriately.
-      return Future.error('Location permissions are permanently denied, we cannot request permissions.');
+      return Future.error(
+        'Location permissions are permanently denied, we cannot request permissions.',
+      );
     }
 
     // When we reach here, permissions are granted and we can

@@ -35,7 +35,9 @@ class RetryInterceptor extends Interceptor {
       final attempt = (options.extra[_retryKey] as int?) ?? 0;
       if (attempt < maxRetries) {
         options.extra[_retryKey] = attempt + 1;
-        debugPrint('Network error, silent retry ${attempt + 1}/$maxRetries => URL: ${options.uri}');
+        debugPrint(
+          'Network error, silent retry ${attempt + 1}/$maxRetries => URL: ${options.uri}',
+        );
         await Future.delayed(retryDelay);
         try {
           final response = await _dio.fetch(options);
@@ -75,5 +77,6 @@ class RetryInterceptor extends Interceptor {
     }
   }
 
-  bool _isSafeMethod(DioException err) => !_unsafeMethods.contains(err.requestOptions.method.toUpperCase());
+  bool _isSafeMethod(DioException err) =>
+      !_unsafeMethods.contains(err.requestOptions.method.toUpperCase());
 }

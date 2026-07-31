@@ -31,7 +31,9 @@ class DialogActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-      mainAxisAlignment: expand ? MainAxisAlignment.start : MainAxisAlignment.end,
+      mainAxisAlignment: expand
+          ? MainAxisAlignment.start
+          : MainAxisAlignment.end,
       children: [
         for (var i = 0; i < children.length; i++) ...[
           if (i > 0) const SizedBox(width: gap),
@@ -96,7 +98,10 @@ class DialogActionButton extends StatelessWidget {
               child: SizedBox(
                 height: 18,
                 width: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.disabled),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: context.colors.disabled,
+                ),
               ),
             )
           : _label(),
@@ -110,7 +115,10 @@ class DialogActionButton extends StatelessWidget {
     return Center(
       child: icon == null
           ? label
-          : Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon), const SizedBox(width: 8), label]),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [Icon(icon), const SizedBox(width: 8), label],
+            ),
     );
   }
 }

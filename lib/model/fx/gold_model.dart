@@ -9,7 +9,8 @@ class GoldResponse {
 
   const GoldResponse({this.data});
 
-  factory GoldResponse.fromJson(Map<String, dynamic> json) => _$GoldResponseFromJson(json);
+  factory GoldResponse.fromJson(Map<String, dynamic> json) =>
+      _$GoldResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$GoldResponseToJson(this);
 }
@@ -20,7 +21,8 @@ class GoldData {
 
   const GoldData({this.symbols});
 
-  factory GoldData.fromJson(Map<String, dynamic> json) => _$GoldDataFromJson(json);
+  factory GoldData.fromJson(Map<String, dynamic> json) =>
+      _$GoldDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$GoldDataToJson(this);
 }
@@ -55,7 +57,8 @@ class GoldSymbol {
     this.time,
   });
 
-  factory GoldSymbol.fromJson(Map<String, dynamic> json) => _$GoldSymbolFromJson(json);
+  factory GoldSymbol.fromJson(Map<String, dynamic> json) =>
+      _$GoldSymbolFromJson(json);
 
   Map<String, dynamic> toJson() => _$GoldSymbolToJson(this);
 }

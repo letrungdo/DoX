@@ -3,10 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'cock_sale.g.dart';
 
 /// Loại gà bán lẻ: gà đá (nòi) hoặc gà thịt.
-enum SaleCategory {
-  fighting,
-  meat,
-}
+enum SaleCategory { fighting, meat }
 
 @JsonSerializable()
 class CockSale {
@@ -24,6 +21,7 @@ class CockSale {
     this.category = SaleCategory.fighting,
   });
 
-  factory CockSale.fromJson(Map<String, dynamic> json) => _$CockSaleFromJson(json);
+  factory CockSale.fromJson(Map<String, dynamic> json) =>
+      _$CockSaleFromJson(json);
   Map<String, dynamic> toJson() => _$CockSaleToJson(this);
 }

@@ -52,7 +52,8 @@ class LunarCalendar {
     final a = ((14 - mm) / 12).floor();
     final y = yy + 4800 - a;
     final m = mm + 12 * a - 3;
-    var jd = dd +
+    var jd =
+        dd +
         ((153 * m + 2) / 5).floor() +
         365 * y +
         (y / 4).floor() -
@@ -70,22 +71,34 @@ class LunarCalendar {
     final t2 = t * t;
     final t3 = t2 * t;
     final dr = math.pi / 180;
-    var jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * t2 - 0.000000155 * t3;
+    var jd1 =
+        2415020.75933 + 29.53058868 * k + 0.0001178 * t2 - 0.000000155 * t3;
     jd1 = jd1 + 0.00033 * math.sin((166.56 + 132.87 * t - 0.009173 * t2) * dr);
     final m = 359.2242 + 29.10535608 * k - 0.0000333 * t2 - 0.00000347 * t3;
     final mpr = 306.0253 + 385.81691806 * k + 0.0107306 * t2 + 0.00001236 * t3;
     final f = 21.2964 + 390.67050646 * k - 0.0016528 * t2 - 0.00000239 * t3;
-    var c1 = (0.1734 - 0.000393 * t) * math.sin(m * dr) +
+    var c1 =
+        (0.1734 - 0.000393 * t) * math.sin(m * dr) +
         0.0021 * math.sin(2 * dr * m);
     c1 = c1 - 0.4068 * math.sin(mpr * dr) + 0.0161 * math.sin(dr * 2 * mpr);
     c1 = c1 - 0.0004 * math.sin(dr * 3 * mpr);
     c1 = c1 + 0.0104 * math.sin(dr * 2 * f) - 0.0051 * math.sin(dr * (m + mpr));
-    c1 = c1 - 0.0074 * math.sin(dr * (m - mpr)) + 0.0004 * math.sin(dr * (2 * f + m));
-    c1 = c1 - 0.0004 * math.sin(dr * (2 * f - m)) - 0.0006 * math.sin(dr * (2 * f + mpr));
-    c1 = c1 + 0.0010 * math.sin(dr * (2 * f - mpr)) + 0.0005 * math.sin(dr * (2 * mpr + m));
+    c1 =
+        c1 -
+        0.0074 * math.sin(dr * (m - mpr)) +
+        0.0004 * math.sin(dr * (2 * f + m));
+    c1 =
+        c1 -
+        0.0004 * math.sin(dr * (2 * f - m)) -
+        0.0006 * math.sin(dr * (2 * f + mpr));
+    c1 =
+        c1 +
+        0.0010 * math.sin(dr * (2 * f - mpr)) +
+        0.0005 * math.sin(dr * (2 * mpr + m));
     double deltat;
     if (t < -11) {
-      deltat = 0.001 +
+      deltat =
+          0.001 +
           0.000839 * t +
           0.0002261 * t2 -
           0.00000845 * t3 -
@@ -100,10 +113,12 @@ class LunarCalendar {
     final t = (jdn - 2451545.0) / 36525;
     final t2 = t * t;
     final dr = math.pi / 180;
-    final m = 357.52910 + 35999.05030 * t - 0.0001559 * t2 - 0.00000048 * t * t2;
+    final m =
+        357.52910 + 35999.05030 * t - 0.0001559 * t2 - 0.00000048 * t * t2;
     final l0 = 280.46645 + 36000.76983 * t + 0.0003032 * t2;
     var dl = (1.914600 - 0.004817 * t - 0.000014 * t2) * math.sin(dr * m);
-    dl = dl +
+    dl =
+        dl +
         (0.019993 - 0.000101 * t) * math.sin(dr * 2 * m) +
         0.000290 * math.sin(dr * 3 * m);
     var l = l0 + dl;
@@ -113,7 +128,8 @@ class LunarCalendar {
   }
 
   static int _getSunLongitude(int dayNumber, double timeZone) {
-    return (_sunLongitude(dayNumber - 0.5 - timeZone / 24) / math.pi * 6).floor();
+    return (_sunLongitude(dayNumber - 0.5 - timeZone / 24) / math.pi * 6)
+        .floor();
   }
 
   static int _getNewMoonDay(int k, double timeZone) {
@@ -231,12 +247,14 @@ class LunarCalendar {
       final leapOff = _getLeapMonthOffset(a11, timeZone);
       var leapMonth = leapOff - 2;
       if (leapMonth < 0) leapMonth += 12;
-      if (isLeap && lunarMonth != leapMonth) {
-        // Requested leap month doesn't exist this year; fall back to the
-        // regular month rather than throwing.
-      } else if (isLeap || off >= leapOff) {
-        off += 1;
-      }
+      // The leap month sits right after the regular month of the same number,
+      // so asking for it moves one month on; so does any month that already
+      // falls after it. A leap month that doesn't exist this year falls back to
+      // the regular month — which means the *whole* regular rule still applies,
+      // including that shift. (Skipping it used to land a month early on every
+      // month after the leap one.)
+      final wantsLeapMonth = isLeap && lunarMonth == leapMonth;
+      if (wantsLeapMonth || off >= leapOff) off += 1;
     }
     final monthStart = _getNewMoonDay(k + off, timeZone);
     final (d, m, y) = _jdToDate(monthStart + lunarDay - 1);
@@ -249,8 +267,14 @@ class LunarCalendar {
       lunarToSolar(lunar.day, lunar.month, lunar.year, isLeap: isLeap);
 
   /// Converts a solar [DateTime] to a lunar-valued [DateTime] (its day/month/
-  /// year hold the lunar date). Time-of-day is dropped. The leap flag is not
-  /// representable in a [DateTime] and is therefore lost.
+  /// year hold the lunar date). Time-of-day is dropped.
+  ///
+  /// The leap flag has nowhere to live in a [DateTime] and is lost, so the
+  /// result is **not** a value to store or convert back: in a leap year it
+  /// cannot say which of the two months of that number a day belongs to, and
+  /// reading it back lands about a month out. It is meant for grouping and
+  /// labelling by lunar year/month, where that distinction does not matter.
+  /// Use [solarToLunar] when the flag is needed, and keep storage solar.
   static DateTime solarToLunarDateTime(DateTime solar) {
     final l = solarToLunar(solar.day, solar.month, solar.year);
     return DateTime(l.year, l.month, l.day);
@@ -337,7 +361,8 @@ class LunarCalendar {
   static List<String> goodHours(int dd, int mm, int yy) {
     final chi = _dayChiIndex(dd, mm, yy);
     return [
-      for (final h in _goodHoursByDayChi[chi]) '${_chiNames[h]} (${_hourRanges[h]}h)',
+      for (final h in _goodHoursByDayChi[chi])
+        '${_chiNames[h]} (${_hourRanges[h]}h)',
     ];
   }
 

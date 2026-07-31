@@ -39,7 +39,9 @@ extension DecimalCanBeNullExtension on Decimal? {
     final value = this;
     if (value == null) return AppConst.dash;
 
-    final formatValue = DecimalFormatter(NumberFormat.decimalPatternDigits(decimalDigits: digit)).format(value);
+    final formatValue = DecimalFormatter(
+      NumberFormat.decimalPatternDigits(decimalDigits: digit),
+    ).format(value);
 
     if (hasPlus && value > Decimal.zero) {
       return "+$formatValue";

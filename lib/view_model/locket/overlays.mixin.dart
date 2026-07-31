@@ -130,7 +130,8 @@ mixin LocketOverlays on CoreViewModel {
   static const Color blueBlues = Color(0xFF174378);
 
   // Make a custom ColorSwatch to name map from the above custom colors.
-  final Map<ColorSwatch<Object>, String> colorsNameMap = <ColorSwatch<Object>, String>{
+  final Map<ColorSwatch<Object>, String>
+  colorsNameMap = <ColorSwatch<Object>, String>{
     ColorTools.createPrimarySwatch(guidePrimary): 'Guide Purple',
     ColorTools.createPrimarySwatch(guidePrimaryVariant): 'Guide Purple Variant',
     ColorTools.createAccentSwatch(guideSecondary): 'Guide Teal',
@@ -150,7 +151,9 @@ mixin LocketOverlays on CoreViewModel {
         return AlertDialog(
           titlePadding: const EdgeInsets.all(0),
           contentPadding: const EdgeInsets.all(0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           content: SingleChildScrollView(
             child: ColorPicker(
               color: tempColor,
@@ -163,10 +166,21 @@ mixin LocketOverlays on CoreViewModel {
               spacing: 5,
               runSpacing: 5,
               wheelDiameter: 155,
-              heading: Text('Select color', style: Theme.of(context).textTheme.titleSmall),
-              subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleSmall),
-              wheelSubheading: Text('Selected color and its shades', style: Theme.of(context).textTheme.titleSmall),
-              copyPasteBehavior: const ColorPickerCopyPasteBehavior(longPressMenu: true),
+              heading: Text(
+                'Select color',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              subheading: Text(
+                'Select color shade',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              wheelSubheading: Text(
+                'Selected color and its shades',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+                longPressMenu: true,
+              ),
               materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
               colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
               colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
@@ -192,7 +206,9 @@ mixin LocketOverlays on CoreViewModel {
                   kind: DialogActionKind.destructiveOutline,
                   onPressed: () {
                     overlayBgColor = null;
-                    overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
+                    overlayTextColor = Colors.white
+                        .withAlpha(200)
+                        .getTextColor()!;
                     notifyListeners();
                     Navigator.of(context).pop(true);
                   },

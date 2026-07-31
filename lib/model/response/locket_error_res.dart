@@ -5,7 +5,10 @@ class LocketErrorResult {
   LocketErrorResult({required this.errors, required this.status});
 
   factory LocketErrorResult.fromJson(Map<String, dynamic> json) {
-    return LocketErrorResult(errors: json['errors'] as List<dynamic>?, status: json['status'] as int?);
+    return LocketErrorResult(
+      errors: json['errors'] as List<dynamic>?,
+      status: json['status'] as int?,
+    );
   }
 }
 
@@ -15,6 +18,10 @@ class LocketErrorResponse {
   LocketErrorResponse({required this.result});
 
   factory LocketErrorResponse.fromJson(Map<String, dynamic> json) {
-    return LocketErrorResponse(result: LocketErrorResult.fromJson(json['result'] as Map<String, dynamic>));
+    return LocketErrorResponse(
+      result: LocketErrorResult.fromJson(
+        json['result'] as Map<String, dynamic>,
+      ),
+    );
   }
 }

@@ -12,13 +12,12 @@ enum OverlayType {
 
   final String value;
 
-  static List<OverlayType> get options =>
-      kIsWeb
-          ? [
-            OverlayType.standard, //
-            OverlayType.review,
-            OverlayType.weather,
-            OverlayType.time,
-          ]
-          : OverlayType.values;
+  static List<OverlayType> get options => kIsWeb
+      ? [
+          OverlayType.standard, //
+          OverlayType.review,
+          OverlayType.weather,
+          OverlayType.time,
+        ]
+      : OverlayType.values;
 }

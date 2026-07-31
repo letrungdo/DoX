@@ -9,7 +9,10 @@ class BaseInterceptor extends Interceptor {
   ClientType get clientType => ClientType.other;
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     debugPrint("""------------------------------------------------------
                 1. REQUEST [${options.method}] => URL: ${options.path}
                 ${options.data}
@@ -24,9 +27,11 @@ class BaseInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    debugPrint("""2. RESPONSE [${response.requestOptions.method}:${response.statusCode}] => URL: ${response.requestOptions.path}
+    debugPrint(
+      """2. RESPONSE [${response.requestOptions.method}:${response.statusCode}] => URL: ${response.requestOptions.path}
                 ------------------------------------------------------
-              """);
+              """,
+    );
     super.onResponse(response, handler);
   }
 
@@ -34,7 +39,9 @@ class BaseInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final errRes = err.response;
 
-    logger.e('ERROR[${err.response?.statusCode}] => URL: ${err.requestOptions.uri}; res: $errRes');
+    logger.e(
+      'ERROR[${err.response?.statusCode}] => URL: ${err.requestOptions.uri}; res: $errRes',
+    );
 
     super.onError(err, handler);
   }

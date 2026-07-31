@@ -1,9 +1,9 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
@@ -34,8 +34,7 @@ Future<void> showExpenseDialog(
   );
   final noteController = TextEditingController(text: expense?.note ?? '');
   var selectedType = expense?.type ?? ExpenseType.feed;
-  var expenseDate =
-      expense?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
+  var expenseDate = expense?.date ?? DateTime.now().dateOnly;
   String? amountError;
 
   return showDialog<void>(

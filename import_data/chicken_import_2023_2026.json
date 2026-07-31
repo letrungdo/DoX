@@ -2,60 +2,60 @@
   "batches": [
     {
       "name": "Gà con 2025 (đầu năm)",
-      "incubationDate": "2024-11-24",
-      "actualHatchDate": "2024-12-15",
+      "incubationDate": "2024-12-24",
+      "actualHatchDate": "2025-01-14",
       "quantity": 164,
       "sales": [
         {
-          "date": "2025-01-15",
+          "date": "2025-02-12",
           "amount": 910000,
           "quantity": 19,
           "note": "15 con 50k + 4 con 40k (ngày ước lượng)"
         },
         {
-          "date": "2025-02-01",
+          "date": "2025-02-28",
           "amount": 830000,
           "quantity": 26,
           "note": "26 con (ngày ước lượng)"
         },
         {
-          "date": "2025-02-16",
+          "date": "2025-03-15",
           "amount": 380000,
           "quantity": 12,
           "note": "12 con"
         },
         {
-          "date": "2025-03-16",
+          "date": "2025-04-13",
           "amount": 800000,
           "quantity": 23,
           "note": "Thu, 23 con"
         },
         {
-          "date": "2025-03-19",
+          "date": "2025-04-16",
           "amount": 630000,
           "quantity": 11,
           "note": "Thu, 11 con"
         },
         {
-          "date": "2025-04-01",
+          "date": "2025-04-28",
           "amount": 1000000,
           "quantity": 21,
           "note": "Thứ, 21 con (ngày ước lượng)"
         },
         {
-          "date": "2025-04-01",
+          "date": "2025-04-28",
           "amount": 300000,
           "quantity": 17,
           "note": "Chị Hai (cho 7, bán 10) (ngày ước lượng)"
         },
         {
-          "date": "2025-04-15",
+          "date": "2025-05-12",
           "amount": 670000,
           "quantity": 18,
           "note": "12 con + 6 con (ngày ước lượng)"
         },
         {
-          "date": "2025-04-22",
+          "date": "2025-05-19",
           "amount": 510000,
           "quantity": 17,
           "note": "Cẩm, 17 con"
@@ -64,42 +64,42 @@
     },
     {
       "name": "Ấp thùng 1 (2025)",
-      "incubationDate": "2025-04-19",
-      "actualHatchDate": "2025-05-10",
+      "incubationDate": "2025-05-16",
+      "actualHatchDate": "2025-06-05",
       "quantity": 131,
       "sales": [
         {
-          "date": "2025-06-10",
+          "date": "2025-08-03",
           "amount": 1080000,
           "quantity": 30,
           "note": "30 x 36k"
         },
         {
-          "date": "2025-06-20",
+          "date": "2025-07-14",
           "amount": 520000,
           "quantity": 15,
           "note": "giá 35k (ngày ước lượng)"
         },
         {
-          "date": "2025-06-25",
+          "date": "2025-07-19",
           "amount": 270000,
           "quantity": 7,
           "note": "7 x 40k (ngày ước lượng)"
         },
         {
-          "date": "2025-07-01",
+          "date": "2025-08-23",
           "amount": 700000,
           "quantity": 20,
           "note": "20 x 35k"
         },
         {
-          "date": "2025-07-05",
+          "date": "2025-08-27",
           "amount": 150000,
           "quantity": 5,
           "note": "5 x 30k (ngày ước lượng)"
         },
         {
-          "date": "2025-07-15",
+          "date": "2025-09-06",
           "amount": 715000,
           "quantity": 21,
           "note": "21 x 34k"
@@ -108,72 +108,72 @@
     },
     {
       "name": "Ấp thùng 2 (2025)",
-      "incubationDate": "2025-06-12",
-      "actualHatchDate": "2025-07-03",
+      "incubationDate": "2025-08-05",
+      "actualHatchDate": "2025-08-25",
       "quantity": 217,
       "sales": [
         {
-          "date": "2025-07-20",
+          "date": "2025-09-11",
           "amount": 460000,
           "quantity": 29,
           "note": "29 x 16k (ngày ước lượng)"
         },
         {
-          "date": "2025-07-25",
+          "date": "2025-09-16",
           "amount": 750000,
           "quantity": 25,
           "note": "25 x 30k (ngày ước lượng)"
         },
         {
-          "date": "2025-07-30",
+          "date": "2025-09-21",
           "amount": 290000,
           "quantity": 17,
           "note": "17 x 17k (ngày ước lượng)"
         },
         {
-          "date": "2025-08-01",
+          "date": "2025-09-22",
           "amount": 110000,
           "quantity": 5,
           "note": "~8 ngày tuổi (ngày ước lượng)"
         },
         {
-          "date": "2025-08-05",
+          "date": "2025-09-26",
           "amount": 496000,
           "quantity": 31,
           "note": "31 x 16k (ngày ước lượng)"
         },
         {
-          "date": "2025-08-10",
+          "date": "2025-10-01",
           "amount": 540000,
           "quantity": 18,
           "note": "18 x 30k"
         },
         {
-          "date": "2025-08-16",
+          "date": "2025-10-07",
           "amount": 390000,
           "quantity": 13,
           "note": "13 x 30k"
         },
         {
-          "date": "2025-08-23",
+          "date": "2025-10-14",
           "amount": 400000,
           "quantity": 13,
           "note": "13 x 30k"
         },
         {
-          "date": "2025-08-25",
+          "date": "2025-10-16",
           "amount": 680000,
           "quantity": 31,
           "note": "31 x 22k"
         },
         {
-          "date": "2025-08-28",
+          "date": "2025-10-19",
           "amount": 360000,
           "quantity": 18,
           "note": "18 x 20k"
         },
         {
-          "date": "2025-09-07",
+          "date": "2025-10-27",
           "amount": 510000,
           "quantity": 17,
           "note": "17 x 30k"
@@ -182,12 +182,12 @@
     },
     {
       "name": "Gà con 2025 - đợt 3",
-      "incubationDate": "2025-06-24",
-      "actualHatchDate": "2025-07-15",
+      "incubationDate": "2025-08-17",
+      "actualHatchDate": "2025-09-06",
       "quantity": 0,
       "sales": [
         {
-          "date": "2025-08-15",
+          "date": "2025-10-06",
           "amount": 2275000,
           "quantity": 0,
           "note": "Sổ chỉ ghi tổng (ngày ước lượng)"
@@ -196,48 +196,48 @@
     },
     {
       "name": "Gà con tháng 9/2025",
-      "incubationDate": "2025-07-11",
-      "actualHatchDate": "2025-08-01",
+      "incubationDate": "2025-09-02",
+      "actualHatchDate": "2025-09-22",
       "quantity": 139,
       "sales": [
         {
-          "date": "2025-09-10",
+          "date": "2025-10-30",
           "amount": 680000,
           "quantity": 31,
           "note": "31 x 22k"
         },
         {
-          "date": "2025-09-15",
+          "date": "2025-11-04",
           "amount": 800000,
           "quantity": 40,
           "note": "40 x 20k"
         },
         {
-          "date": "2025-09-21",
+          "date": "2025-11-10",
           "amount": 210000,
           "quantity": 7,
           "note": "7 x 30k"
         },
         {
-          "date": "2025-09-25",
+          "date": "2025-11-14",
           "amount": 450000,
           "quantity": 23,
           "note": "23 x 20k"
         },
         {
-          "date": "2025-09-25",
+          "date": "2025-11-14",
           "amount": 135000,
           "quantity": 3,
           "note": "3 x 45k"
         },
         {
-          "date": "2025-09-28",
+          "date": "2025-11-17",
           "amount": 480000,
           "quantity": 16,
           "note": "16 x 30k (ngày ước lượng)"
         },
         {
-          "date": "2025-09-30",
+          "date": "2025-11-19",
           "amount": 560000,
           "quantity": 19,
           "note": "19 con (ngày ước lượng)"
@@ -246,12 +246,12 @@
     },
     {
       "name": "Gà con 2025 - đợt 4",
-      "incubationDate": "2025-08-25",
-      "actualHatchDate": "2025-09-15",
+      "incubationDate": "2025-10-16",
+      "actualHatchDate": "2025-11-04",
       "quantity": 0,
       "sales": [
         {
-          "date": "2025-10-25",
+          "date": "2025-12-14",
           "amount": 4645000,
           "quantity": 0,
           "note": "Sổ chỉ ghi tổng (ngày ước lượng)"
@@ -260,48 +260,48 @@
     },
     {
       "name": "Gà con thôn 6 (2025)",
-      "incubationDate": "2025-04-10",
-      "actualHatchDate": "2025-05-01",
+      "incubationDate": "2025-05-07",
+      "actualHatchDate": "2025-05-27",
       "quantity": 140,
       "sales": [
         {
-          "date": "2025-06-15",
+          "date": "2025-07-09",
           "amount": 880000,
           "quantity": 22,
           "note": "22 x 40k (tháng 6, ngày ước lượng)"
         },
         {
-          "date": "2025-06-20",
+          "date": "2025-07-14",
           "amount": 943000,
           "quantity": 27,
           "note": "27 con (sổ không rõ giá, tính lùi từ tổng 3.320k)"
         },
         {
-          "date": "2025-11-28",
+          "date": "2026-01-16",
           "amount": 770000,
           "quantity": 14,
           "note": "14 x 55k"
         },
         {
-          "date": "2025-12-01",
+          "date": "2026-01-19",
           "amount": 60000,
           "quantity": 2,
           "note": "2 x 30k (ngày ước lượng)"
         },
         {
-          "date": "2025-12-05",
+          "date": "2026-01-23",
           "amount": 667000,
           "quantity": 29,
           "note": "29 x 23k (ngày ước lượng)"
         },
         {
-          "date": "2025-12-16",
+          "date": "2026-02-03",
           "amount": 600000,
           "quantity": 14,
           "note": "14 x 45k, bớt 30k"
         },
         {
-          "date": "2025-12-27",
+          "date": "2026-02-14",
           "amount": 1250000,
           "quantity": 32,
           "note": "32 x 40k, bớt 30k"
@@ -310,12 +310,12 @@
     },
     {
       "name": "Bầy 1",
-      "incubationDate": "2025-11-07",
-      "actualHatchDate": "2025-11-28",
+      "incubationDate": "2025-12-26",
+      "actualHatchDate": "2026-01-16",
       "quantity": 14,
       "sales": [
         {
-          "date": "2026-01-07",
+          "date": "2026-02-23",
           "amount": 120000,
           "quantity": 2,
           "note": "Thu cao, 2 x 60k"
@@ -324,35 +324,35 @@
       "vaccinations": [
         {
           "title": "Lasota",
-          "date": "2025-12-04",
+          "date": "2026-01-22",
           "completed": true
         },
         {
           "title": "Đậu",
-          "date": "2025-12-09",
+          "date": "2026-01-27",
           "completed": true
         },
         {
           "title": "Gumboro",
-          "date": "2025-12-12",
+          "date": "2026-01-30",
           "completed": true
         }
       ]
     },
     {
       "name": "Bầy 2",
-      "incubationDate": "2025-11-17",
-      "actualHatchDate": "2025-12-08",
+      "incubationDate": "2026-01-05",
+      "actualHatchDate": "2026-01-26",
       "quantity": 50,
       "sales": [
         {
-          "date": "2026-01-22",
+          "date": "2026-03-10",
           "amount": 400000,
           "quantity": 20,
           "note": "20 x 20k"
         },
         {
-          "date": "2026-01-22",
+          "date": "2026-03-10",
           "amount": 1200000,
           "quantity": 30,
           "note": "30 x 40k"
@@ -361,34 +361,34 @@
       "vaccinations": [
         {
           "title": "Gumboro",
-          "date": "2025-12-12",
+          "date": "2026-01-30",
           "completed": true
         },
         {
           "title": "Lasota",
-          "date": "2025-12-15",
+          "date": "2026-02-02",
           "completed": true
         },
         {
           "title": "Đậu",
-          "date": "2025-12-18",
+          "date": "2026-02-05",
           "completed": true
         },
         {
           "title": "Lasota (lần 2)",
-          "date": "2025-12-27",
+          "date": "2026-02-14",
           "completed": true
         }
       ]
     },
     {
       "name": "Bầy 3",
-      "incubationDate": "2025-11-26",
-      "actualHatchDate": "2025-12-17",
+      "incubationDate": "2026-01-14",
+      "actualHatchDate": "2026-02-04",
       "quantity": 55,
       "sales": [
         {
-          "date": "2026-01-09",
+          "date": "2026-02-25",
           "amount": 1200000,
           "quantity": 30,
           "note": "Thu cao, 30 x 40k"
@@ -397,29 +397,29 @@
       "vaccinations": [
         {
           "title": "Lasota",
-          "date": "2025-12-23",
+          "date": "2026-02-10",
           "completed": true
         },
         {
           "title": "Gumboro",
-          "date": "2025-12-25",
+          "date": "2026-02-12",
           "completed": true
         },
         {
           "title": "Đậu",
-          "date": "2026-01-12",
+          "date": "2026-02-28",
           "completed": true
         }
       ]
     },
     {
       "name": "Bầy 4",
-      "incubationDate": "2025-12-01",
-      "actualHatchDate": "2025-12-22",
+      "incubationDate": "2026-01-19",
+      "actualHatchDate": "2026-02-09",
       "quantity": 40,
       "sales": [
         {
-          "date": "2026-01-15",
+          "date": "2026-03-03",
           "amount": 800000,
           "quantity": 20,
           "note": "Thu lùn, 20 x 40k"
@@ -428,29 +428,29 @@
       "vaccinations": [
         {
           "title": "Gumboro",
-          "date": "2025-12-25",
+          "date": "2026-02-12",
           "completed": true
         },
         {
           "title": "Đậu",
-          "date": "2026-01-12",
+          "date": "2026-02-28",
           "completed": true
         },
         {
           "title": "Lasota",
-          "date": "2026-01-13",
+          "date": "2026-03-01",
           "completed": true
         }
       ]
     },
     {
       "name": "Bầy 5",
-      "incubationDate": "2025-12-06",
-      "actualHatchDate": "2025-12-27",
+      "incubationDate": "2026-01-24",
+      "actualHatchDate": "2026-02-14",
       "quantity": 35,
       "sales": [
         {
-          "date": "2026-01-24",
+          "date": "2026-03-12",
           "amount": 500000,
           "quantity": 20,
           "note": "Thu, cho 10 con"
@@ -459,24 +459,24 @@
       "vaccinations": [
         {
           "title": "Đậu",
-          "date": "2026-01-12",
+          "date": "2026-02-28",
           "completed": true
         },
         {
           "title": "Gumboro (lần 1)",
-          "date": "2026-01-16",
+          "date": "2026-03-04",
           "completed": true
         }
       ]
     },
     {
       "name": "Bầy 6",
-      "incubationDate": "2025-12-18",
-      "actualHatchDate": "2026-01-08",
+      "incubationDate": "2026-02-05",
+      "actualHatchDate": "2026-02-24",
       "quantity": 55,
       "sales": [
         {
-          "date": "2026-02-02",
+          "date": "2026-03-20",
           "amount": 1400000,
           "quantity": 35,
           "note": "Thu, 35 x 40k"
@@ -485,24 +485,24 @@
       "vaccinations": [
         {
           "title": "Gumboro (lần 1)",
-          "date": "2026-01-16",
+          "date": "2026-03-04",
           "completed": true
         },
         {
           "title": "Đậu",
-          "date": "2026-01-21",
+          "date": "2026-03-09",
           "completed": true
         }
       ]
     },
     {
       "name": "Bầy 7",
-      "incubationDate": "2025-12-21",
-      "actualHatchDate": "2026-01-11",
+      "incubationDate": "2026-02-08",
+      "actualHatchDate": "2026-02-27",
       "quantity": 21,
       "sales": [
         {
-          "date": "2026-01-12",
+          "date": "2026-02-28",
           "amount": 420000,
           "quantity": 21,
           "note": "21 x 20k, 1 ngày tuổi"
@@ -511,18 +511,18 @@
     },
     {
       "name": "Bầy 8",
-      "incubationDate": "2025-12-27",
-      "actualHatchDate": "2026-01-17",
+      "incubationDate": "2026-02-14",
+      "actualHatchDate": "2026-03-05",
       "quantity": 0
     },
     {
       "name": "Bầy 9",
-      "incubationDate": "2026-01-03",
-      "actualHatchDate": "2026-01-24",
+      "incubationDate": "2026-02-19",
+      "actualHatchDate": "2026-03-12",
       "quantity": 56,
       "sales": [
         {
-          "date": "2026-02-13",
+          "date": "2026-03-31",
           "amount": 1750000,
           "quantity": 50,
           "note": "Anh Lợi, giá 35k, cho 6 con"
@@ -531,12 +531,12 @@
     },
     {
       "name": "Bầy 10+11 (nhập chung)",
-      "incubationDate": "2026-01-12",
-      "actualHatchDate": "2026-02-02",
+      "incubationDate": "2026-02-28",
+      "actualHatchDate": "2026-03-20",
       "quantity": 41,
       "sales": [
         {
-          "date": "2026-03-09",
+          "date": "2026-04-25",
           "amount": 1160000,
           "quantity": 29,
           "note": "29 x 40k, 34 ngày tuổi"
@@ -545,12 +545,12 @@
     },
     {
       "name": "Bầy 12",
-      "incubationDate": "2026-01-26",
-      "actualHatchDate": "2026-02-16",
+      "incubationDate": "2026-03-14",
+      "actualHatchDate": "2026-04-03",
       "quantity": 34,
       "sales": [
         {
-          "date": "2026-03-14",
+          "date": "2026-04-30",
           "amount": 1060000,
           "quantity": 28,
           "note": "28 x 38k"
@@ -559,12 +559,12 @@
     },
     {
       "name": "Bầy 13",
-      "incubationDate": "2026-02-01",
-      "actualHatchDate": "2026-02-22",
+      "incubationDate": "2026-03-19",
+      "actualHatchDate": "2026-04-09",
       "quantity": 34,
       "sales": [
         {
-          "date": "2026-03-19",
+          "date": "2026-05-05",
           "amount": 960000,
           "quantity": 24,
           "note": "Thắng, 24 x 40k"
@@ -573,12 +573,12 @@
     },
     {
       "name": "Bầy 14",
-      "incubationDate": "2026-02-07",
-      "actualHatchDate": "2026-02-28",
+      "incubationDate": "2026-03-25",
+      "actualHatchDate": "2026-04-15",
       "quantity": 35,
       "sales": [
         {
-          "date": "2026-03-19",
+          "date": "2026-05-05",
           "amount": 1330000,
           "quantity": 35,
           "note": "Thắng, 35 x 38k"
@@ -587,18 +587,18 @@
     },
     {
       "name": "Bầy 15",
-      "incubationDate": "2026-02-13",
-      "actualHatchDate": "2026-03-06",
+      "incubationDate": "2026-03-31",
+      "actualHatchDate": "2026-04-22",
       "quantity": 25,
       "sales": [
         {
-          "date": "2026-04-07",
+          "date": "2026-05-23",
           "amount": 100000,
           "quantity": 5,
           "note": "Anh Bích, 5 con"
         },
         {
-          "date": "2026-04-07",
+          "date": "2026-05-23",
           "amount": 550000,
           "quantity": 13,
           "note": "Thu, 13 x 42k"
@@ -607,18 +607,18 @@
     },
     {
       "name": "Bầy 16",
-      "incubationDate": "2026-02-18",
-      "actualHatchDate": "2026-03-11",
+      "incubationDate": "2026-04-05",
+      "actualHatchDate": "2026-04-27",
       "quantity": 33,
       "sales": [
         {
-          "date": "2026-04-07",
+          "date": "2026-05-23",
           "amount": 1000000,
           "quantity": 29,
           "note": "Chị Bốn"
         },
         {
-          "date": "2026-04-07",
+          "date": "2026-05-23",
           "amount": 200000,
           "quantity": 4,
           "note": "4 x 50k (ngày ước lượng)"
@@ -627,12 +627,12 @@
     },
     {
       "name": "Bầy 17",
-      "incubationDate": "2026-03-03",
-      "actualHatchDate": "2026-03-24",
+      "incubationDate": "2026-04-19",
+      "actualHatchDate": "2026-05-10",
       "quantity": 27,
       "sales": [
         {
-          "date": "2026-03-18",
+          "date": "2026-05-04",
           "amount": 540000,
           "quantity": 27,
           "note": "27 x 20k (ngày theo sổ tháng 3, trước ngày nở?)"
@@ -641,12 +641,12 @@
     },
     {
       "name": "Bầy 18",
-      "incubationDate": "2026-02-27",
-      "actualHatchDate": "2026-03-20",
+      "incubationDate": "2026-04-14",
+      "actualHatchDate": "2026-05-06",
       "quantity": 16,
       "sales": [
         {
-          "date": "2026-03-21",
+          "date": "2026-05-07",
           "amount": 320000,
           "quantity": 16,
           "note": "16 x 20k"
@@ -655,24 +655,24 @@
     },
     {
       "name": "Bầy 19",
-      "incubationDate": "2026-03-05",
-      "actualHatchDate": "2026-03-26",
+      "incubationDate": "2026-04-21",
+      "actualHatchDate": "2026-05-12",
       "quantity": 55,
       "sales": [
         {
-          "date": "2026-04-24",
+          "date": "2026-06-09",
           "amount": 660000,
           "quantity": 20,
           "note": "Thu, 20 x 33k"
         },
         {
-          "date": "2026-05-02",
+          "date": "2026-06-16",
           "amount": 700000,
           "quantity": 20,
           "note": "Chị Bốn, giá 35k, cho 2 con"
         },
         {
-          "date": "2026-05-02",
+          "date": "2026-06-16",
           "amount": 300000,
           "quantity": 10,
           "note": "Bích, giá 35k, cho 50k"
@@ -681,12 +681,12 @@
     },
     {
       "name": "Bầy 20",
-      "incubationDate": "2026-03-20",
-      "actualHatchDate": "2026-04-10",
+      "incubationDate": "2026-05-06",
+      "actualHatchDate": "2026-05-26",
       "quantity": 19,
       "sales": [
         {
-          "date": "2026-05-02",
+          "date": "2026-06-16",
           "amount": 600000,
           "quantity": 15,
           "note": "Hà, 15 x 40k"
@@ -695,12 +695,12 @@
     },
     {
       "name": "Bầy 21",
-      "incubationDate": "2026-03-27",
-      "actualHatchDate": "2026-04-17",
+      "incubationDate": "2026-05-13",
+      "actualHatchDate": "2026-06-02",
       "quantity": 25,
       "sales": [
         {
-          "date": "2026-05-21",
+          "date": "2026-07-05",
           "amount": 760000,
           "quantity": 20,
           "note": "Thu, 20 x 38k, 34 ngày tuổi"
@@ -709,12 +709,12 @@
     },
     {
       "name": "Bầy 22",
-      "incubationDate": "2026-03-31",
-      "actualHatchDate": "2026-04-21",
+      "incubationDate": "2026-05-16",
+      "actualHatchDate": "2026-06-06",
       "quantity": 24,
       "sales": [
         {
-          "date": "2026-05-18",
+          "date": "2026-07-02",
           "amount": 300000,
           "quantity": 10,
           "note": "Thu, giá 30k, 27 ngày tuổi"
@@ -723,12 +723,12 @@
     },
     {
       "name": "Bầy 23",
-      "incubationDate": "2026-04-05",
-      "actualHatchDate": "2026-04-26",
+      "incubationDate": "2026-05-21",
+      "actualHatchDate": "2026-06-11",
       "quantity": 47,
       "sales": [
         {
-          "date": "2026-05-26",
+          "date": "2026-07-10",
           "amount": 1280000,
           "quantity": 38,
           "note": "Thu, 38 x 35k bớt 50k; cho chị Nga 10 con"
@@ -737,12 +737,12 @@
     },
     {
       "name": "Bầy 24",
-      "incubationDate": "2026-04-10",
-      "actualHatchDate": "2026-05-01",
+      "incubationDate": "2026-05-26",
+      "actualHatchDate": "2026-06-15",
       "quantity": 28,
       "sales": [
         {
-          "date": "2026-05-27",
+          "date": "2026-07-11",
           "amount": 300000,
           "quantity": 10,
           "note": "10 x 30k, 26 ngày tuổi"
@@ -751,638 +751,638 @@
     },
     {
       "name": "Bầy 25",
-      "incubationDate": "2026-04-18",
-      "actualHatchDate": "2026-05-09",
+      "incubationDate": "2026-06-03",
+      "actualHatchDate": "2026-06-23",
       "quantity": 25
     },
     {
       "name": "Bầy 26",
-      "incubationDate": "2026-04-20",
-      "actualHatchDate": "2026-05-11",
+      "incubationDate": "2026-06-05",
+      "actualHatchDate": "2026-06-25",
       "quantity": 20
     },
     {
       "name": "Bầy 27",
-      "incubationDate": "2026-04-23",
-      "actualHatchDate": "2026-05-14",
+      "incubationDate": "2026-06-08",
+      "actualHatchDate": "2026-06-28",
       "quantity": 20
     },
     {
       "name": "Bầy 28",
-      "incubationDate": "2026-04-27",
-      "actualHatchDate": "2026-05-18",
+      "incubationDate": "2026-06-12",
+      "actualHatchDate": "2026-07-02",
       "quantity": 25
     },
     {
       "name": "Bầy 29",
-      "incubationDate": "2026-04-30",
-      "actualHatchDate": "2026-05-21",
+      "incubationDate": "2026-06-14",
+      "actualHatchDate": "2026-07-05",
       "quantity": 30
     },
     {
       "name": "Bầy 30",
-      "incubationDate": "2026-05-04",
-      "actualHatchDate": "2026-05-25",
+      "incubationDate": "2026-06-18",
+      "actualHatchDate": "2026-07-09",
       "quantity": 15
     }
   ],
   "cockSales": [
     {
-      "date": "2023-06-30",
+      "date": "2023-08-16",
       "amount": 4200000,
       "note": "Gà đá (2023, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2023-06-30",
+      "date": "2023-08-16",
       "amount": 700000,
       "note": "Gà nòi (2023, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2023-06-30",
+      "date": "2023-08-16",
       "amount": 1500000,
       "note": "Gà nòi (2023, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2023-06-30",
+      "date": "2023-08-16",
       "amount": 2527000,
       "note": "Gà mái (2023, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2023-06-30",
+      "date": "2023-08-16",
       "amount": 1000000,
       "note": "Gà mái (2023, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 4500000,
       "note": "Nhỏ (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 800000,
       "note": "Nhỏ (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 750000,
       "note": "Cống (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 1500000,
       "note": "Cống (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 900000,
       "note": "Cườm (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 1000000,
       "note": "Nhỏ (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 700000,
       "note": "Cống (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 3200000,
       "note": "Nhỏ (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 500000,
       "note": "Nhỏ (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 3400000,
       "note": "Nhỏ (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 220000,
       "note": "Gà mái (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 212000,
       "note": "Gà mái (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 486000,
       "note": "Gà mái (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 490000,
       "note": "Gà (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 770000,
       "note": "Gà (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 660000,
       "note": "Gà (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-06-30",
+      "date": "2024-08-04",
       "amount": 420000,
       "note": "Gà (2024, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-07-15",
+      "date": "2024-08-18",
       "amount": 1000000,
       "note": "Nhỏ (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-08-15",
+      "date": "2024-09-17",
       "amount": 3500000,
       "note": "Nhỏ (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-09-12",
+      "date": "2024-10-14",
       "amount": 4000000,
       "note": "Nhỏ",
       "category": "fighting"
     },
     {
-      "date": "2024-10-09",
+      "date": "2024-11-09",
       "amount": 3900000,
       "note": "Nhỏ (3 con cồ)",
       "category": "fighting"
     },
     {
-      "date": "2024-10-19",
+      "date": "2024-11-19",
       "amount": 4700000,
       "note": "Nhỏ (6 con)",
       "category": "fighting"
     },
     {
-      "date": "2024-11-15",
+      "date": "2024-12-15",
       "amount": 2500000,
       "note": "Nhỏ (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2024-11-15",
+      "date": "2024-12-15",
       "amount": 700000,
       "note": "Gà hàng (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-01-15",
+      "date": "2025-02-12",
       "amount": 5000000,
       "note": "Gà đá (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-01-15",
+      "date": "2025-02-12",
       "amount": 3500000,
       "note": "Nhỏ (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-01-15",
+      "date": "2025-02-12",
       "amount": 3000000,
       "note": "Gà đá (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-01-15",
+      "date": "2025-02-12",
       "amount": 700000,
       "note": "Cống (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-02-15",
+      "date": "2025-03-14",
       "amount": 600000,
       "note": "Hòa Hậu (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-03-01",
+      "date": "2025-03-29",
       "amount": 1000000,
       "note": "Nhỏ (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-03-22",
+      "date": "2025-04-19",
       "amount": 4000000,
       "note": "Nhỏ",
       "category": "fighting"
     },
     {
-      "date": "2025-05-01",
+      "date": "2025-05-27",
       "amount": 5400000,
       "note": "Nhỏ",
       "category": "fighting"
     },
     {
-      "date": "2025-06-25",
+      "date": "2025-07-19",
       "amount": 900000,
       "note": "Hòa Hậu",
       "category": "fighting"
     },
     {
-      "date": "2025-06-05",
+      "date": "2025-07-29",
       "amount": 3900000,
       "note": "Nhỏ",
       "category": "fighting"
     },
     {
-      "date": "2025-06-06",
+      "date": "2025-07-30",
       "amount": 1900000,
       "note": "Hòa Hậu",
       "category": "fighting"
     },
     {
-      "date": "2025-06-17",
+      "date": "2025-08-10",
       "amount": 1400000,
       "note": "Hòa Hậu",
       "category": "fighting"
     },
     {
-      "date": "2025-06-22",
+      "date": "2025-08-15",
       "amount": 1900000,
       "note": "Hòa Hậu",
       "category": "fighting"
     },
     {
-      "date": "2025-07-05",
+      "date": "2025-08-27",
       "amount": 3800000,
       "note": "Nhỏ (4 con, ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-07-10",
+      "date": "2025-09-01",
       "amount": 4800000,
       "note": "Nhỏ (5 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-07-13",
+      "date": "2025-09-04",
       "amount": 2800000,
       "note": "Nhỏ (3 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-07-22",
+      "date": "2025-09-13",
       "amount": 2000000,
       "note": "Hòa Hậu",
       "category": "fighting"
     },
     {
-      "date": "2025-07-25",
+      "date": "2025-09-16",
       "amount": 2000000,
       "note": "Nhỏ",
       "category": "fighting"
     },
     {
-      "date": "2025-08-01",
+      "date": "2025-09-22",
       "amount": 500000,
       "note": "Tiên (ngày ước lượng)",
       "category": "fighting"
     },
     {
-      "date": "2025-08-09",
+      "date": "2025-09-30",
       "amount": 6500000,
       "note": "Hòa Hậu",
       "category": "fighting"
     },
     {
-      "date": "2025-08-16",
+      "date": "2025-10-07",
       "amount": 2500000,
       "note": "Khoa (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-09-01",
+      "date": "2025-10-21",
       "amount": 2700000,
       "note": "Hòa Hậu (3 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-09-07",
+      "date": "2025-10-27",
       "amount": 4000000,
       "note": "Nhỏ (4 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-09-24",
+      "date": "2025-11-13",
       "amount": 2000000,
       "note": "Hòa Hậu (2 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-10-07",
+      "date": "2025-11-26",
       "amount": 2000000,
       "note": "Hòa Hậu (2 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-10-15",
+      "date": "2025-12-04",
       "amount": 3600000,
       "note": "Nhỏ (4 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-10-15",
+      "date": "2025-12-04",
       "amount": 500000,
       "note": "Thạch (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-10-21",
+      "date": "2025-12-10",
       "amount": 3000000,
       "note": "Hòa Hậu (4 con, 1 con thịt)",
       "category": "fighting"
     },
     {
-      "date": "2025-10-15",
+      "date": "2025-12-04",
       "amount": 1600000,
       "note": "Nhỏ (2 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-11-10",
+      "date": "2025-12-29",
       "amount": 2500000,
       "note": "Nhỏ và cha (3 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-12-03",
+      "date": "2026-01-21",
       "amount": 8000000,
       "note": "Nhỏ (9 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-12-03",
+      "date": "2026-01-21",
       "amount": 1000000,
       "note": "Gà nòi (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-01-17",
+      "date": "2026-03-05",
       "amount": 1200000,
       "note": "Chú Quê (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-01-17",
+      "date": "2026-03-05",
       "amount": 4000000,
       "note": "Nhỏ (5 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-01-20",
+      "date": "2026-03-08",
       "amount": 4500000,
       "note": "Hòa Hậu (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-01-30",
+      "date": "2026-03-18",
       "amount": 900000,
       "note": "Gà nòi (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-02-05",
+      "date": "2026-03-23",
       "amount": 700000,
       "note": "Hòa Hậu (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-02-17",
+      "date": "2026-04-04",
       "amount": 2500000,
       "note": "Khoa",
       "category": "fighting"
     },
     {
-      "date": "2026-02-19",
+      "date": "2026-04-06",
       "amount": 1000000,
       "note": "Khoa",
       "category": "fighting"
     },
     {
-      "date": "2026-02-21",
+      "date": "2026-04-08",
       "amount": 3000000,
       "note": "Nhỏ (3 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-03-22",
+      "date": "2026-05-08",
       "amount": 1000000,
       "note": "Hòa Hậu (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-04-01",
+      "date": "2026-05-17",
       "amount": 1000000,
       "note": "Bán Ninh (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-04-03",
+      "date": "2026-05-19",
       "amount": 2000000,
       "note": "Vũ (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-04-07",
+      "date": "2026-05-23",
       "amount": 500000,
       "note": "Chị Bốn (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-04-11",
+      "date": "2026-05-27",
       "amount": 1000000,
       "note": "Hòa Hậu (1 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-04-24",
+      "date": "2026-06-09",
       "amount": 1800000,
       "note": "Hòa Hậu (2 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-05-10",
+      "date": "2026-06-24",
       "amount": 2000000,
       "note": "Nhỏ (2 con)",
       "category": "fighting"
     },
     {
-      "date": "2026-05-24",
+      "date": "2026-07-08",
       "amount": 2000000,
       "note": "Hòa Hậu (2 con)",
       "category": "fighting"
     },
     {
-      "date": "2025-02-15",
+      "date": "2025-03-14",
       "amount": 1000000,
       "note": "Gà thịt (ngày ước lượng)",
       "category": "meat"
     },
     {
-      "date": "2025-03-01",
+      "date": "2025-03-29",
       "amount": 1050000,
       "note": "Gà thịt (ngày ước lượng)",
       "category": "meat"
     },
     {
-      "date": "2025-03-17",
+      "date": "2025-04-14",
       "amount": 1016000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-03-29",
+      "date": "2025-04-26",
       "amount": 1160000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-03-29",
+      "date": "2025-04-26",
       "amount": 220000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-04-12",
+      "date": "2025-05-09",
       "amount": 700000,
       "note": "Gà thịt (giá 90)",
       "category": "meat"
     },
     {
-      "date": "2025-04-13",
+      "date": "2025-05-10",
       "amount": 530000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-04-16",
+      "date": "2025-05-13",
       "amount": 570000,
       "note": "Gà thịt (giá 90/kg)",
       "category": "meat"
     },
     {
-      "date": "2025-04-19",
+      "date": "2025-05-16",
       "amount": 720000,
       "note": "Gà thịt (giá 90 - 11,5 - 80)",
       "category": "meat"
     },
     {
-      "date": "2025-05-01",
+      "date": "2025-05-27",
       "amount": 600000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-05-19",
+      "date": "2025-06-14",
       "amount": 795000,
       "note": "Gà thịt (3 cồ 2,6kg giá 10)",
       "category": "meat"
     },
     {
-      "date": "2025-06-03",
+      "date": "2025-06-27",
       "amount": 530000,
       "note": "Gà thịt (2 cồ 2,6kg giá 10)",
       "category": "meat"
     },
     {
-      "date": "2025-06-19",
+      "date": "2025-07-13",
       "amount": 320000,
       "note": "Gà thịt (mái 110, 70 mái già)",
       "category": "meat"
     },
     {
-      "date": "2025-09-15",
+      "date": "2025-11-04",
       "amount": 400000,
       "note": "Gà cồ thịt (ngày ước lượng)",
       "category": "meat"
     },
     {
-      "date": "2025-10-15",
+      "date": "2025-12-04",
       "amount": 1880000,
       "note": "Gà thịt (mái già 80, cồ 90)",
       "category": "meat"
     },
     {
-      "date": "2025-10-20",
+      "date": "2025-12-09",
       "amount": 950000,
       "note": "Gà thịt (cồ thải)",
       "category": "meat"
     },
     {
-      "date": "2025-10-30",
+      "date": "2025-12-19",
       "amount": 415000,
       "note": "Gà thịt (mái 11, cồ nhỏ 9,5)",
       "category": "meat"
     },
     {
-      "date": "2025-11-24",
+      "date": "2026-01-12",
       "amount": 540000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-11-28",
+      "date": "2026-01-16",
       "amount": 150000,
       "note": "Gà thịt",
       "category": "meat"
     },
     {
-      "date": "2025-12-15",
+      "date": "2026-02-02",
       "amount": 1045000,
       "note": "Gà thịt (3 con, giá 11,5/12/13)",
       "category": "meat"
     },
     {
-      "date": "2026-01-07",
+      "date": "2026-02-23",
       "amount": 1000000,
       "note": "Gà trụi nướng (10kg x 100k)",
       "category": "meat"
     },
     {
-      "date": "2026-01-07",
+      "date": "2026-02-23",
       "amount": 300000,
       "note": "Gà đủ lông (2,5kg x 120k)",
       "category": "meat"
     },
     {
-      "date": "2026-04-04",
+      "date": "2026-05-20",
       "amount": 350000,
       "note": "Gà thịt",
       "category": "meat"
@@ -1396,148 +1396,149 @@
       "note": "Tổng chi phí cả năm 2025 (theo sổ, không có chi tiết)"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-03-03",
       "amount": 92000,
       "type": "medicine",
       "note": "Hiệp"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-03-03",
       "amount": 162000,
       "type": "medicine",
       "note": "Vắc xin"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-03-03",
       "amount": 690000,
       "type": "feed",
       "note": "Cám Phổ (1,5 bao)"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-03-03",
       "amount": 150000,
       "type": "other",
       "note": "Út"
     },
     {
-      "date": "2026-01-20",
+      "date": "2026-03-08",
       "amount": 400000,
       "type": "feed",
       "note": "Độ (1 bao)"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-03-03",
       "amount": 94000,
       "type": "medicine",
       "note": "Độ - thuốc"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-03-03",
       "amount": 538000,
       "type": "feed",
       "note": "Độ (1 bao + 1 bì đậm đặc)"
     },
     {
-      "date": "2026-02-15",
+      "date": "2026-04-02",
       "amount": 390000,
       "type": "feed",
       "note": "Độ - cám"
     },
     {
-      "date": "2026-02-15",
+      "date": "2026-04-02",
       "amount": 133000,
       "type": "medicine",
       "note": "Thuốc"
     },
     {
-      "date": "2026-02-15",
+      "date": "2026-04-02",
       "amount": 62000,
       "type": "medicine",
       "note": "Hiệp"
     },
     {
-      "date": "2026-02-15",
+      "date": "2026-04-02",
       "amount": 950000,
       "type": "feed",
       "note": "Độ (trong đó 165k thuốc)"
     },
     {
-      "date": "2026-02-15",
+      "date": "2026-04-02",
       "amount": 450000,
       "type": "feed",
       "note": "Bắp 50kg"
     },
     {
-      "date": "2026-02-15",
+      "date": "2026-04-02",
       "amount": 540000,
       "type": "other",
       "note": "Mua gà giống 14 con x 39k"
     },
     {
-      "date": "2026-03-15",
+      "date": "2026-05-01",
       "amount": 70000,
       "type": "medicine",
       "note": "Độ - thuốc"
     },
     {
-      "date": "2026-03-09",
+      "date": "2026-04-25",
       "amount": 770000,
       "type": "feed",
       "note": "Cám Phổ (2 bao)"
     },
     {
-      "date": "2026-03-14",
+      "date": "2026-04-30",
       "amount": 1400000,
       "type": "medicine",
       "note": "Thuốc Bách"
     },
     {
-      "date": "2026-04-15",
+      "date": "2026-05-31",
       "amount": 1060000,
       "type": "feed",
       "note": "Tổng chi cám, thuốc tháng 4/2026 theo sổ (không cộng các dòng lúa vì số tổng đã chốt là 1.060.000đ)"
     },
     {
-      "date": "2026-04-01",
+      "date": "2026-05-17",
       "amount": 3000000,
       "type": "other",
       "note": "Mua gà bs Ninh (1 con)"
     },
     {
-      "date": "2026-05-15",
+      "date": "2026-06-29",
       "amount": 415000,
       "type": "feed",
       "note": "Cám Phổ"
     },
     {
-      "date": "2026-05-15",
+      "date": "2026-06-29",
       "amount": 35000,
       "type": "medicine",
       "note": "Thuốc + men tiêu hóa"
     },
     {
-      "date": "2026-05-15",
+      "date": "2026-06-29",
       "amount": 74000,
       "type": "medicine",
       "note": "Mật ong, thuốc"
     },
     {
-      "date": "2026-05-15",
+      "date": "2026-06-29",
       "amount": 680000,
       "type": "feed",
       "note": "Cám Phổ"
     },
     {
-      "date": "2026-05-15",
+      "date": "2026-06-29",
       "amount": 186000,
       "type": "medicine",
       "note": "Thuốc Bách"
     },
     {
-      "date": "2026-05-15",
+      "date": "2026-06-29",
       "amount": 720000,
       "type": "feed",
       "note": "Cám Phổ (780k - 50k Hải)"
     }
-  ]
+  ],
+  "dateCalendar": "solar"
 }

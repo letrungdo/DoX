@@ -11,7 +11,10 @@ class FirebaseInterceptor extends BaseInterceptor {
   ClientType get clientType => ClientType.firebase;
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     await FirebaseUtil.refreshTokenIfNeed();
     options.headers.addAll({
       'X-Ios-Bundle-Identifier': 'com.locket.Locket', //

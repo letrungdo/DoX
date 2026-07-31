@@ -39,13 +39,14 @@ class ElectricAccount {
 
   String? get contractTypeDisplay => detail?.contractType ?? contractType;
 
-  factory ElectricAccount.fromJson(Map<String, dynamic> json) => ElectricAccount(
-    username: json['username'] as String,
-    password: json['password'] as String,
-    accessToken: json['accessToken'] as String?,
-    customerName: json['customerName'] as String?,
-    contractType: json['contractType'] as String?,
-  );
+  factory ElectricAccount.fromJson(Map<String, dynamic> json) =>
+      ElectricAccount(
+        username: json['username'] as String,
+        password: json['password'] as String,
+        accessToken: json['accessToken'] as String?,
+        customerName: json['customerName'] as String?,
+        contractType: json['contractType'] as String?,
+      );
 
   Map<String, dynamic> toJson() => {
     'username': username, //

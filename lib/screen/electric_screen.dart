@@ -33,10 +33,14 @@ class _ChartColors {
   static const compareDark = Color(0xFFC07B28);
 
   static Color current(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? currentDark : currentLight;
+      Theme.of(context).brightness == Brightness.dark
+      ? currentDark
+      : currentLight;
 
   static Color compare(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? compareDark : compareLight;
+      Theme.of(context).brightness == Brightness.dark
+      ? compareDark
+      : compareLight;
 }
 
 @RoutePage()
@@ -55,7 +59,8 @@ class ElectricScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel> {
+class _ElectricScreenState
+    extends ScreenState<ElectricScreen, ElectricViewModel> {
   final _scrollController = ScrollController();
   final _monthlySectionKey = GlobalKey();
   final _highlightedMonthlyItemKey = GlobalKey();
@@ -75,21 +80,34 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     super.didChangeDependencies();
     final mainViewModel = context.read<MainViewModel>();
     if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(ElectricRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      ElectricRoute.name,
+      _tabReselectHandler,
+    );
     _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(ElectricRoute.name, _tabReselectHandler);
+    mainViewModel.registerTabReselectHandler(
+      ElectricRoute.name,
+      _tabReselectHandler,
+    );
   }
 
   @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(ElectricRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      ElectricRoute.name,
+      _tabReselectHandler,
+    );
     _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _handleTabReselect() async {
     if (_scrollController.hasClients) {
-      await _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
     if (mounted && vm.status == ElectricStatus.loggedIn) await vm.onRefresh();
   }
@@ -106,12 +124,16 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.electricityTitle,
-        titleSuffix: AppBarSyncIcon<ElectricViewModel>(selector: (vm) => vm.isFetching),
+        titleSuffix: AppBarSyncIcon<ElectricViewModel>(
+          selector: (vm) => vm.isFetching,
+        ),
         actions: [
           Selector<ElectricViewModel, ElectricStatus>(
             selector: (_, vm) => vm.status,
             builder: (context, status, _) {
-              if (status != ElectricStatus.loggedIn) return const SizedBox.shrink();
+              if (status != ElectricStatus.loggedIn) {
+                return const SizedBox.shrink();
+              }
               return IconButton(
                 tooltip: l10n.logout,
                 onPressed: () => _confirmRemoveAccount(l10n),
@@ -125,8 +147,13 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         selector: (_, vm) => vm.status,
         builder: (context, status, _) {
           return switch (status) {
-            ElectricStatus.loading => const Center(child: CircularProgressIndicator.adaptive()),
-            ElectricStatus.loggedOut => _LoginForm(onSubmit: _login, onForgetSavedAccount: _confirmForgetSavedAccount),
+            ElectricStatus.loading => const Center(
+              child: CircularProgressIndicator.adaptive(),
+            ),
+            ElectricStatus.loggedOut => _LoginForm(
+              onSubmit: _login,
+              onForgetSavedAccount: _confirmForgetSavedAccount,
+            ),
             ElectricStatus.loggedIn => RefreshIndicator.adaptive(
               onRefresh: () => vm.onRefresh(showLoading: true), //
               child: _buildContent(l10n),
@@ -156,7 +183,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
                 kind: DialogActionKind.cancel,
                 onPressed: () => Navigator.pop(context, false),
               ),
-              DialogActionButton(text: l10n.logout, onPressed: () => Navigator.pop(context, true)),
+              DialogActionButton(
+                text: l10n.logout,
+                onPressed: () => Navigator.pop(context, true),
+              ),
             ],
           ),
         ],
@@ -180,7 +210,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
                 kind: DialogActionKind.cancel,
                 onPressed: () => Navigator.pop(context, false),
               ),
-              DialogActionButton(text: l10n.delete, onPressed: () => Navigator.pop(context, true)),
+              DialogActionButton(
+                text: l10n.delete,
+                onPressed: () => Navigator.pop(context, true),
+              ),
             ],
           ),
         ],
@@ -196,8 +229,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       context: context,
       // The dialog sits above this screen's provider, so the saved accounts are
       // passed in instead of read from the view model.
-      builder: (context) =>
-          _AddAccountDialog(savedAccounts: vm.availableSavedAccounts, onForgetSavedAccount: _confirmForgetSavedAccount),
+      builder: (context) => _AddAccountDialog(
+        savedAccounts: vm.availableSavedAccounts,
+        onForgetSavedAccount: _confirmForgetSavedAccount,
+      ),
     );
     if (credentials == null) return;
     _login(credentials.username, credentials.password);
@@ -219,7 +254,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
             return SliverPadding(
               // 16, not 15: a card's shadow reaches ~17px, so a tighter page padding
               // lets the scroll viewport clip the rim of the first and last card.
-              padding: EdgeInsets.symmetric(vertical: 16, horizontal: horizontalPadding),
+              padding: EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: horizontalPadding,
+              ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _buildAccountTabs(l10n),
@@ -265,7 +303,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       return Container(
         height: height,
         width: width,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+        ),
       );
     }
 
@@ -322,7 +363,11 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               depth: 0.5,
               onTap: () => _showAddAccountDialog(l10n),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Icon(Icons.person_add_alt_1_rounded, size: 18, color: scheme.onSurface),
+              child: Icon(
+                Icons.person_add_alt_1_rounded,
+                size: 18,
+                color: scheme.onSurface,
+              ),
             ),
           ],
         );
@@ -352,10 +397,20 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         children: [
           Text(
             label,
-            style: TextStyle(color: foreground, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, fontSize: 13),
+            style: TextStyle(
+              color: foreground,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 13,
+            ),
           ),
           if (subtitle != null && subtitle.isNotEmpty)
-            Text(subtitle, style: TextStyle(color: foreground.withValues(alpha: 0.75), fontSize: 10.5)),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: foreground.withValues(alpha: 0.75),
+                fontSize: 10.5,
+              ),
+            ),
         ],
       ),
     );
@@ -377,14 +432,20 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
                   color: _ChartColors.current(context).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.electric_meter_rounded, color: _ChartColors.current(context)),
+                child: Icon(
+                  Icons.electric_meter_rounded,
+                  color: _ChartColors.current(context),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(customer?.customerName.toDashIfNull ?? "", style: context.textTheme.primary.bold),
+                    Text(
+                      customer?.customerName.toDashIfNull ?? "",
+                      style: context.textTheme.primary.bold,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       "${customer?.customerCode.toDashIfNull} · ${l10n.meterId} ${customer?.meterId.toDashIfNull}",
@@ -413,7 +474,12 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         Text(l10n.electricUsage, style: context.textTheme.primary.size16.bold),
         const SizedBox(height: 8),
         Selector<ElectricViewModel, (num?, num?, num?, num?)>(
-          selector: (_, vm) => (vm.usageToday, vm.usageYesterday, vm.usageThisMonth, vm.usageLastMonth),
+          selector: (_, vm) => (
+            vm.usageToday,
+            vm.usageYesterday,
+            vm.usageThisMonth,
+            vm.usageLastMonth,
+          ),
           builder: (context, usage, _) {
             final (today, yesterday, thisMonth, lastMonth) = usage;
             return Column(
@@ -421,11 +487,17 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               children: [
                 Row(
                   spacing: 8,
-                  children: [_buildUsageTile(l10n.today, today), _buildUsageTile(l10n.yesterday, yesterday)],
+                  children: [
+                    _buildUsageTile(l10n.today, today),
+                    _buildUsageTile(l10n.yesterday, yesterday),
+                  ],
                 ),
                 Row(
                   spacing: 8,
-                  children: [_buildUsageTile(l10n.thisMonth, thisMonth), _buildUsageTile(l10n.lastMonth, lastMonth)],
+                  children: [
+                    _buildUsageTile(l10n.thisMonth, thisMonth),
+                    _buildUsageTile(l10n.lastMonth, lastMonth),
+                  ],
                 ),
               ],
             );
@@ -437,7 +509,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
           builder: (context, reading, _) {
             if (reading == null) return const SizedBox.shrink();
             final readAt = reading.readAt;
-            final time = readAt == null ? "" : DateFormat("HH:mm dd/MM/yyyy").format(readAt);
+            final time = readAt == null
+                ? ""
+                : DateFormat("HH:mm dd/MM/yyyy").format(readAt);
             return Text(
               "${l10n.latestMeterReading}: ${reading.meterIndex.formatUnit()} kWh ($time)",
               style: context.textTheme.secondary.size13,
@@ -456,17 +530,30 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       child: NeuCard(
         radius: 12,
         depth: 0.6,
-        color: Color.alphaBlend(accent.withValues(alpha: 0.08), context.neu.base),
+        color: Color.alphaBlend(
+          accent.withValues(alpha: 0.08),
+          context.neu.base,
+        ),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         child: Column(
           children: [
-            Text(label, style: context.textTheme.secondary.size13, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              label,
+              style: context.textTheme.secondary.size13,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 4),
             Text.rich(
               TextSpan(
                 text: kwh.formatUnit(digit: 1),
                 style: context.textTheme.primary.bold,
-                children: [TextSpan(text: " kWh", style: context.textTheme.secondary.size13)],
+                children: [
+                  TextSpan(
+                    text: " kWh",
+                    style: context.textTheme.secondary.size13,
+                  ),
+                ],
               ),
             ),
           ],
@@ -482,7 +569,12 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         if (usages.isEmpty) return const SizedBox.shrink();
         final items = usages
             .skip(usages.length <= 14 ? 0 : usages.length - 14)
-            .map((e) => CuteBarChartItem(label: DateFormat("d/M").format(e.day), value: e.kwh))
+            .map(
+              (e) => CuteBarChartItem(
+                label: DateFormat("d/M").format(e.day),
+                value: e.kwh,
+              ),
+            )
             .toList();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,7 +597,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       selector: (_, vm) => vm.monthlyUsages,
       builder: (context, items, _) {
         if (items.isEmpty) return const SizedBox.shrink();
-        final highlightedMonth = context.watch<AppViewModel>().electricMonthToHighlight;
+        final highlightedMonth = context
+            .watch<AppViewModel>()
+            .electricMonthToHighlight;
         _focusMonthlySectionWhenReady(items, highlightedMonth);
         // Chart reads left→right in time; the list keeps newest first.
         final chartItems = items.reversed
@@ -521,7 +615,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
           key: _monthlySectionKey,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.billingHistory, style: context.textTheme.primary.size16.bold),
+            Text(
+              l10n.billingHistory,
+              style: context.textTheme.primary.size16.bold,
+            ),
             const SizedBox(height: 8),
             _buildChartLegend(l10n),
             const SizedBox(height: 6),
@@ -532,7 +629,13 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               formatValue: (v) => "${v.formatUnit()} kWh",
             ),
             const SizedBox(height: 10),
-            ...items.map((item) => _buildMonthlyItem(l10n, item, highlighted: _isSameMonth(item, highlightedMonth))),
+            ...items.map(
+              (item) => _buildMonthlyItem(
+                l10n,
+                item,
+                highlighted: _isSameMonth(item, highlightedMonth),
+              ),
+            ),
           ],
         );
       },
@@ -540,15 +643,22 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
   }
 
   bool _isSameMonth(ElectricMonthlyUsage item, DateTime? month) {
-    return month != null && item.year == month.year && item.month == month.month;
+    return month != null &&
+        item.year == month.year &&
+        item.month == month.month;
   }
 
-  void _focusMonthlySectionWhenReady(List<ElectricMonthlyUsage> items, DateTime? month) {
+  void _focusMonthlySectionWhenReady(
+    List<ElectricMonthlyUsage> items,
+    DateTime? month,
+  ) {
     if (month == null || identical(_lastFocusedMonth, month)) return;
     if (!items.any((item) => _isSameMonth(item, month))) return;
     _lastFocusedMonth = month;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final targetContext = _highlightedMonthlyItemKey.currentContext ?? _monthlySectionKey.currentContext;
+      final targetContext =
+          _highlightedMonthlyItemKey.currentContext ??
+          _monthlySectionKey.currentContext;
       if (!mounted || targetContext == null) return;
       Scrollable.ensureVisible(
         targetContext,
@@ -585,7 +695,11 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     );
   }
 
-  Widget _buildMonthlyItem(AppLocalizations l10n, ElectricMonthlyUsage item, {required bool highlighted}) {
+  Widget _buildMonthlyItem(
+    AppLocalizations l10n,
+    ElectricMonthlyUsage item, {
+    required bool highlighted,
+  }) {
     final highlightColor = _ChartColors.current(context);
     return AnimatedContainer(
       key: highlighted ? _highlightedMonthlyItemKey : null,
@@ -598,9 +712,14 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
           ? context.neuRaised(
               radius: 12,
               depth: 0.6,
-              color: Color.alphaBlend(highlightColor.withValues(alpha: 0.16), context.neu.base),
+              color: Color.alphaBlend(
+                highlightColor.withValues(alpha: 0.16),
+                context.neu.base,
+              ),
             )
-          : const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(12))),
+          : const BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -610,7 +729,9 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
               children: [
                 Text(
                   l10n.monthLabel("${item.month}", "${item.year}"),
-                  style: context.textTheme.primary.bold.copyWith(color: highlighted ? highlightColor : null),
+                  style: context.textTheme.primary.bold.copyWith(
+                    color: highlighted ? highlightColor : null,
+                  ),
                 ),
                 Text(
                   l10n.sameMonthLastYear(
@@ -629,9 +750,14 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
             children: [
               Text(
                 "${item.totalAmount.formatUnit()} đ",
-                style: context.textTheme.primary.bold.copyWith(color: context.colors.money),
+                style: context.textTheme.primary.bold.copyWith(
+                  color: context.colors.money,
+                ),
               ),
-              Text("${item.usageKwh.formatUnit()} kWh", style: context.textTheme.secondary.size13),
+              Text(
+                "${item.usageKwh.formatUnit()} kWh",
+                style: context.textTheme.secondary.size13,
+              ),
             ],
           ),
         ],
@@ -650,12 +776,17 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.spiderReadings, style: context.textTheme.primary.size16.bold),
+            Text(
+              l10n.spiderReadings,
+              style: context.textTheme.primary.size16.bold,
+            ),
             const SizedBox(height: 8),
             ...List.generate(items.length, (index) {
               final reading = items[index];
               // The list is newest first, so the next item is the previous reading.
-              final previous = index + 1 < readings.length ? readings[index + 1] : null;
+              final previous = index + 1 < readings.length
+                  ? readings[index + 1]
+                  : null;
               return _buildSpiderItem(reading, previous);
             }),
           ],
@@ -664,9 +795,14 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
     );
   }
 
-  Widget _buildSpiderItem(ElectricMeterReading reading, ElectricMeterReading? previous) {
+  Widget _buildSpiderItem(
+    ElectricMeterReading reading,
+    ElectricMeterReading? previous,
+  ) {
     final readAt = reading.readAt;
-    final time = readAt == null ? "" : DateFormat("HH:mm dd/MM/yyyy").format(readAt);
+    final time = readAt == null
+        ? ""
+        : DateFormat("HH:mm dd/MM/yyyy").format(readAt);
     final current = reading.meterIndex;
     final prior = previous?.meterIndex;
     final delta = (current != null && prior != null) ? current - prior : null;
@@ -674,7 +810,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(flex: 4, child: Text(time, style: context.textTheme.secondary.size13)),
+          Expanded(
+            flex: 4,
+            child: Text(time, style: context.textTheme.secondary.size13),
+          ),
           Expanded(
             flex: 3,
             child: Text(
@@ -699,7 +838,10 @@ class _ElectricScreenState extends ScreenState<ElectricScreen, ElectricViewModel
 
 /// Full-screen form shown when no account is logged in yet.
 class _LoginForm extends StatefulWidget {
-  const _LoginForm({required this.onSubmit, required this.onForgetSavedAccount});
+  const _LoginForm({
+    required this.onSubmit,
+    required this.onForgetSavedAccount,
+  });
 
   final void Function(String username, String password) onSubmit;
   final Future<bool> Function(ElectricAccount account) onForgetSavedAccount;
@@ -739,9 +881,17 @@ class _LoginFormState extends State<_LoginForm> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.electric_bolt_rounded, size: 56, color: _ChartColors.compare(context)),
+              Icon(
+                Icons.electric_bolt_rounded,
+                size: 56,
+                color: _ChartColors.compare(context),
+              ),
               const SizedBox(height: 12),
-              Text(l10n.electricLoginTitle, style: context.textTheme.primary.size16.bold, textAlign: TextAlign.center),
+              Text(
+                l10n.electricLoginTitle,
+                style: context.textTheme.primary.size16.bold,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
               // Consumer, not Selector: the getter builds a fresh list every
               // call, so there is nothing stable to compare against.
@@ -753,7 +903,8 @@ class _LoginFormState extends State<_LoginForm> {
                     padding: const EdgeInsets.only(bottom: 24),
                     child: _SavedAccountPicker(
                       accounts: savedAccounts,
-                      onSelect: (account) => widget.onSubmit(account.username, account.password),
+                      onSelect: (account) =>
+                          widget.onSubmit(account.username, account.password),
                       onForget: widget.onForgetSavedAccount,
                     ),
                   );
@@ -770,12 +921,19 @@ class _LoginFormState extends State<_LoginForm> {
                 obscureText: _obscurePassword,
                 autocorrect: false,
                 onSubmitted: (_) => _submit(),
-                decoration: cuteInputDecoration(context, l10n.password).copyWith(
-                  suffixIcon: IconButton(
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-                  ),
-                ),
+                decoration: cuteInputDecoration(context, l10n.password)
+                    .copyWith(
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                        ),
+                      ),
+                    ),
               ),
               const SizedBox(height: 24),
               NeuButton(
@@ -795,7 +953,10 @@ class _LoginFormState extends State<_LoginForm> {
 
 /// Small username/password dialog used to add another account tab.
 class _AddAccountDialog extends StatefulWidget {
-  const _AddAccountDialog({required this.savedAccounts, required this.onForgetSavedAccount});
+  const _AddAccountDialog({
+    required this.savedAccounts,
+    required this.onForgetSavedAccount,
+  });
 
   final List<ElectricAccount> savedAccounts;
   final Future<bool> Function(ElectricAccount account) onForgetSavedAccount;
@@ -815,7 +976,11 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   Future<void> _forget(ElectricAccount account) async {
     final removed = await widget.onForgetSavedAccount(account);
     if (!removed || !mounted) return;
-    setState(() => _savedAccounts = _savedAccounts.where((a) => a.username != account.username).toList());
+    setState(
+      () => _savedAccounts = _savedAccounts
+          .where((a) => a.username != account.username)
+          .toList(),
+    );
   }
 
   @override
@@ -854,8 +1019,10 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
                 padding: const EdgeInsets.only(bottom: 18),
                 child: _SavedAccountPicker(
                   accounts: _savedAccounts,
-                  onSelect: (account) =>
-                      Navigator.pop(context, (username: account.username, password: account.password)),
+                  onSelect: (account) => Navigator.pop(context, (
+                    username: account.username,
+                    password: account.password,
+                  )),
                   onForget: _forget,
                 ),
               ),
@@ -872,8 +1039,13 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
               onSubmitted: (_) => _submit(),
               decoration: cuteInputDecoration(context, l10n.password).copyWith(
                 suffixIcon: IconButton(
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                  icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
                 ),
               ),
             ),
@@ -899,7 +1071,11 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
 /// Chips for accounts logged in before, so signing back in is one tap instead
 /// of retyping the credentials. The trailing ✕ forgets the stored password.
 class _SavedAccountPicker extends StatelessWidget {
-  const _SavedAccountPicker({required this.accounts, required this.onSelect, required this.onForget});
+  const _SavedAccountPicker({
+    required this.accounts,
+    required this.onSelect,
+    required this.onForget,
+  });
 
   final List<ElectricAccount> accounts;
   final void Function(ElectricAccount account) onSelect;
@@ -917,13 +1093,19 @@ class _SavedAccountPicker extends StatelessWidget {
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: accounts.map((account) => _chip(context, scheme, account)).toList(),
+          children: accounts
+              .map((account) => _chip(context, scheme, account))
+              .toList(),
         ),
       ],
     );
   }
 
-  Widget _chip(BuildContext context, ColorScheme scheme, ElectricAccount account) {
+  Widget _chip(
+    BuildContext context,
+    ColorScheme scheme,
+    ElectricAccount account,
+  ) {
     return NeuCard(
       radius: 14,
       depth: 0.5,
@@ -932,7 +1114,11 @@ class _SavedAccountPicker extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.account_circle_rounded, size: 18, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.account_circle_rounded,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 6),
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -940,9 +1126,19 @@ class _SavedAccountPicker extends StatelessWidget {
             children: [
               Text(
                 account.displayName,
-                style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13),
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
-              Text(account.username, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 10.5)),
+              Text(
+                account.username,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: 10.5,
+                ),
+              ),
             ],
           ),
           IconButton(

@@ -28,6 +28,7 @@ class ChickenListTileCard extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+
   /// Tint that carries the row's state. Neumorphic cards have no border, so the
   /// fill is the only place that signal can live.
   final Color? color;

@@ -14,11 +14,16 @@ class AppUpdateInfo {
   final String apkUrl;
   final String? releaseNotes;
 
-  AppUpdateInfo({required this.version, required this.apkUrl, this.releaseNotes});
+  AppUpdateInfo({
+    required this.version,
+    required this.apkUrl,
+    this.releaseNotes,
+  });
 }
 
 class UpdateService {
-  static const _latestReleaseApi = 'https://api.github.com/repos/letrungdo/DoX/releases/latest';
+  static const _latestReleaseApi =
+      'https://api.github.com/repos/letrungdo/DoX/releases/latest';
 
   final _dio = Dio();
 
@@ -36,7 +41,9 @@ class UpdateService {
       if (!_isNewerThanCurrent(latest)) return null;
 
       final assets = (res.data['assets'] as List?) ?? [];
-      final apk = assets.firstWhereOrNull((a) => (a['name'] as String? ?? '').endsWith('.apk'));
+      final apk = assets.firstWhereOrNull(
+        (a) => (a['name'] as String? ?? '').endsWith('.apk'),
+      );
       if (apk == null) return null;
 
       return AppUpdateInfo(
@@ -79,14 +86,13 @@ class UpdateService {
         update.apkUrl,
         cancelToken: cancelToken,
         options: Options(
-          headers: {
-            if (existingLength > 0) 'range': 'bytes=$existingLength-',
-          },
+          headers: {if (existingLength > 0) 'range': 'bytes=$existingLength-'},
           responseType: ResponseType.stream,
         ),
       );
 
-      final totalLength = int.tryParse(response.headers.value('content-length') ?? '0') ?? 0;
+      final totalLength =
+          int.tryParse(response.headers.value('content-length') ?? '0') ?? 0;
       final isPartial = response.statusCode == 206;
 
       if (!isPartial && existingLength > 0) {
@@ -135,7 +141,9 @@ class UpdateService {
     final current = "${appInfo.version}+${appInfo.packageInfo.buildNumber}";
     final latestParts = _numericParts(latest);
     final currentParts = _numericParts(current);
-    final length = latestParts.length > currentParts.length ? latestParts.length : currentParts.length;
+    final length = latestParts.length > currentParts.length
+        ? latestParts.length
+        : currentParts.length;
     for (var i = 0; i < length; i++) {
       final l = i < latestParts.length ? latestParts[i] : 0;
       final c = i < currentParts.length ? currentParts[i] : 0;
@@ -145,7 +153,10 @@ class UpdateService {
   }
 
   List<int> _numericParts(String version) {
-    return version.split(RegExp(r'[.+]')).map((e) => int.tryParse(e.trim()) ?? 0).toList();
+    return version
+        .split(RegExp(r'[.+]'))
+        .map((e) => int.tryParse(e.trim()) ?? 0)
+        .toList();
   }
 }
 

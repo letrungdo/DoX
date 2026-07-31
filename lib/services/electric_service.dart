@@ -9,8 +9,9 @@ class ElectricService {
 
   /// Several accounts can fetch concurrently, so the JWT is passed per
   /// request instead of being kept on the client.
-  Options _authOptions(String? accessToken) =>
-      Options(headers: {if (accessToken != null) "Authorization": "Bearer $accessToken"});
+  Options _authOptions(String? accessToken) => Options(
+    headers: {if (accessToken != null) "Authorization": "Bearer $accessToken"},
+  );
 
   Future<Result<ElectricAuthResponse>> login({
     required String username,

@@ -15,7 +15,11 @@ import 'package:do_x/utils/logger.dart';
 /// would silently throw away work the user believes is saved. A queue left by
 /// another account is discarded instead of replayed.
 class ChickenSyncQueue {
-  static const _version = 1;
+  // 2: dates switched from lunar to solar values. Ops queued by an older build
+  // carry lunar date strings, which would land in the solar columns as dates
+  // about a month out; there is no way to tell them apart afterwards, so a
+  // queue from an older version is dropped instead of replayed.
+  static const _version = 2;
 
   final List<PendingOp> _ops = [];
 

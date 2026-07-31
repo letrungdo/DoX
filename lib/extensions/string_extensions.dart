@@ -12,7 +12,8 @@ extension StringNullableExtensions on String? {
 
   String get toDashIfNull => this ?? "-";
 
-  String withStatusCode(int? statusCode) => statusCode == null ? toString() : '$this（$statusCode）';
+  String withStatusCode(int? statusCode) =>
+      statusCode == null ? toString() : '$this（$statusCode）';
 
   DateTime? toDateTime() {
     if (isNullOrEmpty) return null;
@@ -46,5 +47,6 @@ extension StringNullableExtensions on String? {
 }
 
 extension StringExtensions on String {
-  String get toCapitalized => length > 0 ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : '';
+  String get toCapitalized =>
+      length > 0 ? '${this[0].toUpperCase()}${substring(1).toLowerCase()}' : '';
 }

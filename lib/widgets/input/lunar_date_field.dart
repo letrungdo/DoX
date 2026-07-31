@@ -1,13 +1,11 @@
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/input/lunar_date_picker.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:flutter/material.dart';
 
-/// Date field for chicken dates. [value] is always the canonical lunar-valued
-/// date. When [useLunar] is true the user picks on the lunar calendar; when
-/// false a normal solar picker is shown and its result is converted back to a
-/// lunar value before [onChanged] fires, so storage stays lunar in both modes.
+/// Date field for chicken dates. [value] and the value passed to [onChanged]
+/// are solar dates; [useLunar] only decides whether the field shows the lunar
+/// date or the solar one.
 class LunarDateField extends StatelessWidget {
   final String label;
   final DateTime? value;
@@ -25,10 +23,9 @@ class LunarDateField extends StatelessWidget {
   Future<void> _pick(BuildContext context) async {
     // The picker's month grid shows both the solar day and its lunar date, so
     // it serves both display modes; only the field's own text differs.
-    final initial = value ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
     final picked = await showLunarDatePicker(
       context: context,
-      initialLunar: initial,
+      initialDate: value ?? DateTime.now(),
     );
     if (picked != null) onChanged(picked);
   }

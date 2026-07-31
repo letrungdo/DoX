@@ -36,8 +36,10 @@ class GlobalExpensesScreen extends StatefulScreen implements AutoRouteWrapper {
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
-  String _fmt(DateTime date) => ChickenDate.format(date, useLunar: vm.useLunarCalendar);
+class _GlobalExpensesScreenState
+    extends ScreenState<GlobalExpensesScreen, ChickenViewModel> {
+  String _fmt(DateTime date) =>
+      ChickenDate.format(date, useLunar: vm.useLunarCalendar);
   int _selectedYear = DateTime.now().year;
 
   /// The year to ask the server for; null when the picker is on "all", which
@@ -56,7 +58,11 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
   void _scrollToTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -79,7 +85,9 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
-        titleSuffix: AppBarSyncIcon<ChickenViewModel>(selector: (vm) => vm.isFetching),
+        titleSuffix: AppBarSyncIcon<ChickenViewModel>(
+          selector: (vm) => vm.isFetching,
+        ),
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
@@ -94,17 +102,23 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
             ...vm.yearsFor({ChickenSection.globalExpenses}),
           }.toList()..sort((a, b) => b.compareTo(a));
           final expenses = vm.globalExpenses.where((expense) {
-            return _selectedYear == 0 || vm.displayYear(expense.date) == _selectedYear;
+            return _selectedYear == 0 ||
+                vm.displayYear(expense.date) == _selectedYear;
           }).toList();
           // Stable sort by date desc so that, for the same date, the most
           // recently added record (kept at the front of the source list)
           // stays on top.
           mergeSort(expenses, compare: (a, b) => b.date.compareTo(a.date));
-          final total = expenses.fold<double>(0, (sum, expense) => sum + expense.amount);
+          final total = expenses.fold<double>(
+            0,
+            (sum, expense) => sum + expense.amount,
+          );
 
           return Column(
             children: [
-              const ChickenStaleBanner(sections: {ChickenSection.globalExpenses}),
+              const ChickenStaleBanner(
+                sections: {ChickenSection.globalExpenses},
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(
@@ -120,7 +134,9 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                         _scrollToTop();
                         // Another year means another read: the server only
                         // sent the one that was selected.
-                        vm.ensureLoaded({ChickenSection.globalExpenses}, year: _yearFilter);
+                        vm.ensureLoaded({
+                          ChickenSection.globalExpenses,
+                        }, year: _yearFilter);
                       },
                     ),
                     const SizedBox(width: 8),
@@ -130,7 +146,8 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => vm.loadData(sections: {ChickenSection.globalExpenses}),
+                  onRefresh: () =>
+                      vm.loadData(sections: {ChickenSection.globalExpenses}),
                   child: expenses.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -141,21 +158,36 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                                 child: vm.isLoading
                                     ? const SizedBox.shrink()
                                     : Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Assets.images.feedCute.svg(width: 72, height: 72),
+                                          Assets.images.feedCute.svg(
+                                            width: 72,
+                                            height: 72,
+                                          ),
                                           const SizedBox(height: 16),
                                           Text(
                                             vm.globalExpenses.isEmpty
                                                 ? l10n.noCommonExpenses
-                                                : l10n.noCommonExpensesInYear(_selectedYear),
-                                            style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
+                                                : l10n.noCommonExpensesInYear(
+                                                    _selectedYear,
+                                                  ),
+                                            style: TextStyle(
+                                              color: context
+                                                  .theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                           ),
                                           if (vm.globalExpenses.isEmpty) ...[
                                             const SizedBox(height: 16),
                                             NeuButton(
-                                              onPressed: () => _showExpenseDialog(),
-                                              accent: context.theme.colorScheme.primary,
+                                              onPressed: () =>
+                                                  _showExpenseDialog(),
+                                              accent: context
+                                                  .theme
+                                                  .colorScheme
+                                                  .primary,
                                               child: Text(l10n.addFirstExpense),
                                             ),
                                           ],
@@ -170,7 +202,8 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                           itemCount: expenses.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 14),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 14),
                           itemBuilder: (context, index) {
                             final expense = expenses[index];
                             return ChickenListTileCard(
@@ -178,19 +211,29 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
                               leading: _expenseSvg(expense.type),
                               title: Row(
                                 children: [
-                                  ChickenChangeBadge(vm.changeBadgeOf(expense.id), leading: true),
+                                  ChickenChangeBadge(
+                                    vm.changeBadgeOf(expense.id),
+                                    leading: true,
+                                  ),
                                   Flexible(
                                     child: Text(
-                                      expense.note ?? _expenseLabel(expense.type),
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                      expense.note ??
+                                          _expenseLabel(expense.type),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                              subtitle: Text("${_fmt(expense.date)} · ${_expenseLabel(expense.type)}"),
+                              subtitle: Text(
+                                "${_fmt(expense.date)} · ${_expenseLabel(expense.type)}",
+                              ),
                               trailing: Text(
                                 "${expense.amount.toCurrency()}đ",
-                                style: DoTextTheme.listAmount.copyWith(color: context.colors.money),
+                                style: DoTextTheme.listAmount.copyWith(
+                                  color: context.colors.money,
+                                ),
                               ),
                             );
                           },
@@ -228,9 +271,11 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
           return true;
         } catch (error) {
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(context.errorSnackBar(l10n.saveCommonExpenseFailed(error.toString())));
+            ScaffoldMessenger.of(context).showSnackBar(
+              context.errorSnackBar(
+                l10n.saveCommonExpenseFailed(error.toString()),
+              ),
+            );
           }
           return false;
         }
@@ -251,7 +296,10 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
         onConfirm: () => Navigator.pop(context, true),
         children: [
           Text(
-            l10n.confirmDeleteCommonExpense(_fmt(expense.date), '${expense.amount.toCurrency()}đ'),
+            l10n.confirmDeleteCommonExpense(
+              _fmt(expense.date),
+              '${expense.amount.toCurrency()}đ',
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -263,9 +311,11 @@ class _GlobalExpensesScreenState extends ScreenState<GlobalExpensesScreen, Chick
       await vm.deleteGlobalExpense(expense.id);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(context.errorSnackBar(l10n.deleteCommonExpenseFailed(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          context.errorSnackBar(
+            l10n.deleteCommonExpenseFailed(error.toString()),
+          ),
+        );
       }
     }
   }

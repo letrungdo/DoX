@@ -123,7 +123,7 @@ class ChickenViewModel extends CoreViewModel {
   bool _useLunarCalendar = storageService.getChickenLunarDisplay();
 
   /// Whether chicken dates are displayed on the lunar calendar (default) or
-  /// converted to the solar calendar. Stored dates are always lunar values.
+  /// on the solar one. Stored dates are always solar values.
   bool get useLunarCalendar => _useLunarCalendar;
 
   Future<void> setUseLunarCalendar(bool value) async {
@@ -140,12 +140,12 @@ class ChickenViewModel extends CoreViewModel {
   /// sales and expenses alike.
   RecordChange? changeBadgeOf(String id) => _recentChanges.statusOf(id);
 
-  /// Year of a stored (lunar) [date] in the currently displayed calendar:
+  /// Year of a stored (solar) [date] in the currently displayed calendar:
   /// the lunar year in lunar mode, the solar year in solar mode. Used by the
   /// year filters/grouping so they match the statistics.
   int displayYear(DateTime date) => _useLunarCalendar
-      ? date.year
-      : LunarCalendar.lunarDateTimeToSolar(date).year;
+      ? LunarCalendar.solarToLunar(date.day, date.month, date.year).year
+      : date.year;
 
   StreamSubscription<AuthState>? _authSub;
 
@@ -153,7 +153,10 @@ class ChickenViewModel extends CoreViewModel {
   // The screens show the data cached from the previous session right away and
   // refresh from the API in the background, so opening the tab is never empty.
 
-  static const _cacheVersion = 3;
+  // 4: dates switched from lunar to solar values. A cache written by an older
+  // build holds lunar dates, which this build would read as solar and show
+  // about a month out, so it has to be discarded rather than migrated.
+  static const _cacheVersion = 4;
   static const _cacheSaveDelay = Duration(milliseconds: 500);
 
   bool _cacheRestored = false;
@@ -566,12 +569,24 @@ class ChickenViewModel extends CoreViewModel {
     return task;
   }
 
+  /// The year to ask the server for when the screens are filtering on [year] of
+  /// the displayed calendar.
+  ///
+  /// Stored dates are solar and the server answers for stored years
+  /// `[year - 1, year]`. A lunar year runs from late January of the same solar
+  /// year into January of the next one, so showing lunar year Y needs solar
+  /// years `[Y, Y + 1]` — which is exactly the window the server gives for
+  /// `Y + 1`.
+  int? _serverYearFor(int? year) =>
+      year == null ? null : (_useLunarCalendar ? year + 1 : year);
+
   /// Merges a year-filtered read into what is already in memory.
   ///
   /// The server answers for stored years `[year - 1, year]`, so records outside
   /// that window were never part of the answer and have to survive — otherwise
   /// switching the year filter would throw away every other year. Within the
-  /// window the server is the authority.
+  /// window the server is the authority. [year] here is the *server* year, the
+  /// one [_serverYearFor] produced.
   List<T> _mergeYearWindow<T>(
     List<T> fetched,
     List<T> existing,
@@ -604,10 +619,13 @@ class ChickenViewModel extends CoreViewModel {
     _fetching = true;
     if (showLoading) _loading = true;
     notifyListenersSafe();
+    // The screens filter on the displayed calendar; the server stores solar
+    // dates and knows nothing about the setting.
+    final serverYear = _serverYearFor(year);
     try {
       final data = await _repository.getChickenData(
         sections: sections,
-        year: year,
+        year: serverYear,
       );
       final batches = data.batches;
       if (batches != null) {
@@ -621,7 +639,7 @@ class ChickenViewModel extends CoreViewModel {
               .where((b) => !_pendingDeletedBatchIds.contains(b.id))
               .toList(),
           _batches,
-          year,
+          serverYear,
           (b) => b.incubationDate.year,
           (b) => b.id,
         );
@@ -634,7 +652,7 @@ class ChickenViewModel extends CoreViewModel {
         _globalCockSales = _mergeYearWindow(
           data.globalCockSales!,
           _globalCockSales,
-          year,
+          serverYear,
           (s) => s.date.year,
           (s) => s.id,
         );
@@ -647,7 +665,7 @@ class ChickenViewModel extends CoreViewModel {
         _globalExpenses = _mergeYearWindow(
           data.globalExpenses!,
           _globalExpenses,
-          year,
+          serverYear,
           (e) => e.date.year,
           (e) => e.id,
         );
@@ -769,12 +787,9 @@ class ChickenViewModel extends CoreViewModel {
     final index = _batches.indexWhere((e) => e.id == batch.id);
     if (index == -1) return;
     final previousBatch = _batches[index];
-    // Dates are lunar values; measure the shift in real (solar) days so the
-    // vaccination schedule moves by the same physical amount.
-    final incubationDateDelta =
-        LunarCalendar.lunarDateTimeToSolar(batch.incubationDate).difference(
-          LunarCalendar.lunarDateTimeToSolar(previousBatch.incubationDate),
-        );
+    final incubationDateDelta = batch.incubationDate.difference(
+      previousBatch.incubationDate,
+    );
     final updatedBatch = incubationDateDelta == Duration.zero
         ? batch
         : batch.shiftVaccinationSchedule(incubationDateDelta);
@@ -1068,20 +1083,12 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   List<Vaccination> _getDefaultVaccinationSchedule(DateTime incubationDate) {
-    // [incubationDate] is a lunar-valued date. The offsets below are real
-    // (biological) day counts, so compute them in the solar calendar and store
-    // the result back as lunar values to stay consistent with the rest of the
-    // data.
-    final hatchSolar = LunarCalendar.lunarDateTimeToSolar(
-      incubationDate,
-    ).add(const Duration(days: 21));
+    final hatchDate = incubationDate.add(const Duration(days: 21));
 
     Vaccination vaccination(String title, int daysAfterHatch) => Vaccination(
       id: _uuid.v4(),
       title: title,
-      scheduledDate: LunarCalendar.solarToLunarDateTime(
-        hatchSolar.add(Duration(days: daysAfterHatch)),
-      ),
+      scheduledDate: hatchDate.add(Duration(days: daysAfterHatch)),
     );
 
     return [
@@ -1150,10 +1157,10 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   void _accumulateStats(_MutableStats? Function(DateTime date) bucketOf) {
-    // Stored dates are lunar values. In lunar mode the buckets are lunar
-    // year/month; in solar mode convert first so stats group by solar dates.
+    // Stored dates are solar. In lunar mode the buckets are lunar year/month,
+    // so convert first; in solar mode the date is already the bucket.
     DateTime bucketDate(DateTime date) =>
-        _useLunarCalendar ? date : LunarCalendar.lunarDateTimeToSolar(date);
+        _useLunarCalendar ? LunarCalendar.solarToLunarDateTime(date) : date;
 
     void addSale(CockSale sale) {
       final bucket = bucketOf(bucketDate(sale.date));

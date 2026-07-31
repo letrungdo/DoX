@@ -11,8 +11,15 @@ class BatchSale {
   final double amount;
   final String? note;
 
-  BatchSale({required this.id, required this.date, required this.quantity, required this.amount, this.note});
+  BatchSale({
+    required this.id,
+    required this.date,
+    required this.quantity,
+    required this.amount,
+    this.note,
+  });
 
-  factory BatchSale.fromJson(Map<String, dynamic> json) => _$BatchSaleFromJson(json);
+  factory BatchSale.fromJson(Map<String, dynamic> json) =>
+      _$BatchSaleFromJson(json);
   Map<String, dynamic> toJson() => _$BatchSaleToJson(this);
 }

@@ -20,7 +20,10 @@ import 'package:flutter/cupertino.dart';
 class LocketService {
   final dio = DioClient.createLocket();
 
-  Future<Result<UserInfoData>> fetchUserV2({required UserModel? user, CancelToken? cancelToken}) {
+  Future<Result<UserInfoData>> fetchUserV2({
+    required UserModel? user,
+    CancelToken? cancelToken,
+  }) {
     return Result.guardFuture<UserInfoData>(() async {
       final response = await dio.post(
         '/fetchUserV2', //
@@ -52,7 +55,12 @@ class LocketService {
     required List<Color?>? bgColors,
   }) {
     final overlayName = overlayType.name;
-    final colors = bgColors?.where((e) => e != null).map(((e) => e.toHexString(includeAlpha: false))).toList() ?? [];
+    final colors =
+        bgColors
+            ?.where((e) => e != null)
+            .map(((e) => e.toHexString(includeAlpha: false)))
+            .toList() ??
+        [];
 
     switch (overlayType) {
       case OverlayType.standard:
@@ -65,7 +73,10 @@ class LocketService {
               "text_color": textColor.toHexString(),
               // "text_color": "#FFFFFFE6",
               "type": overlayName,
-              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
+              "max_lines": {
+                "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                "value": "4",
+              },
               "text": text,
             },
             "alt_text": text,
@@ -82,11 +93,17 @@ class LocketService {
               "background": {"material_blur": "regular", "colors": []},
               "payload": {
                 "comment": reviewCaption,
-                "rating": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": reviewRating},
+                "rating": {
+                  "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                  "value": reviewRating,
+                },
               },
               "text_color": "#FFFFFFE6",
               "type": overlayName,
-              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "4"},
+              "max_lines": {
+                "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                "value": "4",
+              },
               "text": text,
             },
             "alt_text": text,
@@ -101,12 +118,19 @@ class LocketService {
         return [
           {
             "data": {
-              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
+              "max_lines": {
+                "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                "value": "1",
+              },
               "payload": {},
               "text": text,
               "background": {"material_blur": "regular", "colors": []},
               "type": overlayName,
-              "icon": {"color": "#24B0FF", "data": "location.fill", "type": "sf_symbol"},
+              "icon": {
+                "color": "#24B0FF",
+                "data": "location.fill",
+                "type": "sf_symbol",
+              },
               "text_color": "#FFFFFFE6",
             },
             "alt_text": text,
@@ -122,7 +146,10 @@ class LocketService {
         return [
           {
             "data": {
-              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
+              "max_lines": {
+                "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                "value": "1",
+              },
               "payload": {
                 "temperature": weather.temperature2m.celsiusToFahrenheit(),
                 "wk_condition": data?.description,
@@ -135,7 +162,11 @@ class LocketService {
               "text": text,
               "background": {"colors": []},
               "type": overlayName,
-              "icon": {"color": "#FFFFFF", "data": data.symbolName(weather.isDaylight), "type": "sf_symbol"},
+              "icon": {
+                "color": "#FFFFFF",
+                "data": data.symbolName(weather.isDaylight),
+                "type": "sf_symbol",
+              },
               "text_color": "#FFFFFFE6",
             },
             "alt_text": text,
@@ -150,12 +181,19 @@ class LocketService {
         return [
           {
             "data": {
-              "max_lines": {"@type": "type.googleapis.com/google.protobuf.Int64Value", "value": "1"},
+              "max_lines": {
+                "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                "value": "1",
+              },
               "payload": {"date": date},
               "text": text,
               "background": {"material_blur": "regular", "colors": []},
               "type": overlayName,
-              "icon": {"type": "sf_symbol", "color": "#FFFFFFCC", "data": "clock.fill"},
+              "icon": {
+                "type": "sf_symbol",
+                "color": "#FFFFFFCC",
+                "data": "clock.fill",
+              },
               "text_color": "#FFFFFFE6",
             },
             "alt_text": text,

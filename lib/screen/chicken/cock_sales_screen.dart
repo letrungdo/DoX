@@ -10,7 +10,7 @@ import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -358,8 +358,7 @@ class _CockSalesScreenState
       text: sale == null ? '' : sale.amount.toCurrency(),
     );
     final noteController = TextEditingController(text: sale?.note ?? '');
-    DateTime saleDate =
-        sale?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
+    DateTime saleDate = sale?.date ?? DateTime.now().dateOnly;
     SaleCategory category = sale?.category ?? SaleCategory.fighting;
     String? amountError;
 

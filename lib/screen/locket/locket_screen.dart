@@ -45,7 +45,8 @@ class LocketScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScreen, V> {
+class _HomeScreenState<V extends LocketViewModel>
+    extends ScreenState<LocketScreen, V> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,7 +110,11 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                       ),
                       height: height, //
                       width: height,
-                      child: DoCamera(key: cameraKey, imgData: data, parentSize: height),
+                      child: DoCamera(
+                        key: cameraKey,
+                        imgData: data,
+                        parentSize: height,
+                      ),
                     ),
                     if (data != null) _buildOverlays(context, height: height),
                   ],
@@ -164,8 +169,12 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                           action: vm.cancelUpload,
                           cameraAction: vm.toggleFlash,
                           icon: SFIcons.sf_xmark,
-                          cameraIcon: flashMode == FlashMode.off ? SFIcons.sf_bolt : SFIcons.sf_bolt_fill,
-                          cameraIconColor: flashMode == FlashMode.always ? Colors.amber : null,
+                          cameraIcon: flashMode == FlashMode.off
+                              ? SFIcons.sf_bolt
+                              : SFIcons.sf_bolt_fill,
+                          cameraIconColor: flashMode == FlashMode.always
+                              ? Colors.amber
+                              : null,
                         ),
                       ),
                     ),
@@ -186,7 +195,8 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
                           action: vm.showOverlaysModal,
                           cameraAction: vm.switchCamera,
                           icon: SFIcons.sf_wand_and_rays,
-                          cameraIcon: SFIcons.sf_arrow_trianglehead_2_clockwise_rotate_90,
+                          cameraIcon: SFIcons
+                              .sf_arrow_trianglehead_2_clockwise_rotate_90,
                         ),
                       ),
                     ),
@@ -210,7 +220,12 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
   }) {
     return IconButton(
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints(minWidth: size, maxWidth: size, minHeight: size, maxHeight: size),
+      constraints: BoxConstraints(
+        minWidth: size,
+        maxWidth: size,
+        minHeight: size,
+        maxHeight: size,
+      ),
       onPressed: () => isCameraMode ? cameraAction.call() : action.call(), //
       icon: SFIcon(
         isCameraMode ? cameraIcon : icon,
@@ -221,7 +236,10 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
     );
   }
 
-  Widget _buildActionButton({required bool isCameraMode, required bool isBusy}) {
+  Widget _buildActionButton({
+    required bool isCameraMode,
+    required bool isBusy,
+  }) {
     return SizedBox(
       width: 63,
       height: 63,
@@ -249,7 +267,9 @@ class _HomeScreenState<V extends LocketViewModel> extends ScreenState<LocketScre
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: isBusy ? null : () => isCameraMode ? vm.capture() : vm.startUpload(), //
+              onTap: isBusy
+                  ? null
+                  : () => isCameraMode ? vm.capture() : vm.startUpload(), //
               customBorder: CircleBorder(),
             ),
           ),

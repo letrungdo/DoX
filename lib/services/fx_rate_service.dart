@@ -21,7 +21,8 @@ class FxRateService {
       // push cadence (see CoinChartMixin._bucketMs). Only recent points are
       // charted, so keep countBack small.
       final response = await dio.get(
-        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=1m&code=$codes&countBack=60'.withProxy(),
+        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=1m&code=$codes&countBack=60'
+            .withProxy(),
         cancelToken: cancelToken,
       );
       final data = MarketResponse.fromJson(response.data);
@@ -41,7 +42,8 @@ class FxRateService {
   }) {
     return Result.guardFuture(() async {
       final response = await dio.get(
-        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=$timeframe&code=${code.code}&countBack=$countBack'.withProxy(),
+        'https://api.finpath.vn/api/tradingview/v2/bars/many/all/get?timeframe=$timeframe&code=${code.code}&countBack=$countBack'
+            .withProxy(),
         cancelToken: cancelToken,
       );
       final data = MarketResponse.fromJson(response.data);
@@ -60,7 +62,8 @@ class FxRateService {
       final rows = await supabase.from('fx_rates').select('code, rate');
 
       return {
-        for (final row in rows) row['code'] as String: (row['rate'] as num).toDouble(),
+        for (final row in rows)
+          row['code'] as String: (row['rate'] as num).toDouble(),
       };
     });
   }
@@ -83,5 +86,4 @@ class FxRateService {
           .toList();
     });
   }
-
 }
