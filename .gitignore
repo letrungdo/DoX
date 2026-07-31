@@ -54,3 +54,6 @@ android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 # Local chicken-date migration manifest and backup.
 tool/.chicken_dates_migrated.json
+
+# Supabase CLI state is machine-specific; migration SQL stays versioned.
+supabase/.temp/
