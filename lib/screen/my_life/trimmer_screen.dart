@@ -31,13 +31,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
 
   late VideoEditorController _controller = _createController(widget.file);
 
-  VideoEditorController _createController(File file) => VideoEditorController.file(
-    file,
-    minDuration: const Duration(milliseconds: 500),
-    maxDuration: const Duration(seconds: 10),
-    trimThumbnailsQuality: 20,
-    coverThumbnailsQuality: 20,
-  );
+  VideoEditorController _createController(File file) =>
+      VideoEditorController.file(
+        file,
+        minDuration: const Duration(milliseconds: 500),
+        maxDuration: const Duration(seconds: 10),
+        trimThumbnailsQuality: 20,
+        coverThumbnailsQuality: 20,
+      );
 
   @override
   void initState() {
@@ -72,7 +73,9 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
 
   Future<String?> _normalizeVideo(File file) async {
     try {
-      return await VideoEditorBuilder(videoPath: file.path).compress(resolution: VideoResolution.p720).export();
+      return await VideoEditorBuilder(
+        videoPath: file.path,
+      ).compress(resolution: VideoResolution.p720).export();
     } catch (e) {
       debugPrint('TrimmerScreen normalize failed: $e');
       return null;
@@ -87,14 +90,18 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     super.dispose();
   }
 
-  void _showErrorSnackBar(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 1)));
+  void _showErrorSnackBar(String message) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+      );
 
   Future<void> _exportVideo() async {
     _exportingProgress.value = 0;
     _isExporting.value = true;
-    final [videoPath, thumbnailData] = await Future.wait([_trimVideo(), _getThumbnail()]);
+    final [videoPath, thumbnailData] = await Future.wait([
+      _trimVideo(),
+      _getThumbnail(),
+    ]);
     _isExporting.value = false;
     if (videoPath == null || thumbnailData == null) {
       return;
@@ -132,7 +139,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                 kind: DialogActionKind.cancel,
                 onPressed: () => Navigator.pop(ctx, false),
               ),
-              DialogActionButton(text: l10n.reduceTo480p, onPressed: () => Navigator.pop(ctx, true)),
+              DialogActionButton(
+                text: l10n.reduceTo480p,
+                onPressed: () => Navigator.pop(ctx, true),
+              ),
             ],
           ),
         ],
@@ -154,7 +164,9 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     return reduced;
   }
 
-  Future<String?> _trimVideo({VideoResolution resolution = VideoResolution.p720}) async {
+  Future<String?> _trimVideo({
+    VideoResolution resolution = VideoResolution.p720,
+  }) async {
     try {
       final editor = VideoEditorBuilder(videoPath: _controller.file.path).trim(
         startTimeMs: _controller.startTrim.inMilliseconds, //
@@ -182,7 +194,9 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
       final data = await VideoThumbnail.thumbnailData(
         video: _controller.file.path,
         imageFormat: ImageFormat.JPEG,
-        timeMs: _controller.selectedCoverVal?.timeMs ?? _controller.startTrim.inMilliseconds,
+        timeMs:
+            _controller.selectedCoverVal?.timeMs ??
+            _controller.startTrim.inMilliseconds,
         quality: 100,
       );
       if (data == null) return null;
@@ -192,15 +206,28 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
       }
 
       // No crop selected -> return the thumbnail as-is.
-      if (_controller.minCrop <= minOffset && _controller.maxCrop >= maxOffset) {
+      if (_controller.minCrop <= minOffset &&
+          _controller.maxCrop >= maxOffset) {
         return data;
       }
 
       // crop fractions (0..1) applied to the ACTUAL decoded image size, clamped to bounds.
-      final x = (image.width * _controller.minCrop.dx).round().clamp(0, image.width - 1);
-      final y = (image.height * _controller.minCrop.dy).round().clamp(0, image.height - 1);
-      final w = (image.width * (_controller.maxCrop.dx - _controller.minCrop.dx)).round().clamp(1, image.width - x);
-      final h = (image.height * (_controller.maxCrop.dy - _controller.minCrop.dy)).round().clamp(1, image.height - y);
+      final x = (image.width * _controller.minCrop.dx).round().clamp(
+        0,
+        image.width - 1,
+      );
+      final y = (image.height * _controller.minCrop.dy).round().clamp(
+        0,
+        image.height - 1,
+      );
+      final w =
+          (image.width * (_controller.maxCrop.dx - _controller.minCrop.dx))
+              .round()
+              .clamp(1, image.width - x);
+      final h =
+          (image.height * (_controller.maxCrop.dy - _controller.minCrop.dy))
+              .round()
+              .clamp(1, image.height - y);
 
       final cropped = img.copyCrop(image, x: x, y: y, width: w, height: h);
       return Uint8List.fromList(img.encodeJpg(cropped));
@@ -224,12 +251,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         appBar: DoAppBar(
           actions: [
             IconButton(
-              onPressed: () => _controller.rotate90Degrees(RotateDirection.left),
+              onPressed: () =>
+                  _controller.rotate90Degrees(RotateDirection.left),
               icon: const Icon(Icons.rotate_left),
               tooltip: 'Rotate unclockwise',
             ),
             IconButton(
-              onPressed: () => _controller.rotate90Degrees(RotateDirection.right),
+              onPressed: () =>
+                  _controller.rotate90Degrees(RotateDirection.right),
               icon: const Icon(Icons.rotate_right),
               tooltip: 'Rotate clockwise',
             ),
@@ -237,7 +266,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
             ValueListenableBuilder(
               valueListenable: _isExporting,
               builder: (context, value, _) {
-                return IconButton(onPressed: value ? null : _exportVideo, icon: const Icon(Icons.save));
+                return IconButton(
+                  onPressed: value ? null : _exportVideo,
+                  icon: const Icon(Icons.save),
+                );
               },
             ),
           ],
@@ -271,8 +303,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                                 child: Container(
                                   width: 40,
                                   height: 40,
-                                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                  child: const Icon(Icons.play_arrow, color: Colors.black),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.black,
+                                  ),
                                 ),
                               ),
                             ),
@@ -293,14 +331,20 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Padding(padding: EdgeInsets.all(5), child: Icon(Icons.content_cut)),
+                              Padding(
+                                padding: EdgeInsets.all(5),
+                                child: Icon(Icons.content_cut),
+                              ),
                               Text('Trim'),
                             ],
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Padding(padding: EdgeInsets.all(5), child: Icon(Icons.video_label)),
+                              Padding(
+                                padding: EdgeInsets.all(5),
+                                child: Icon(Icons.video_label),
+                              ),
                               Text('Cover'),
                             ],
                           ),
@@ -310,7 +354,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                         child: TabBarView(
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
-                            Column(mainAxisAlignment: MainAxisAlignment.center, children: _trimSlider()),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: _trimSlider(),
+                            ),
                             _coverSelection(),
                           ],
                         ),
@@ -320,13 +367,17 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                 ),
                 ValueListenableBuilder(
                   valueListenable: _isExporting,
-                  builder: (_, bool export, Widget? child) =>
-                      AnimatedSize(duration: kThemeAnimationDuration, child: export ? child : null),
+                  builder: (_, bool export, Widget? child) => AnimatedSize(
+                    duration: kThemeAnimationDuration,
+                    child: export ? child : null,
+                  ),
                   child: AlertDialog(
                     title: ValueListenableBuilder(
                       valueListenable: _exportingProgress,
-                      builder: (_, double value, _) =>
-                          Text("Exporting video ${(value * 100).ceil()}%", style: const TextStyle(fontSize: 12)),
+                      builder: (_, double value, _) => Text(
+                        "Exporting video ${(value * 100).ceil()}%",
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ),
                 ),
@@ -379,7 +430,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
           controller: _controller,
           height: height,
           horizontalMargin: height / 4,
-          child: TrimTimeline(controller: _controller, padding: const EdgeInsets.only(top: 10)),
+          child: TrimTimeline(
+            controller: _controller,
+            padding: const EdgeInsets.only(top: 10),
+          ),
         ),
       ),
     ];
@@ -399,7 +453,10 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
                 alignment: Alignment.center,
                 children: [
                   cover,
-                  Icon(Icons.check_circle, color: const CoverSelectionStyle().selectedBorderColor),
+                  Icon(
+                    Icons.check_circle,
+                    color: const CoverSelectionStyle().selectedBorderColor,
+                  ),
                 ],
               );
             },

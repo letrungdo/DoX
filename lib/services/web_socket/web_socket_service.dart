@@ -14,7 +14,8 @@ class WebSocketService {
 
   WebSocketChannel? _channel;
 
-  final StreamController<RatePushModel> _rateController = StreamController.broadcast();
+  final StreamController<RatePushModel> _rateController =
+      StreamController.broadcast();
   Stream<RatePushModel> get rateStream => _rateController.stream;
 
   StreamSubscription<dynamic>? _streamSubscription;
@@ -118,7 +119,9 @@ class WebSocketService {
     if (_manuallyClosed || !context.mounted) return;
     if (_retryCount < _maxRetries) {
       _retryCount++;
-      debugPrint('[PUSH] reconnecting silently, attempt $_retryCount/$_maxRetries');
+      debugPrint(
+        '[PUSH] reconnecting silently, attempt $_retryCount/$_maxRetries',
+      );
       _retryTimer?.cancel();
       _retryTimer = Timer(Duration(seconds: 2 * _retryCount), () {
         if (!context.mounted) return;

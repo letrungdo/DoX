@@ -21,6 +21,8 @@ extension ColorExtensions on Color? {
   Color? getTextColor() {
     final color = this;
     if (color == null) return null;
-    return color.computeLuminance() > 0.5 ? Color.fromARGB(255, 2, 22, 59) : Color(0xFFFFFFE6);
+    return color.computeLuminance() > 0.5
+        ? Color.fromARGB(255, 2, 22, 59)
+        : Color(0xFFFFFFE6);
   }
 }

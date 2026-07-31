@@ -69,7 +69,8 @@ mixin CoinChartMixin on CoreViewModel {
     final points = List<double>.from(chartData.chartData);
     final times = List<DateTime>.from(chartData.times);
 
-    final inCurrentBucket = points.isNotEmpty &&
+    final inCurrentBucket =
+        points.isNotEmpty &&
         times.isNotEmpty &&
         times.last.millisecondsSinceEpoch == bucketMs;
 

@@ -6,19 +6,18 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 /// Shows a month-grid date picker where every cell shows the solar day with
-/// its lunar date underneath (like the Lunar tab). [initialLunar] and the
-/// returned value are lunar-valued [DateTime]s. Returns null on cancel.
+/// its lunar date underneath (like the Lunar tab). [initialDate] and the
+/// returned value are solar dates. Returns null on cancel.
 Future<DateTime?> showLunarDatePicker({
   required BuildContext context,
-  required DateTime initialLunar,
+  required DateTime initialDate,
   int firstYear = 2000,
   int lastYear = 2100,
 }) {
-  final initialSolar = LunarCalendar.lunarDateTimeToSolar(initialLunar);
   return showDialog<DateTime>(
     context: context,
     builder: (_) => _LunarCalendarPickerDialog(
-      initialSolar: initialSolar,
+      initialSolar: initialDate,
       firstDay: DateTime(firstYear),
       lastDay: DateTime(lastYear, 12, 31),
     ),
@@ -105,10 +104,7 @@ class _LunarCalendarPickerDialogState
           child: Text(materialL10n.cancelButtonLabel),
         ),
         TextButton(
-          onPressed: () => Navigator.pop(
-            context,
-            LunarCalendar.solarToLunarDateTime(_selected),
-          ),
+          onPressed: () => Navigator.pop(context, _selected),
           child: Text(materialL10n.okButtonLabel),
         ),
       ],
@@ -279,7 +275,9 @@ class _LunarCalendarPickerDialogState
                 ),
                 if (showLunarMonth)
                   TextSpan(
-                    text: '/${lunar.month}',
+                    // "N" marks a leap month, so the two month sixes of a leap
+                    // year are told apart at a glance.
+                    text: '/${lunar.month}${lunar.isLeap ? 'N' : ''}',
                     style: const TextStyle(fontWeight: FontWeight.w400),
                   ),
               ],

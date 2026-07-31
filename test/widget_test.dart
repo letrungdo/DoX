@@ -17,11 +17,9 @@ void main() {
     expect(storageService.getChickenNotificationsEnabled(), isTrue);
   });
 
-  // Stored dates are lunar values but the shift is a real, physical number of
-  // days, so it has to be applied in the solar calendar and converted back —
-  // adding the duration to the lunar DateTime would drift by however much the
-  // lunar and solar months differ in length.
-  test('shifts vaccination dates by real days, not lunar ones', () {
+  // Stored dates are solar, so a shift is plain day arithmetic — including
+  // across a month boundary.
+  test('shifts vaccination dates by whole days', () {
     final batch = ChickenBatch(
       id: 'batch-1',
       name: 'Lứa 1',
@@ -38,11 +36,7 @@ void main() {
 
     final shifted = batch.shiftVaccinationSchedule(const Duration(days: 3));
 
-    // Lunar month 7 of 2026 ends on the 29th, so three real days later is the
-    // 3rd of lunar month 8. (Adding 3 days to the raw DateTime would say
-    // 2026-08-01, because the *solar* July has 31 days — the drift this
-    // conversion exists to avoid.)
-    expect(shifted.vaccinations.single.scheduledDate, DateTime(2026, 8, 3));
+    expect(shifted.vaccinations.single.scheduledDate, DateTime(2026, 8, 1));
   });
 
   test('shifting by zero leaves the schedule untouched', () {

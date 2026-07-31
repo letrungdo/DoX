@@ -109,10 +109,7 @@ class _AppRouter extends RootStackRouter {
       ),
       AutoRoute(path: '/login', page: AppLoginRoute.page),
       AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
-      AutoRoute(
-        path: '/feng-shui-compass',
-        page: FengShuiCompassRoute.page,
-      ),
+      AutoRoute(path: '/feng-shui-compass', page: FengShuiCompassRoute.page),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       RedirectRoute(path: '*', redirectTo: '/'),
     ];

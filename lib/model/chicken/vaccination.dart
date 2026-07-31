@@ -16,7 +16,8 @@ class Vaccination {
     this.isCompleted = false,
   });
 
-  factory Vaccination.fromJson(Map<String, dynamic> json) => _$VaccinationFromJson(json);
+  factory Vaccination.fromJson(Map<String, dynamic> json) =>
+      _$VaccinationFromJson(json);
   Map<String, dynamic> toJson() => _$VaccinationToJson(this);
 
   Vaccination copyWith({

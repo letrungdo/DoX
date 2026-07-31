@@ -76,7 +76,9 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     if (xFile == null) return;
     if (!context.mounted) return;
 
-    final result = await context.router.push<List<dynamic>?>(TrimmerRoute(file: File(xFile.path)));
+    final result = await context.router.push<List<dynamic>?>(
+      TrimmerRoute(file: File(xFile.path)),
+    );
     if (result == null) return;
     final [videoPath, coverData] = result;
     if (videoPath == null) {
@@ -143,7 +145,9 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
               ...OverlayType.values.mapIndexed((index, type) {
                 return TextButton(
                   style: ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(context.theme.colorScheme.primaryContainer), //
+                    backgroundColor: WidgetStatePropertyAll(
+                      context.theme.colorScheme.primaryContainer,
+                    ), //
                   ),
                   onPressed: () {
                     carouselController.jumpToPage(index);
@@ -166,15 +170,27 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
                     // OverlayType.music =>
                     OverlayType.location => Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [Icon(Icons.location_on), SizedBox(width: 4), Text("Location")],
+                      children: [
+                        Icon(Icons.location_on),
+                        SizedBox(width: 4),
+                        Text("Location"),
+                      ],
                     ),
                     OverlayType.weather => Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [SFIcon(SFIcons.sf_sun_max_fill, fontSize: 16), SizedBox(width: 4), Text("Weather")],
+                      children: [
+                        SFIcon(SFIcons.sf_sun_max_fill, fontSize: 16),
+                        SizedBox(width: 4),
+                        Text("Weather"),
+                      ],
                     ),
                     OverlayType.time => Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [SFIcon(SFIcons.sf_clock, fontSize: 16), SizedBox(width: 4), Text("Time")],
+                      children: [
+                        SFIcon(SFIcons.sf_clock, fontSize: 16),
+                        SizedBox(width: 4),
+                        Text("Time"),
+                      ],
                     ),
                   },
                 );
@@ -207,7 +223,9 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
   }
 
   Future<String?> _uploadVideo(Uint8List videoCompressed) async {
-    logger.d("upload video size: ${(videoCompressed.lengthInBytes / 1024 / 1024).toStringAsFixed(2)} MB");
+    logger.d(
+      "upload video size: ${(videoCompressed.lengthInBytes / 1024 / 1024).toStringAsFixed(2)} MB",
+    );
     final uploadRes = await _uploadService.uploadVideo(
       data: videoCompressed, //
       user: appData.user!,

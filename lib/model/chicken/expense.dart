@@ -2,13 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'expense.g.dart';
 
-enum ExpenseType {
-  feed,
-  medicine,
-  electricity,
-  water,
-  other,
-}
+enum ExpenseType { feed, medicine, electricity, water, other }
 
 @JsonSerializable()
 class Expense {
@@ -26,6 +20,7 @@ class Expense {
     this.note,
   });
 
-  factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
+  factory Expense.fromJson(Map<String, dynamic> json) =>
+      _$ExpenseFromJson(json);
   Map<String, dynamic> toJson() => _$ExpenseToJson(this);
 }

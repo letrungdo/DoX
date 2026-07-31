@@ -62,12 +62,15 @@ class _CuteBarChartState extends State<CuteBarChart> {
 
   bool get _hasCompare => widget.items.any((e) => e.compareValue != null);
 
-  String _format(double value) => widget.formatValue?.call(value) ?? value.toStringAsFixed(1);
+  String _format(double value) =>
+      widget.formatValue?.call(value) ?? value.toStringAsFixed(1);
 
   @override
   void didUpdateWidget(covariant CuteBarChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_selected != null && _selected! >= widget.items.length) _selected = null;
+    if (_selected != null && _selected! >= widget.items.length) {
+      _selected = null;
+    }
   }
 
   @override
@@ -97,8 +100,12 @@ class _CuteBarChartState extends State<CuteBarChart> {
                 primaryColor: widget.primaryColor,
                 compareColor: _hasCompare ? widget.compareColor : null,
                 selectedIndex: selectedIndex,
-                selectionColor: theme.colorScheme.onSurface.withValues(alpha: 0.06),
-                baselineColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                selectionColor: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.06,
+                ),
+                baselineColor: theme.colorScheme.outlineVariant.withValues(
+                  alpha: 0.6,
+                ),
                 labelStyle: labelStyle,
                 surfaceColor: theme.scaffoldBackgroundColor,
               ),
@@ -111,16 +118,25 @@ class _CuteBarChartState extends State<CuteBarChart> {
 
   /// Selected group details: label + one dot-value pair per series.
   Widget _buildHeader(ThemeData theme, CuteBarChartItem item) {
-    final textStyle = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    final valueStyle = theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700);
+    final textStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final valueStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+    );
     return Wrap(
       spacing: 12,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(item.label, style: textStyle),
         if (item.compareValue != null && widget.compareColor != null)
-          _legendValue(widget.compareColor!, _format(item.compareValue!), textStyle),
-        if (item.value != null) _legendValue(widget.primaryColor, _format(item.value!), valueStyle),
+          _legendValue(
+            widget.compareColor!,
+            _format(item.compareValue!),
+            textStyle,
+          ),
+        if (item.value != null)
+          _legendValue(widget.primaryColor, _format(item.value!), valueStyle),
       ],
     );
   }
@@ -145,7 +161,10 @@ class _CuteBarChartState extends State<CuteBarChart> {
     if (box == null || widget.items.isEmpty) return;
     final width = box.size.width;
     final groupWidth = width / widget.items.length;
-    final index = (position.dx / groupWidth).floor().clamp(0, widget.items.length - 1);
+    final index = (position.dx / groupWidth).floor().clamp(
+      0,
+      widget.items.length - 1,
+    );
     setState(() => _selected = index);
   }
 }
@@ -184,7 +203,10 @@ class _BarChartPainter extends CustomPainter {
 
     double maxValue = 0;
     for (final item in items) {
-      maxValue = math.max(maxValue, math.max(item.value ?? 0, item.compareValue ?? 0));
+      maxValue = math.max(
+        maxValue,
+        math.max(item.value ?? 0, item.compareValue ?? 0),
+      );
     }
     if (maxValue <= 0) maxValue = 1;
 
@@ -196,7 +218,12 @@ class _BarChartPainter extends CustomPainter {
 
     // Selection backdrop behind the whole group.
     final selectionRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(selectedIndex * groupWidth + 1, 0, groupWidth - 2, plotHeight),
+      Rect.fromLTWH(
+        selectedIndex * groupWidth + 1,
+        0,
+        groupWidth - 2,
+        plotHeight,
+      ),
       const Radius.circular(6),
     );
     canvas.drawRRect(selectionRect, Paint()..color = selectionColor);
@@ -204,17 +231,34 @@ class _BarChartPainter extends CustomPainter {
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       final groupCenter = i * groupWidth + groupWidth / 2;
-      final totalBarsWidth = barWidth * barsPerGroup + _barGap * (barsPerGroup - 1);
+      final totalBarsWidth =
+          barWidth * barsPerGroup + _barGap * (barsPerGroup - 1);
       var x = groupCenter - totalBarsWidth / 2;
 
       // Compare (older period) on the left, primary (current) on the right —
       // groups read left→right in time like the axis does.
       if (compareColor != null) {
-        _drawBar(canvas, x, item.compareValue, maxValue, plotHeight, barWidth, compareColor!);
+        _drawBar(
+          canvas,
+          x,
+          item.compareValue,
+          maxValue,
+          plotHeight,
+          barWidth,
+          compareColor!,
+        );
         x += barWidth + _barGap;
       }
       if (item.segments.isEmpty) {
-        _drawBar(canvas, x, item.value, maxValue, plotHeight, barWidth, primaryColor);
+        _drawBar(
+          canvas,
+          x,
+          item.value,
+          maxValue,
+          plotHeight,
+          barWidth,
+          primaryColor,
+        );
       } else {
         _drawStackedBar(canvas, x, item, maxValue, plotHeight, barWidth);
       }
@@ -232,7 +276,15 @@ class _BarChartPainter extends CustomPainter {
     _drawLabels(canvas, size, groupWidth, plotHeight);
   }
 
-  void _drawBar(Canvas canvas, double x, double? value, double maxValue, double plotHeight, double width, Color color) {
+  void _drawBar(
+    Canvas canvas,
+    double x,
+    double? value,
+    double maxValue,
+    double plotHeight,
+    double width,
+    Color color,
+  ) {
     if (value == null) return;
     final height = (value / maxValue) * (plotHeight - 6);
     if (height <= 0) return;
@@ -291,7 +343,12 @@ class _BarChartPainter extends CustomPainter {
     }
   }
 
-  void _drawLabels(Canvas canvas, Size size, double groupWidth, double plotHeight) {
+  void _drawLabels(
+    Canvas canvas,
+    Size size,
+    double groupWidth,
+    double plotHeight,
+  ) {
     // Thin the labels out when groups get narrow instead of colliding.
     final step = math.max(1, (items.length / (size.width / 34)).ceil());
     for (var i = 0; i < items.length; i += step) {
@@ -301,8 +358,14 @@ class _BarChartPainter extends CustomPainter {
         maxLines: 1,
         ellipsis: "…",
       )..layout(maxWidth: groupWidth + 8);
-      final x = (i * groupWidth + groupWidth / 2 - painter.width / 2).clamp(0.0, size.width - painter.width);
-      painter.paint(canvas, Offset(x, plotHeight + (_labelHeight - painter.height) / 2 + 2));
+      final x = (i * groupWidth + groupWidth / 2 - painter.width / 2).clamp(
+        0.0,
+        size.width - painter.width,
+      );
+      painter.paint(
+        canvas,
+        Offset(x, plotHeight + (_labelHeight - painter.height) / 2 + 2),
+      );
     }
   }
 

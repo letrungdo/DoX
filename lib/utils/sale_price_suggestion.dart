@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:do_x/model/chicken/chicken_batch.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 
 /// A price per chicken taken from a past sale round, together with the age the
@@ -9,9 +8,9 @@ import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 class _PriceSample {
   final int ageInDays;
   final double unitPrice;
-  final DateTime dateSolar;
+  final DateTime date;
 
-  const _PriceSample(this.ageInDays, this.unitPrice, this.dateSolar);
+  const _PriceSample(this.ageInDays, this.unitPrice, this.date);
 }
 
 /// Suggested price per chicken for a sale, derived from past sale rounds.
@@ -78,11 +77,7 @@ SalePriceSuggestion? suggestSaleUnitPrice({
       // real price, and it would pull the suggestion right down.
       if (unitPrice < kSuspiciousPriceThreshold) continue;
       samples.add(
-        _PriceSample(
-          batch.ageInDaysAt(sale.date),
-          unitPrice,
-          LunarCalendar.lunarDateTimeToSolar(sale.date),
-        ),
+        _PriceSample(batch.ageInDaysAt(sale.date), unitPrice, sale.date),
       );
     }
   }
@@ -111,7 +106,7 @@ SalePriceSuggestion? suggestSaleUnitPrice({
 
   final weights = selected.map((sample) {
     final ageWeight = 1 / (1 + (sample.ageInDays - ageInDays).abs() / 7);
-    final daysAgo = today.difference(sample.dateSolar).inDays.abs();
+    final daysAgo = today.difference(sample.date).inDays.abs();
     final recencyWeight = math.pow(0.5, daysAgo / _recencyHalfLifeDays);
     return ageWeight * recencyWeight;
   }).toList();

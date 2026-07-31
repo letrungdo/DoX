@@ -21,7 +21,9 @@ class _SecureStorageService {
   }
 
   Future<void> saveAccount(UserModel? value) {
-    final expiryTime = DateTime.now().millisecondsSinceEpoch + ((value?.expiresIn ?? 0) * 1000);
+    final expiryTime =
+        DateTime.now().millisecondsSinceEpoch +
+        ((value?.expiresIn ?? 0) * 1000);
     value = value?.copyWith(expiryTime: expiryTime);
     appData.setUser(value);
 
@@ -33,24 +35,35 @@ class _SecureStorageService {
     try {
       final raw = await _secureStorage.read(key: StorageKey.supabaseAccount);
       final json = jsonDecode(raw ?? "");
-      return (email: json['email'] as String, password: json['password'] as String);
+      return (
+        email: json['email'] as String,
+        password: json['password'] as String,
+      );
     } catch (e) {
       return null;
     }
   }
 
-  Future<void> saveSupabaseAccount({required String email, required String password}) {
-    return _secureStorage.write(key: StorageKey.supabaseAccount, value: jsonEncode({'email': email, 'password': password}));
+  Future<void> saveSupabaseAccount({
+    required String email,
+    required String password,
+  }) {
+    return _secureStorage.write(
+      key: StorageKey.supabaseAccount,
+      value: jsonEncode({'email': email, 'password': password}),
+    );
   }
 
-  Future<List<ElectricAccount>> getCpcAccounts() => _readCpcAccounts(StorageKey.cpcAccounts);
+  Future<List<ElectricAccount>> getCpcAccounts() =>
+      _readCpcAccounts(StorageKey.cpcAccounts);
 
   Future<void> saveCpcAccounts(List<ElectricAccount> accounts) {
     return _writeCpcAccounts(StorageKey.cpcAccounts, accounts);
   }
 
   /// Accounts kept after logout so they can be signed in again with one tap.
-  Future<List<ElectricAccount>> getCpcSavedAccounts() => _readCpcAccounts(StorageKey.cpcSavedAccounts);
+  Future<List<ElectricAccount>> getCpcSavedAccounts() =>
+      _readCpcAccounts(StorageKey.cpcSavedAccounts);
 
   Future<void> saveCpcSavedAccounts(List<ElectricAccount> accounts) {
     return _writeCpcAccounts(StorageKey.cpcSavedAccounts, accounts);

@@ -26,7 +26,8 @@ class LoginScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _LoginScreenState<V extends LoginViewModel> extends ScreenState<LoginScreen, V> {
+class _LoginScreenState<V extends LoginViewModel>
+    extends ScreenState<LoginScreen, V> {
   final _formKey = GlobalKey<FormState>();
 
   @override

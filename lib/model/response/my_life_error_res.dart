@@ -5,7 +5,10 @@ class MyLifeErrorResult {
   MyLifeErrorResult({required this.errors, required this.status});
 
   factory MyLifeErrorResult.fromJson(Map<String, dynamic> json) {
-    return MyLifeErrorResult(errors: json['errors'] as List<dynamic>?, status: json['status'] as int?);
+    return MyLifeErrorResult(
+      errors: json['errors'] as List<dynamic>?,
+      status: json['status'] as int?,
+    );
   }
 }
 
@@ -15,6 +18,10 @@ class MyLifeErrorResponse {
   MyLifeErrorResponse({required this.result});
 
   factory MyLifeErrorResponse.fromJson(Map<String, dynamic> json) {
-    return MyLifeErrorResponse(result: MyLifeErrorResult.fromJson(json['result'] as Map<String, dynamic>));
+    return MyLifeErrorResponse(
+      result: MyLifeErrorResult.fromJson(
+        json['result'] as Map<String, dynamic>,
+      ),
+    );
   }
 }

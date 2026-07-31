@@ -13,7 +13,7 @@ import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -80,14 +80,23 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     super.didChangeDependencies();
     final mainViewModel = context.read<MainViewModel>();
     if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      ChickenRoute.name,
+      _tabReselectHandler,
+    );
     _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    mainViewModel.registerTabReselectHandler(
+      ChickenRoute.name,
+      _tabReselectHandler,
+    );
   }
 
   @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(ChickenRoute.name, _tabReselectHandler);
+    _mainViewModel?.unregisterTabReselectHandler(
+      ChickenRoute.name,
+      _tabReselectHandler,
+    );
     _scrollController.dispose();
     super.dispose();
   }
@@ -97,14 +106,22 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   void _scrollToTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
 
   Future<void> _handleTabReselect() async {
     if (_scrollController.hasClients) {
-      await _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
     if (mounted) await vm.loadData(sections: {ChickenSection.batches});
   }
@@ -115,11 +132,14 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     return Scaffold(
       appBar: DoAppBar(
         title: l10n.chickenManagement,
-        titleSuffix: AppBarSyncIcon<ChickenViewModel>(selector: (vm) => vm.isFetching),
+        titleSuffix: AppBarSyncIcon<ChickenViewModel>(
+          selector: (vm) => vm.isFetching,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
-            onPressed: () => context.router.push(const ChickenStatisticsRoute()),
+            onPressed: () =>
+                context.router.push(const ChickenStatisticsRoute()),
             tooltip: l10n.profitStatistics,
           ),
           IconButton(
@@ -140,7 +160,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 PopupMenuItem(value: 'import', child: Text(l10n.importData)),
                 PopupMenuItem(
                   value: 'delete_all',
-                  child: Text(l10n.deleteAllChickenData, style: TextStyle(color: context.colors.danger)),
+                  child: Text(
+                    l10n.deleteAllChickenData,
+                    style: TextStyle(color: context.colors.danger),
+                  ),
                 ),
               ],
             ),
@@ -155,7 +178,13 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           final batches = _selectedYear == 0
               ? vm.batches
               : vm.batches
-                    .where((batch) => vm.displayYear(batch.actualHatchDate ?? batch.expectedHatchDate) == _selectedYear)
+                    .where(
+                      (batch) =>
+                          vm.displayYear(
+                            batch.actualHatchDate ?? batch.expectedHatchDate,
+                          ) ==
+                          _selectedYear,
+                    )
                     .toList();
           final totalRevenue = batches.fold<double>(
             0,
@@ -165,7 +194,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           final items = <Widget>[];
           int? currentYear;
           for (final batch in batches) {
-            final year = vm.displayYear(batch.actualHatchDate ?? batch.expectedHatchDate);
+            final year = vm.displayYear(
+              batch.actualHatchDate ?? batch.expectedHatchDate,
+            );
             if (_selectedYear == 0 && year != currentYear) {
               currentYear = year;
               items.add(
@@ -183,7 +214,12 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                         ),
                       ),
                       const SizedBox(width: 14),
-                      Expanded(child: Divider(height: 1, color: context.theme.colorScheme.outlineVariant)),
+                      Expanded(
+                        child: Divider(
+                          height: 1,
+                          color: context.theme.colorScheme.outlineVariant,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -205,17 +241,22 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                         title: l10n.commonExpenses,
                         accent: context.colors.warning,
                         accentSoft: context.colors.warningSoft,
-                        onTap: () => context.router.push(const GlobalExpensesRoute()),
+                        onTap: () =>
+                            context.router.push(const GlobalExpensesRoute()),
                       ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: _buildFeatureCard(
-                        icon: Assets.images.roosterCute.svg(width: 32, height: 32),
+                        icon: Assets.images.roosterCute.svg(
+                          width: 32,
+                          height: 32,
+                        ),
                         title: l10n.sellGrownChicken,
                         accent: context.colors.danger,
                         accentSoft: context.colors.dangerSoft,
-                        onTap: () => context.router.push(const CockSalesRoute()),
+                        onTap: () =>
+                            context.router.push(const CockSalesRoute()),
                       ),
                     ),
                   ],
@@ -236,7 +277,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                         _scrollToTop();
                         // Another year means another read: the server only
                         // sent the one that was selected.
-                        vm.ensureLoaded({ChickenSection.batches}, year: _yearFilter);
+                        vm.ensureLoaded({
+                          ChickenSection.batches,
+                        }, year: _yearFilter);
                       },
                     ),
                     const SizedBox(width: 8),
@@ -246,7 +289,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => vm.loadData(sections: {ChickenSection.batches}),
+                  onRefresh: () =>
+                      vm.loadData(sections: {ChickenSection.batches}),
                   child: items.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraints) => ListView(
@@ -258,14 +302,20 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                                 child: vm.isLoading
                                     ? const SizedBox.shrink()
                                     : Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Assets.images.chickCute.svg(width: 72, height: 72),
+                                          Assets.images.chickCute.svg(
+                                            width: 72,
+                                            height: 72,
+                                          ),
                                           const SizedBox(height: 12),
                                           Text(
                                             _selectedYear == 0
                                                 ? l10n.noBatchesYet
-                                                : l10n.noBatchesInYear(_selectedYear),
+                                                : l10n.noBatchesInYear(
+                                                    _selectedYear,
+                                                  ),
                                           ),
                                         ],
                                       ),
@@ -307,7 +357,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
             width: 42,
             height: 42,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: accentSoft, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: accentSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: icon,
           ),
           const SizedBox(width: 9),
@@ -322,7 +375,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           Icon(
             Icons.chevron_right_rounded,
             size: 20,
-            color: context.theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            color: context.theme.colorScheme.onSurfaceVariant.withValues(
+              alpha: 0.7,
+            ),
           ),
         ],
       ),
@@ -333,10 +388,15 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     final l10n = AppLocalizations.of(context);
     final useLunar = vm.useLunarCalendar;
     final hatchDate = batch.actualHatchDate ?? batch.expectedHatchDate;
-    final isHatched = batch.actualHatchDate != null || DateTime.now().isAfter(batch.expectedHatchDateSolar);
+    final isHatched =
+        batch.actualHatchDate != null ||
+        DateTime.now().isAfter(batch.expectedHatchDate);
     final isSoldOut = batch.sales.isNotEmpty && batch.remainingQuantity <= 0;
     final isPartiallySold = batch.sales.isNotEmpty && !isSoldOut;
-    final hasMoney = batch.sales.isNotEmpty || batch.expenses.isNotEmpty || batch.cockSales.isNotEmpty;
+    final hasMoney =
+        batch.sales.isNotEmpty ||
+        batch.expenses.isNotEmpty ||
+        batch.cockSales.isNotEmpty;
 
     // Sold out → red, partially sold → green, not sold → default card color.
     // The tints come from the theme so they stay soft on a light background and
@@ -350,7 +410,12 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         : null;
 
     final (statusText, statusColor) = !isHatched
-        ? (l10n.statusWaitingHatch(ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar)), colors.warning)
+        ? (
+            l10n.statusWaitingHatch(
+              ChickenDate.format(batch.expectedHatchDate, useLunar: useLunar),
+            ),
+            colors.warning,
+          )
         : isSoldOut
         ? (l10n.statusSoldOut, context.theme.colorScheme.onSurfaceVariant)
         : (ChickenDate.formatAge(l10n, batch.ageInDays), colors.success);
@@ -397,7 +462,13 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                   color: context.neuTint(statusColor),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(statusText, style: DoTextTheme.pill.copyWith(fontSize: 11, color: statusColor)),
+                child: Text(
+                  statusText,
+                  style: DoTextTheme.pill.copyWith(
+                    fontSize: 11,
+                    color: statusColor,
+                  ),
+                ),
               ),
             ],
           ),
@@ -426,14 +497,21 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                     children: [
                       _buildBatchInfo(
                         Icons.calendar_today_rounded,
-                        l10n.hatchedOnDate(ChickenDate.format(hatchDate, useLunar: useLunar)),
+                        l10n.hatchedOnDate(
+                          ChickenDate.format(hatchDate, useLunar: useLunar),
+                        ),
                         alignment: MainAxisAlignment.end,
                       ),
                       if (batch.lastSaleDate != null) ...[
                         const SizedBox(height: 4),
                         _buildBatchInfo(
                           Icons.sell_rounded,
-                          l10n.soldOnDate(ChickenDate.format(batch.lastSaleDate!, useLunar: useLunar)),
+                          l10n.soldOnDate(
+                            ChickenDate.format(
+                              batch.lastSaleDate!,
+                              useLunar: useLunar,
+                            ),
+                          ),
                           alignment: MainAxisAlignment.end,
                         ),
                       ],
@@ -448,9 +526,22 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildMoneyBadge(l10n.badgeRevenue, batch.totalSaleAmount + batch.totalCockSales, colors.money),
-                  if (batch.totalExpenses > 0) _buildMoneyBadge(l10n.badgeExpense, batch.totalExpenses, colors.warning),
-                  _buildMoneyBadge(l10n.badgeProfit, batch.profit, batch.profit >= 0 ? colors.money : colors.danger),
+                  _buildMoneyBadge(
+                    l10n.badgeRevenue,
+                    batch.totalSaleAmount + batch.totalCockSales,
+                    colors.money,
+                  ),
+                  if (batch.totalExpenses > 0)
+                    _buildMoneyBadge(
+                      l10n.badgeExpense,
+                      batch.totalExpenses,
+                      colors.warning,
+                    ),
+                  _buildMoneyBadge(
+                    l10n.badgeProfit,
+                    batch.profit,
+                    batch.profit >= 0 ? colors.money : colors.danger,
+                  ),
                 ],
               ),
             ],
@@ -469,17 +560,26 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     MainAxisAlignment alignment = MainAxisAlignment.start,
     bool highlighted = false,
   }) {
-    final color = highlighted ? context.theme.colorScheme.primary : context.theme.colorScheme.onSurfaceVariant;
+    final color = highlighted
+        ? context.theme.colorScheme.primary
+        : context.theme.colorScheme.onSurfaceVariant;
     return Row(
       mainAxisAlignment: alignment,
       children: [
-        if (icon != null) ...[Icon(icon, size: 15, color: color), const SizedBox(width: 5)],
+        if (icon != null) ...[
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 5),
+        ],
         Flexible(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13, color: color, fontWeight: highlighted ? FontWeight.w700 : FontWeight.normal),
+            style: TextStyle(
+              fontSize: 13,
+              color: color,
+              fontWeight: highlighted ? FontWeight.w700 : FontWeight.normal,
+            ),
           ),
         ),
       ],
@@ -495,7 +595,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
         color: context.neuTint(color),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text("$label ${amount.toCurrency()}đ", style: DoTextTheme.pill.copyWith(fontSize: 12, color: color)),
+      child: Text(
+        "$label ${amount.toCurrency()}đ",
+        style: DoTextTheme.pill.copyWith(fontSize: 12, color: color),
+      ),
     );
   }
 
@@ -522,14 +625,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       final count = await vm.importFromJson(jsonString);
       if (progressDialogContext.mounted) Navigator.pop(progressDialogContext);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.importedRecords(count, file.name))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.importedRecords(count, file.name))),
+      );
     } catch (e) {
       final dialogContext = progressDialogContext;
       if (dialogContext != null && dialogContext.mounted) {
         Navigator.pop(dialogContext);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(context.errorSnackBar(l10n.importFileFailed(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        context.errorSnackBar(l10n.importFileFailed(e.toString())),
+      );
     }
   }
 
@@ -577,7 +684,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
           Navigator.pop(dialogContext);
           _deleteAllData();
         },
-        children: [Text(l10n.deleteAllChickenDataWarning, textAlign: TextAlign.center)],
+        children: [
+          Text(l10n.deleteAllChickenDataWarning, textAlign: TextAlign.center),
+        ],
       ),
     );
   }
@@ -611,12 +720,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
       final count = await vm.deleteAllData();
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
-      final message = count == 0 ? l10n.noDataToDelete : l10n.deletedAllData(count);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      final message = count == 0
+          ? l10n.noDataToDelete
+          : l10n.deletedAllData(count);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(context.errorSnackBar(l10n.deleteDataFailed(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        context.errorSnackBar(l10n.deleteDataFailed(e.toString())),
+      );
     }
   }
 
@@ -625,10 +740,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   Future<void> _addBatch(String name, DateTime incubationDate, int qty) async {
     final l10n = AppLocalizations.of(context);
     try {
-      await vm.addBatch(name: name, incubationDate: incubationDate, quantity: qty);
+      await vm.addBatch(
+        name: name,
+        incubationDate: incubationDate,
+        quantity: qty,
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.saveFailed(error.toString()))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.saveFailed(error.toString()))),
+      );
     }
   }
 
@@ -637,14 +758,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     // Prefill "Bầy xx" continuing the latest batch's number (if its name ends with one).
     var suggestedName = '';
     if (vm.batches.isNotEmpty) {
-      final match = RegExp(r'(\d+)\s*$').firstMatch(vm.batches.first.name.trim());
+      final match = RegExp(
+        r'(\d+)\s*$',
+      ).firstMatch(vm.batches.first.name.trim());
       if (match != null) {
         suggestedName = l10n.batchNamePrefill(int.parse(match.group(1)!) + 1);
       }
     }
     final nameController = TextEditingController(text: suggestedName);
     final quantityController = TextEditingController();
-    DateTime selectedDate = LunarCalendar.solarToLunarDateTime(DateTime.now());
+    DateTime selectedDate = DateTime.now().dateOnly;
     String? nameError;
     String? qtyError;
 
@@ -684,7 +807,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
               label: l10n.eggQuantity,
               autofocus: true,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, NoLeadingZeroInputFormatter()],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                NoLeadingZeroInputFormatter(),
+              ],
               errorText: qtyError,
               onChanged: (_) {
                 if (qtyError != null) setState(() => qtyError = null);

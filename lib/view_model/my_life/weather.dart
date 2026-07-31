@@ -32,7 +32,9 @@ extension WeatherIconExt on WeatherIcon? {
     final value = this;
     try {
       if (value == null) throw "data not exists";
-      return isDaylight ? value.lightSymbolName : (value.nightSymbolName ?? value.lightSymbolName);
+      return isDaylight
+          ? value.lightSymbolName
+          : (value.nightSymbolName ?? value.lightSymbolName);
     } catch (e) {
       return "questionmark";
     }
@@ -43,8 +45,20 @@ extension WeatherIconExt on WeatherIcon? {
 /// https://docs.google.com/spreadsheets/d/1D8Bdrk26dhZ4PdrNGUL9e9Bs9vnCrUxI_VbHhaZMgUY/edit?gid=1359697320#gid=1359697320
 /// https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM
 final Map<int, WeatherIcon> wmoWeatherInfos = {
-  0: WeatherIcon('sun.max', 'clear', SFIcons.sf_sun_max, nightIcon: SFIcons.sf_moon_stars_fill, nightSymbolName: "moon.stars.fill"),
-  1: WeatherIcon('sun.min', 'mostlyClear', SFIcons.sf_sun_min, nightIcon: SFIcons.sf_moon_fill, nightSymbolName: "moon.fill"),
+  0: WeatherIcon(
+    'sun.max',
+    'clear',
+    SFIcons.sf_sun_max,
+    nightIcon: SFIcons.sf_moon_stars_fill,
+    nightSymbolName: "moon.stars.fill",
+  ),
+  1: WeatherIcon(
+    'sun.min',
+    'mostlyClear',
+    SFIcons.sf_sun_min,
+    nightIcon: SFIcons.sf_moon_fill,
+    nightSymbolName: "moon.fill",
+  ),
   2: WeatherIcon(
     'cloud.sun',
     'partlyCloudy',
@@ -58,13 +72,29 @@ final Map<int, WeatherIcon> wmoWeatherInfos = {
   51: WeatherIcon('cloud.drizzle', 'drizzle', SFIcons.sf_cloud_drizzle),
   53: WeatherIcon('cloud.drizzle', 'drizzle', SFIcons.sf_cloud_drizzle),
   55: WeatherIcon('cloud.drizzle', 'drizzle', SFIcons.sf_cloud_drizzle),
-  56: WeatherIcon('cloud.drizzle.fill', 'freezingDrizzle', SFIcons.sf_cloud_drizzle_fill),
-  57: WeatherIcon('cloud.drizzle.fill', 'freezingDrizzle', SFIcons.sf_cloud_drizzle_fill),
+  56: WeatherIcon(
+    'cloud.drizzle.fill',
+    'freezingDrizzle',
+    SFIcons.sf_cloud_drizzle_fill,
+  ),
+  57: WeatherIcon(
+    'cloud.drizzle.fill',
+    'freezingDrizzle',
+    SFIcons.sf_cloud_drizzle_fill,
+  ),
   61: WeatherIcon('cloud.rain', 'rain', SFIcons.sf_cloud_rain),
   63: WeatherIcon('cloud.rain', 'rain', SFIcons.sf_cloud_rain),
   65: WeatherIcon('cloud.heavyrain', 'heavyRain', SFIcons.sf_cloud_heavyrain),
-  66: WeatherIcon('cloud.rain.fill', 'freezingRain', SFIcons.sf_cloud_rain_fill),
-  67: WeatherIcon('cloud.rain.fill', 'freezingRain', SFIcons.sf_cloud_rain_fill),
+  66: WeatherIcon(
+    'cloud.rain.fill',
+    'freezingRain',
+    SFIcons.sf_cloud_rain_fill,
+  ),
+  67: WeatherIcon(
+    'cloud.rain.fill',
+    'freezingRain',
+    SFIcons.sf_cloud_rain_fill,
+  ),
   71: WeatherIcon('cloud.snow', 'snow', SFIcons.sf_cloud_snow),
   73: WeatherIcon('cloud.snow', 'snow', SFIcons.sf_cloud_snow),
   75: WeatherIcon('cloud.snow.fill', 'heavySnow', SFIcons.sf_cloud_snow_fill),

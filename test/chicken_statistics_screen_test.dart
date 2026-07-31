@@ -57,8 +57,10 @@ class _FakeRepository extends ChickenRepository {
   Future<void> apply(PendingOp op) async {}
 }
 
-/// Lunar dates, as stored. The screen is pumped in lunar mode (the app default)
-/// so a date lands in the month it is written as.
+/// Solar dates, as stored. The screen is pumped in solar mode so a date lands
+/// in the month it is written as; the lunar display mode only changes which
+/// month/year a date is bucketed under, which is covered in the view model
+/// tests instead.
 ChickenBatch _batch({
   required int month,
   required double revenue,
@@ -111,6 +113,7 @@ Future<ChickenViewModel> _pumpScreen(
 ) async {
   await storageService.clearChickenCache();
   await storageService.clearChickenSyncQueue();
+  await storageService.setChickenLunarDisplay(false);
 
   final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
   addTearDown(vm.dispose);
@@ -217,11 +220,7 @@ void main() {
     expect(march.compareValue, 2000000);
     // The bar is sliced per source, meat included, so the chart shows where the
     // revenue came from rather than one opaque total.
-    expect(march.segments.map((s) => s.value).toList(), [
-      5000000,
-      0,
-      4000000,
-    ]);
+    expect(march.segments.map((s) => s.value).toList(), [5000000, 0, 4000000]);
   });
 
   testWidgets('common expenses count against the period they fall in', (
@@ -274,9 +273,6 @@ void main() {
     await _pumpScreen(tester, _FakeRepository());
 
     expect(find.byType(CuteBarChart), findsNothing);
-    expect(
-      find.textContaining('Không có dữ liệu trong năm'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Không có dữ liệu trong năm'), findsOneWidget);
   });
 }

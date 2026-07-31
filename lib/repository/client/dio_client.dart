@@ -16,10 +16,7 @@ final _baseOptions = BaseOptions(
 class DioClient {
   static Dio create([String? baseUrl]) {
     final dio = Dio(_baseOptions.copyWith(baseUrl: baseUrl));
-    dio.interceptors.addAll([
-      RetryInterceptor(dio),
-      BaseInterceptor(),
-    ]);
+    dio.interceptors.addAll([RetryInterceptor(dio), BaseInterceptor()]);
     if (!kIsWeb) {
       dio.httpClientAdapter = httpClientAdapter;
     }
@@ -29,7 +26,9 @@ class DioClient {
   static final dio = DioClient.create();
 
   static Dio createMyLife() {
-    final dio = Dio(_baseOptions.copyWith(baseUrl: "https://api.mylifecam.com"));
+    final dio = Dio(
+      _baseOptions.copyWith(baseUrl: "https://api.mylifecam.com"),
+    );
     dio.interceptors.addAll([
       RetryInterceptor(dio),
       MyLifeInterceptor(), //

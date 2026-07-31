@@ -33,7 +33,8 @@ class ElectricViewModel extends CoreViewModel {
     return _savedAccounts.where((a) => !signedIn.contains(a.username)).toList();
   }
 
-  ElectricAccount? get activeAccount => _accounts.isEmpty ? null : _accounts[_activeIndex];
+  ElectricAccount? get activeAccount =>
+      _accounts.isEmpty ? null : _accounts[_activeIndex];
 
   final _fetchingUsernames = <String>{};
 
@@ -62,24 +63,33 @@ class ElectricViewModel extends CoreViewModel {
   /// latest reading's since-billing counter, last month from billing history.
   num? get usageToday => usage?.today ?? _dailyKwhOn(DateTime.now());
 
-  num? get usageYesterday => usage?.yesterday ?? _dailyKwhOn(DateTime.now().subtract(const Duration(days: 1)));
+  num? get usageYesterday =>
+      usage?.yesterday ??
+      _dailyKwhOn(DateTime.now().subtract(const Duration(days: 1)));
 
-  num? get usageThisMonth => usage?.thisMonth ?? latestReading?.usageSinceBilling;
+  num? get usageThisMonth =>
+      usage?.thisMonth ?? latestReading?.usageSinceBilling;
 
-  num? get usageLastMonth => usage?.lastMonth ?? monthlyUsages.firstOrNull?.usageKwh;
+  num? get usageLastMonth =>
+      usage?.lastMonth ?? monthlyUsages.firstOrNull?.usageKwh;
 
   num? _dailyKwhOn(DateTime date) {
     for (final entry in dailyUsages) {
-      if (entry.day.year == date.year && entry.day.month == date.month && entry.day.day == date.day) {
+      if (entry.day.year == date.year &&
+          entry.day.month == date.month &&
+          entry.day.day == date.day) {
         return entry.kwh;
       }
     }
     return null;
   }
-  List<ElectricMonthlyUsage> get monthlyUsages => activeAccount?.monthlyUsages ?? [];
+
+  List<ElectricMonthlyUsage> get monthlyUsages =>
+      activeAccount?.monthlyUsages ?? [];
 
   /// RF-SPIDER readings, newest first.
-  List<ElectricMeterReading> get spiderReadings => activeAccount?.spiderReadings ?? [];
+  List<ElectricMeterReading> get spiderReadings =>
+      activeAccount?.spiderReadings ?? [];
 
   ElectricMeterReading? get latestReading => spiderReadings.firstOrNull;
 
@@ -130,20 +140,31 @@ class ElectricViewModel extends CoreViewModel {
   }
 
   /// Logs in and adds a new account tab, then makes it active.
-  Future<void> addAccount({required String username, required String password}) async {
+  Future<void> addAccount({
+    required String username,
+    required String password,
+  }) async {
     if (_accounts.any((a) => a.username == username)) {
       switchAccount(_accounts.indexWhere((a) => a.username == username));
       return;
     }
     showLoading();
-    final res = await _service.login(username: username, password: password, cancelToken: cancelToken);
+    final res = await _service.login(
+      username: username,
+      password: password,
+      cancelToken: cancelToken,
+    );
     hideLoading();
     if (res.isError || res.data?.accessToken == null) {
+      final error =
+          res.error ?? ConnectionError(type: ApiErrorType.unauthorized);
       // ignore: use_build_context_synchronously
-      showAppError(context, res.error ?? ConnectionError(type: ApiErrorType.unauthorized));
+      showAppError(context, error);
       return;
     }
-    final saved = _savedAccounts.firstWhereOrNull((a) => a.username == username);
+    final saved = _savedAccounts.firstWhereOrNull(
+      (a) => a.username == username,
+    );
     final account = ElectricAccount(
       username: username,
       password: password,
@@ -167,7 +188,9 @@ class ElectricViewModel extends CoreViewModel {
 
   /// Drops a stored account so it stops being offered as a shortcut.
   Future<void> forgetSavedAccount(ElectricAccount saved) async {
-    _savedAccounts = _savedAccounts.where((a) => a.username != saved.username).toList();
+    _savedAccounts = _savedAccounts
+        .where((a) => a.username != saved.username)
+        .toList();
     await secureStorage.saveCpcSavedAccounts(_savedAccounts);
     notifyListenersSafe();
   }
@@ -177,14 +200,18 @@ class ElectricViewModel extends CoreViewModel {
   Future<void> _rememberAccounts(List<ElectricAccount> accounts) async {
     if (accounts.isEmpty) return;
     final usernames = accounts.map((a) => a.username).toSet();
-    final remaining = _savedAccounts.where((a) => !usernames.contains(a.username));
+    final remaining = _savedAccounts.where(
+      (a) => !usernames.contains(a.username),
+    );
     _savedAccounts = [
       ...remaining,
       ...accounts.map(
         (a) => ElectricAccount(
           username: a.username,
           password: a.password,
-          customerName: a.displayName == a.username ? a.customerName : a.displayName,
+          customerName: a.displayName == a.username
+              ? a.customerName
+              : a.displayName,
           contractType: a.contractTypeDisplay,
         ),
       ),
@@ -199,7 +226,9 @@ class ElectricViewModel extends CoreViewModel {
     // list so the account can be picked again.
     await _rememberAccounts([account]);
     _accounts = [..._accounts]..removeAt(_activeIndex);
-    if (_activeIndex >= _accounts.length) _activeIndex = _accounts.isEmpty ? 0 : _accounts.length - 1;
+    if (_activeIndex >= _accounts.length) {
+      _activeIndex = _accounts.isEmpty ? 0 : _accounts.length - 1;
+    }
     await secureStorage.saveCpcAccounts(_accounts);
     if (_accounts.isEmpty) {
       _setStatus(ElectricStatus.loggedOut);
@@ -228,7 +257,10 @@ class ElectricViewModel extends CoreViewModel {
     }
   }
 
-  Future<void> _fetchAccount(ElectricAccount account, {bool showLoading = false}) async {
+  Future<void> _fetchAccount(
+    ElectricAccount account, {
+    bool showLoading = false,
+  }) async {
     _fetchingUsernames.add(account.username);
     if (showLoading) _loadingUsernames.add(account.username);
     notifyListenersSafe();
@@ -242,7 +274,10 @@ class ElectricViewModel extends CoreViewModel {
   }
 
   Future<void> _doFetchAccount(ElectricAccount account) async {
-    var res = await _service.getCustomerInfos(accessToken: account.accessToken, cancelToken: cancelToken);
+    var res = await _service.getCustomerInfos(
+      accessToken: account.accessToken,
+      cancelToken: cancelToken,
+    );
 
     // The stored token may have been revoked — try once to log in again
     // with the saved credentials before giving up.
@@ -262,7 +297,10 @@ class ElectricViewModel extends CoreViewModel {
       }
       account.accessToken = auth.data?.accessToken;
       await secureStorage.saveCpcAccounts(_accounts);
-      res = await _service.getCustomerInfos(accessToken: account.accessToken, cancelToken: cancelToken);
+      res = await _service.getCustomerInfos(
+        accessToken: account.accessToken,
+        cancelToken: cancelToken,
+      );
     }
 
     if (res.isError) {
@@ -293,21 +331,39 @@ class ElectricViewModel extends CoreViewModel {
     await _rememberAccounts([account]);
   }
 
-  Future<void> _getCustomerDetail(ElectricAccount account, String customerCode) async {
-    final res = await _service.getCustomerDetail(customerCode, accessToken: account.accessToken, cancelToken: cancelToken);
+  Future<void> _getCustomerDetail(
+    ElectricAccount account,
+    String customerCode,
+  ) async {
+    final res = await _service.getCustomerDetail(
+      customerCode,
+      accessToken: account.accessToken,
+      cancelToken: cancelToken,
+    );
     if (res.isError) return;
     account.detail = res.data;
     notifyListenersSafe();
   }
 
-  Future<void> _getUsageAlert(ElectricAccount account, String customerCode) async {
-    final res = await _service.getUsageAlert(customerCode, accessToken: account.accessToken, cancelToken: cancelToken);
+  Future<void> _getUsageAlert(
+    ElectricAccount account,
+    String customerCode,
+  ) async {
+    final res = await _service.getUsageAlert(
+      customerCode,
+      accessToken: account.accessToken,
+      cancelToken: cancelToken,
+    );
     if (res.isError) return;
     account.usage = res.data?.electricConsumption;
     notifyListenersSafe();
   }
 
-  Future<void> _getSpiderReadings(ElectricAccount account, String customerCode, String? orgCode) async {
+  Future<void> _getSpiderReadings(
+    ElectricAccount account,
+    String customerCode,
+    String? orgCode,
+  ) async {
     if (orgCode == null) return;
     final res = await _service.getSpiderReadings(
       customerCode: customerCode,
@@ -317,12 +373,17 @@ class ElectricViewModel extends CoreViewModel {
     );
     if (res.isError) return;
     final readings = res.data ?? [];
-    readings.sort((a, b) => (b.readAt ?? DateTime(0)).compareTo(a.readAt ?? DateTime(0)));
+    readings.sort(
+      (a, b) => (b.readAt ?? DateTime(0)).compareTo(a.readAt ?? DateTime(0)),
+    );
     account.spiderReadings = readings;
     notifyListenersSafe();
   }
 
-  Future<void> _getMonthlyUsages(ElectricAccount account, String customerCode) async {
+  Future<void> _getMonthlyUsages(
+    ElectricAccount account,
+    String customerCode,
+  ) async {
     final res = await _service.getMonthlyUsageHistory(
       customerCode,
       accessToken: account.accessToken,

@@ -27,9 +27,15 @@ mixin AppErrorMixin {
     VoidCallback? onRetry,
     ValueChanged<ApiErrorType?>? onClose,
   }) async {
-    if (error == null || error.type == ApiErrorType.cancel || !context.mounted) return;
+    if (error == null ||
+        error.type == ApiErrorType.cancel ||
+        !context.mounted) {
+      return;
+    }
 
-    _errorQueues.add(ErrorCallback(onRetry: onRetry, error: error, onClose: onClose));
+    _errorQueues.add(
+      ErrorCallback(onRetry: onRetry, error: error, onClose: onClose),
+    );
 
     if (_isShow) {
       return;

@@ -44,7 +44,8 @@ class CuteDialog extends StatefulWidget {
   /// Runs [action] without the confirm spinner, for the part of a confirm
   /// handler that waits on the user (a follow-up dialog) rather than on a write.
   /// The dialog stays disabled throughout, so nothing can be submitted twice.
-  static Future<T> pauseLoading<T>(Future<T> Function() action) => _CuteDialogState._pauseLoading(action);
+  static Future<T> pauseLoading<T>(Future<T> Function() action) =>
+      _CuteDialogState._pauseLoading(action);
 }
 
 class _CuteDialogState extends State<CuteDialog> {
@@ -108,7 +109,10 @@ class _CuteDialogState extends State<CuteDialog> {
     final confirmText = widget.confirmText;
     final destructiveText = widget.destructiveText;
     final accentColor = accent ?? theme.colorScheme.primary;
-    final titleStyle = theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18);
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.bold,
+      fontSize: 18,
+    );
     final deleteButton = destructiveText == null
         ? null
         : TextButton.icon(
@@ -152,7 +156,9 @@ class _CuteDialogState extends State<CuteDialog> {
                               if (icon != null) ...[
                                 CircleAvatar(
                                   radius: 22,
-                                  backgroundColor: accentColor.withValues(alpha: 0.12),
+                                  backgroundColor: accentColor.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   child: icon.svg(width: 28, height: 28),
                                 ),
                                 const SizedBox(width: 12),
@@ -160,7 +166,9 @@ class _CuteDialogState extends State<CuteDialog> {
                               Expanded(
                                 child: Text(
                                   title,
-                                  textAlign: icon == null ? TextAlign.center : TextAlign.start,
+                                  textAlign: icon == null
+                                      ? TextAlign.center
+                                      : TextAlign.start,
                                   style: titleStyle,
                                 ),
                               ),
@@ -168,7 +176,11 @@ class _CuteDialogState extends State<CuteDialog> {
                             ],
                           )
                         else
-                          Text(title, textAlign: TextAlign.center, style: titleStyle),
+                          Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: titleStyle,
+                          ),
                         const SizedBox(height: 16),
                         for (var i = 0; i < children.length; i++) ...[
                           if (i > 0) const SizedBox(height: 12),
@@ -182,7 +194,9 @@ class _CuteDialogState extends State<CuteDialog> {
                 DialogActions(
                   children: [
                     DialogActionButton(
-                      text: widget.cancelText ?? AppLocalizations.of(context).cancel,
+                      text:
+                          widget.cancelText ??
+                          AppLocalizations.of(context).cancel,
                       // Closing the dialog mid-save would leave the user
                       // guessing whether the write went through.
                       onPressed: _saving ? null : () => Navigator.pop(context),
@@ -193,7 +207,9 @@ class _CuteDialogState extends State<CuteDialog> {
                         text: confirmText,
                         onPressed: _saving ? null : _handleConfirm,
                         loading: _saving && !_paused,
-                        kind: widget.isDestructive ? DialogActionKind.destructive : DialogActionKind.primary,
+                        kind: widget.isDestructive
+                            ? DialogActionKind.destructive
+                            : DialogActionKind.primary,
                       ),
                   ],
                 ),

@@ -47,7 +47,9 @@ Future<ActionButtonType?> showAppDialog(
                         (e) => DialogActionButton(
                           text: e.text,
                           textStyle: e.textStyle,
-                          kind: e.type == ActionButtonType.cancel ? DialogActionKind.cancel : DialogActionKind.primary,
+                          kind: e.type == ActionButtonType.cancel
+                              ? DialogActionKind.cancel
+                              : DialogActionKind.primary,
                           onPressed: () {
                             e.onPressed?.call(context);
                             if (e.autoClose) {

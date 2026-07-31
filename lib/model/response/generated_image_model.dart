@@ -2,10 +2,7 @@ class GeneratedImage {
   final String? downloadTokens;
   final Metadata? metadata;
 
-  const GeneratedImage({
-    this.downloadTokens,
-    this.metadata,
-  });
+  const GeneratedImage({this.downloadTokens, this.metadata});
 
   factory GeneratedImage.fromJson(Map<String, dynamic> json) {
     return GeneratedImage(

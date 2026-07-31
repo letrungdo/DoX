@@ -2,14 +2,14 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'user_info_response.g.dart';
 
-
 @JsonSerializable(explicitToJson: true)
 class UserInfoResponse {
   final UserInfoResult result;
 
   const UserInfoResponse({required this.result});
 
-  factory UserInfoResponse.fromJson(Map<String, dynamic> json) => _$UserInfoResponseFromJson(json);
+  factory UserInfoResponse.fromJson(Map<String, dynamic> json) =>
+      _$UserInfoResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserInfoResponseToJson(this);
 }
@@ -21,7 +21,8 @@ class UserInfoResult {
 
   const UserInfoResult({required this.status, required this.data});
 
-  factory UserInfoResult.fromJson(Map<String, dynamic> json) => _$UserInfoResultFromJson(json);
+  factory UserInfoResult.fromJson(Map<String, dynamic> json) =>
+      _$UserInfoResultFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserInfoResultToJson(this);
 }
@@ -54,7 +55,8 @@ class UserInfoData {
     required this.username,
   });
 
-  factory UserInfoData.fromJson(Map<String, dynamic> json) => _$UserInfoDataFromJson(json);
+  factory UserInfoData.fromJson(Map<String, dynamic> json) =>
+      _$UserInfoDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserInfoDataToJson(this);
 }

@@ -14,9 +14,14 @@ class ElectricAuthResponse {
   @JsonKey(name: "token_type")
   final String? tokenType;
 
-  const ElectricAuthResponse({this.accessToken, this.expiresIn, this.tokenType});
+  const ElectricAuthResponse({
+    this.accessToken,
+    this.expiresIn,
+    this.tokenType,
+  });
 
-  factory ElectricAuthResponse.fromJson(Map<String, dynamic> json) => _$ElectricAuthResponseFromJson(json);
+  factory ElectricAuthResponse.fromJson(Map<String, dynamic> json) =>
+      _$ElectricAuthResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricAuthResponseToJson(this);
 }
@@ -29,7 +34,8 @@ class ElectricCustomerInfos {
 
   const ElectricCustomerInfos({this.userName, this.customerCodes = const []});
 
-  factory ElectricCustomerInfos.fromJson(Map<String, dynamic> json) => _$ElectricCustomerInfosFromJson(json);
+  factory ElectricCustomerInfos.fromJson(Map<String, dynamic> json) =>
+      _$ElectricCustomerInfosFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricCustomerInfosToJson(this);
 }
@@ -52,7 +58,8 @@ class ElectricCustomer {
     this.phoneNumber,
   });
 
-  factory ElectricCustomer.fromJson(Map<String, dynamic> json) => _$ElectricCustomerFromJson(json);
+  factory ElectricCustomer.fromJson(Map<String, dynamic> json) =>
+      _$ElectricCustomerFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricCustomerToJson(this);
 }
@@ -66,9 +73,14 @@ class ElectricCustomerDetail {
   final String? paymentType;
   final String? voltageLevel;
 
-  const ElectricCustomerDetail({this.contractType, this.paymentType, this.voltageLevel});
+  const ElectricCustomerDetail({
+    this.contractType,
+    this.paymentType,
+    this.voltageLevel,
+  });
 
-  factory ElectricCustomerDetail.fromJson(Map<String, dynamic> json) => _$ElectricCustomerDetailFromJson(json);
+  factory ElectricCustomerDetail.fromJson(Map<String, dynamic> json) =>
+      _$ElectricCustomerDetailFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricCustomerDetailToJson(this);
 }
@@ -112,7 +124,8 @@ class ElectricMonthlyUsage {
     this.lastYearTotalAmount,
   });
 
-  factory ElectricMonthlyUsage.fromJson(Map<String, dynamic> json) => _$ElectricMonthlyUsageFromJson(json);
+  factory ElectricMonthlyUsage.fromJson(Map<String, dynamic> json) =>
+      _$ElectricMonthlyUsageFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricMonthlyUsageToJson(this);
 }
@@ -126,7 +139,8 @@ class ElectricUsageAlert {
 
   const ElectricUsageAlert({this.customerCode, this.electricConsumption});
 
-  factory ElectricUsageAlert.fromJson(Map<String, dynamic> json) => _$ElectricUsageAlertFromJson(json);
+  factory ElectricUsageAlert.fromJson(Map<String, dynamic> json) =>
+      _$ElectricUsageAlertFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricUsageAlertToJson(this);
 }
@@ -145,9 +159,15 @@ class ElectricUsageSnapshot {
   @JsonKey(name: "electricConsumptionLastMonth")
   final num? lastMonth;
 
-  const ElectricUsageSnapshot({this.today, this.yesterday, this.thisMonth, this.lastMonth});
+  const ElectricUsageSnapshot({
+    this.today,
+    this.yesterday,
+    this.thisMonth,
+    this.lastMonth,
+  });
 
-  factory ElectricUsageSnapshot.fromJson(Map<String, dynamic> json) => _$ElectricUsageSnapshotFromJson(json);
+  factory ElectricUsageSnapshot.fromJson(Map<String, dynamic> json) =>
+      _$ElectricUsageSnapshotFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricUsageSnapshotToJson(this);
 }
@@ -170,9 +190,15 @@ class ElectricMeterReading {
   @JsonKey(name: "NGAYGIO")
   final DateTime? readAt;
 
-  const ElectricMeterReading({this.meterId, this.meterIndex, this.usageSinceBilling, this.readAt});
+  const ElectricMeterReading({
+    this.meterId,
+    this.meterIndex,
+    this.usageSinceBilling,
+    this.readAt,
+  });
 
-  factory ElectricMeterReading.fromJson(Map<String, dynamic> json) => _$ElectricMeterReadingFromJson(json);
+  factory ElectricMeterReading.fromJson(Map<String, dynamic> json) =>
+      _$ElectricMeterReadingFromJson(json);
 
   Map<String, dynamic> toJson() => _$ElectricMeterReadingToJson(this);
 }

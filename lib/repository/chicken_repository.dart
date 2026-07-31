@@ -45,9 +45,10 @@ class ChickenRepository {
   /// still filtered by row level security.
   ///
   /// [year] narrows the read to that year. The server widens it to the stored
-  /// years `[year - 1, year]` because dates are lunar values that can land in
-  /// the next solar year, and a batch is grouped by its hatch date — see the
-  /// SQL. Callers must still apply their own exact filter.
+  /// years `[year - 1, year]`, because a batch is grouped by its hatch date and
+  /// that can land in the year after the stored incubation date — see the SQL.
+  /// Stored dates are solar; the caller is the one that knows which calendar
+  /// the user is filtering on, and must still apply its own exact filter.
   Future<ChickenData> getChickenData({
     Set<ChickenSection>? sections,
     int? year,

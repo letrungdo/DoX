@@ -8,7 +8,8 @@ import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 
 const requestTimeOutMessage = "The semaphore timeout period has expired.";
-const connectionCloseMessage = "Connection closed before full header was received";
+const connectionCloseMessage =
+    "Connection closed before full header was received";
 
 enum ApiErrorType {
   networkError, //
@@ -23,7 +24,12 @@ enum ApiErrorType {
 }
 
 class ConnectionError {
-  ConnectionError({this.type, this.message, this.statusCode, this.resultString});
+  ConnectionError({
+    this.type,
+    this.message,
+    this.statusCode,
+    this.resultString,
+  });
   final ApiErrorType? type;
   final String? message;
   final int? statusCode;
@@ -41,7 +47,10 @@ class Result<T> {
     try {
       return Result(data: await request());
     } on DioException catch (e) {
-      logger.e('guardFuture DioException[${e.response?.statusCode}] => URL: ${e.requestOptions.uri}; res: ${e.response}', error: e.error);
+      logger.e(
+        'guardFuture DioException[${e.response?.statusCode}] => URL: ${e.requestOptions.uri}; res: ${e.response}',
+        error: e.error,
+      );
       switch (e.type) {
         case DioExceptionType.cancel:
           debugPrint('Request canceled: ${e.message}');
@@ -49,7 +58,9 @@ class Result<T> {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          return Result(error: ConnectionError(type: ApiErrorType.requestTimeout));
+          return Result(
+            error: ConnectionError(type: ApiErrorType.requestTimeout),
+          );
         case DioExceptionType.badResponse:
           final response = e.response;
           final statusCode = response?.statusCode;
@@ -60,13 +71,17 @@ class Result<T> {
                 switch (statusCode) {
                   case 200:
                     {
-                      final errorRes = MyLifeErrorResponse.fromJson(error.response.data).result;
+                      final errorRes = MyLifeErrorResponse.fromJson(
+                        error.response.data,
+                      ).result;
                       if (errorRes.errors != null) {
                         return Result(
                           error: ConnectionError(
                             type: ApiErrorType.other,
                             statusCode: errorRes.status,
-                            message: errorRes.errors?.map((e) => e.toString()).join(","),
+                            message: errorRes.errors
+                                ?.map((e) => e.toString())
+                                .join(","),
                           ),
                         );
                       }
@@ -114,18 +129,26 @@ class Result<T> {
           }
         case DioExceptionType.badCertificate:
         case DioExceptionType.connectionError:
-          return Result(error: ConnectionError(type: ApiErrorType.networkError));
+          return Result(
+            error: ConnectionError(type: ApiErrorType.networkError),
+          );
         case DioExceptionType.unknown:
           if (e.error is SocketException) {
             final message = (e.error as SocketException).message;
-            if (message.contains(requestTimeOutMessage) || message.contains(connectionCloseMessage)) {
-              return Result(error: ConnectionError(type: ApiErrorType.requestTimeout));
+            if (message.contains(requestTimeOutMessage) ||
+                message.contains(connectionCloseMessage)) {
+              return Result(
+                error: ConnectionError(type: ApiErrorType.requestTimeout),
+              );
             }
           }
           if (e.error is HttpException) {
             final message = (e.error as HttpException).message;
-            if (message.contains(requestTimeOutMessage) || message.contains(connectionCloseMessage)) {
-              return Result(error: ConnectionError(type: ApiErrorType.requestTimeout));
+            if (message.contains(requestTimeOutMessage) ||
+                message.contains(connectionCloseMessage)) {
+              return Result(
+                error: ConnectionError(type: ApiErrorType.requestTimeout),
+              );
             }
           }
           return Result(error: ConnectionError(type: ApiErrorType.other));

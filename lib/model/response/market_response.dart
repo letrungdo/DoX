@@ -16,7 +16,11 @@ class MarketData {
   const MarketData({required this.codes});
 
   factory MarketData.fromJson(Map<String, dynamic> json) {
-    return MarketData(codes: (json['codes'] as List).map((i) => MarketCodeInfo.fromJson(i)).toList());
+    return MarketData(
+      codes: (json['codes'] as List)
+          .map((i) => MarketCodeInfo.fromJson(i))
+          .toList(),
+    );
   }
 }
 
@@ -27,7 +31,10 @@ class MarketCodeInfo {
   const MarketCodeInfo({required this.code, required this.bars});
 
   factory MarketCodeInfo.fromJson(Map<String, dynamic> json) {
-    return MarketCodeInfo(code: MarketCode.from(json['code']), bars: (json['bars'] as List).map((i) => Bar.fromList(i)).toList());
+    return MarketCodeInfo(
+      code: MarketCode.from(json['code']),
+      bars: (json['bars'] as List).map((i) => Bar.fromList(i)).toList(),
+    );
   }
 }
 
@@ -39,7 +46,14 @@ class Bar {
   final double volume;
   final DateTime date;
 
-  const Bar({required this.open, required this.high, required this.low, required this.close, required this.volume, required this.date});
+  const Bar({
+    required this.open,
+    required this.high,
+    required this.low,
+    required this.close,
+    required this.volume,
+    required this.date,
+  });
 
   factory Bar.fromList(List<dynamic> list) {
     return Bar(

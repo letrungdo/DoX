@@ -1,7 +1,6 @@
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/services/storage_service.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -130,11 +129,7 @@ class NotificationService {
     // future notification types and schedule the nearest vaccination dates.
     var scheduledCount = 0;
     for (final reminder in reminders) {
-      // Vaccination dates are stored as lunar values; convert to the solar
-      // date so the notification fires on the correct real-world day.
-      final date = LunarCalendar.lunarDateTimeToSolar(
-        reminder.vaccination.scheduledDate,
-      );
+      final date = reminder.vaccination.scheduledDate;
       final scheduledDate = tz.TZDateTime(
         tz.local,
         date.year,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
@@ -15,7 +16,6 @@ import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/utils/sale_price_suggestion.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -482,11 +482,7 @@ class _ChickenBatchDetailScreenState
   }
 
   Widget _buildVaccinationRow(ChickenBatch batch, Vaccination v) {
-    final overdue =
-        !v.isCompleted &&
-        LunarCalendar.lunarDateTimeToSolar(
-          v.scheduledDate,
-        ).isBefore(DateTime.now());
+    final overdue = !v.isCompleted && v.scheduledDate.isBefore(DateTime.now());
     final accent = v.isCompleted
         ? context.colors.success
         : overdue
@@ -1073,8 +1069,7 @@ class _ChickenBatchDetailScreenState
       text: isEditing ? sale.amount.toCurrency() : '',
     );
     final noteController = TextEditingController(text: sale?.note ?? '');
-    DateTime saleDate =
-        sale?.date ?? LunarCalendar.solarToLunarDateTime(DateTime.now());
+    DateTime saleDate = sale?.date ?? DateTime.now().dateOnly;
     String? qtyError;
     String? amountError;
 

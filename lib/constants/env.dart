@@ -6,7 +6,10 @@ class Envs {
   const Envs._();
 
   static const String _flavorString = String.fromEnvironment('FLAVOR');
-  static final Flavor flavor = Flavor.values.firstWhere((e) => e.name == _flavorString, orElse: () => Flavor.dev);
+  static final Flavor flavor = Flavor.values.firstWhere(
+    (e) => e.name == _flavorString,
+    orElse: () => Flavor.dev,
+  );
 
   static final bool isDev = flavor != Flavor.prod;
 

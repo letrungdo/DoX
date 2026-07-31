@@ -142,7 +142,9 @@ String _cache({
   required String userId,
   required List<ChickenBatch> batches,
   required DateTime syncedAt,
-  int version = 3,
+  // Tracks ChickenViewModel._cacheVersion; a cache written with anything else
+  // is meant to be discarded.
+  int version = 4,
 }) {
   return jsonEncode({
     'version': version,
@@ -808,6 +810,11 @@ void main() {
       quantity: 10,
     );
 
+    // Stored dates are solar, so in solar display mode the year the screens
+    // filter on is the year the server is asked for. The lunar mode shifts it;
+    // that has a test of its own at the end of the group.
+    setUp(() => storageService.setChickenLunarDisplay(false));
+
     test('the selected year is passed to the server', () async {
       final repository = _FakeRepository()..batches = [batchIn(2026)];
       final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
@@ -888,6 +895,24 @@ void main() {
         vm.yearsFor({ChickenSection.batches}),
         containsAll([2019, 2026]),
         reason: 'otherwise the filter can never reach an older year',
+      );
+      vm.dispose();
+    });
+
+    test('in lunar mode the server is asked for the next solar year', () async {
+      await storageService.setChickenLunarDisplay(true);
+      final repository = _FakeRepository()..batches = [batchIn(2026)];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      await vm.ensureLoaded({ChickenSection.batches}, year: 2026);
+
+      expect(
+        repository.requestedYears.single,
+        2027,
+        reason:
+            'lunar year 2026 runs into January 2027, and the server answers '
+            'for the stored years [year - 1, year]',
       );
       vm.dispose();
     });

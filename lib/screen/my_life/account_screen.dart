@@ -24,7 +24,8 @@ class AccountScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _AccountScreenState<V extends AccountViewModel> extends ScreenState<AccountScreen, V> {
+class _AccountScreenState<V extends AccountViewModel>
+    extends ScreenState<AccountScreen, V> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(

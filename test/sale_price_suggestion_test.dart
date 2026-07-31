@@ -1,51 +1,25 @@
 import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
-import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/utils/sale_price_suggestion.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Sales are given as (age in days at the sale, price per chicken, quantity).
-///
-/// [hatchSolar] must be a date whose lunar round-trip is stable over the ages
-/// used (leap lunar months do not survive a DateTime round-trip), otherwise the
-/// batch would not be the age the case says it is. `_expectAges` checks it.
 ChickenBatch _batch(
   String id,
-  DateTime hatchSolar,
-  List<(int, int, int)> sales,
-) {
-  final batch = _rawBatch(id, hatchSolar, sales);
-  for (var i = 0; i < sales.length; i++) {
-    expect(
-      batch.ageInDaysAt(batch.sales[i].date),
-      sales[i].$1,
-      reason: 'lunar round-trip moved sale $id-$i off its age',
-    );
-  }
-  return batch;
-}
-
-ChickenBatch _rawBatch(
-  String id,
-  DateTime hatchSolar,
+  DateTime hatchDate,
   List<(int, int, int)> sales,
 ) {
   return ChickenBatch(
     id: id,
     name: id,
-    // Stored dates are lunar values, so build them from real (solar) days.
-    incubationDate: LunarCalendar.solarToLunarDateTime(
-      hatchSolar.subtract(const Duration(days: 21)),
-    ),
+    incubationDate: hatchDate.subtract(const Duration(days: 21)),
     quantity: 100,
-    actualHatchDate: LunarCalendar.solarToLunarDateTime(hatchSolar),
+    actualHatchDate: hatchDate,
     sales: [
       for (var i = 0; i < sales.length; i++)
         BatchSale(
           id: '$id-$i',
-          date: LunarCalendar.solarToLunarDateTime(
-            hatchSolar.add(Duration(days: sales[i].$1)),
-          ),
+          date: hatchDate.add(Duration(days: sales[i].$1)),
           quantity: sales[i].$3,
           amount: (sales[i].$2 * sales[i].$3).toDouble(),
         ),

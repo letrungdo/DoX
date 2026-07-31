@@ -4,20 +4,26 @@ import 'package:intl/intl.dart';
 
 /// Formatting helpers for chicken dates.
 ///
-/// All chicken dates are stored as *lunar* values (their day/month/year hold a
-/// lunar date). Depending on the user's setting they are shown either as the
-/// lunar date itself or converted to the solar (Gregorian) calendar.
+/// All chicken dates are stored as *solar* (Gregorian) dates. The lunar
+/// calendar is a display layer: depending on the user's setting a date is
+/// shown either as itself or converted to its lunar date. Keeping storage
+/// solar is what makes the conversion safe — a lunar date needs a leap-month
+/// flag that a [DateTime] has nowhere to put, so a stored lunar value cannot
+/// tell a leap month from the ordinary month of the same number.
 class ChickenDate {
   ChickenDate._();
 
   static final DateFormat _format = DateFormat('dd/MM/yyyy');
 
-  /// Formats a stored (lunar-valued) [date] for display. When [useLunar] is
-  /// true the lunar date is shown with an "ÂL" marker; otherwise it is
-  /// converted to the solar date.
+  /// Formats a stored (solar) [date] for display. When [useLunar] is true it is
+  /// converted to its lunar date and marked "ÂL", with an "N" after the month
+  /// in a leap month (e.g. `08/06N/2025 ÂL`); otherwise it is shown as is.
   static String format(DateTime date, {required bool useLunar}) {
-    if (useLunar) return '${_format.format(date)} ÂL';
-    return _format.format(LunarCalendar.lunarDateTimeToSolar(date));
+    if (!useLunar) return _format.format(date);
+    final lunar = LunarCalendar.solarToLunar(date.day, date.month, date.year);
+    final day = lunar.day.toString().padLeft(2, '0');
+    final month = lunar.month.toString().padLeft(2, '0');
+    return '$day/$month${lunar.isLeap ? 'N' : ''}/${lunar.year} ÂL';
   }
 
   /// Formats an age in [days] for display. Below a month it is shown in days;

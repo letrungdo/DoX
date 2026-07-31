@@ -12,7 +12,10 @@ class MyLifeInterceptor extends BaseInterceptor {
   ClientType get clientType => ClientType.myLife;
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     await FirebaseUtil.refreshTokenIfNeed();
 
     options.headers.addAll({
