@@ -531,6 +531,39 @@
   "quantityLabel": "Quantity",
   "pricePerUnit": "Price each",
   "totalAutoCalculated": "Total received (auto)",
+  "priceSuggestion": "Suggested {price}/chicken",
+  "@priceSuggestion": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "priceSuggestionBasis": "From {count} past sales around day {age}",
+  "@priceSuggestionBasis": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "priceSuggestionBasisAll": "From all {count} past sales ({min} - {max})",
+  "@priceSuggestionBasisAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
   "saleNoteHint": "Note (sold to whom...)",
   "saleDate": "Sale date",
   "deleteBatch": "Delete batch",

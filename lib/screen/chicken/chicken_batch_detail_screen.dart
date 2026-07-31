@@ -16,6 +16,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
+import 'package:do_x/utils/sale_price_suggestion.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -1086,118 +1087,202 @@ class _ChickenBatchDetailScreenState
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
-          icon: Assets.images.coinCute,
-          title: isEditing ? l10n.editSaleRound : l10n.recordSale,
-          accent: context.colors.success,
-          confirmText: isEditing ? l10n.update : l10n.confirm,
-          destructiveText: isEditing ? l10n.delete : null,
-          onDestructive: isEditing
-              ? () {
-                  Navigator.pop(context);
-                  _confirmDeleteSale(batch, sale);
-                }
-              : null,
-          onConfirm: () async {
-            final amount = totalAmountController.text.toMoney() ?? 0;
-            final qty = int.tryParse(qtyController.text) ?? 0;
-            if (qty <= 0 || qty > maxQuantity || amount <= 0) {
-              setState(() {
-                qtyError = qty <= 0
-                    ? l10n.errorEnterQuantity
-                    : qty > maxQuantity
-                    ? l10n.errorQuantityExceedsRemaining(maxQuantity)
-                    : null;
-                amountError = amount <= 0 ? l10n.errorEnterAmount : null;
-              });
-              return;
-            }
-            // A price per chicken below the threshold is most likely a missing
-            // zero, so ask before saving it.
-            final unitPrice = (amount / qty).round();
-            if (unitPrice < kSuspiciousPriceThreshold) {
-              final saveAnyway = await confirmSuspiciousPrice(
-                context,
-                unitPrice,
+        builder: (context, setState) {
+          // Recomputed on every build: the age it prices depends on the sale
+          // date, which the user can change while the dialog is open.
+          final suggestion = vm.salePriceSuggestion(
+            ageInDays: batch.ageInDaysAt(saleDate),
+            excludeSaleId: sale?.id,
+          );
+          return CuteDialog(
+            icon: Assets.images.coinCute,
+            title: isEditing ? l10n.editSaleRound : l10n.recordSale,
+            accent: context.colors.success,
+            confirmText: isEditing ? l10n.update : l10n.confirm,
+            destructiveText: isEditing ? l10n.delete : null,
+            onDestructive: isEditing
+                ? () {
+                    Navigator.pop(context);
+                    _confirmDeleteSale(batch, sale);
+                  }
+                : null,
+            onConfirm: () async {
+              final amount = totalAmountController.text.toMoney() ?? 0;
+              final qty = int.tryParse(qtyController.text) ?? 0;
+              if (qty <= 0 || qty > maxQuantity || amount <= 0) {
+                setState(() {
+                  qtyError = qty <= 0
+                      ? l10n.errorEnterQuantity
+                      : qty > maxQuantity
+                      ? l10n.errorQuantityExceedsRemaining(maxQuantity)
+                      : null;
+                  amountError = amount <= 0 ? l10n.errorEnterAmount : null;
+                });
+                return;
+              }
+              // A price per chicken below the threshold is most likely a missing
+              // zero, so ask before saving it.
+              final unitPrice = (amount / qty).round();
+              if (unitPrice < kSuspiciousPriceThreshold) {
+                final saveAnyway = await confirmSuspiciousPrice(
+                  context,
+                  unitPrice,
+                );
+                if (!saveAnyway || !context.mounted) return;
+              }
+              final newSale = BatchSale(
+                id: sale?.id ?? const Uuid().v4(),
+                date: saleDate,
+                quantity: qty,
+                amount: amount,
+                note: noteController.text.isEmpty ? null : noteController.text,
               );
-              if (!saveAnyway || !context.mounted) return;
-            }
-            final newSale = BatchSale(
-              id: sale?.id ?? const Uuid().v4(),
-              date: saleDate,
-              quantity: qty,
-              amount: amount,
-              note: noteController.text.isEmpty ? null : noteController.text,
-            );
-            unawaited(
-              _runWrite(
-                isEditing
-                    ? vm.updateBatchSale(batch.id, newSale)
-                    : vm.addBatchSale(batch.id, newSale),
+              unawaited(
+                _runWrite(
+                  isEditing
+                      ? vm.updateBatchSale(batch.id, newSale)
+                      : vm.addBatchSale(batch.id, newSale),
+                ),
+              );
+              Navigator.pop(context);
+            },
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: CuteTextField(
+                      controller: qtyController,
+                      label: l10n.quantityLabel,
+                      autofocus: !isEditing,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        NoLeadingZeroInputFormatter(),
+                      ],
+                      errorText: qtyError,
+                      onChanged: (_) => setState(() {
+                        qtyError = null;
+                        updateTotal();
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CuteMoneyField(
+                      controller: unitPriceController,
+                      label: l10n.pricePerUnit,
+                      // The suggested price leads the one-tap bar when there is
+                      // one, so it is reachable without leaving the keyboard.
+                      presetSuggestions: [
+                        if (suggestion != null) suggestion.unitPrice,
+                        for (final preset in const [
+                          20000,
+                          25000,
+                          30000,
+                          35000,
+                          40000,
+                          45000,
+                          50000,
+                        ])
+                          if (preset != suggestion?.unitPrice) preset,
+                      ],
+                      onChanged: (_) => setState(() {
+                        amountError = null;
+                        updateTotal();
+                      }),
+                    ),
+                  ),
+                ],
               ),
-            );
-            Navigator.pop(context);
-          },
+              if (suggestion != null)
+                _buildPriceSuggestion(
+                  suggestion,
+                  () => setState(() {
+                    unitPriceController.text = suggestion.unitPrice
+                        .toCurrency();
+                    amountError = null;
+                    updateTotal();
+                  }),
+                ),
+              CuteMoneyField(
+                controller: totalAmountController,
+                label: l10n.totalAutoCalculated,
+                errorText: amountError,
+                onChanged: (_) {
+                  if (amountError != null) setState(() => amountError = null);
+                },
+              ),
+              NoteField(
+                controller: noteController,
+                label: l10n.saleNoteHint,
+                suggestions: vm.batchSaleNoteSuggestions,
+              ),
+              LunarDateField(
+                label: l10n.saleDate,
+                value: saleDate,
+                useLunar: vm.useLunarCalendar,
+                onChanged: (d) => setState(() => saleDate = d),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Tappable line under the price field offering the price past rounds fetched
+  /// at this age, with what it was worked out from.
+  Widget _buildPriceSuggestion(
+    SalePriceSuggestion suggestion,
+    VoidCallback onApply,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final basis = suggestion.windowDays == null
+        ? l10n.priceSuggestionBasisAll(
+            suggestion.sampleCount,
+            "${suggestion.minPrice.toCurrency()}đ",
+            "${suggestion.maxPrice.toCurrency()}đ",
+          )
+        : l10n.priceSuggestionBasis(
+            suggestion.sampleCount,
+            suggestion.ageInDays,
+          );
+    return InkWell(
+      onTap: onApply,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: CuteTextField(
-                    controller: qtyController,
-                    label: l10n.quantityLabel,
-                    autofocus: !isEditing,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      NoLeadingZeroInputFormatter(),
-                    ],
-                    errorText: qtyError,
-                    onChanged: (_) => setState(() {
-                      qtyError = null;
-                      updateTotal();
-                    }),
+            Icon(
+              Icons.lightbulb_outline,
+              size: 16,
+              color: context.colors.money,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.priceSuggestion(
+                      "${suggestion.unitPrice.toCurrency()}đ",
+                    ),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.colors.money,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: CuteMoneyField(
-                    controller: unitPriceController,
-                    label: l10n.pricePerUnit,
-                    presetSuggestions: const [
-                      20000,
-                      25000,
-                      30000,
-                      35000,
-                      40000,
-                      45000,
-                      50000,
-                    ],
-                    onChanged: (_) => setState(() {
-                      amountError = null;
-                      updateTotal();
-                    }),
+                  Text(
+                    basis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            CuteMoneyField(
-              controller: totalAmountController,
-              label: l10n.totalAutoCalculated,
-              errorText: amountError,
-              onChanged: (_) {
-                if (amountError != null) setState(() => amountError = null);
-              },
-            ),
-            NoteField(
-              controller: noteController,
-              label: l10n.saleNoteHint,
-              suggestions: vm.batchSaleNoteSuggestions,
-            ),
-            LunarDateField(
-              label: l10n.saleDate,
-              value: saleDate,
-              useLunar: vm.useLunarCalendar,
-              onChanged: (d) => setState(() => saleDate = d),
+                ],
+              ),
             ),
           ],
         ),

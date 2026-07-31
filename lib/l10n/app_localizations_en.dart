@@ -819,6 +819,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get totalAutoCalculated => 'Total received (auto)';
 
   @override
+  String priceSuggestion(String price) {
+    return 'Suggested $price/chicken';
+  }
+
+  @override
+  String priceSuggestionBasis(int count, int age) {
+    return 'From $count past sales around day $age';
+  }
+
+  @override
+  String priceSuggestionBasisAll(int count, String min, String max) {
+    return 'From all $count past sales ($min - $max)';
+  }
+
+  @override
   String get saleNoteHint => 'Note (sold to whom...)';
 
   @override

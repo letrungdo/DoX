@@ -17,6 +17,7 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
+import 'package:do_x/utils/sale_price_suggestion.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -81,10 +82,8 @@ class ChickenViewModel extends CoreViewModel {
   /// Previously used notes for cock-sale records (global + per batch), newest
   /// first.
   List<String> get cockSaleNoteSuggestions {
-    final sales = [
-      ..._globalCockSales,
-      ..._batches.expand((b) => b.cockSales),
-    ]..sort((a, b) => b.date.compareTo(a.date));
+    final sales = [..._globalCockSales, ..._batches.expand((b) => b.cockSales)]
+      ..sort((a, b) => b.date.compareTo(a.date));
     return _distinctNotes(sales.map((s) => s.note));
   }
 
@@ -95,13 +94,23 @@ class ChickenViewModel extends CoreViewModel {
     return _distinctNotes(sales.map((s) => s.note));
   }
 
+  /// Suggested price per chicken for a sale at [ageInDays] days old, read from
+  /// every past sale round of every batch. Null until there is a past round to
+  /// learn from. [excludeSaleId] leaves out the round being edited.
+  SalePriceSuggestion? salePriceSuggestion({
+    required int ageInDays,
+    String? excludeSaleId,
+  }) => suggestSaleUnitPrice(
+    batches: _batches,
+    ageInDays: ageInDays,
+    excludeSaleId: excludeSaleId,
+  );
+
   /// Previously used notes for expense records (global + per batch), newest
   /// first.
   List<String> get expenseNoteSuggestions {
-    final expenses = [
-      ..._globalExpenses,
-      ..._batches.expand((b) => b.expenses),
-    ]..sort((a, b) => b.date.compareTo(a.date));
+    final expenses = [..._globalExpenses, ..._batches.expand((b) => b.expenses)]
+      ..sort((a, b) => b.date.compareTo(a.date));
     return _distinctNotes(expenses.map((e) => e.note));
   }
 
@@ -537,7 +546,9 @@ class ChickenViewModel extends CoreViewModel {
     final inFlight = _loadTask;
     // An unfiltered read covers every year, so it also answers a narrower one.
     final coversYear = _loadTaskYear == null || _loadTaskYear == year;
-    if (inFlight != null && coversYear && _loadTaskSections.containsAll(wanted)) {
+    if (inFlight != null &&
+        coversYear &&
+        _loadTaskSections.containsAll(wanted)) {
       return inFlight;
     }
 
@@ -606,7 +617,9 @@ class ChickenViewModel extends CoreViewModel {
           _pendingDeletedBatchIds.removeWhere((id) => !fetchedIds.contains(id));
         }
         _batches = _mergeYearWindow(
-          batches.where((b) => !_pendingDeletedBatchIds.contains(b.id)).toList(),
+          batches
+              .where((b) => !_pendingDeletedBatchIds.contains(b.id))
+              .toList(),
           _batches,
           year,
           (b) => b.incubationDate.year,
@@ -625,7 +638,10 @@ class ChickenViewModel extends CoreViewModel {
           (s) => s.date.year,
           (s) => s.id,
         );
-        mergeSort(_globalCockSales, compare: (a, b) => b.date.compareTo(a.date));
+        mergeSort(
+          _globalCockSales,
+          compare: (a, b) => b.date.compareTo(a.date),
+        );
       }
       if (data.globalExpenses != null) {
         _globalExpenses = _mergeYearWindow(

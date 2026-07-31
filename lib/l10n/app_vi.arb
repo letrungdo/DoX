@@ -510,6 +510,39 @@
   "quantityLabel": "Số lượng",
   "pricePerUnit": "Giá 1 con",
   "totalAutoCalculated": "Tổng tiền thu được (tự tính)",
+  "priceSuggestion": "Gợi ý {price}/con",
+  "@priceSuggestion": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "priceSuggestionBasis": "Từ {count} đợt bán quanh {age} ngày tuổi",
+  "@priceSuggestionBasis": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "priceSuggestionBasisAll": "Từ {count} đợt bán trước đó ({min} - {max})",
+  "@priceSuggestionBasisAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
   "saleNoteHint": "Ghi chú (bán cho ai...)",
   "saleDate": "Ngày bán",
   "deleteBatch": "Xóa lứa gà",
