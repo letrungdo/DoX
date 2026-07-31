@@ -43,7 +43,7 @@ class _ChickenStatisticsScreenState
     extends ScreenState<ChickenStatisticsScreen, ChickenViewModel>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _selectedYear = DateTime.now().year;
+  late int _selectedYear;
 
   /// Only the monthly tab is year-filtered, so only it needs to be scrolled
   /// back to the top when the year changes.
@@ -52,6 +52,7 @@ class _ChickenStatisticsScreenState
   @override
   void initState() {
     super.initState();
+    _selectedYear = vm.currentDisplayYear();
     _tabController = TabController(length: 2, vsync: this);
   }
 
@@ -147,12 +148,16 @@ class _ChickenStatisticsScreenState
     // Every month feeds the chart (an empty month is a meaningful gap there),
     // but only months with figures get a detail card.
     final allMonths = [
-      for (var m = 1; m <= 12; m++)
+      for (final (index, entry) in stats.entries.indexed)
         (
-          key: m,
-          label: "${l10n.monthPrefix} $m",
-          shortLabel: l10n.monthShort(m),
-          data: stats[m]!,
+          key: index + 1,
+          label:
+              "${l10n.monthPrefix} ${entry.key.month}"
+              "${entry.key.isLeap ? ' (${l10n.lunarLeapMonth})' : ''}",
+          shortLabel:
+              "${l10n.monthShort(entry.key.month)}"
+              "${entry.key.isLeap ? 'N' : ''}",
+          data: entry.value,
         ),
     ];
     final active = allMonths.where(_hasData).toList();
