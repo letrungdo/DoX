@@ -1544,6 +1544,24 @@ abstract class AppLocalizations {
   /// **'Total received (auto)'**
   String get totalAutoCalculated;
 
+  /// No description provided for @priceSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested {price}/chicken'**
+  String priceSuggestion(String price);
+
+  /// No description provided for @priceSuggestionBasis.
+  ///
+  /// In en, this message translates to:
+  /// **'From {count} past sales around day {age}'**
+  String priceSuggestionBasis(int count, int age);
+
+  /// No description provided for @priceSuggestionBasisAll.
+  ///
+  /// In en, this message translates to:
+  /// **'From all {count} past sales ({min} - {max})'**
+  String priceSuggestionBasisAll(int count, String min, String max);
+
   /// No description provided for @saleNoteHint.
   ///
   /// In en, this message translates to:

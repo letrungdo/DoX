@@ -818,6 +818,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get totalAutoCalculated => 'Tổng tiền thu được (tự tính)';
 
   @override
+  String priceSuggestion(String price) {
+    return 'Gợi ý $price/con';
+  }
+
+  @override
+  String priceSuggestionBasis(int count, int age) {
+    return 'Từ $count đợt bán quanh $age ngày tuổi';
+  }
+
+  @override
+  String priceSuggestionBasisAll(int count, String min, String max) {
+    return 'Từ $count đợt bán trước đó ($min - $max)';
+  }
+
+  @override
   String get saleNoteHint => 'Ghi chú (bán cho ai...)';
 
   @override
