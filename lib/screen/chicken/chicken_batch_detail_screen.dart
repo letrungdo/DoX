@@ -635,6 +635,9 @@ class _ChickenBatchDetailScreenState
     final l10n = AppLocalizations.of(context);
     final hasSold = batch.sales.isNotEmpty;
     final soldOut = hasSold && batch.remainingQuantity <= 0;
+    final suggestion = !hasSold
+        ? vm.salePriceSuggestion(ageInDays: batch.ageInDays)
+        : null;
 
     // Theme-aware tint: green once the batch is sold out, amber while there are
     // still chickens left to sell.
@@ -662,16 +665,15 @@ class _ChickenBatchDetailScreenState
             style: TextStyle(color: context.theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
-          _buildSummaryBox([
-            _buildRowInfo(
-              l10n.suggestedPrice,
-              l10n.pricePerChicken(
-                "${vm.suggestPrice(batch.ageInDays).toCurrency()}đ",
+          if (suggestion != null)
+            _buildSummaryBox([
+              _buildRowInfo(
+                l10n.suggestedPrice,
+                l10n.pricePerChicken("${suggestion.unitPrice.toCurrency()}đ"),
+                color: context.colors.money,
+                isBold: true,
               ),
-              color: context.colors.money,
-              isBold: true,
-            ),
-          ]),
+            ]),
         ] else ...[
           ...batch.sales.map((sale) => _buildSaleRow(batch, sale)),
           const SizedBox(height: 4),
