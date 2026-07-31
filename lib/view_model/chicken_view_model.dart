@@ -1104,16 +1104,6 @@ class ChickenViewModel extends CoreViewModel {
     ];
   }
 
-  /// Giá gợi ý theo mặt bằng giá bán thực tế trong sổ (đ/con).
-  /// Tuổi âm (chưa nở) vẫn trả mức thấp nhất để form bán có giá mặc định.
-  double suggestPrice(int ageInDays) {
-    if (ageInDays < 7) return 20000;
-    if (ageInDays < 21) return 25000;
-    if (ageInDays < 30) return 33000;
-    if (ageInDays < 45) return 40000;
-    return 50000;
-  }
-
   bool get vaccinationNotificationsEnabled =>
       storageService.getChickenNotificationsEnabled();
 
