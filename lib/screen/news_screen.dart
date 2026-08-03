@@ -3,6 +3,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
@@ -10,6 +11,7 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
@@ -25,6 +27,7 @@ import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 @RoutePage()
@@ -199,6 +202,15 @@ class _NewsScreenState<V extends NewsViewModel>
       _buildGoldCard(l10n),
       const SizedBox(height: 22),
       _SectionHeader(
+        icon: Icons.auto_awesome_rounded, //
+        color: colors.warning,
+        title: l10n.goldNews,
+        badge: "AI",
+      ),
+      const SizedBox(height: 10),
+      _buildGoldNewsCard(l10n),
+      const SizedBox(height: 22),
+      _SectionHeader(
         icon: Icons.show_chart_rounded, //
         color: colors.money,
         title: l10n.market,
@@ -333,6 +345,207 @@ class _NewsScreenState<V extends NewsViewModel>
         ),
       ),
     );
+  }
+
+  /// The daily digest: one AI paragraph, the headlines behind it, and the
+  /// articles they came from. The whole thing is built server-side, in both of
+  /// the app's languages, so switching language needs no extra fetch — only
+  /// the source titles stay in whatever language the outlet published them.
+  Widget _buildGoldNewsCard(AppLocalizations l10n) {
+    final lang = l10n.localeName;
+    return Selector<V, GoldNews?>(
+      selector: (_, vm) => vm.goldNews,
+      builder: (context, news, _) {
+        return NeuCard(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: news == null
+                ? Text(
+                    l10n.goldNewsEmpty,
+                    style: context.textTheme.title.size13, //
+                  )
+                : _buildDigest(l10n, news, lang),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDigest(AppLocalizations l10n, GoldNews news, String lang) {
+    final reason = news.sentimentReason(lang);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _buildSentimentChip(l10n, news.sentiment),
+            const Spacer(),
+            Text(
+              _digestTime(l10n, news),
+              style: context.textTheme.title.size13,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          news.summary(lang),
+          style: context.textTheme.primary.size17.copyWith(height: 1.45),
+        ),
+        if (reason != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            reason,
+            style: context.textTheme.title.size15.copyWith(height: 1.4),
+          ),
+        ],
+        for (final item in news.highlights) ...[
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          _buildHighlight(item, news.sourceOf(item), lang),
+        ],
+      ],
+    );
+  }
+
+  /// When the digest was put together. It is rebuilt once a day, so the time
+  /// of day is what tells the reader how stale the card is; the date is only
+  /// spelled out once the digest is no longer from today.
+  String _digestTime(AppLocalizations l10n, GoldNews news) {
+    final updatedAt = news.updatedAt?.toLocal();
+    if (updatedAt == null) return news.date.toStringFormat("dd/MM");
+    final now = DateTime.now();
+    final isToday =
+        updatedAt.year == now.year &&
+        updatedAt.month == now.month &&
+        updatedAt.day == now.day;
+    return l10n.goldNewsUpdatedAt(
+      updatedAt.toStringFormat(isToday ? "HH:mm" : "HH:mm dd/MM"),
+    );
+  }
+
+  Widget _buildSentimentChip(AppLocalizations l10n, GoldImpact sentiment) {
+    final (color, icon, label) = switch (sentiment) {
+      GoldImpact.up => (
+        context.colors.success,
+        Icons.trending_up_rounded,
+        l10n.trendUp,
+      ),
+      GoldImpact.down => (
+        context.colors.danger,
+        Icons.trending_down_rounded,
+        l10n.trendDown,
+      ),
+      GoldImpact.neutral => (
+        context.colors.info,
+        Icons.trending_flat_rounded,
+        l10n.trendNeutral,
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.neuTint(color, amount: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 5,
+        children: [
+          Icon(icon, size: 15, color: color),
+          Text(
+            label,
+            style: context.textTheme.secondary.size13.bold.textColor(color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// One bullet of the digest. Tapping it opens the article it came from —
+  /// the AI text is a summary, so the original stays one tap away.
+  Widget _buildHighlight(
+    GoldNewsHighlight item,
+    GoldNewsSource? source,
+    String lang,
+  ) {
+    final color = switch (item.impact) {
+      GoldImpact.up => context.colors.success,
+      GoldImpact.down => context.colors.danger,
+      GoldImpact.neutral => context.colors.info,
+    };
+    final icon = switch (item.impact) {
+      GoldImpact.up => Icons.arrow_drop_up_rounded,
+      GoldImpact.down => Icons.arrow_drop_down_rounded,
+      GoldImpact.neutral => Icons.remove_rounded,
+    };
+    return InkWell(
+      onTap: source == null ? null : () => _openSource(source),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 6,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: context.neuTint(color, amount: 0.14),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title(lang),
+                    style: context.textTheme.primary.size16.bold,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    item.detail(lang),
+                    style: context.textTheme.title.size15.copyWith(height: 1.4),
+                  ),
+                  if (source != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      spacing: 4,
+                      children: [
+                        Icon(
+                          Icons.open_in_new_rounded,
+                          size: 13,
+                          color: context.colors.info,
+                        ),
+                        Flexible(
+                          child: Text(
+                            source.source ?? source.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.secondary.size13.textColor(
+                              context.colors.info,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSource(GoldNewsSource source) async {
+    final uri = Uri.tryParse(source.url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Widget _buildMarketCard() {

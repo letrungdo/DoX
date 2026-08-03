@@ -448,6 +448,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get market => 'Market';
 
   @override
+  String get goldNews => 'Gold price drivers';
+
+  @override
+  String get goldNewsEmpty => 'No digest for today yet.';
+
+  @override
+  String get goldNewsSources => 'Sources';
+
+  @override
+  String goldNewsUpdatedAt(String time) {
+    return 'Compiled $time';
+  }
+
+  @override
+  String get trendUp => 'Trending up';
+
+  @override
+  String get trendDown => 'Trending down';
+
+  @override
+  String get trendNeutral => 'Sideways';
+
+  @override
   String get index => 'Index';
 
   @override

@@ -201,6 +201,20 @@
   "goldPrice": "Gold Price",
   "exchangeRate": "Exchange rate",
   "market": "Market",
+  "goldNews": "Gold price drivers",
+  "goldNewsEmpty": "No digest for today yet.",
+  "goldNewsSources": "Sources",
+  "goldNewsUpdatedAt": "Compiled {time}",
+  "@goldNewsUpdatedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "trendUp": "Trending up",
+  "trendDown": "Trending down",
+  "trendNeutral": "Sideways",
   "index": "Index",
   "buy": "Buy",
   "sell": "Sell",

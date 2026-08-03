@@ -1,11 +1,15 @@
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:do_x/view_model/news/coin_chart.dart';
 
 class NewsViewModel extends CoreViewModel with CoinChartMixin {
   List<GoldSymbol> _goldPrices = [];
   List<GoldSymbol> get goldPrices => _goldPrices;
+
+  GoldNews? _goldNews;
+  GoldNews? get goldNews => _goldNews;
 
   String? _googleRate;
   String? get googleRate => _googleRate;
@@ -54,6 +58,7 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
     try {
       await Future.wait([
         _getGoldPrice(), //
+        _getGoldNews(),
         _getFxRates(),
         getMarket(),
       ]);
@@ -84,6 +89,17 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
     final data = res.data;
     if (data == null) return;
     _goldPrices = data;
+    notifyListenersSafe();
+  }
+
+  /// The digest is rebuilt once a day on the server, so a failed fetch is not
+  /// worth an error dialog: the previous card stays on screen and the next
+  /// refresh picks it up.
+  Future<void> _getGoldNews() async {
+    final res = await fxRateService.getGoldNews(cancelToken: cancelToken);
+    final news = res.data;
+    if (news == null) return;
+    _goldNews = news;
     notifyListenersSafe();
   }
 

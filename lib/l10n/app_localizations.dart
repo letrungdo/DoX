@@ -914,6 +914,48 @@ abstract class AppLocalizations {
   /// **'Market'**
   String get market;
 
+  /// No description provided for @goldNews.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold price drivers'**
+  String get goldNews;
+
+  /// No description provided for @goldNewsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No digest for today yet.'**
+  String get goldNewsEmpty;
+
+  /// No description provided for @goldNewsSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get goldNewsSources;
+
+  /// No description provided for @goldNewsUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Compiled {time}'**
+  String goldNewsUpdatedAt(String time);
+
+  /// No description provided for @trendUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending up'**
+  String get trendUp;
+
+  /// No description provided for @trendDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending down'**
+  String get trendDown;
+
+  /// No description provided for @trendNeutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Sideways'**
+  String get trendNeutral;
+
   /// No description provided for @index.
   ///
   /// In en, this message translates to:
