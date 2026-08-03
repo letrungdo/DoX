@@ -88,6 +88,38 @@
       "value": {"type": "String"}
     }
   },
+  "mergedTab": "Combined",
+  "mergedTabSubtitle": "Meters of one customer",
+  "mergedSavingsTitle": "Saved by splitting the meters",
+  "mergedSavingsTotal": "Total saved",
+  "mergedSingleMeterCost": "On one household meter",
+  "mergedActualCost": "Actually paid",
+  "mergedAveragePerMonth": "Average per month",
+  "mergedMonthsCounted": "{count} months with both meters",
+  "@mergedMonthsCounted": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "mergedMeters": "{count} meters under the same customer name",
+  "@mergedMeters": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "mergedMonthlyTitle": "Combined bill by month",
+  "mergedSavingsLabel": "Saved",
+  "mergedSplitLabel": "Household {residential} · Other {other}",
+  "@mergedSplitLabel": {
+    "placeholders": {
+      "residential": {"type": "String"},
+      "other": {"type": "String"}
+    }
+  },
+  "mergedNeedsBothMeters": "Sign in to both a household and a non-household account to compare.",
+  "mergedNoOverlap": "No month has a bill from both meters yet.",
+  "mergedNoGroups": "No customer here holds more than one meter. This tab only adds up meters under the same customer name.",
+  "mergedEstimateNote": "Estimated with the progressive household tariff (one allowance), calibrated against the same month's real household bill.",
   "news": "News",
   "chicken": "Chicken",
   "locket": "Locket",

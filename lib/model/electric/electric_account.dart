@@ -39,6 +39,19 @@ class ElectricAccount {
 
   String? get contractTypeDisplay => detail?.contractType ?? contractType;
 
+  /// True for a household contract ("Sinh hoạt"), i.e. the one billed on the
+  /// progressive tier ladder. "Ngoài sinh hoạt" (agriculture, business…) also
+  /// contains "sinh hoạt", so it has to be excluded first. Unknown contract
+  /// types are treated as non-residential.
+  bool get isResidential {
+    final type = contractTypeDisplay?.toLowerCase().trim();
+    if (type == null || type.isEmpty) return false;
+    if (type.contains("ngoài sinh hoạt") || type.contains("ngoai sinh hoat")) {
+      return false;
+    }
+    return type.contains("sinh hoạt") || type.contains("sinh hoat");
+  }
+
   factory ElectricAccount.fromJson(Map<String, dynamic> json) =>
       ElectricAccount(
         username: json['username'] as String,

@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:do_x/model/electric/electric_account.dart';
+import 'package:do_x/model/electric/electric_merged.dart';
 import 'package:do_x/model/electric/electric_models.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/services/electric_service.dart';
@@ -36,23 +37,44 @@ class ElectricViewModel extends CoreViewModel {
   ElectricAccount? get activeAccount =>
       _accounts.isEmpty ? null : _accounts[_activeIndex];
 
+  bool _mergedView = false;
+
+  /// True while the "all meters together" tab is selected instead of one of
+  /// the accounts.
+  bool get isMergedView => _mergedView;
+
+  /// Accounts of the same customer, merged — one group per customer holding
+  /// more than one meter. Recomputed on demand: a dozen months per account is
+  /// nothing to fold.
+  List<ElectricMergedGroup> get mergedGroups =>
+      ElectricMergedGroup.of(_accounts);
+
+  /// The merged tab only makes sense once one customer holds two meters. While
+  /// the accounts are still loading their names can't be compared yet, so the
+  /// tab is offered from two accounts up and the grouping settles once the
+  /// customer names arrive.
+  bool get canMerge => _accounts.length > 1;
+
   final _fetchingUsernames = <String>{};
 
   /// True while data for the active account is being (re)loaded (any trigger,
-  /// including background refreshes on tab switch / resume).
-  bool get isFetching {
-    final account = activeAccount;
-    return account != null && _fetchingUsernames.contains(account.username);
-  }
+  /// including background refreshes on tab switch / resume). On the merged tab,
+  /// true while any account is loading.
+  bool get isFetching => _anyOf(_fetchingUsernames);
 
   final _loadingUsernames = <String>{};
 
   /// True only while an explicitly-requested load is running — first load or a
   /// manual reload (refresh button / pull-to-refresh). Background refreshes on
   /// tab switch / resume don't set this, so the top progress bar stays hidden.
-  bool get isLoading {
+  bool get isLoading => _anyOf(_loadingUsernames);
+
+  bool _anyOf(Set<String> usernames) {
+    if (_mergedView) {
+      return _accounts.any((a) => usernames.contains(a.username));
+    }
     final account = activeAccount;
-    return account != null && _loadingUsernames.contains(account.username);
+    return account != null && usernames.contains(account.username);
   }
 
   ElectricCustomer? get customer => activeAccount?.customer;
@@ -61,20 +83,60 @@ class ElectricViewModel extends CoreViewModel {
   /// Usage tiles with fallbacks when the alerts API has no data:
   /// today/yesterday from the RF-SPIDER daily deltas, this month from the
   /// latest reading's since-billing counter, last month from billing history.
-  num? get usageToday => usage?.today ?? _dailyKwhOn(DateTime.now());
+  num? get usageToday => _usageToday(activeAccount);
 
-  num? get usageYesterday =>
-      usage?.yesterday ??
-      _dailyKwhOn(DateTime.now().subtract(const Duration(days: 1)));
+  num? get usageYesterday => _usageYesterday(activeAccount);
 
-  num? get usageThisMonth =>
-      usage?.thisMonth ?? latestReading?.usageSinceBilling;
+  num? get usageThisMonth => _usageThisMonth(activeAccount);
 
-  num? get usageLastMonth =>
-      usage?.lastMonth ?? monthlyUsages.firstOrNull?.usageKwh;
+  num? get usageLastMonth => _usageLastMonth(activeAccount);
 
-  num? _dailyKwhOn(DateTime date) {
-    for (final entry in dailyUsages) {
+  /// Same four tiles with [accounts]' meters added together. Null only when no
+  /// account has the figure at all; accounts that are missing it count as 0
+  /// rather than voiding the sum.
+  num? mergedUsageToday(List<ElectricAccount> accounts) =>
+      _sumUsage(accounts, _usageToday);
+
+  num? mergedUsageYesterday(List<ElectricAccount> accounts) =>
+      _sumUsage(accounts, _usageYesterday);
+
+  num? mergedUsageThisMonth(List<ElectricAccount> accounts) =>
+      _sumUsage(accounts, _usageThisMonth);
+
+  num? mergedUsageLastMonth(List<ElectricAccount> accounts) =>
+      _sumUsage(accounts, _usageLastMonth);
+
+  num? _sumUsage(
+    List<ElectricAccount> accounts,
+    num? Function(ElectricAccount account) value,
+  ) {
+    num total = 0;
+    var found = false;
+    for (final account in accounts) {
+      final kwh = value(account);
+      if (kwh == null) continue;
+      found = true;
+      total += kwh;
+    }
+    return found ? total : null;
+  }
+
+  num? _usageToday(ElectricAccount? account) =>
+      account?.usage?.today ?? _dailyKwhOn(account, DateTime.now());
+
+  num? _usageYesterday(ElectricAccount? account) =>
+      account?.usage?.yesterday ??
+      _dailyKwhOn(account, DateTime.now().subtract(const Duration(days: 1)));
+
+  num? _usageThisMonth(ElectricAccount? account) =>
+      account?.usage?.thisMonth ??
+      account?.spiderReadings.firstOrNull?.usageSinceBilling;
+
+  num? _usageLastMonth(ElectricAccount? account) =>
+      account?.usage?.lastMonth ?? account?.monthlyUsages.firstOrNull?.usageKwh;
+
+  num? _dailyKwhOn(ElectricAccount? account, DateTime date) {
+    for (final entry in _dailyUsagesOf(account)) {
       if (entry.day.year == date.year &&
           entry.day.month == date.month &&
           entry.day.day == date.day) {
@@ -95,8 +157,31 @@ class ElectricViewModel extends CoreViewModel {
 
   /// kWh per day derived from RF-SPIDER meter indexes (last reading of each
   /// day minus the previous day's), oldest first.
-  List<({DateTime day, double kwh})> get dailyUsages {
-    final readings = spiderReadings;
+  List<({DateTime day, double kwh})> get dailyUsages =>
+      _dailyUsagesOf(activeAccount);
+
+  /// Daily usage of [accounts]' meters added together, oldest first. Only days
+  /// covered by all of them are kept — a meter with no reading that day would
+  /// otherwise pull the merged bar down.
+  List<({DateTime day, double kwh})> mergedDailyUsages(
+    List<ElectricAccount> accounts,
+  ) {
+    if (accounts.isEmpty) return [];
+    final totals = <DateTime, double>{};
+    final counts = <DateTime, int>{};
+    for (final account in accounts) {
+      for (final entry in _dailyUsagesOf(account)) {
+        totals[entry.day] = (totals[entry.day] ?? 0) + entry.kwh;
+        counts[entry.day] = (counts[entry.day] ?? 0) + 1;
+      }
+    }
+    final days = totals.keys.where((d) => counts[d] == accounts.length).toList()
+      ..sort();
+    return days.map((day) => (day: day, kwh: totals[day]!)).toList();
+  }
+
+  List<({DateTime day, double kwh})> _dailyUsagesOf(ElectricAccount? account) {
+    final readings = account?.spiderReadings ?? const <ElectricMeterReading>[];
     if (readings.isEmpty) return [];
 
     // Last (highest) meter index of each day.
@@ -231,9 +316,12 @@ class ElectricViewModel extends CoreViewModel {
     }
     await secureStorage.saveCpcAccounts(_accounts);
     if (_accounts.isEmpty) {
+      _mergedView = false;
       _setStatus(ElectricStatus.loggedOut);
       return;
     }
+    // Nothing left to merge once a single meter remains.
+    if (!canMerge) _mergedView = false;
     notifyListenersSafe();
     final active = activeAccount;
     if (active != null && !active.loaded) {
@@ -242,15 +330,34 @@ class ElectricViewModel extends CoreViewModel {
   }
 
   void switchAccount(int index) {
-    if (index < 0 || index >= _accounts.length || index == _activeIndex) return;
+    if (index < 0 || index >= _accounts.length) return;
+    if (index == _activeIndex && !_mergedView) return;
     _activeIndex = index;
+    _mergedView = false;
     notifyListenersSafe();
     final account = _accounts[index];
     if (!account.loaded) _fetchAccount(account, showLoading: true);
   }
 
+  /// Selects the merged tab and pulls in whatever accounts haven't loaded yet —
+  /// the comparison needs every meter's billing history.
+  void switchToMergedView() {
+    if (_mergedView || !canMerge) return;
+    _mergedView = true;
+    notifyListenersSafe();
+    for (final account in _accounts) {
+      if (!account.loaded) _fetchAccount(account, showLoading: true);
+    }
+  }
+
   Future<void> onRefresh({bool showLoading = false}) async {
     renewCancelToken("onRefresh");
+    if (_mergedView) {
+      await Future.wait(
+        _accounts.map((a) => _fetchAccount(a, showLoading: showLoading)),
+      );
+      return;
+    }
     final account = activeAccount;
     if (account != null) {
       await _fetchAccount(account, showLoading: showLoading);

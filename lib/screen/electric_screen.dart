@@ -6,6 +6,7 @@ import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/electric/electric_account.dart';
+import 'package:do_x/model/electric/electric_merged.dart';
 import 'package:do_x/model/electric/electric_models.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
@@ -128,10 +129,12 @@ class _ElectricScreenState
           selector: (vm) => vm.isFetching,
         ),
         actions: [
-          Selector<ElectricViewModel, ElectricStatus>(
-            selector: (_, vm) => vm.status,
-            builder: (context, status, _) {
-              if (status != ElectricStatus.loggedIn) {
+          Selector<ElectricViewModel, (ElectricStatus, bool)>(
+            selector: (_, vm) => (vm.status, vm.isMergedView),
+            builder: (context, state, _) {
+              final (status, mergedView) = state;
+              // The merged tab has no single account to sign out of.
+              if (status != ElectricStatus.loggedIn || mergedView) {
                 return const SizedBox.shrink();
               }
               return IconButton(
@@ -263,24 +266,10 @@ class _ElectricScreenState
                   _buildAccountTabs(l10n),
                   const SizedBox(height: 14),
                   Selector<ElectricViewModel, bool>(
-                    // Skeleton while the account is loading for the first time.
-                    selector: (_, vm) => vm.customer == null && vm.isFetching,
-                    builder: (context, showSkeleton, _) {
-                      if (showSkeleton) return _buildSkeleton();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildCustomerCard(l10n),
-                          const SizedBox(height: 20),
-                          _buildUsageSection(l10n),
-                          const SizedBox(height: 24),
-                          _buildDailyChart(l10n),
-                          const SizedBox(height: 24),
-                          _buildMonthlySection(l10n),
-                          const SizedBox(height: 24),
-                          _buildSpiderSection(l10n),
-                        ],
-                      );
+                    selector: (_, vm) => vm.isMergedView,
+                    builder: (context, mergedView, _) {
+                      if (mergedView) return _buildMergedContent(l10n);
+                      return _buildAccountContent(l10n);
                     },
                   ),
                 ]),
@@ -289,6 +278,30 @@ class _ElectricScreenState
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildAccountContent(AppLocalizations l10n) {
+    return Selector<ElectricViewModel, bool>(
+      // Skeleton while the account is loading for the first time.
+      selector: (_, vm) => vm.customer == null && vm.isFetching,
+      builder: (context, showSkeleton, _) {
+        if (showSkeleton) return _buildSkeleton();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildCustomerCard(l10n),
+            const SizedBox(height: 20),
+            _buildUsageSection(l10n),
+            const SizedBox(height: 24),
+            _buildDailyChart(l10n),
+            const SizedBox(height: 24),
+            _buildMonthlySection(l10n),
+            const SizedBox(height: 24),
+            _buildSpiderSection(l10n),
+          ],
+        );
+      },
     );
   }
 
@@ -355,8 +368,16 @@ class _ElectricScreenState
                 scheme,
                 label: accounts[i].shortDisplayName,
                 subtitle: accounts[i].contractTypeDisplay,
-                selected: i == activeIndex,
+                selected: !vm.isMergedView && i == activeIndex,
                 onTap: () => vm.switchAccount(i),
+              ),
+            if (vm.canMerge)
+              _accountChip(
+                scheme,
+                label: l10n.mergedTab,
+                subtitle: l10n.mergedTabSubtitle,
+                selected: vm.isMergedView,
+                onTap: vm.switchToMergedView,
               ),
             NeuCard(
               radius: 14,
@@ -757,6 +778,433 @@ class _ElectricScreenState
               Text(
                 "${item.usageKwh.formatUnit()} kWh",
                 style: context.textTheme.secondary.size13,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Merged tab: the meters of one customer added together, plus what the same
+  // consumption would have cost on a single household meter. Meters are grouped
+  // by customer name, so a relative's account signed in here stays out of the
+  // household's own total.
+  // ---------------------------------------------------------------------------
+
+  Widget _buildMergedContent(AppLocalizations l10n) {
+    // Consumer, not Selector: the groups are rebuilt on every read, so there is
+    // nothing stable to compare against.
+    return Consumer<ElectricViewModel>(
+      builder: (context, vm, _) {
+        final groups = vm.mergedGroups;
+        if (groups.isEmpty) {
+          if (vm.isFetching) return _buildSkeleton();
+          return _buildMergedNotice(l10n.mergedNoGroups);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final group in groups) ...[
+              _buildMergedGroup(l10n, vm, group),
+              if (group != groups.last) const SizedBox(height: 32),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMergedGroup(
+    AppLocalizations l10n,
+    ElectricViewModel vm,
+    ElectricMergedGroup group,
+  ) {
+    final merged = group.usage;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Named first: the totals below are meaningless until it is clear whose
+        // meters, and which of them, went into the sum.
+        _buildMergedMetersCard(l10n, group),
+        const SizedBox(height: 20),
+        if (!merged.isComparable)
+          _buildMergedNotice(l10n.mergedNeedsBothMeters)
+        else if (merged.isEmpty)
+          _buildMergedNotice(l10n.mergedNoOverlap)
+        else
+          _buildSavingsCard(l10n, merged),
+        const SizedBox(height: 20),
+        _buildMergedUsageSection(l10n, vm, group.accounts),
+        const SizedBox(height: 24),
+        _buildMergedDailyChart(l10n, vm.mergedDailyUsages(group.accounts)),
+        if (merged.months.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildMergedMonthlySection(l10n, merged),
+        ],
+      ],
+    );
+  }
+
+  /// Who the total belongs to and exactly which meters were added into it.
+  Widget _buildMergedMetersCard(
+    AppLocalizations l10n,
+    ElectricMergedGroup group,
+  ) {
+    final accent = _ChartColors.current(context);
+    return NeuCard(
+      radius: 14,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.merge_rounded, color: accent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  group.ownerName,
+                  style: context.textTheme.primary.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.mergedMeters("${group.accounts.length}"),
+            style: context.textTheme.secondary.size13,
+          ),
+          const SizedBox(height: 10),
+          ...group.accounts.map(
+            (account) => _buildMergedMeterRow(l10n, account),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMergedMeterRow(AppLocalizations l10n, ElectricAccount account) {
+    final customer = account.customer;
+    // Contract type is what tells the two meters apart; the customer code and
+    // meter id are there for the times both are "Sinh hoạt".
+    final title = account.contractTypeDisplay?.isNotEmpty == true
+        ? account.contractTypeDisplay!
+        : account.username;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(
+            Icons.electric_meter_rounded,
+            size: 16,
+            color: context.theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: context.textTheme.primary.size13),
+                Text(
+                  "${customer?.customerCode.toDashIfNull} · ${l10n.meterId} ${customer?.meterId.toDashIfNull}",
+                  style: context.textTheme.secondary.copyWith(fontSize: 11.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMergedNotice(String message) {
+    // Sunken fill: a notice is a hole in the page, not another raised panel
+    // competing with the cards below it.
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.neu.sunken,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(message, style: context.textTheme.secondary.size13),
+    );
+  }
+
+  Widget _buildSavingsCard(AppLocalizations l10n, ElectricMergedUsage merged) {
+    final saved = merged.totalSavings;
+    // Splitting the load is the whole point of the second meter, so savings are
+    // the expected sign; a negative total is worth flagging in red.
+    final accent = saved >= 0 ? context.colors.success : context.colors.danger;
+    final months = merged.months.length;
+    return NeuCard(
+      radius: 14,
+      padding: const EdgeInsets.all(16),
+      color: Color.alphaBlend(accent.withValues(alpha: 0.10), context.neu.base),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.savings_rounded, color: accent, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.mergedSavingsTitle,
+                  style: context.textTheme.primary.size16.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l10n.mergedSavingsTotal,
+            style: context.textTheme.secondary.size13,
+          ),
+          Text.rich(
+            TextSpan(
+              text: saved.formatUnit(digit: 0, hasPlus: true),
+              style: context.textTheme.primary.bold.copyWith(
+                color: accent,
+                fontSize: 26,
+              ),
+              children: [
+                TextSpan(text: " đ", style: context.textTheme.secondary.size13),
+              ],
+            ),
+          ),
+          Text(
+            l10n.mergedMonthsCounted("$months"),
+            style: context.textTheme.secondary.size13,
+          ),
+          const SizedBox(height: 12),
+          _savingsRow(
+            l10n.mergedSingleMeterCost,
+            merged.totalSingleMeterAmount,
+            emphasized: false,
+          ),
+          const SizedBox(height: 4),
+          _savingsRow(l10n.mergedActualCost, merged.totalActualAmount),
+          const SizedBox(height: 4),
+          _savingsRow(
+            l10n.mergedAveragePerMonth,
+            months == 0 ? 0 : saved / months,
+            color: accent,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.mergedEstimateNote,
+            style: context.textTheme.secondary.copyWith(fontSize: 11.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _savingsRow(
+    String label,
+    num amount, {
+    bool emphasized = true,
+    Color? color,
+  }) {
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: context.textTheme.secondary.size13)),
+        Text(
+          "${amount.formatUnit(digit: 0)} đ",
+          style: emphasized
+              ? context.textTheme.primary.bold.copyWith(
+                  color: color ?? context.colors.money,
+                )
+              : context.textTheme.secondary.size13,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMergedUsageSection(
+    AppLocalizations l10n,
+    ElectricViewModel vm,
+    List<ElectricAccount> accounts,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.electricUsage, style: context.textTheme.primary.size16.bold),
+        const SizedBox(height: 8),
+        Column(
+          spacing: 8,
+          children: [
+            Row(
+              spacing: 8,
+              children: [
+                _buildUsageTile(l10n.today, vm.mergedUsageToday(accounts)),
+                _buildUsageTile(
+                  l10n.yesterday,
+                  vm.mergedUsageYesterday(accounts),
+                ),
+              ],
+            ),
+            Row(
+              spacing: 8,
+              children: [
+                _buildUsageTile(
+                  l10n.thisMonth,
+                  vm.mergedUsageThisMonth(accounts),
+                ),
+                _buildUsageTile(
+                  l10n.lastMonth,
+                  vm.mergedUsageLastMonth(accounts),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMergedDailyChart(
+    AppLocalizations l10n,
+    List<({DateTime day, double kwh})> usages,
+  ) {
+    if (usages.isEmpty) return const SizedBox.shrink();
+    final items = usages
+        .skip(usages.length <= 14 ? 0 : usages.length - 14)
+        .map(
+          (e) => CuteBarChartItem(
+            label: DateFormat("d/M").format(e.day),
+            value: e.kwh,
+          ),
+        )
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.dailyUsage, style: context.textTheme.primary.size16.bold),
+        const SizedBox(height: 8),
+        CuteBarChart(
+          items: items,
+          primaryColor: _ChartColors.current(context),
+          formatValue: (v) => "${v.formatUnit(digit: 2)} kWh",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMergedMonthlySection(
+    AppLocalizations l10n,
+    ElectricMergedUsage merged,
+  ) {
+    // Chart reads left→right in time; the list keeps newest first. The pair of
+    // bars is the same comparison as the card above: one meter vs. what was
+    // really paid.
+    final chartItems = merged.months.reversed
+        .map(
+          (m) => CuteBarChartItem(
+            label: "${m.month}/${m.year % 100}",
+            value: m.actualAmount.toDouble(),
+            compareValue: m.singleMeterAmount.toDouble(),
+          ),
+        )
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.mergedMonthlyTitle,
+          style: context.textTheme.primary.size16.bold,
+        ),
+        const SizedBox(height: 8),
+        _buildMergedLegend(l10n),
+        const SizedBox(height: 6),
+        CuteBarChart(
+          items: chartItems,
+          primaryColor: _ChartColors.current(context),
+          compareColor: _ChartColors.compare(context),
+          formatValue: (v) => "${v.formatUnit(digit: 0)} đ",
+        ),
+        const SizedBox(height: 10),
+        ...merged.months.map((m) => _buildMergedMonthlyItem(l10n, m)),
+      ],
+    );
+  }
+
+  Widget _buildMergedLegend(AppLocalizations l10n) {
+    Widget entry(Color color, String label) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Text(label, style: context.textTheme.secondary.size13),
+        ],
+      );
+    }
+
+    // Same order as the bars: the estimate on the left, reality on the right.
+    return Wrap(
+      spacing: 14,
+      children: [
+        entry(_ChartColors.compare(context), l10n.mergedSingleMeterCost),
+        entry(_ChartColors.current(context), l10n.mergedActualCost),
+      ],
+    );
+  }
+
+  Widget _buildMergedMonthlyItem(
+    AppLocalizations l10n,
+    ElectricMergedMonth item,
+  ) {
+    final accent = item.savings >= 0
+        ? context.colors.success
+        : context.colors.danger;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.monthLabel("${item.month}", "${item.year}"),
+                  style: context.textTheme.primary.bold,
+                ),
+                Text(
+                  l10n.mergedSplitLabel(
+                    "${item.residentialKwh.formatUnit()} kWh",
+                    "${item.otherKwh.formatUnit()} kWh",
+                  ),
+                  style: context.textTheme.secondary.size13,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                "${item.actualAmount.formatUnit(digit: 0)} đ",
+                style: context.textTheme.primary.bold.copyWith(
+                  color: context.colors.money,
+                ),
+              ),
+              Text(
+                "${l10n.mergedSavingsLabel} ${item.savings.formatUnit(digit: 0, hasPlus: true)} đ",
+                style: context.textTheme.secondary.size13.copyWith(
+                  color: accent,
+                ),
               ),
             ],
           ),

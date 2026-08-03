@@ -201,6 +201,64 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get mergedTab => 'Tổng';
+
+  @override
+  String get mergedTabSubtitle => 'Đồng hồ cùng tên';
+
+  @override
+  String get mergedSavingsTitle => 'Tiết kiệm nhờ tách đồng hồ';
+
+  @override
+  String get mergedSavingsTotal => 'Tổng tiết kiệm';
+
+  @override
+  String get mergedSingleMeterCost => 'Nếu chỉ 1 đồng hồ sinh hoạt';
+
+  @override
+  String get mergedActualCost => 'Thực tế đã trả';
+
+  @override
+  String get mergedAveragePerMonth => 'Trung bình mỗi tháng';
+
+  @override
+  String mergedMonthsCounted(String count) {
+    return '$count tháng có cả 2 đồng hồ';
+  }
+
+  @override
+  String mergedMeters(String count) {
+    return 'Gộp $count đồng hồ cùng tên khách hàng';
+  }
+
+  @override
+  String get mergedMonthlyTitle => 'Tiền điện gộp theo tháng';
+
+  @override
+  String get mergedSavingsLabel => 'Tiết kiệm';
+
+  @override
+  String mergedSplitLabel(String residential, String other) {
+    return 'Sinh hoạt $residential · Ngoài sinh hoạt $other';
+  }
+
+  @override
+  String get mergedNeedsBothMeters =>
+      'Cần đăng nhập cả tài khoản điện sinh hoạt và ngoài sinh hoạt để so sánh được.';
+
+  @override
+  String get mergedNoOverlap =>
+      'Chưa có tháng nào có hóa đơn của cả 2 đồng hồ.';
+
+  @override
+  String get mergedNoGroups =>
+      'Không có khách hàng nào đứng tên từ 2 đồng hồ trở lên. Tab này chỉ gộp các đồng hồ cùng tên khách hàng.';
+
+  @override
+  String get mergedEstimateNote =>
+      'Ước tính theo giá bán lẻ điện sinh hoạt bậc thang (1 định mức), hiệu chỉnh theo hóa đơn sinh hoạt thực tế của chính tháng đó.';
+
+  @override
   String get news => 'Tin tức';
 
   @override
