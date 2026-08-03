@@ -81,6 +81,38 @@
       "value": {"type": "String"}
     }
   },
+  "mergedTab": "Tổng",
+  "mergedTabSubtitle": "Đồng hồ cùng tên",
+  "mergedSavingsTitle": "Tiết kiệm nhờ tách đồng hồ",
+  "mergedSavingsTotal": "Tổng tiết kiệm",
+  "mergedSingleMeterCost": "Nếu chỉ 1 đồng hồ sinh hoạt",
+  "mergedActualCost": "Thực tế đã trả",
+  "mergedAveragePerMonth": "Trung bình mỗi tháng",
+  "mergedMonthsCounted": "{count} tháng có cả 2 đồng hồ",
+  "@mergedMonthsCounted": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "mergedMeters": "Gộp {count} đồng hồ cùng tên khách hàng",
+  "@mergedMeters": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "mergedMonthlyTitle": "Tiền điện gộp theo tháng",
+  "mergedSavingsLabel": "Tiết kiệm",
+  "mergedSplitLabel": "Sinh hoạt {residential} · Ngoài sinh hoạt {other}",
+  "@mergedSplitLabel": {
+    "placeholders": {
+      "residential": {"type": "String"},
+      "other": {"type": "String"}
+    }
+  },
+  "mergedNeedsBothMeters": "Cần đăng nhập cả tài khoản điện sinh hoạt và ngoài sinh hoạt để so sánh được.",
+  "mergedNoOverlap": "Chưa có tháng nào có hóa đơn của cả 2 đồng hồ.",
+  "mergedNoGroups": "Không có khách hàng nào đứng tên từ 2 đồng hồ trở lên. Tab này chỉ gộp các đồng hồ cùng tên khách hàng.",
+  "mergedEstimateNote": "Ước tính theo giá bán lẻ điện sinh hoạt bậc thang (1 định mức), hiệu chỉnh theo hóa đơn sinh hoạt thực tế của chính tháng đó.",
   "news": "Tin tức",
   "chicken": "Gà",
   "myLife": "MyLife",

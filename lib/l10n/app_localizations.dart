@@ -458,6 +458,102 @@ abstract class AppLocalizations {
   /// **'Same month last year: {value}'**
   String sameMonthLastYear(String value);
 
+  /// No description provided for @mergedTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Combined'**
+  String get mergedTab;
+
+  /// No description provided for @mergedTabSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Meters of one customer'**
+  String get mergedTabSubtitle;
+
+  /// No description provided for @mergedSavingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved by splitting the meters'**
+  String get mergedSavingsTitle;
+
+  /// No description provided for @mergedSavingsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total saved'**
+  String get mergedSavingsTotal;
+
+  /// No description provided for @mergedSingleMeterCost.
+  ///
+  /// In en, this message translates to:
+  /// **'On one household meter'**
+  String get mergedSingleMeterCost;
+
+  /// No description provided for @mergedActualCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Actually paid'**
+  String get mergedActualCost;
+
+  /// No description provided for @mergedAveragePerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Average per month'**
+  String get mergedAveragePerMonth;
+
+  /// No description provided for @mergedMonthsCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} months with both meters'**
+  String mergedMonthsCounted(String count);
+
+  /// No description provided for @mergedMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} meters under the same customer name'**
+  String mergedMeters(String count);
+
+  /// No description provided for @mergedMonthlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Combined bill by month'**
+  String get mergedMonthlyTitle;
+
+  /// No description provided for @mergedSavingsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get mergedSavingsLabel;
+
+  /// No description provided for @mergedSplitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Household {residential} · Other {other}'**
+  String mergedSplitLabel(String residential, String other);
+
+  /// No description provided for @mergedNeedsBothMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to both a household and a non-household account to compare.'**
+  String get mergedNeedsBothMeters;
+
+  /// No description provided for @mergedNoOverlap.
+  ///
+  /// In en, this message translates to:
+  /// **'No month has a bill from both meters yet.'**
+  String get mergedNoOverlap;
+
+  /// No description provided for @mergedNoGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'No customer here holds more than one meter. This tab only adds up meters under the same customer name.'**
+  String get mergedNoGroups;
+
+  /// No description provided for @mergedEstimateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated with the progressive household tariff (one allowance), calibrated against the same month\'s real household bill.'**
+  String get mergedEstimateNote;
+
   /// No description provided for @news.
   ///
   /// In en, this message translates to:

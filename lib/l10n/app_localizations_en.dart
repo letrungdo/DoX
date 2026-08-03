@@ -201,6 +201,63 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mergedTab => 'Combined';
+
+  @override
+  String get mergedTabSubtitle => 'Meters of one customer';
+
+  @override
+  String get mergedSavingsTitle => 'Saved by splitting the meters';
+
+  @override
+  String get mergedSavingsTotal => 'Total saved';
+
+  @override
+  String get mergedSingleMeterCost => 'On one household meter';
+
+  @override
+  String get mergedActualCost => 'Actually paid';
+
+  @override
+  String get mergedAveragePerMonth => 'Average per month';
+
+  @override
+  String mergedMonthsCounted(String count) {
+    return '$count months with both meters';
+  }
+
+  @override
+  String mergedMeters(String count) {
+    return '$count meters under the same customer name';
+  }
+
+  @override
+  String get mergedMonthlyTitle => 'Combined bill by month';
+
+  @override
+  String get mergedSavingsLabel => 'Saved';
+
+  @override
+  String mergedSplitLabel(String residential, String other) {
+    return 'Household $residential · Other $other';
+  }
+
+  @override
+  String get mergedNeedsBothMeters =>
+      'Sign in to both a household and a non-household account to compare.';
+
+  @override
+  String get mergedNoOverlap => 'No month has a bill from both meters yet.';
+
+  @override
+  String get mergedNoGroups =>
+      'No customer here holds more than one meter. This tab only adds up meters under the same customer name.';
+
+  @override
+  String get mergedEstimateNote =>
+      'Estimated with the progressive household tariff (one allowance), calibrated against the same month\'s real household bill.';
+
+  @override
   String get news => 'News';
 
   @override
