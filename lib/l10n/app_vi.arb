@@ -194,6 +194,20 @@
   "goldPrice": "Giá vàng",
   "exchangeRate": "Tỷ giá",
   "market": "Thị trường",
+  "goldNews": "Tin ảnh hưởng giá vàng",
+  "goldNewsEmpty": "Chưa có bản tin cho hôm nay.",
+  "goldNewsSources": "Nguồn tham khảo",
+  "goldNewsUpdatedAt": "Tổng hợp {time}",
+  "@goldNewsUpdatedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "trendUp": "Xu hướng tăng",
+  "trendDown": "Xu hướng giảm",
+  "trendNeutral": "Đi ngang",
   "index": "Chỉ số",
   "buy": "Mua vào",
   "sell": "Bán ra",

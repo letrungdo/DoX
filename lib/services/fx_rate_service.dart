@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/model/response/market_response.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
@@ -65,6 +66,17 @@ class FxRateService {
         for (final row in rows)
           row['code'] as String: (row['rate'] as num).toDouble(),
       };
+    });
+  }
+
+  /// The gold-news digest, rebuilt three times a day by the
+  /// `summarize-gold-news` edge function (RSS from several outlets, summarised
+  /// by Gemini). The table holds a single row that each run overwrites.
+  Future<Result<GoldNews?>> getGoldNews({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final row = await supabase.from('gold_news').select().maybeSingle();
+
+      return row == null ? null : GoldNews.fromJson(row);
     });
   }
 

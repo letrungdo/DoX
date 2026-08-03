@@ -448,6 +448,29 @@ class AppLocalizationsVi extends AppLocalizations {
   String get market => 'Thị trường';
 
   @override
+  String get goldNews => 'Tin ảnh hưởng giá vàng';
+
+  @override
+  String get goldNewsEmpty => 'Chưa có bản tin cho hôm nay.';
+
+  @override
+  String get goldNewsSources => 'Nguồn tham khảo';
+
+  @override
+  String goldNewsUpdatedAt(String time) {
+    return 'Tổng hợp $time';
+  }
+
+  @override
+  String get trendUp => 'Xu hướng tăng';
+
+  @override
+  String get trendDown => 'Xu hướng giảm';
+
+  @override
+  String get trendNeutral => 'Đi ngang';
+
+  @override
   String get index => 'Chỉ số';
 
   @override
