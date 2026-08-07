@@ -2587,6 +2587,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mute'**
   String get mute;
+
+  /// No description provided for @removeFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from history'**
+  String get removeFromHistory;
+
+  /// No description provided for @confirmRemoveFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove \'{title}\' from your watched history?'**
+  String confirmRemoveFromHistory(String title);
 }
 
 class _AppLocalizationsDelegate

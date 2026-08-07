@@ -941,5 +941,14 @@
   "episodeFull": "Full",
   "episodeDefaultName": "Episode",
   "unmute": "Unmute",
-  "mute": "Mute"
+  "mute": "Mute",
+  "removeFromHistory": "Remove from history",
+  "confirmRemoveFromHistory": "Remove '{title}' from your watched history?",
+  "@confirmRemoveFromHistory": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

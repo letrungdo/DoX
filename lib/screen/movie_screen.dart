@@ -11,7 +11,9 @@ import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,20 +53,14 @@ class _MovieScreenState extends State<MovieScreen> {
   _MovieCollection _collection = _MovieCollection.browse;
 
   bool get _supportsDeviceRotation =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
   void initState() {
     super.initState();
-    _serverUrlController = TextEditingController(
-      text: movieService.baseUrl ?? '',
-    );
+    _serverUrlController = TextEditingController(text: movieService.baseUrl ?? '');
     if (_supportsDeviceRotation) {
-      unawaited(
-        SystemChrome.setPreferredOrientations(DeviceOrientation.values),
-      );
+      unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
     }
     _initData();
     _scrollController.addListener(_onScroll);
@@ -88,12 +84,7 @@ class _MovieScreenState extends State<MovieScreen> {
   @override
   void dispose() {
     if (_supportsDeviceRotation) {
-      unawaited(
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]),
-      );
+      unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]));
     }
     _searchController.dispose();
     _serverUrlController.dispose();
@@ -110,21 +101,14 @@ class _MovieScreenState extends State<MovieScreen> {
       setState(() => _showScrollToTop = shouldShowScrollToTop);
     }
 
-    if (position.pixels >= position.maxScrollExtent - 300 &&
-        !_isLoadingMore &&
-        !_isLoading &&
-        _hasMore) {
+    if (position.pixels >= position.maxScrollExtent - 300 && !_isLoadingMore && !_isLoading && _hasMore) {
       _loadMoreMovies();
     }
   }
 
   Future<void> _scrollToTop() async {
     if (!_scrollController.hasClients) return;
-    await _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
+    await _scrollController.animateTo(0, duration: const Duration(milliseconds: 350), curve: Curves.easeOutCubic);
   }
 
   Future<void> _loadMovies({bool refresh = false}) async {
@@ -162,38 +146,20 @@ class _MovieScreenState extends State<MovieScreen> {
     MovieResponse response;
     try {
       if (_collection == _MovieCollection.watched) {
-        final fetched = await movieLibraryService.getWatched(
-          searchQuery: _searchQuery,
-          onBatch: publishLibraryBatch,
-        );
+        final fetched = await movieLibraryService.getWatched(searchQuery: _searchQuery, onBatch: publishLibraryBatch);
         response = MovieResponse(movies: fetched, total: fetched.length);
       } else if (_collection == _MovieCollection.favorites) {
-        final fetched = await movieLibraryService.getFavorites(
-          searchQuery: _searchQuery,
-          onBatch: publishLibraryBatch,
-        );
+        final fetched = await movieLibraryService.getFavorites(searchQuery: _searchQuery, onBatch: publishLibraryBatch);
         response = MovieResponse(movies: fetched, total: fetched.length);
       } else if (_searchQuery.isNotEmpty) {
-        response = await movieService.searchMovies(
-          _searchQuery,
-          page: _currentPage,
-          cancelToken: _cancelToken,
-        );
+        response = await movieService.searchMovies(_searchQuery, page: _currentPage, cancelToken: _cancelToken);
       } else if (_selectedCategory != null) {
-        response = await movieService.getMoviesByCategory(
-          _selectedCategory!.path,
-          page: _currentPage,
-          cancelToken: _cancelToken,
-        );
+        response = await movieService.getMoviesByCategory(_selectedCategory!.path, page: _currentPage, cancelToken: _cancelToken);
       } else {
         response = const MovieResponse(movies: [], total: 0);
       }
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: load movies failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieScreen: load movies failed', error: error, stackTrace: stackTrace);
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _isLoading = false;
@@ -206,9 +172,7 @@ class _MovieScreenState extends State<MovieScreen> {
         }
       });
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.loadMoviesFailed)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.loadMoviesFailed)));
       return;
     }
 
@@ -266,17 +230,9 @@ class _MovieScreenState extends State<MovieScreen> {
     _currentPage++;
     MovieResponse response;
     if (_searchQuery.isNotEmpty) {
-      response = await movieService.searchMovies(
-        _searchQuery,
-        page: _currentPage,
-        cancelToken: _cancelToken,
-      );
+      response = await movieService.searchMovies(_searchQuery, page: _currentPage, cancelToken: _cancelToken);
     } else if (_selectedCategory != null) {
-      response = await movieService.getMoviesByCategory(
-        _selectedCategory!.path,
-        page: _currentPage,
-        cancelToken: _cancelToken,
-      );
+      response = await movieService.getMoviesByCategory(_selectedCategory!.path, page: _currentPage, cancelToken: _cancelToken);
     } else {
       response = const MovieResponse(movies: [], total: 0);
     }
@@ -315,33 +271,53 @@ class _MovieScreenState extends State<MovieScreen> {
 
   void _selectCollection(_MovieCollection collection) {
     setState(() {
-      _collection = _collection == collection
-          ? _MovieCollection.browse
-          : collection;
+      _collection = _collection == collection ? _MovieCollection.browse : collection;
     });
     _loadMovies(refresh: true);
   }
 
-  Future<Map<String, MovieLibraryState>> _loadLibraryStates(
-    Iterable<String> movieIds,
-  ) async {
+  Future<void> _handleMovieLongPress(Movie movie) async {
+    if (_collection != _MovieCollection.watched) return;
+
+    final l10n = AppLocalizations.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.removeFromHistory),
+        content: Text(l10n.confirmRemoveFromHistory(movie.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await movieLibraryService.removeFromHistory(movie.id);
+      if (mounted) {
+        await _loadMovies(refresh: true);
+      }
+    }
+  }
+
+  Future<Map<String, MovieLibraryState>> _loadLibraryStates(Iterable<String> movieIds) async {
     try {
       return await movieLibraryService.getStates(movieIds);
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: load library states failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieScreen: load library states failed', error: error, stackTrace: stackTrace);
       return {};
     }
   }
 
   Future<void> _refreshLibraryStates() async {
     try {
-      final states = await movieLibraryService.getStates(
-        _movies.map((movie) => movie.id),
-      );
+      final states = await movieLibraryService.getStates(_movies.map((movie) => movie.id));
       if (!mounted) return;
       setState(() {
         _libraryStates
@@ -349,11 +325,7 @@ class _MovieScreenState extends State<MovieScreen> {
           ..addAll(states);
       });
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: refresh library states failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieScreen: refresh library states failed', error: error, stackTrace: stackTrace);
     }
   }
 
@@ -362,12 +334,8 @@ class _MovieScreenState extends State<MovieScreen> {
     if (_isSyncingServer) return false;
     final url = rawUrl.trim();
     final uri = Uri.tryParse(url);
-    if (uri == null ||
-        !uri.hasAuthority ||
-        (uri.scheme != 'http' && uri.scheme != 'https')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.invalidMovieServerUrl)),
-      );
+    if (uri == null || !uri.hasAuthority || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidMovieServerUrl)));
       return false;
     }
 
@@ -383,20 +351,12 @@ class _MovieScreenState extends State<MovieScreen> {
       _searchQuery = '';
       await _loadMovies(refresh: true);
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.movieServerUrlUpdated)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.movieServerUrlUpdated)));
       return true;
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: update server failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieScreen: update server failed', error: error, stackTrace: stackTrace);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.updateMovieServerFailed)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.updateMovieServerFailed)));
       }
       return false;
     } finally {
@@ -418,7 +378,6 @@ class _MovieScreenState extends State<MovieScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final movieLabel = movieService.getLabel();
     final baseUrl = movieService.baseUrl;
     final emptyMessage = switch (_collection) {
@@ -433,25 +392,19 @@ class _MovieScreenState extends State<MovieScreen> {
         appBar: DoAppBar(
           title: movieLabel,
           actions: [
-            IconButton(
-              tooltip: l10n.changeMovieServerUrl,
-              icon: const Icon(Icons.link_rounded),
-              onPressed: _showServerUrlDialog,
-            ),
-            IconButton(
+            NeuIconButton(tooltip: l10n.changeMovieServerUrl, icon: Icons.link_rounded, onPressed: _showServerUrlDialog),
+            const SizedBox(width: 8),
+            NeuIconButton(
               tooltip: l10n.watchedMovies,
-              color: _collection == _MovieCollection.watched
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-              icon: const Icon(Icons.history_rounded),
+              color: _collection == _MovieCollection.watched ? Theme.of(context).colorScheme.primary : null,
+              icon: Icons.history_rounded,
               onPressed: () => _selectCollection(_MovieCollection.watched),
             ),
-            IconButton(
+            const SizedBox(width: 8),
+            NeuIconButton(
               tooltip: l10n.favoriteMovies,
-              color: _collection == _MovieCollection.favorites
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-              icon: const Icon(Icons.favorite_rounded),
+              color: _collection == _MovieCollection.favorites ? Theme.of(context).colorScheme.primary : null,
+              icon: Icons.favorite_rounded,
               onPressed: () => _selectCollection(_MovieCollection.favorites),
             ),
           ],
@@ -466,48 +419,22 @@ class _MovieScreenState extends State<MovieScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.85),
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))],
                         ),
                         child: Text(
-                          l10n.movieCountStatus(
-                            _movies.length,
-                            _totalMovies > 0 ? _totalMovies.toString() : '...',
-                          ),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          l10n.movieCountStatus(_movies.length, _totalMovies > 0 ? _totalMovies.toString() : '...'),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                         ),
                       ),
                     ),
                   if (_showScrollToTop)
-                    FloatingActionButton.small(
-                      tooltip: l10n.scrollToTop,
-                      elevation: 2,
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest
-                          .withValues(alpha: 0.72),
-                      foregroundColor: Theme.of(context).colorScheme.onSurface,
-                      onPressed: _scrollToTop,
-                      child: const Icon(Icons.vertical_align_top_rounded),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: NeuIconButton(tooltip: l10n.scrollToTop, icon: Icons.vertical_align_top_rounded, onPressed: _scrollToTop),
                     ),
                 ],
               ),
@@ -542,9 +469,14 @@ class _MovieScreenState extends State<MovieScreen> {
                                   : null,
                               isDense: true,
                               filled: true,
+                              fillColor: Theme.of(context).colorScheme.surface,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
                               ),
                             ),
                           ),
@@ -553,20 +485,16 @@ class _MovieScreenState extends State<MovieScreen> {
                       if (_searchQuery.isEmpty && _categories.isNotEmpty)
                         SliverToBoxAdapter(
                           child: SizedBox(
-                            height: 42,
+                            height: 46,
                             child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              clipBehavior: Clip.none,
                               scrollDirection: Axis.horizontal,
                               itemCount: _categories.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(width: 8),
+                              separatorBuilder: (_, _) => const SizedBox(width: 8),
                               itemBuilder: (context, index) {
                                 final cat = _categories[index];
-                                final isSelected =
-                                    _collection == _MovieCollection.browse &&
-                                    cat.id == _selectedCategory?.id;
+                                final isSelected = _collection == _MovieCollection.browse && cat.id == _selectedCategory?.id;
 
                                 final label = switch (cat.id) {
                                   'new' => l10n.categoryNew,
@@ -577,15 +505,11 @@ class _MovieScreenState extends State<MovieScreen> {
                                   _ => cat.name,
                                 };
 
-                                return ChoiceChip(
-                                  label: Text(label),
-                                  selected: isSelected,
-                                  showCheckmark: false,
-                                  onSelected: (selected) {
-                                    if (selected &&
-                                        (_collection !=
-                                                _MovieCollection.browse ||
-                                            cat.id != _selectedCategory?.id)) {
+                                return NeuChip(
+                                  label: label,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    if (_collection != _MovieCollection.browse || cat.id != _selectedCategory?.id) {
                                       setState(() {
                                         _collection = _MovieCollection.browse;
                                         _selectedCategory = cat;
@@ -593,46 +517,23 @@ class _MovieScreenState extends State<MovieScreen> {
                                       _loadMovies(refresh: true);
                                     }
                                   },
-                                  selectedColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
-                                  labelStyle: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : (isDark
-                                              ? Colors.white70
-                                              : Colors.black87),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
                                 );
                               },
                             ),
                           ),
                         ),
-                      if (_searchQuery.isEmpty &&
-                          _categories.isEmpty &&
-                          _collection == _MovieCollection.browse)
+                      if (_searchQuery.isEmpty && _categories.isEmpty && _collection == _MovieCollection.browse)
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Center(
-                              child: Text(
-                                l10n.noCategoriesConfigured,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
+                              child: Text(l10n.noCategoriesConfigured, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                             ),
                           ),
                         ),
                       const SliverToBoxAdapter(child: SizedBox(height: 8)),
                       if (_isLoading)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
+                        const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
                       else if (_movies.isEmpty)
                         SliverFillRemaining(
                           hasScrollBody: false,
@@ -640,75 +541,45 @@ class _MovieScreenState extends State<MovieScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(
-                                  Icons.movie_outlined,
-                                  size: 64,
-                                  color: Colors.grey,
-                                ),
+                                const Icon(Icons.movie_outlined, size: 64, color: Colors.grey),
                                 const SizedBox(height: 12),
-                                Text(
-                                  emptyMessage,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                  ),
-                                ),
+                                Text(emptyMessage, style: const TextStyle(fontSize: 16, color: Colors.grey)),
                               ],
                             ),
                           ),
                         )
                       else
                         SliverPadding(
-                          padding: EdgeInsets.fromLTRB(
-                            16,
-                            8,
-                            16,
-                            MediaQuery.paddingOf(context).bottom + 50,
-                          ),
+                          padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.paddingOf(context).bottom + 50),
                           sliver: SliverGrid(
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 220,
-                                  childAspectRatio: 1.0,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                ),
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                if (index >= _movies.length) {
-                                  return const Card(
-                                    child: Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  );
-                                }
-                                final movie = _movies[index];
-                                final libraryState = _libraryStates[movie.id];
-                                return _MovieCard(
-                                  movie: movie,
-                                  isWatched: libraryState?.watchedAt != null,
-                                  isFavorite: libraryState?.isFavorite ?? false,
-                                  onTap: () async {
-                                    await context.pushRoute(
-                                      MovieDetailRoute(
-                                        movieUrl: movie.url,
-                                        movieId: movie.id,
-                                        initialMovie: movie,
-                                      ),
-                                    );
-                                    if (!mounted) return;
-                                    if (_collection ==
-                                        _MovieCollection.browse) {
-                                      await _refreshLibraryStates();
-                                    } else {
-                                      await _loadMovies(refresh: true);
-                                    }
-                                  },
-                                );
-                              },
-                              childCount:
-                                  _movies.length + (_isLoadingMore ? 2 : 0),
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
+                              childAspectRatio: 1.0,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
                             ),
+                            delegate: SliverChildBuilderDelegate((context, index) {
+                              if (index >= _movies.length) {
+                                return const Card(child: Center(child: CircularProgressIndicator()));
+                              }
+                              final movie = _movies[index];
+                              final libraryState = _libraryStates[movie.id];
+                              return _MovieCard(
+                                movie: movie,
+                                isWatched: libraryState?.watchedAt != null,
+                                isFavorite: libraryState?.isFavorite ?? false,
+                                onTap: () async {
+                                  await context.pushRoute(MovieDetailRoute(movieUrl: movie.url, movieId: movie.id, initialMovie: movie));
+                                  if (!mounted) return;
+                                  if (_collection == _MovieCollection.browse) {
+                                    await _refreshLibraryStates();
+                                  } else {
+                                    await _loadMovies(refresh: true);
+                                  }
+                                },
+                                onLongPress: () => _handleMovieLongPress(movie),
+                              );
+                            }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),
                           ),
                         ),
                     ],
@@ -746,23 +617,23 @@ class _MovieScreenState extends State<MovieScreen> {
                   prefixIcon: const Icon(Icons.dns_rounded),
                   border: const OutlineInputBorder(),
                 ),
-                onSubmitted: (_) =>
-                    _updateMovieServer(_serverUrlController.text),
+                onSubmitted: (_) => _updateMovieServer(_serverUrlController.text),
               ),
             ),
             const SizedBox(height: 14),
-            FilledButton.icon(
-              onPressed: _isSyncingServer
-                  ? null
-                  : () => _updateMovieServer(_serverUrlController.text),
-              icon: _isSyncingServer
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.sync_rounded),
-              label: Text(
-                _isSyncingServer ? l10n.syncing : l10n.saveAndSync,
+            NeuButton(
+              onPressed: _isSyncingServer ? null : () => _updateMovieServer(_serverUrlController.text),
+              accent: Theme.of(context).colorScheme.primary,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isSyncingServer)
+                    const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  else
+                    const Icon(Icons.sync_rounded),
+                  const SizedBox(width: 8),
+                  Text(_isSyncingServer ? l10n.syncing : l10n.saveAndSync),
+                ],
               ),
             ),
           ],
@@ -775,12 +646,14 @@ class _MovieScreenState extends State<MovieScreen> {
 class _MovieCard extends StatelessWidget {
   final Movie movie;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool isWatched;
   final bool isFavorite;
 
   const _MovieCard({
     required this.movie,
     required this.onTap,
+    this.onLongPress,
     this.isWatched = false,
     this.isFavorite = false,
   });
@@ -794,6 +667,7 @@ class _MovieCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -806,16 +680,11 @@ class _MovieCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     color: Colors.grey.shade900,
-                    child: const Center(
-                      child: Icon(Icons.movie, color: Colors.white24),
-                    ),
+                    child: const Center(child: Icon(Icons.movie, color: Colors.white24)),
                   ),
                   errorWidget: (context, url, error) => Container(
                     color: Colors.grey.shade800,
-                    child: const Icon(
-                      Icons.broken_image_rounded,
-                      color: Colors.white38,
-                    ),
+                    child: const Icon(Icons.broken_image_rounded, color: Colors.white38),
                   ),
                 ),
                 if (displayBadge != null && displayBadge.isNotEmpty)
@@ -823,21 +692,11 @@ class _MovieCard extends StatelessWidget {
                     top: 6,
                     right: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.pinkAccent.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.pinkAccent.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(6)),
                       child: Text(
                         displayBadge,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -846,83 +705,38 @@ class _MovieCard extends StatelessWidget {
                     top: 6,
                     left: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.68),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.68), borderRadius: BorderRadius.circular(8)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isWatched)
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: Colors.lightGreenAccent,
-                              size: 17,
-                            ),
+                          if (isWatched) const Icon(Icons.check_circle_rounded, color: Colors.lightGreenAccent, size: 17),
                           if (isWatched && isFavorite) const SizedBox(width: 4),
-                          if (isFavorite)
-                            const Icon(
-                              Icons.favorite_rounded,
-                              color: Colors.pinkAccent,
-                              size: 17,
-                            ),
+                          if (isFavorite) const Icon(Icons.favorite_rounded, color: Colors.pinkAccent, size: 17),
                         ],
                       ),
                     ),
                   ),
-                if ((movie.views?.isNotEmpty ?? false) ||
-                    (movie.likes?.isNotEmpty ?? false))
+                if ((movie.views?.isNotEmpty ?? false) || (movie.likes?.isNotEmpty ?? false))
                   Positioned(
                     bottom: 6,
                     left: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(6)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (movie.views?.isNotEmpty ?? false) ...[
-                            const Icon(
-                              Icons.visibility_rounded,
-                              size: 11,
-                              color: Colors.white70,
-                            ),
+                            const Icon(Icons.visibility_rounded, size: 11, color: Colors.white70),
                             const SizedBox(width: 3),
-                            Text(
-                              movie.views!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                              ),
-                            ),
+                            Text(movie.views!, style: const TextStyle(color: Colors.white, fontSize: 10)),
                           ],
-                          if ((movie.views?.isNotEmpty ?? false) &&
-                              (movie.likes?.isNotEmpty ?? false))
-                            const SizedBox(width: 7),
+                          if ((movie.views?.isNotEmpty ?? false) && (movie.likes?.isNotEmpty ?? false)) const SizedBox(width: 7),
                           if (movie.likes?.isNotEmpty ?? false) ...[
-                            const Icon(
-                              Icons.favorite_rounded,
-                              size: 11,
-                              color: Colors.pinkAccent,
-                            ),
+                            const Icon(Icons.favorite_rounded, size: 11, color: Colors.pinkAccent),
                             const SizedBox(width: 3),
-                            Text(
-                              movie.likes!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                              ),
-                            ),
+                            Text(movie.likes!, style: const TextStyle(color: Colors.white, fontSize: 10)),
                           ],
                         ],
                       ),
@@ -937,11 +751,7 @@ class _MovieCard extends StatelessWidget {
               movie.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.2),
             ),
           ),
         ],
@@ -956,8 +766,7 @@ class _ServerManagementDialog extends StatefulWidget {
   const _ServerManagementDialog({required this.onServerChanged});
 
   @override
-  State<_ServerManagementDialog> createState() =>
-      _ServerManagementDialogState();
+  State<_ServerManagementDialog> createState() => _ServerManagementDialogState();
 }
 
 class _ServerManagementDialogState extends State<_ServerManagementDialog> {
@@ -1044,9 +853,7 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(isInputMode
-              ? (_isAdding ? l10n.enterMovieServerUrl : l10n.editMovieServerUrl)
-              : l10n.movieServerUrl),
+          Text(isInputMode ? (_isAdding ? l10n.enterMovieServerUrl : l10n.editMovieServerUrl) : l10n.movieServerUrl),
           if (!isInputMode)
             IconButton(
               icon: const Icon(Icons.add_circle_outline_rounded),
@@ -1074,10 +881,7 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     hintText: l10n.serverUrlHint,
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.check_circle_outline_rounded),
-                      onPressed: _handleSave,
-                    ),
+                    suffixIcon: IconButton(icon: const Icon(Icons.check_circle_outline_rounded), onPressed: _handleSave),
                   ),
                   onSubmitted: (_) => _handleSave(),
                 ),
@@ -1085,15 +889,12 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
             Flexible(
               child: _servers.isEmpty
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Text(l10n.noServersFound),
-                      ),
+                      child: Padding(padding: const EdgeInsets.all(20.0), child: Text(l10n.noServersFound)),
                     )
                   : ListView.separated(
                       shrinkWrap: true,
                       itemCount: _servers.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final url = _servers[index];
                         final isPrimary = url == _primaryServer;
@@ -1105,9 +906,7 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
                           enabled: !isInputMode,
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(
-                            isSelected
-                                ? Icons.radio_button_checked_rounded
-                                : Icons.radio_button_off_rounded,
+                            isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
                             color: isSelected ? theme.colorScheme.primary : null,
                             size: 20,
                           ),
@@ -1115,9 +914,7 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
                             movieService.getLabelForUrl(url),
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                               color: isSelected ? theme.colorScheme.primary : null,
                             ),
                           ),
@@ -1128,16 +925,12 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           trailing: isInputMode
-                              ? (isCurrentlyEditing
-                                  ? const Icon(Icons.edit_note_rounded,
-                                      color: Colors.orange)
-                                  : null)
+                              ? (isCurrentlyEditing ? const Icon(Icons.edit_note_rounded, color: Colors.orange) : null)
                               : Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.edit_outlined,
-                                          size: 18),
+                                      icon: const Icon(Icons.edit_outlined, size: 18),
                                       onPressed: () {
                                         setState(() {
                                           _editingUrl = url;
@@ -1148,9 +941,7 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
                                     ),
                                     if (!isPrimary)
                                       IconButton(
-                                        icon: const Icon(
-                                            Icons.delete_outline_rounded,
-                                            size: 18),
+                                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
                                         onPressed: () async {
                                           await movieService.deleteServer(url);
                                           _refreshServers();
@@ -1182,16 +973,8 @@ class _ServerManagementDialogState extends State<_ServerManagementDialog> {
             },
             child: Text(l10n.cancel),
           ),
-        if (!isInputMode)
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.close),
-          ),
-        if (isInputMode)
-          FilledButton(
-            onPressed: _handleSave,
-            child: Text(l10n.save),
-          ),
+        if (!isInputMode) TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.close)),
+        if (isInputMode) FilledButton(onPressed: _handleSave, child: Text(l10n.save)),
       ],
     );
   }

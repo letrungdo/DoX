@@ -9,7 +9,9 @@ import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,12 +24,7 @@ class MovieDetailScreen extends StatefulWidget {
   final String movieId;
   final Movie? initialMovie;
 
-  const MovieDetailScreen({
-    super.key,
-    required this.movieUrl,
-    required this.movieId,
-    this.initialMovie,
-  });
+  const MovieDetailScreen({super.key, required this.movieUrl, required this.movieId, this.initialMovie});
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
@@ -56,6 +53,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   int _thumbnailGeneration = 0;
   int _qualityGeneration = 0;
 
+  bool _isSpeedBoosted = false;
+  Offset? _doubleTapPosition;
+  int _skipForwardValue = 0;
+  int _skipBackwardValue = 0;
+  Timer? _skipForwardTimer;
+  Timer? _skipBackwardTimer;
+
   bool _isDragging = false;
   bool _isTimelineHovering = false;
   Duration _dragPosition = Duration.zero;
@@ -74,15 +78,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _hasRecordedWatch = false;
   bool _isRotationLocked = false;
 
-  bool get _supportsOrientationManager =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+  Duration? _virtualSeekPosition;
+  Timer? _virtualSeekTimer;
 
-  bool get _supportsDoubleTapFullScreen =>
-      kIsWeb ||
-      (defaultTargetPlatform != TargetPlatform.android &&
-          defaultTargetPlatform != TargetPlatform.iOS);
+  bool get _supportsOrientationManager =>
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
   void initState() {
@@ -92,32 +92,29 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _loadLibraryState();
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final shouldAutoEnterFullScreen =
-          kIsWeb || defaultTargetPlatform == TargetPlatform.macOS;
+      final shouldAutoEnterFullScreen = kIsWeb || defaultTargetPlatform == TargetPlatform.macOS;
       if (mounted && shouldAutoEnterFullScreen) _enterFullScreen();
     });
   }
 
   void _initOrientationListener() {
     if (!_supportsOrientationManager) return;
-    _orientationSubscription = FlutterOrientationManager.orientationStream
-        .listen((orientation) {
-          if (!mounted || _isRotationLocked) return;
-          if (orientation == Orientation.landscape && !_isFullScreen) {
-            if (_videoController?.value.isInitialized == true) {
-              _enterFullScreen();
-            }
-          } else if (orientation == Orientation.portrait && _isFullScreen) {
-            _exitFullScreen();
-          }
-        });
+    _orientationSubscription = FlutterOrientationManager.orientationStream.listen((orientation) {
+      if (!mounted || _isRotationLocked) return;
+      if (orientation == Orientation.landscape && !_isFullScreen) {
+        if (_videoController?.value.isInitialized == true) {
+          _enterFullScreen();
+        }
+      } else if (orientation == Orientation.portrait && _isFullScreen) {
+        _exitFullScreen();
+      }
+    });
   }
 
   @override
   void didUpdateWidget(MovieDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.movieId != widget.movieId ||
-        oldWidget.movieUrl != widget.movieUrl) {
+    if (oldWidget.movieId != widget.movieId || oldWidget.movieUrl != widget.movieUrl) {
       _hasRecordedWatch = false;
       _isFavorite = false;
       unawaited(_detachAndDisposeController());
@@ -158,11 +155,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Future<void> _loadDetail({bool showLoading = true}) async {
     final generation = ++_detailGeneration;
     if (showLoading) setState(() => _isLoading = true);
-    final detail = await movieService.getMovieDetail(
-      widget.movieUrl,
-      widget.movieId,
-      cancelToken: _cancelToken,
-    );
+    final detail = await movieService.getMovieDetail(widget.movieUrl, widget.movieId, cancelToken: _cancelToken);
     if (!mounted || generation != _detailGeneration) return;
     setState(() {
       _detail = detail;
@@ -189,16 +182,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Future<void> _refreshDetail() async {
-    await Future.wait<void>([
-      _loadDetail(showLoading: false),
-      _loadLibraryState(),
-    ]);
+    await Future.wait<void>([_loadDetail(showLoading: false), _loadLibraryState()]);
   }
 
-  Future<void> _loadThumbnailTrack(
-    String trackUrl,
-    int detailGeneration,
-  ) async {
+  Future<void> _loadThumbnailTrack(String trackUrl, int detailGeneration) async {
     final generation = ++_thumbnailGeneration;
     try {
       final response = await Dio().get<String>(
@@ -214,10 +201,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ),
       );
       final track = _ThumbnailTrack.parse(trackUrl, response.data ?? '');
-      if (!mounted ||
-          generation != _thumbnailGeneration ||
-          detailGeneration != _detailGeneration ||
-          track == null) {
+      if (!mounted || generation != _thumbnailGeneration || detailGeneration != _detailGeneration || track == null) {
         return;
       }
       setState(() {
@@ -226,21 +210,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           _hoverThumbnailCue = track.cueAt(_dragPosition);
         }
       });
-      unawaited(
-        precacheImage(
-          NetworkImage(
-            track.spriteUrl,
-            headers: {'Referer': '${movieService.baseUrl}/'},
-          ),
-          context,
-        ).catchError((_) {}),
-      );
+      unawaited(precacheImage(NetworkImage(track.spriteUrl, headers: {'Referer': '${movieService.baseUrl}/'}), context).catchError((_) {}));
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieDetailScreen: thumbnail track unavailable',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieDetailScreen: thumbnail track unavailable', error: error, stackTrace: stackTrace);
     }
   }
 
@@ -253,9 +225,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _isLoadingStream = true;
     });
     final variants = await movieService.getStreamVariants(masterUrl);
-    if (!mounted ||
-        generation != _qualityGeneration ||
-        masterUrl != _masterStreamUrl) {
+    if (!mounted || generation != _qualityGeneration || masterUrl != _masterStreamUrl) {
       return;
     }
     final selectedQuality = variants.isEmpty ? 'Auto' : variants.first.label;
@@ -280,22 +250,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Movie get _libraryMovie {
     final detail = _detail;
     final initialMovie = widget.initialMovie;
-    final title = detail?.title.isNotEmpty == true
-        ? detail!.title
-        : initialMovie?.title ?? '';
-    final poster = detail?.poster.isNotEmpty == true
-        ? detail!.poster
-        : initialMovie?.poster ?? '';
-    final description = detail?.description.isNotEmpty == true
-        ? detail!.description
-        : initialMovie?.description;
-    return Movie(
-      id: widget.movieId,
-      title: title,
-      url: widget.movieUrl,
-      poster: poster,
-      description: description,
-    );
+    final title = detail?.title.isNotEmpty == true ? detail!.title : initialMovie?.title ?? '';
+    final poster = detail?.poster.isNotEmpty == true ? detail!.poster : initialMovie?.poster ?? '';
+    final description = detail?.description.isNotEmpty == true ? detail!.description : initialMovie?.description;
+    return Movie(id: widget.movieId, title: title, url: widget.movieUrl, poster: poster, description: description);
   }
 
   Future<void> _loadLibraryState() async {
@@ -307,11 +265,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         _isFavorite = state.isFavorite;
       });
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieDetailScreen: load library state failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieDetailScreen: load library state failed', error: error, stackTrace: stackTrace);
     }
   }
 
@@ -322,11 +276,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       await movieLibraryService.markWatched(_libraryMovie);
     } catch (error, stackTrace) {
       _hasRecordedWatch = false;
-      logger.e(
-        'MovieDetailScreen: mark watched failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieDetailScreen: mark watched failed', error: error, stackTrace: stackTrace);
     }
   }
 
@@ -340,15 +290,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (!mounted) return;
       setState(() => _isFavorite = nextValue);
     } catch (error, stackTrace) {
-      logger.e(
-        'MovieDetailScreen: update favorite failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e('MovieDetailScreen: update favorite failed', error: error, stackTrace: stackTrace);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.updateFavoriteFailed)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.updateFavoriteFailed)));
       }
     } finally {
       if (mounted) setState(() => _isUpdatingFavorite = false);
@@ -375,10 +319,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
     if (!mounted || generation != _controllerGeneration) return;
 
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      httpHeaders: {'Referer': '${movieService.baseUrl}/'},
-    );
+    final controller = VideoPlayerController.networkUrl(Uri.parse(url), httpHeaders: {'Referer': '${movieService.baseUrl}/'});
 
     try {
       await controller.initialize();
@@ -395,9 +336,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       }
 
       void videoValueListener() {
-        if (!mounted ||
-            generation != _controllerGeneration ||
-            !identical(_videoController, controller)) {
+        if (!mounted || generation != _controllerGeneration || !identical(_videoController, controller)) {
           return;
         }
         final isPlaying = controller.value.isPlaying;
@@ -422,9 +361,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       setState(() {
         _isLoadingStream = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.videoStreamError)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
     }
   }
 
@@ -505,9 +442,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (mounted) {
         setState(() => _isLoadingStream = false);
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.videoStreamError)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
       }
     }
   }
@@ -605,19 +540,30 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     if (controller == null || !controller.value.isInitialized) return;
 
     final duration = controller.value.duration;
-    var target = controller.value.position + offset;
+    final currentPos = _virtualSeekPosition ?? controller.value.position;
+    var target = currentPos + offset;
+
     if (target < Duration.zero) target = Duration.zero;
     if (duration > Duration.zero && target > duration) target = duration;
+
+    setState(() {
+      _virtualSeekPosition = target;
+    });
+
     unawaited(controller.seekTo(target));
+
+    _virtualSeekTimer?.cancel();
+    _virtualSeekTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() => _virtualSeekPosition = null);
+      }
+    });
+
     if (!_showControls) setState(() => _showControls = true);
     _startControlsTimer();
   }
 
-  void _updateDragPosition(
-    VideoPlayerController controller,
-    double localX,
-    double width,
-  ) {
+  void _updateDragPosition(VideoPlayerController controller, double localX, double width) {
     final fraction = (localX / width).clamp(0.0, 1.0);
     final target = controller.value.duration * fraction;
     setState(() {
@@ -628,11 +574,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     unawaited(controller.seekTo(target));
   }
 
-  void _updateHoverPreview(
-    double localX,
-    double width, {
-    bool showPreview = true,
-  }) {
+  void _updateHoverPreview(double localX, double width, {bool showPreview = true}) {
     if (width <= 0) return;
     final fraction = (localX / width).clamp(0.0, 1.0);
     final controller = _videoController;
@@ -691,6 +633,64 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _startControlsTimer();
   }
 
+  void _start2xSpeed() {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return;
+    }
+    setState(() => _isSpeedBoosted = true);
+    _videoController!.setPlaybackSpeed(2.0);
+    HapticFeedback.mediumImpact();
+  }
+
+  void _stop2xSpeed() {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return;
+    }
+    setState(() => _isSpeedBoosted = false);
+    _videoController!.setPlaybackSpeed(_playbackSpeed);
+  }
+
+  void _showSettingsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _SettingsBottomSheet(
+        selectedQuality: _selectedQuality,
+        availableQualities: _availableQualities,
+        playbackSpeed: _playbackSpeed,
+        isRotationLocked: _isRotationLocked,
+        supportsOrientationManager: _supportsOrientationManager,
+        onQualityChanged: (q) {
+          _switchQuality(q);
+        },
+        onSpeedChanged: (s) {
+          setState(() => _playbackSpeed = s);
+          _videoController?.setPlaybackSpeed(s);
+        },
+        onRotationLockToggled: () {
+          _toggleRotationLock();
+        },
+      ),
+    );
+  }
+
+  void _triggerSkipIndicator({required bool isForward}) {
+    if (isForward) {
+      _skipForwardTimer?.cancel();
+      setState(() => _skipForwardValue += 10);
+      _skipForwardTimer = Timer(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _skipForwardValue = 0);
+      });
+    } else {
+      _skipBackwardTimer?.cancel();
+      setState(() => _skipBackwardValue += 10);
+      _skipBackwardTimer = Timer(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _skipBackwardValue = 0);
+      });
+    }
+  }
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = duration.inHours;
@@ -703,10 +703,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
   }
 
-  Widget _buildThumbnailPreview(
-    VideoPlayerController controller,
-    double previewWidth,
-  ) {
+  Widget _buildThumbnailPreview(VideoPlayerController controller, double previewWidth) {
     final cue = _hoverThumbnailCue;
     final track = _thumbnailTrack;
     if (cue == null || track == null) return VideoPlayer(controller);
@@ -729,9 +726,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               filterQuality: FilterQuality.low,
               errorBuilder: (_, _, _) => const ColoredBox(
                 color: Colors.black,
-                child: Center(
-                  child: Icon(Icons.image_not_supported, color: Colors.white38),
-                ),
+                child: Center(child: Icon(Icons.image_not_supported, color: Colors.white38)),
               ),
             ),
           ),
@@ -742,28 +737,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   double _appBarHeight(BuildContext context, String title) {
     final theme = Theme.of(context);
-    final titleStyle =
-        theme.appBarTheme.titleTextStyle ??
-        theme.textTheme.titleLarge ??
-        const TextStyle(fontSize: 20);
+    final titleStyle = theme.appBarTheme.titleTextStyle ?? theme.textTheme.titleLarge ?? const TextStyle(fontSize: 20);
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final availableWidth = screenWidth > 272 ? screenWidth - 152 : 120.0;
+    final availableWidth = screenWidth > 272 ? screenWidth - 160 : 120.0;
     final painter = TextPainter(
       text: TextSpan(text: title, style: titleStyle),
       maxLines: 4,
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
     )..layout(maxWidth: availableWidth);
-    final height = (painter.height + 12).clamp(48.0, 112.0);
+    final height = (painter.height + 24).clamp(56.0, 140.0);
     painter.dispose();
     return height;
   }
 
-  Widget _buildServerMetadataChip({
-    required IconData icon,
-    required String label,
-    Color? color,
-  }) {
+  Widget _buildServerMetadataChip({required IconData icon, required String label, Color? color}) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -785,8 +773,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final title =
-        _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
+    final title = _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
 
     return PopScope(
       canPop: !_isFullScreen,
@@ -798,9 +785,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       child: _isFullScreen
           ? Scaffold(
               backgroundColor: Colors.black,
-              body: SizedBox.expand(
-                child: _buildVideoPlayerArea(isFullScreen: true),
-              ),
+              body: SizedBox.expand(child: _buildVideoPlayerArea(isFullScreen: true)),
             )
           : GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
@@ -810,22 +795,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   titleMaxLines: 4,
                   height: _appBarHeight(context, title),
                   actions: [
-                    IconButton(
-                      tooltip: _isFavorite
-                          ? l10n.removeFromFavorites
-                          : l10n.addToFavorites,
+                    NeuIconButton(
+                      tooltip: _isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
                       onPressed: _isUpdatingFavorite ? null : _toggleFavorite,
-                      icon: _isUpdatingFavorite
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              _isFavorite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              color: _isFavorite ? Colors.pinkAccent : null,
-                            ),
+                      icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      color: _isFavorite ? Colors.pinkAccent : null,
                     ),
                   ],
                 ),
@@ -851,14 +825,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                         spacing: 8,
                                         runSpacing: 8,
                                         children: [
-                                          if (_detail?.views?.isNotEmpty ??
-                                              false)
-                                            _buildServerMetadataChip(
-                                              icon: Icons.visibility_rounded,
-                                              label: _detail!.views!,
-                                            ),
-                                          if (_detail?.likes?.isNotEmpty ??
-                                              false)
+                                          if (_detail?.views?.isNotEmpty ?? false)
+                                            _buildServerMetadataChip(icon: Icons.visibility_rounded, label: _detail!.views!),
+                                          if (_detail?.likes?.isNotEmpty ?? false)
                                             _buildServerMetadataChip(
                                               icon: Icons.favorite_rounded,
                                               label: _detail!.likes!,
@@ -876,178 +845,122 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                     ],
                                     // Server selector
                                     if (_detail!.servers.isNotEmpty) ...[
-                                      Row(
-                                        children: [
-                                          Text(
-                                            l10n.serverLabel,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: SingleChildScrollView(
-                                              scrollDirection: Axis.horizontal,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 4,
-                                                    ),
-                                                child: Row(
-                                                  children: _detail!.servers
-                                                      .map((srv) {
-                                                    final isSelected =
-                                                        _selectedServer?.name ==
-                                                            srv.name;
-                                                    return Padding(
-                                                      padding: const EdgeInsets
-                                                          .only(right: 6),
-                                                      child: ChoiceChip(
-                                                        label: Text(srv.name),
-                                                        selected: isSelected,
-                                                        showCheckmark: false,
-                                                        onSelected: (sel) {
-                                                          if (sel) {
-                                                            _switchServer(srv);
-                                                          }
-                                                        },
-                                                        labelStyle: TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: isSelected
-                                                              ? Colors.white
-                                                              : null,
-                                                        ),
+                                      NeuCard(
+                                        margin: const EdgeInsets.symmetric(vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(l10n.serverLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: SingleChildScrollView(
+                                                    scrollDirection: Axis.horizontal,
+                                                    clipBehavior: Clip.none,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                                      child: Row(
+                                                        children: _detail!.servers.map((srv) {
+                                                          final isSelected = _selectedServer?.name == srv.name;
+                                                          return Padding(
+                                                            padding: const EdgeInsets.only(right: 8),
+                                                            child: NeuChip(
+                                                              label: srv.name,
+                                                              isSelected: isSelected,
+                                                              fontSize: 12,
+                                                              onTap: () {
+                                                                _switchServer(srv);
+                                                              },
+                                                            ),
+                                                          );
+                                                        }).toList(),
                                                       ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (_selectedServer != null && _selectedServer!.episodes.length > 1) ...[
+                                              const SizedBox(height: 12),
+                                              Text(
+                                                '${l10n.episodeLabel}:',
+                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 8,
+                                                  children: _selectedServer!.episodes.map((ep) {
+                                                    final isSelected = _selectedEpisode?.slug == ep.slug;
+                                                    return NeuChip(
+                                                      label: ep.name,
+                                                      isSelected: isSelected,
+                                                      fontSize: 11,
+                                                      onTap: () {
+                                                        _playEpisode(ep);
+                                                      },
                                                     );
                                                   }).toList(),
                                                 ),
                                               ),
-                                            ),
-                                          ),
-                                        ],
+                                            ],
+                                          ],
+                                        ),
                                       ),
-                                      if (_selectedServer != null &&
-                                          _selectedServer!.episodes.length >
-                                              1) ...[
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          '${l10n.episodeLabel}:',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children: _selectedServer!.episodes
-                                                .map((ep) {
-                                              final isSelected =
-                                                  _selectedEpisode?.slug ==
-                                                      ep.slug;
-                                              return ChoiceChip(
-                                                label: Text(
-                                                  ep.name,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                                padding: const EdgeInsets
-                                                    .symmetric(horizontal: 4),
-                                                selected: isSelected,
-                                                showCheckmark: false,
-                                                onSelected: (sel) {
-                                                  if (sel) {
-                                                    _playEpisode(ep);
-                                                  }
-                                                },
-                                              );
-                                            }).toList(),
-                                          ),
-                                        ),
-                                      ],
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 8),
                                     ],
 
                                     // Description
-                                    if (_detail?.description.isNotEmpty ??
-                                        false)
+                                    if (_detail?.description.isNotEmpty ?? false)
                                       NeuCard(
-                                        margin: const EdgeInsets.symmetric(
-                                          vertical: 8,
-                                        ),
+                                        margin: const EdgeInsets.symmetric(vertical: 8),
                                         padding: const EdgeInsets.all(12),
                                         child: Text(
-                                          _detail!.description,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            height: 1.4,
-                                          ),
+                                          _detail!.description.replaceAll(RegExp(r'<[^>]*>'), '').trim(),
+                                          style: const TextStyle(fontSize: 13, height: 1.4),
                                         ),
                                       ),
 
                                     // Tags
                                     if (_detail?.tags.isNotEmpty ?? false) ...[
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 12),
                                       Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
+                                        spacing: 8,
+                                        runSpacing: 8,
                                         children: _detail!.tags.map((tag) {
                                           return Chip(
-                                            label: Text(
-                                              '#$tag',
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                              ),
-                                            ),
+                                            label: Text('#$tag', style: const TextStyle(fontSize: 11)),
                                             padding: EdgeInsets.zero,
-                                            materialTapTargetSize:
-                                                MaterialTapTargetSize
-                                                    .shrinkWrap,
+                                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           );
                                         }).toList(),
                                       ),
                                     ],
 
                                     // Related movies
-                                    if (_detail?.relatedMovies.isNotEmpty ??
-                                        false) ...[
+                                    if (_detail?.relatedMovies.isNotEmpty ?? false) ...[
                                       const SizedBox(height: 20),
-                                      Text(
-                                        l10n.relatedMovies,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
+                                      Text(l10n.relatedMovies, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 12),
                                       SizedBox(
                                         height: 200,
                                         child: ListView.separated(
                                           scrollDirection: Axis.horizontal,
                                           clipBehavior: Clip.none,
-                                          itemCount:
-                                              _detail!.relatedMovies.length,
-                                          separatorBuilder: (_, _) =>
-                                              const SizedBox(width: 12),
+                                          itemCount: _detail!.relatedMovies.length,
+                                          separatorBuilder: (_, _) => const SizedBox(width: 12),
                                           itemBuilder: (context, index) {
-                                            final rel =
-                                                _detail!.relatedMovies[index];
+                                            final rel = _detail!.relatedMovies[index];
                                             return SizedBox(
                                               width: 130,
                                               child: GestureDetector(
                                                 onTap: () {
                                                   context.replaceRoute(
-                                                    MovieDetailRoute(
-                                                      movieUrl: rel.url,
-                                                      movieId: rel.id,
-                                                      initialMovie: rel,
-                                                    ),
+                                                    MovieDetailRoute(movieUrl: rel.url, movieId: rel.id, initialMovie: rel),
                                                   );
                                                 },
                                                 child: NeuCard(
@@ -1055,39 +968,22 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                                   padding: EdgeInsets.zero,
                                                   clipBehavior: Clip.antiAlias,
                                                   child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .stretch,
+                                                    crossAxisAlignment: CrossAxisAlignment.stretch,
                                                     children: [
                                                       Expanded(
                                                         child: Image.network(
                                                           rel.poster,
                                                           fit: BoxFit.cover,
-                                                          errorBuilder:
-                                                              (
-                                                                _,
-                                                                _,
-                                                                _,
-                                                              ) => Container(
-                                                                color:
-                                                                    Colors.grey,
-                                                              ),
+                                                          errorBuilder: (_, _, _) => Container(color: Colors.grey),
                                                         ),
                                                       ),
                                                       Padding(
-                                                        padding:
-                                                            const EdgeInsets.all(
-                                                              6.0,
-                                                            ),
+                                                        padding: const EdgeInsets.all(6.0),
                                                         child: Text(
                                                           rel.title,
                                                           maxLines: 2,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 11,
-                                                              ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: const TextStyle(fontSize: 11),
                                                         ),
                                                       ),
                                                     ],
@@ -1103,9 +999,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                 ),
                               ),
                               // Add spacing at bottom to prevent shadow clipping and respect safe area
-                              SizedBox(
-                                height: MediaQuery.paddingOf(context).bottom,
-                              ),
+                              SizedBox(height: MediaQuery.paddingOf(context).bottom),
                             ],
                           ),
                         ),
@@ -1124,9 +1018,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       autofocus: true,
       onKeyEvent: _handleVideoKeyEvent,
       child: AspectRatio(
-        aspectRatio: (controller != null && controller.value.isInitialized)
-            ? controller.value.aspectRatio
-            : 16 / 9,
+        aspectRatio: (controller != null && controller.value.isInitialized) ? controller.value.aspectRatio : 16 / 9,
         child: Container(
           color: Colors.black,
           child: Stack(
@@ -1134,27 +1026,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             children: [
               if (controller != null && controller.value.isInitialized)
                 Center(
-                  child: AspectRatio(
-                    aspectRatio: controller.value.aspectRatio,
-                    child: VideoPlayer(controller),
-                  ),
+                  child: AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller)),
                 )
               else if (_isLoadingStream)
-                const Center(
-                  child: CircularProgressIndicator(color: Colors.pinkAccent),
-                )
+                const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
               else
                 Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.play_circle_outline_rounded,
-                        size: 56,
-                        color: Colors.white54,
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
+                      const Icon(Icons.play_circle_outline_rounded, size: 56, color: Colors.white54),
+                      const SizedBox(height: 12),
+                      NeuButton(
                         onPressed: () {
                           final qualityUrl = _qualityUrlFor(_selectedQuality);
                           if (qualityUrl != null) {
@@ -1163,6 +1046,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             _loadDetail();
                           }
                         },
+                        accent: Theme.of(context).colorScheme.primary,
                         child: Text(l10n.loadStream),
                       ),
                     ],
@@ -1177,12 +1061,94 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       _videoFocusNode.requestFocus();
                       _toggleControls();
                     },
-                    onDoubleTap: _supportsDoubleTapFullScreen
-                        ? () {
-                            _videoFocusNode.requestFocus();
-                            _toggleFullScreen();
+                    onDoubleTapDown: (details) {
+                      _doubleTapPosition = details.localPosition;
+                    },
+                    onDoubleTap: () {
+                      if (_doubleTapPosition != null) {
+                        final width = context.size?.width ?? 0;
+                        if (width > 0) {
+                          if (_doubleTapPosition!.dx < width / 2) {
+                            _seekBy(const Duration(seconds: -10));
+                            _triggerSkipIndicator(isForward: false);
+                          } else {
+                            _seekBy(const Duration(seconds: 10));
+                            _triggerSkipIndicator(isForward: true);
                           }
-                        : null,
+                        }
+                      }
+                    },
+                    onLongPressStart: (_) => _start2xSpeed(),
+                    onLongPressEnd: (_) => _stop2xSpeed(),
+                  ),
+                ),
+
+              // Always-on Overlays (2x, Skip indicators)
+              if (controller != null && controller.value.isInitialized)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Stack(
+                      children: [
+                        if (_isSpeedBoosted)
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(16)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.fast_forward_rounded, color: Colors.white, size: 16),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    '2x',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (_skipBackwardValue > 0)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 32),
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.fast_rewind_rounded, color: Colors.white, size: 32),
+                                  Text(
+                                    '-${_skipBackwardValue}s',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (_skipForwardValue > 0)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 32),
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.fast_forward_rounded, color: Colors.white, size: 32),
+                                  Text(
+                                    '+${_skipForwardValue}s',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -1201,24 +1167,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             alignment: Alignment.bottomCenter,
                             child: Container(
                               padding: EdgeInsets.only(
-                                bottom:
-                                    4 +
-                                    (isFullScreen
-                                        ? MediaQuery.paddingOf(context).bottom
-                                        : 0),
-                                left: isFullScreen
-                                    ? MediaQuery.paddingOf(context).left
-                                    : 0,
-                                right: isFullScreen
-                                    ? MediaQuery.paddingOf(context).right
-                                    : 0,
+                                bottom: 4 + (isFullScreen ? MediaQuery.paddingOf(context).bottom : 0),
+                                left: isFullScreen ? MediaQuery.paddingOf(context).left : 0,
+                                right: isFullScreen ? MediaQuery.paddingOf(context).right : 0,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.7),
-                                  ],
+                                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
@@ -1229,98 +1184,59 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                   LayoutBuilder(
                                     builder: (context, constraints) {
                                       const previewWidth = 160.0;
-                                      final maxPreviewLeft =
-                                          constraints.maxWidth > previewWidth
+                                      final maxPreviewLeft = constraints.maxWidth > previewWidth
                                           ? constraints.maxWidth - previewWidth
                                           : 0.0;
-                                      final previewLeft =
-                                          (constraints.maxWidth *
-                                                      _dragFraction -
-                                                  previewWidth / 2)
-                                              .clamp(0.0, maxPreviewLeft);
+                                      final previewLeft = (constraints.maxWidth * _dragFraction - previewWidth / 2).clamp(
+                                        0.0,
+                                        maxPreviewLeft,
+                                      );
 
                                       return Stack(
                                         clipBehavior: Clip.none,
                                         children: [
                                           MouseRegion(
                                             cursor: SystemMouseCursors.click,
-                                            onEnter: (event) =>
-                                                _updateHoverPreview(
-                                                  event.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                ),
-                                            onHover: (event) =>
-                                                _updateHoverPreview(
-                                                  event.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                ),
+                                            onEnter: (event) => _updateHoverPreview(event.localPosition.dx, constraints.maxWidth),
+                                            onHover: (event) => _updateHoverPreview(event.localPosition.dx, constraints.maxWidth),
                                             onExit: (_) {
                                               if (_isTimelineHovering) {
-                                                setState(
-                                                  () => _isTimelineHovering =
-                                                      false,
-                                                );
+                                                setState(() => _isTimelineHovering = false);
                                               }
                                               _startControlsTimer();
                                             },
                                             child: GestureDetector(
                                               behavior: HitTestBehavior.opaque,
                                               onHorizontalDragStart: (details) {
-                                                _resumeAfterDrag =
-                                                    controller.value.isPlaying;
+                                                _resumeAfterDrag = controller.value.isPlaying;
                                                 unawaited(controller.pause());
                                                 _controlsTimer?.cancel();
-                                                setState(
-                                                  () => _isDragging = true,
-                                                );
-                                                _updateDragPosition(
-                                                  controller,
-                                                  details.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                );
+                                                setState(() => _isDragging = true);
+                                                _updateDragPosition(controller, details.localPosition.dx, constraints.maxWidth);
                                               },
-                                              onHorizontalDragUpdate:
-                                                  (details) {
-                                                    _updateDragPosition(
-                                                      controller,
-                                                      details.localPosition.dx,
-                                                      constraints.maxWidth,
-                                                    );
-                                                  },
-                                              onHorizontalDragEnd: (_) =>
-                                                  _finishDragging(controller),
-                                              onHorizontalDragCancel: () =>
-                                                  _finishDragging(controller),
+                                              onHorizontalDragUpdate: (details) {
+                                                _updateDragPosition(controller, details.localPosition.dx, constraints.maxWidth);
+                                              },
+                                              onHorizontalDragEnd: (_) => _finishDragging(controller),
+                                              onHorizontalDragCancel: () => _finishDragging(controller),
                                               onTapDown: (details) {
-                                                _updateDragPosition(
-                                                  controller,
-                                                  details.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                );
+                                                _updateDragPosition(controller, details.localPosition.dx, constraints.maxWidth);
                                               },
                                               child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 14,
-                                                    ),
+                                                padding: const EdgeInsets.only(top: 14, bottom: 2),
                                                 child: VideoProgressIndicator(
                                                   controller,
                                                   allowScrubbing: false,
-                                                  colors:
-                                                      const VideoProgressColors(
-                                                        playedColor:
-                                                            Colors.pinkAccent,
-                                                        bufferedColor:
-                                                            Colors.white30,
-                                                        backgroundColor:
-                                                            Colors.white12,
-                                                      ),
+                                                  colors: const VideoProgressColors(
+                                                    playedColor: Colors.pinkAccent,
+                                                    bufferedColor: Colors.white30,
+                                                    backgroundColor: Colors.white12,
+                                                  ),
                                                 ),
                                               ),
                                             ),
                                           ),
-                                          if (_isDragging ||
-                                              _isTimelineHovering)
+                                          if (_isDragging || _isTimelineHovering)
                                             Positioned(
                                               left: previewLeft,
                                               bottom: 42,
@@ -1329,51 +1245,27 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                                   width: previewWidth,
                                                   decoration: BoxDecoration(
                                                     color: Colors.black,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: Colors.white70,
-                                                    ),
-                                                    boxShadow: const [
-                                                      BoxShadow(
-                                                        color: Colors.black54,
-                                                        blurRadius: 8,
-                                                      ),
-                                                    ],
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(color: Colors.white70),
+                                                    boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8)],
                                                   ),
                                                   clipBehavior: Clip.antiAlias,
                                                   child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
+                                                    mainAxisSize: MainAxisSize.min,
                                                     children: [
                                                       AspectRatio(
                                                         aspectRatio: 16 / 9,
-                                                        child:
-                                                            _buildThumbnailPreview(
-                                                              controller,
-                                                              previewWidth,
-                                                            ),
+                                                        child: _buildThumbnailPreview(controller, previewWidth),
                                                       ),
                                                       Padding(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              vertical: 3,
-                                                            ),
+                                                        padding: const EdgeInsets.symmetric(vertical: 3),
                                                         child: Text(
-                                                          _formatDuration(
-                                                            _dragPosition,
+                                                          _formatDuration(_dragPosition),
+                                                          style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 11,
+                                                            fontWeight: FontWeight.w600,
                                                           ),
-                                                          style:
-                                                              const TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 11,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
                                                         ),
                                                       ),
                                                     ],
@@ -1390,149 +1282,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                       const SizedBox(width: 12),
                                       ValueListenableBuilder(
                                         valueListenable: controller,
-                                        builder:
-                                            (
-                                              context,
-                                              VideoPlayerValue value,
-                                              child,
-                                            ) {
-                                              final currentPos = _isDragging
-                                                  ? _dragPosition
-                                                  : value.position;
-                                              return Text(
-                                                '${_formatDuration(currentPos)} / ${_formatDuration(value.duration)}',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                ),
-                                              );
-                                            },
+                                        builder: (context, VideoPlayerValue value, child) {
+                                          final currentPos = _isDragging ? _dragPosition : (_virtualSeekPosition ?? value.position);
+                                          return Text(
+                                            '${_formatDuration(currentPos)} / ${_formatDuration(value.duration)}',
+                                            style: const TextStyle(color: Colors.white, fontSize: 11),
+                                          );
+                                        },
                                       ),
                                       const Spacer(),
-                                      // Quality Selector Button
-                                      PopupMenuButton<String>(
-                                        initialValue: _selectedQuality,
-                                        tooltip: l10n.resolutionQuality,
-                                        onSelected: (q) {
-                                          _switchQuality(q);
-                                          _startControlsTimer();
-                                        },
-                                        itemBuilder: (context) => [
-                                          const PopupMenuItem(
-                                            value: 'Auto',
-                                            child: Text('Auto'),
-                                          ),
-                                          ..._availableQualities.map(
-                                            (quality) => PopupMenuItem(
-                                              value: quality.label,
-                                              child: Text(quality.label),
-                                            ),
-                                          ),
-                                        ],
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white24,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.high_quality_rounded,
-                                                size: 16,
-                                                color: Colors.white,
-                                              ),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                _selectedQuality,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
                                       IconButton(
                                         tooltip: l10n.volume,
                                         padding: EdgeInsets.zero,
-                                        constraints:
-                                            const BoxConstraints.tightFor(
-                                              width: 40,
-                                              height: 40,
-                                            ),
-                                        icon: Icon(
-                                          _volumeIcon,
-                                          color: _volume == 0
-                                              ? Colors.white70
-                                              : Colors.white,
-                                        ),
+                                        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                                        icon: Icon(_volumeIcon, color: _volume == 0 ? Colors.white70 : Colors.white),
                                         onPressed: _toggleVolumeControl,
                                       ),
-                                      // Speed Picker
-                                      PopupMenuButton<double>(
-                                        initialValue: _playbackSpeed,
-                                        tooltip: l10n.playbackSpeed,
-                                        onSelected: (speed) {
-                                          setState(
-                                            () => _playbackSpeed = speed,
-                                          );
-                                          controller.setPlaybackSpeed(speed);
-                                          _startControlsTimer();
-                                        },
-                                        itemBuilder: (context) =>
-                                            [0.5, 1.0, 1.25, 1.5, 2.0]
-                                                .map(
-                                                  (s) => PopupMenuItem(
-                                                    value: s,
-                                                    child: Text('${s}x'),
-                                                  ),
-                                                )
-                                                .toList(),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                          ),
-                                          child: Text(
-                                            '${_playbackSpeed}x',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      if (_supportsOrientationManager)
-                                        IconButton(
-                                          tooltip: _isRotationLocked
-                                              ? l10n.unlockRotation
-                                              : l10n.lockRotation,
-                                          icon: Icon(
-                                            _isRotationLocked
-                                                ? Icons
-                                                      .screen_lock_rotation_rounded
-                                                : Icons.screen_rotation_rounded,
-                                            color: _isRotationLocked
-                                                ? Colors.pinkAccent
-                                                : Colors.white,
-                                          ),
-                                          onPressed: _toggleRotationLock,
-                                        ),
                                       // Fullscreen button
                                       IconButton(
                                         icon: Icon(
-                                          isFullScreen
-                                              ? Icons.fullscreen_exit_rounded
-                                              : Icons.fullscreen_rounded,
+                                          isFullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
                                           color: Colors.white,
                                         ),
                                         onPressed: _toggleFullScreen,
@@ -1544,56 +1313,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             ),
                           ),
 
-                          // Center Controls (Play/Pause/Skip)
+                          // Center Controls (Play/Pause)
                           if (!_isDragging)
                             Center(
-                              child: FractionallySizedBox(
-                                widthFactor: isFullScreen ? 0.5 : 0.62,
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    _buildCenterControlButton(
-                                      icon: Icons.replay_10_rounded,
-                                      onPressed: () =>
-                                          _seekBy(const Duration(seconds: -10)),
-                                    ),
-                                    _buildCenterControlButton(
-                                      icon: _isPlaying
-                                          ? Icons.pause_rounded
-                                          : Icons.play_arrow_rounded,
-                                      size: 64,
-                                      onPressed: _togglePlayback,
-                                    ),
-                                    _buildCenterControlButton(
-                                      icon: Icons.forward_10_rounded,
-                                      onPressed: () =>
-                                          _seekBy(const Duration(seconds: 10)),
-                                    ),
-                                  ],
-                                ),
+                              child: _buildCenterControlButton(
+                                icon: _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                size: 64,
+                                onPressed: _togglePlayback,
                               ),
                             ),
 
                           if (_showVolumeControl)
                             Positioned(
-                              right:
-                                  12 +
-                                  (isFullScreen
-                                      ? MediaQuery.paddingOf(context).right
-                                      : 0),
-                              bottom:
-                                  58 +
-                                  (isFullScreen
-                                      ? MediaQuery.paddingOf(context).bottom
-                                      : 0),
+                              right: 12 + (isFullScreen ? MediaQuery.paddingOf(context).right : 0),
+                              bottom: 58 + (isFullScreen ? MediaQuery.paddingOf(context).bottom : 0),
                               child: Material(
                                 color: Colors.transparent,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: Colors.black87,
                                     borderRadius: BorderRadius.circular(12),
@@ -1603,21 +1340,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        tooltip: _volume == 0
-                                            ? l10n.unmute
-                                            : l10n.mute,
-                                        icon: Icon(
-                                          _volumeIcon,
-                                          color: Colors.white,
-                                        ),
+                                        tooltip: _volume == 0 ? l10n.unmute : l10n.mute,
+                                        icon: Icon(_volumeIcon, color: Colors.white),
                                         onPressed: _toggleMute,
                                       ),
                                       SizedBox(
                                         width: 120,
                                         child: Slider(
                                           value: _volume,
-                                          onChangeStart: (_) =>
-                                              _controlsTimer?.cancel(),
+                                          onChangeStart: (_) => _controlsTimer?.cancel(),
                                           onChanged: _setVolume,
                                           onChangeEnd: (_) {},
                                           activeColor: Colors.pinkAccent,
@@ -1629,11 +1360,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                         child: Text(
                                           '${(_volume * 100).round()}%',
                                           textAlign: TextAlign.right,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                                         ),
                                       ),
                                     ],
@@ -1642,31 +1369,44 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                               ),
                             ),
 
-                          // Top bar in FullScreen mode with back icon
-                          if (isFullScreen)
-                            Positioned(
-                              top: 12 + MediaQuery.paddingOf(context).top,
-                              left: 12 + MediaQuery.paddingOf(context).left,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: _toggleFullScreen,
-                                  borderRadius: BorderRadius.circular(32),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black26,
-                                      shape: BoxShape.circle,
+                          // Top bar with back icon and settings
+                          Positioned(
+                            top: 12 + (isFullScreen ? MediaQuery.paddingOf(context).top : 0),
+                            left: 12 + (isFullScreen ? MediaQuery.paddingOf(context).left : 0),
+                            right: 12 + (isFullScreen ? MediaQuery.paddingOf(context).right : 0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                if (isFullScreen)
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _toggleFullScreen,
+                                      borderRadius: BorderRadius.circular(32),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
+                                      ),
                                     ),
-                                    child: const Icon(
-                                      Icons.arrow_back_rounded,
-                                      color: Colors.white,
-                                      size: 28,
+                                  )
+                                else
+                                  const SizedBox.shrink(),
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _showSettingsBottomSheet,
+                                    borderRadius: BorderRadius.circular(32),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                                      child: const Icon(Icons.settings_rounded, color: Colors.white, size: 24),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
+                          ),
                         ],
                       ),
                     ),
@@ -1684,11 +1424,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return playerWidget;
   }
 
-  Widget _buildCenterControlButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    double size = 48,
-  }) {
+  Widget _buildCenterControlButton({required IconData icon, required VoidCallback onPressed, double size = 48}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1730,12 +1466,7 @@ class _ThumbnailCue {
 }
 
 class _ThumbnailTrack {
-  const _ThumbnailTrack({
-    required this.cues,
-    required this.spriteUrl,
-    required this.spriteWidth,
-    required this.spriteHeight,
-  });
+  const _ThumbnailTrack({required this.cues, required this.spriteUrl, required this.spriteWidth, required this.spriteHeight});
 
   final List<_ThumbnailCue> cues;
   final String spriteUrl;
@@ -1766,9 +1497,7 @@ class _ThumbnailTrack {
       final y = double.parse(match.group(5)!);
       final width = double.parse(match.group(6)!);
       final height = double.parse(match.group(7)!);
-      final imageUrl = Uri.parse(
-        trackUrl,
-      ).resolve(match.group(3)!.trim()).toString();
+      final imageUrl = Uri.parse(trackUrl).resolve(match.group(3)!.trim()).toString();
       cues.add(
         _ThumbnailCue(
           start: _parseTimestamp(match.group(1)!),
@@ -1785,12 +1514,7 @@ class _ThumbnailTrack {
     }
 
     if (cues.isEmpty) return null;
-    return _ThumbnailTrack(
-      cues: cues,
-      spriteUrl: cues.first.imageUrl,
-      spriteWidth: spriteWidth,
-      spriteHeight: spriteHeight,
-    );
+    return _ThumbnailTrack(cues: cues, spriteUrl: cues.first.imageUrl, spriteWidth: spriteWidth, spriteHeight: spriteHeight);
   }
 
   static Duration _parseTimestamp(String timestamp) {
@@ -1800,6 +1524,160 @@ class _ThumbnailTrack {
       minutes: int.parse(parts[1]),
       seconds: int.parse(parts[2]),
       milliseconds: int.parse(parts[3]),
+    );
+  }
+}
+
+class _SettingsBottomSheet extends StatelessWidget {
+  const _SettingsBottomSheet({
+    required this.selectedQuality,
+    required this.availableQualities,
+    required this.playbackSpeed,
+    required this.isRotationLocked,
+    required this.supportsOrientationManager,
+    required this.onQualityChanged,
+    required this.onSpeedChanged,
+    required this.onRotationLockToggled,
+  });
+
+  final String selectedQuality;
+  final List<MovieStreamVariant> availableQualities;
+  final double playbackSpeed;
+  final bool isRotationLocked;
+  final bool supportsOrientationManager;
+  final ValueChanged<String> onQualityChanged;
+  final ValueChanged<double> onSpeedChanged;
+  final VoidCallback onRotationLockToggled;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.high_quality_rounded),
+              title: Text(l10n.resolutionQuality),
+              subtitle: Text(selectedQuality),
+              onTap: () {
+                Navigator.pop(context);
+                _showSelectionSheet<String>(
+                  context,
+                  l10n.resolutionQuality,
+                  ['Auto', ...availableQualities.map((e) => e.label)],
+                  selectedQuality,
+                  onQualityChanged,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.speed_rounded),
+              title: Text(l10n.playbackSpeed),
+              subtitle: Text('${playbackSpeed}x'),
+              onTap: () {
+                Navigator.pop(context);
+                _showSelectionSheet<double>(
+                  context,
+                  l10n.playbackSpeed,
+                  const [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+                  playbackSpeed,
+                  onSpeedChanged,
+                  labelBuilder: (v) => v == 1.0 ? '1x' : '${v}x',
+                );
+              },
+            ),
+            if (supportsOrientationManager)
+              ListTile(
+                leading: Icon(isRotationLocked ? Icons.screen_lock_rotation_rounded : Icons.screen_rotation_rounded),
+                title: Text(l10n.lockRotation),
+                subtitle: Text(isRotationLocked ? l10n.lockRotation : l10n.unlockRotation),
+                trailing: Switch(
+                  value: isRotationLocked,
+                  onChanged: (_) {
+                    onRotationLockToggled();
+                    Navigator.pop(context);
+                  },
+                ),
+                onTap: () {
+                  onRotationLockToggled();
+                  Navigator.pop(context);
+                },
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSelectionSheet<T>(
+    BuildContext context,
+    String title,
+    List<T> options,
+    T selectedValue,
+    ValueChanged<T> onSelected, {
+    String Function(T)? labelBuilder,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Divider(),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final option = options[index];
+                    final isSelected = option == selectedValue;
+                    return ListTile(
+                      title: Text(
+                        labelBuilder?.call(option) ?? option.toString(),
+                        style: TextStyle(color: isSelected ? Colors.pinkAccent : null, fontWeight: isSelected ? FontWeight.bold : null),
+                      ),
+                      trailing: isSelected ? const Icon(Icons.check, color: Colors.pinkAccent) : null,
+                      onTap: () {
+                        onSelected(option);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

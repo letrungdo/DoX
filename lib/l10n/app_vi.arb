@@ -920,5 +920,14 @@
   "episodeFull": "Full",
   "episodeDefaultName": "Tập",
   "unmute": "Bật tiếng",
-  "mute": "Tắt tiếng"
+  "mute": "Tắt tiếng",
+  "removeFromHistory": "Xóa khỏi lịch sử",
+  "confirmRemoveFromHistory": "Xóa '{title}' khỏi lịch sử đã xem?",
+  "@confirmRemoveFromHistory": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

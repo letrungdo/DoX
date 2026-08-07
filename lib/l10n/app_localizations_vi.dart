@@ -1424,4 +1424,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get mute => 'Tắt tiếng';
+
+  @override
+  String get removeFromHistory => 'Xóa khỏi lịch sử';
+
+  @override
+  String confirmRemoveFromHistory(String title) {
+    return 'Xóa \'$title\' khỏi lịch sử đã xem?';
+  }
 }

@@ -1427,4 +1427,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mute => 'Mute';
+
+  @override
+  String get removeFromHistory => 'Remove from history';
+
+  @override
+  String confirmRemoveFromHistory(String title) {
+    return 'Remove \'$title\' from your watched history?';
+  }
 }
