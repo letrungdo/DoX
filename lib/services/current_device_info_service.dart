@@ -32,7 +32,7 @@ class CurrentDeviceInfoService {
         final manufacturer = _clean(info.manufacturer);
         final model = _clean(info.model);
         final modelName = [
-          if (manufacturer != null) manufacturer,
+          ?manufacturer,
           if (model != null &&
               model.toLowerCase() != manufacturer?.toLowerCase())
             model,

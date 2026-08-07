@@ -187,7 +187,7 @@ class _ChickenBatchDetailScreenState
                   ),
                 ),
               ),
-              if (trailing != null) trailing,
+              ?trailing,
             ],
           ),
           const SizedBox(height: 12),

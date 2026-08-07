@@ -1275,4 +1275,126 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lowPriceWarningSaveAnyway => 'Save anyway';
+
+  @override
+  String get movie => 'Movies';
+
+  @override
+  String get movieTab => 'Movie Tab';
+
+  @override
+  String movieCountStatus(int count, String total) {
+    return 'Loaded: $count/$total';
+  }
+
+  @override
+  String get searchMoviesPlaceholder => 'Search movies, actors...';
+
+  @override
+  String get noMoviesFound => 'No movies found';
+
+  @override
+  String get loadMoviesFailed => 'Could not load movie library.';
+
+  @override
+  String get invalidMovieServerUrl => 'Invalid Movie Server URL.';
+
+  @override
+  String get movieServerUrlUpdated => 'Movie Server URL updated.';
+
+  @override
+  String get updateMovieServerFailed => 'Could not update movie server.';
+
+  @override
+  String get movieServerUrl => 'Movie Server URL';
+
+  @override
+  String get serverUrlHint => 'https://...';
+
+  @override
+  String get serverUrlHelperText =>
+      'Label and categories will be synced automatically.';
+
+  @override
+  String get saveAndSync => 'Save & sync';
+
+  @override
+  String get noWatchedMovies => 'No watched movies yet.';
+
+  @override
+  String get noFavoriteMovies => 'No favorite movies yet.';
+
+  @override
+  String get changeMovieServerUrl => 'Change Movie Server URL';
+
+  @override
+  String get watchedMovies => 'Watched movies';
+
+  @override
+  String get favoriteMovies => 'Favorite movies';
+
+  @override
+  String get scrollToTop => 'Scroll to top';
+
+  @override
+  String get noCategoriesConfigured => 'No categories configured.';
+
+  @override
+  String get enterMovieServerUrl =>
+      'Enter Movie Server URL to load categories.';
+
+  @override
+  String get syncing => 'Syncing...';
+
+  @override
+  String get vietsub => 'Vietsub';
+
+  @override
+  String get updateFavoriteFailed => 'Could not update favorite.';
+
+  @override
+  String get videoStreamError => 'Video stream connection error.';
+
+  @override
+  String serverNotResponding(int index) {
+    return 'Server $index not responding.';
+  }
+
+  @override
+  String get removeFromFavorites => 'Remove from favorites';
+
+  @override
+  String get addToFavorites => 'Add to favorites';
+
+  @override
+  String serverName(String name) {
+    return 'Server $name';
+  }
+
+  @override
+  String get relatedMovies => 'Related movies';
+
+  @override
+  String get loadStream => 'Load stream';
+
+  @override
+  String get resolutionQuality => 'Resolution quality';
+
+  @override
+  String get volume => 'Volume';
+
+  @override
+  String get playbackSpeed => 'Playback speed';
+
+  @override
+  String get unlockRotation => 'Unlock rotation';
+
+  @override
+  String get lockRotation => 'Lock rotation';
+
+  @override
+  String get unmute => 'Unmute';
+
+  @override
+  String get mute => 'Mute';
 }

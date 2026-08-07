@@ -38,10 +38,7 @@ void main() {
       await Future.wait([
         storageService.init(),
         appInfo.init(),
-        Firebase.initializeApp(
-          // name: DefaultFirebaseOptions.currentPlatform.projectId,
-          options: kIsWeb ? DefaultFirebaseOptions.currentPlatform : null,
-        ),
+        Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
         secureStorage.getAccount(),
         initSupabase(),
         notificationService.init(),

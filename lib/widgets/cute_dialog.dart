@@ -172,7 +172,7 @@ class _CuteDialogState extends State<CuteDialog> {
                                   style: titleStyle,
                                 ),
                               ),
-                              if (deleteButton != null) deleteButton,
+                              ?deleteButton,
                             ],
                           )
                         else

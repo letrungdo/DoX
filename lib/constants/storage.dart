@@ -20,6 +20,10 @@ class StorageKey {
   static const showLocketTab = "showLocketTab";
   static const showElectricTab = "showElectricTab";
   static const showLunarTab = "showLunarTab";
+  static const showMovieTab = "showMovieTab";
+  static const movieBaseUrl = "movieBaseUrl";
+  static const movieCategories = "movieCategories";
+  static const movieLabel = "movieLabel";
   static const tabOrder = "tabOrder";
   static const electricReminder = "electricReminder";
 

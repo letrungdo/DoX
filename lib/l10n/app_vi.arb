@@ -848,5 +848,67 @@
   "badgeNew": "Mới",
   "badgeUpdated": "Đã sửa",
   "lowPriceWarningEdit": "Sửa lại giá",
-  "lowPriceWarningSaveAnyway": "Vẫn lưu"
+  "lowPriceWarningSaveAnyway": "Vẫn lưu",
+  "movie": "Phim",
+  "movieTab": "Tab Phim",
+  "movieCountStatus": "Tải: {count}/{total}",
+  "@movieCountStatus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "searchMoviesPlaceholder": "Tìm tên phim, diễn viên...",
+  "noMoviesFound": "Không tìm thấy phim nào",
+  "loadMoviesFailed": "Không thể tải thư viện phim.",
+  "invalidMovieServerUrl": "Movie Server URL không hợp lệ.",
+  "movieServerUrlUpdated": "Đã cập nhật Movie Server URL.",
+  "updateMovieServerFailed": "Không thể cập nhật movie server.",
+  "movieServerUrl": "Movie Server URL",
+  "serverUrlHint": "https://...",
+  "serverUrlHelperText": "Nhãn và danh mục sẽ được đồng bộ tự động.",
+  "saveAndSync": "Lưu & đồng bộ",
+  "noWatchedMovies": "Chưa có phim nào đã xem.",
+  "noFavoriteMovies": "Chưa có phim yêu thích.",
+  "changeMovieServerUrl": "Đổi Movie Server URL",
+  "watchedMovies": "Phim đã xem",
+  "favoriteMovies": "Phim yêu thích",
+  "scrollToTop": "Lên đầu trang",
+  "noCategoriesConfigured": "Chưa cấu hình chuyên mục.",
+  "enterMovieServerUrl": "Nhập Movie Server URL để tải danh mục phim.",
+  "syncing": "Đang đồng bộ...",
+  "vietsub": "Vietsub",
+  "updateFavoriteFailed": "Không thể cập nhật yêu thích.",
+  "videoStreamError": "Lỗi kết nối luồng phát video.",
+  "serverNotResponding": "Server {index} không phản hồi.",
+  "@serverNotResponding": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "removeFromFavorites": "Bỏ khỏi yêu thích",
+  "addToFavorites": "Thêm vào yêu thích",
+  "serverName": "Server {name}",
+  "@serverName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "relatedMovies": "Phim liên quan",
+  "loadStream": "Tải luồng phát",
+  "resolutionQuality": "Chất lượng phân giải",
+  "volume": "Âm lượng",
+  "playbackSpeed": "Tốc độ",
+  "unlockRotation": "Mở khóa xoay màn hình",
+  "lockRotation": "Khóa xoay màn hình",
+  "unmute": "Bật tiếng",
+  "mute": "Tắt tiếng"
 }

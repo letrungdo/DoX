@@ -82,7 +82,7 @@ class ChickenRepository {
   Future<List<dynamic>> _readSection(ChickenSection section, int? year) async {
     final rows = await _client.rpc(
       section.functionName,
-      params: {if (year != null) 'p_year': year},
+      params: {'p_year': ?year},
     );
     return (rows as List?) ?? const [];
   }
