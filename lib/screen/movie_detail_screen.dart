@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:dio/dio.dart';
@@ -28,6 +29,55 @@ class MovieDetailScreen extends StatefulWidget {
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
+}
+
+const _titleMaxLines = 3;
+const _subtitleMaxLines = 2;
+
+/// Keeps the inline player tall enough for the centre button and the progress
+/// bar not to collide, however wide the video is.
+const _minPlayerHeight = 220.0;
+
+/// Sizes the inline player to [aspectRatio] but never below [minHeight];
+/// when [fill] is set it simply takes all the space its parent offers.
+class _PlayerBox extends StatelessWidget {
+  const _PlayerBox({
+    required this.aspectRatio,
+    required this.minHeight,
+    required this.fill,
+    required this.child,
+  });
+
+  final double aspectRatio;
+  final double minHeight;
+  final bool fill;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (fill) return child;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
+        return SizedBox(width: width, height: math.max(width / aspectRatio, minHeight), child: child);
+      },
+    );
+  }
+}
+
+/// Result of shrinking a text to fit a line budget.
+class _TextFit {
+  const _TextFit({required this.fontSize, required this.height});
+  final double fontSize;
+  final double height;
+}
+
+/// Styles and toolbar height for the app bar title block.
+class _AppBarTitleFit {
+  const _AppBarTitleFit({required this.titleStyle, required this.subtitleStyle, required this.height});
+  final TextStyle titleStyle;
+  final TextStyle? subtitleStyle;
+  final double height;
 }
 
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
@@ -80,6 +130,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   Duration? _virtualSeekPosition;
   Timer? _virtualSeekTimer;
+
+  /// True when the language chip already reads as "Vietsub" / "Phụ đề".
+  bool get _languageImpliesVietsub {
+    final language = _detail?.language?.toLowerCase();
+    if (language == null || language.isEmpty) return false;
+    return language.contains('sub') || language.contains('phụ đề');
+  }
 
   bool get _supportsOrientationManager =>
       !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
@@ -735,20 +792,105 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
-  double _appBarHeight(BuildContext context, String title) {
+  /// Shrinks [style] until [text] fits in [maxLines] within [maxWidth], and
+  /// reports the height it occupies at that size.
+  _TextFit _fitText({
+    required BuildContext context,
+    required String text,
+    required TextStyle style,
+    required double maxWidth,
+    required int maxLines,
+    required double minFontSize,
+  }) {
+    final textDirection = Directionality.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    double fontSize = style.fontSize ?? 14;
+
+    while (true) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style.copyWith(fontSize: fontSize)),
+        maxLines: maxLines,
+        textDirection: textDirection,
+        textScaler: textScaler,
+      )..layout(maxWidth: maxWidth);
+      final fits = !painter.didExceedMaxLines;
+      final height = painter.height;
+      painter.dispose();
+      if (fits || fontSize <= minFontSize) {
+        return _TextFit(fontSize: fontSize, height: height);
+      }
+      fontSize = math.max(minFontSize, fontSize - 0.5);
+    }
+  }
+
+  _AppBarTitleFit _appBarTitleFit(BuildContext context, String title, String? originalTitle) {
     final theme = Theme.of(context);
     final titleStyle = theme.appBarTheme.titleTextStyle ?? theme.textTheme.titleLarge ?? const TextStyle(fontSize: 20);
+    final subtitleStyle =
+        theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)) ??
+        const TextStyle(fontSize: 12);
+
     final screenWidth = MediaQuery.sizeOf(context).width;
     final availableWidth = screenWidth > 272 ? screenWidth - 160 : 120.0;
-    final painter = TextPainter(
-      text: TextSpan(text: title, style: titleStyle),
-      maxLines: 4,
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout(maxWidth: availableWidth);
-    final height = (painter.height + 24).clamp(56.0, 140.0);
-    painter.dispose();
-    return height;
+
+    final titleFit = _fitText(
+      context: context,
+      text: title,
+      style: titleStyle,
+      maxWidth: availableWidth,
+      maxLines: _titleMaxLines,
+      minFontSize: 12,
+    );
+
+    _TextFit? subtitleFit;
+    if (originalTitle != null && originalTitle.isNotEmpty && originalTitle != title) {
+      subtitleFit = _fitText(
+        context: context,
+        text: originalTitle,
+        style: subtitleStyle,
+        maxWidth: availableWidth,
+        maxLines: _subtitleMaxLines,
+        minFontSize: 9,
+      );
+    }
+
+    // 12 = 6px breathing room above/below the title block.
+    final height = titleFit.height + (subtitleFit != null ? subtitleFit.height + 2 : 0) + 12;
+    return _AppBarTitleFit(
+      titleStyle: titleStyle.copyWith(fontSize: titleFit.fontSize),
+      subtitleStyle: subtitleFit == null ? null : subtitleStyle.copyWith(fontSize: subtitleFit.fontSize),
+      height: math.max(56.0, height),
+    );
+  }
+
+  /// One labelled line of the info card, e.g. `Đạo diễn  •  A, B`.
+  /// Renders nothing when [values] is empty.
+  Widget _buildMetadataRow({required IconData icon, required String label, required List<String> values}) {
+    if (values.isEmpty) return const SizedBox.shrink();
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 78,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              values.join(', '),
+              style: const TextStyle(fontSize: 12.5, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildServerMetadataChip({required IconData icon, required String label, Color? color}) {
@@ -774,6 +916,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final title = _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
+    final originalTitle = _detail?.originalTitle ?? widget.initialMovie?.originalTitle;
+    final titleFit = _appBarTitleFit(context, title, originalTitle);
 
     return PopScope(
       canPop: !_isFullScreen,
@@ -792,8 +936,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               child: Scaffold(
                 appBar: DoAppBar(
                   title: title,
-                  titleMaxLines: 4,
-                  height: _appBarHeight(context, title),
+                  titleStyle: titleFit.titleStyle,
+                  subtitle: titleFit.subtitleStyle == null
+                      ? null
+                      : Text(
+                          originalTitle!,
+                          style: titleFit.subtitleStyle,
+                          maxLines: _subtitleMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  titleMaxLines: _titleMaxLines,
+                  height: titleFit.height,
                   actions: [
                     NeuIconButton(
                       tooltip: _isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
@@ -825,6 +978,23 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                         spacing: 8,
                                         runSpacing: 8,
                                         children: [
+                                          if (_detail?.quality?.isNotEmpty ?? false)
+                                            _buildServerMetadataChip(
+                                              icon: Icons.high_quality_rounded,
+                                              label: _detail!.quality!,
+                                              color: Colors.amberAccent,
+                                            ),
+                                          if (_detail?.language?.isNotEmpty ?? false)
+                                            _buildServerMetadataChip(
+                                              icon: Icons.language_rounded,
+                                              label: _detail!.language!,
+                                              color: Colors.blueAccent,
+                                            ),
+                                          if (_detail?.time?.isNotEmpty ?? false)
+                                            _buildServerMetadataChip(
+                                              icon: Icons.timer_outlined,
+                                              label: _detail!.time!,
+                                            ),
                                           if (_detail?.views?.isNotEmpty ?? false)
                                             _buildServerMetadataChip(icon: Icons.visibility_rounded, label: _detail!.views!),
                                           if (_detail?.likes?.isNotEmpty ?? false)
@@ -833,7 +1003,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                               label: _detail!.likes!,
                                               color: Colors.pinkAccent,
                                             ),
-                                          if (_detail?.hasVietsub ?? false)
+                                          // Skipped when `language` already says it (e.g. lang "Vietsub"),
+                                          // otherwise the same tag shows twice.
+                                          if ((_detail?.hasVietsub ?? false) && !_languageImpliesVietsub)
                                             _buildServerMetadataChip(
                                               icon: Icons.subtitles_rounded,
                                               label: l10n.vietsub,
@@ -856,27 +1028,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                                 Text(l10n.serverLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                                                 const SizedBox(width: 8),
                                                 Expanded(
+                                                  // Clips at the viewport so chips never draw over the
+                                                  // label; the padding keeps room for their shadows.
                                                   child: SingleChildScrollView(
                                                     scrollDirection: Axis.horizontal,
-                                                    clipBehavior: Clip.none,
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.symmetric(vertical: 4),
-                                                      child: Row(
-                                                        children: _detail!.servers.map((srv) {
-                                                          final isSelected = _selectedServer?.name == srv.name;
-                                                          return Padding(
-                                                            padding: const EdgeInsets.only(right: 8),
-                                                            child: NeuChip(
-                                                              label: srv.name,
-                                                              isSelected: isSelected,
-                                                              fontSize: 12,
-                                                              onTap: () {
-                                                                _switchServer(srv);
-                                                              },
-                                                            ),
-                                                          );
-                                                        }).toList(),
-                                                      ),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                                    child: Row(
+                                                      spacing: 8,
+                                                      children: _detail!.servers.map((srv) {
+                                                        final isSelected = _selectedServer?.name == srv.name;
+                                                        return NeuChip(
+                                                          label: srv.name,
+                                                          isSelected: isSelected,
+                                                          fontSize: 12,
+                                                          onTap: () {
+                                                            _switchServer(srv);
+                                                          },
+                                                        );
+                                                      }).toList(),
                                                     ),
                                                   ),
                                                 ),
@@ -925,19 +1094,39 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                         ),
                                       ),
 
-                                    // Tags
-                                    if (_detail?.tags.isNotEmpty ?? false) ...[
+                                    // Tags and Metadata
+                                    if ((_detail?.tags.isNotEmpty ?? false) ||
+                                        (_detail?.countries.isNotEmpty ?? false) ||
+                                        (_detail?.actors.isNotEmpty ?? false) ||
+                                        (_detail?.directors.isNotEmpty ?? false)) ...[
                                       const SizedBox(height: 12),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: _detail!.tags.map((tag) {
-                                          return Chip(
-                                            label: Text('#$tag', style: const TextStyle(fontSize: 11)),
-                                            padding: EdgeInsets.zero,
-                                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          );
-                                        }).toList(),
+                                      NeuCard(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            _buildMetadataRow(
+                                              icon: Icons.movie_creation_rounded,
+                                              label: l10n.directorLabel,
+                                              values: _detail!.directors,
+                                            ),
+                                            _buildMetadataRow(
+                                              icon: Icons.people_alt_rounded,
+                                              label: l10n.actorsLabel,
+                                              values: _detail!.actors,
+                                            ),
+                                            _buildMetadataRow(
+                                              icon: Icons.public_rounded,
+                                              label: l10n.countryLabel,
+                                              values: _detail!.countries,
+                                            ),
+                                            _buildMetadataRow(
+                                              icon: Icons.local_offer_rounded,
+                                              label: l10n.genreLabel,
+                                              values: _detail!.tags,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ],
 
@@ -1013,12 +1202,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final controller = _videoController;
     final l10n = AppLocalizations.of(context);
 
+    final aspectRatio = (controller != null && controller.value.isInitialized) ? controller.value.aspectRatio : 16 / 9;
+
     Widget playerWidget = Focus(
       focusNode: _videoFocusNode,
       autofocus: true,
       onKeyEvent: _handleVideoKeyEvent,
-      child: AspectRatio(
-        aspectRatio: (controller != null && controller.value.isInitialized) ? controller.value.aspectRatio : 16 / 9,
+      child: _PlayerBox(
+        aspectRatio: aspectRatio,
+        // Ultra-wide videos would otherwise be so short that the centre play
+        // button covers the progress bar.
+        minHeight: isFullScreen ? 0 : _minPlayerHeight,
+        fill: isFullScreen,
         child: Container(
           color: Colors.black,
           child: Stack(

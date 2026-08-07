@@ -230,6 +230,26 @@ class MovieService {
         logger.e('MovieService fetch genres failed', error: e);
       }
 
+      // Fetch countries
+      try {
+        final response = await _dio.get('/quoc-gia');
+        if (response.data is Map && response.data['status'] == 'success') {
+          final List<dynamic> items = response.data['data']['items'];
+          for (final item in items) {
+            final slug = item['slug'];
+            categories.add(
+              MovieCategory(
+                id: 'country_$slug',
+                name: item['name'],
+                path: '/v1/api/quoc-gia/$slug',
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        logger.e('MovieService fetch countries failed', error: e);
+      }
+
       await updateCategories(categories);
     } catch (e) {
       logger.e('MovieService discoverOphimConfig failed', error: e);
@@ -803,6 +823,9 @@ class MovieService {
         return Movie(
           id: item['_id'] ?? slug,
           title: item['name'] ?? '',
+          originalTitle: item['origin_name']?.toString(),
+          quality: item['quality']?.toString(),
+          language: item['lang']?.toString(),
           url: slug,
           poster: (thumb.startsWith('http') || cdnImage.isEmpty)
               ? thumb
@@ -883,8 +906,11 @@ class MovieService {
 
       String poster = movieData['poster_url'] ?? movieData['thumb_url'] ?? '';
       if (poster.isNotEmpty && !poster.startsWith('http')) {
-        // Fallback to APP_DOMAIN_CDN_IMAGE from previous list if available,
-        // but here we don't have it directly. Most Ophim APIs provide full URLs in detail.
+        // Many Ophim APIs provide relative paths. Check if CDN domain is in the response.
+        final cdnImage = data['data']?['APP_DOMAIN_CDN_IMAGE'] ?? '';
+        if (cdnImage.isNotEmpty) {
+          poster = '$cdnImage/$poster';
+        }
       }
 
       final servers = <MovieEpisodeServer>[];
@@ -917,6 +943,10 @@ class MovieService {
       return MovieDetail(
         id: movieData['_id'] ?? slug,
         title: movieData['name'] ?? '',
+        originalTitle: movieData['origin_name']?.toString(),
+        quality: movieData['quality']?.toString(),
+        language: movieData['lang']?.toString(),
+        time: movieData['time']?.toString(),
         url: slug,
         poster: poster,
         description: movieData['content'] ?? '',
@@ -928,6 +958,18 @@ class MovieService {
         streamUrl: firstStreamUrl,
         tags:
             (movieData['category'] as List<dynamic>? ?? [])
+                .map((e) => e['name'] as String)
+                .toList(),
+        actors:
+            (movieData['actor'] as List<dynamic>? ?? [])
+                .whereType<String>()
+                .toList(),
+        directors:
+            (movieData['director'] as List<dynamic>? ?? [])
+                .whereType<String>()
+                .toList(),
+        countries:
+            (movieData['country'] as List<dynamic>? ?? [])
                 .map((e) => e['name'] as String)
                 .toList(),
         servers: servers,

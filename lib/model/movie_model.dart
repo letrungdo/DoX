@@ -1,6 +1,9 @@
 class Movie {
   final String id;
   final String title;
+  final String? originalTitle;
+  final String? quality;
+  final String? language;
   final String url;
   final String poster;
   final String? badge;
@@ -12,6 +15,9 @@ class Movie {
   const Movie({
     required this.id,
     required this.title,
+    this.originalTitle,
+    this.quality,
+    this.language,
     required this.url,
     required this.poster,
     this.badge,
@@ -25,6 +31,9 @@ class Movie {
     return Movie(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? '',
+      originalTitle: json['originalTitle'] as String?,
+      quality: json['quality'] as String?,
+      language: json['language'] as String?,
       url: json['url'] as String? ?? '',
       poster: json['poster'] as String? ?? '',
       badge: json['badge'] as String?,
@@ -39,6 +48,9 @@ class Movie {
     return {
       'id': id,
       'title': title,
+      'originalTitle': originalTitle,
+      'quality': quality,
+      'language': language,
       'url': url,
       'poster': poster,
       'badge': badge,
@@ -63,6 +75,10 @@ class MovieResponse {
 class MovieDetail {
   final String id;
   final String title;
+  final String? originalTitle;
+  final String? quality;
+  final String? language;
+  final String? time;
   final String url;
   final String poster;
   final String description;
@@ -72,12 +88,19 @@ class MovieDetail {
   final String? streamUrl;
   final String? thumbnailTrackUrl;
   final List<String> tags;
+  final List<String> actors;
+  final List<String> directors;
+  final List<String> countries;
   final List<Movie> relatedMovies;
   final List<MovieEpisodeServer> servers;
 
   const MovieDetail({
     required this.id,
     required this.title,
+    this.originalTitle,
+    this.quality,
+    this.language,
+    this.time,
     required this.url,
     required this.poster,
     required this.description,
@@ -87,6 +110,9 @@ class MovieDetail {
     this.streamUrl,
     this.thumbnailTrackUrl,
     this.tags = const [],
+    this.actors = const [],
+    this.directors = const [],
+    this.countries = const [],
     this.relatedMovies = const [],
     this.servers = const [],
   });

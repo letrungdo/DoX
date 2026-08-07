@@ -5,7 +5,9 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   const DoAppBar({
     super.key,
     this.title, //
+    this.titleStyle,
     this.titleSuffix,
+    this.subtitle,
     this.titleMaxLines = 1,
     this.height = Dimens.appBarHeight,
     this.leading,
@@ -15,11 +17,21 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.bottom,
   });
   final String? title;
-  final int titleMaxLines;
+
+  /// Overrides the default app bar title style, e.g. a smaller font so a long
+  /// title still fits [titleMaxLines].
+  final TextStyle? titleStyle;
+
+  /// `null` shows the whole title, wrapping over as many lines as needed.
+  final int? titleMaxLines;
 
   /// Sits right after [title], e.g. an `AppBarSyncIcon` that spins while data
   /// is being fetched.
   final Widget? titleSuffix;
+
+  /// Displayed below the [title].
+  final Widget? subtitle;
+
   final double height;
   final Widget? leading;
   final List<Widget>? actions;
@@ -42,30 +54,39 @@ class _DoAppBarState extends State<DoAppBar> {
   Widget build(BuildContext context) {
     final title = widget.title;
     final titleSuffix = widget.titleSuffix;
+    final subtitle = widget.subtitle;
+
+    Widget? titleWidget;
+    if (title != null) {
+      titleWidget = Text(
+        title,
+        style: widget.titleStyle,
+        maxLines: widget.titleMaxLines,
+        overflow: widget.titleMaxLines == null
+            ? TextOverflow.clip
+            : TextOverflow.ellipsis,
+      );
+
+      if (titleSuffix != null) {
+        titleWidget = Row(
+          spacing: 8,
+          mainAxisSize: MainAxisSize.min,
+          children: [Flexible(child: titleWidget), titleSuffix],
+        );
+      }
+
+      if (subtitle != null) {
+        titleWidget = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [titleWidget, subtitle],
+        );
+      }
+    }
+
     return AppBar(
       backgroundColor: widget.backgroundColor,
-      title: title == null
-          ? null
-          : titleSuffix == null
-          ? Text(
-              title,
-              maxLines: widget.titleMaxLines,
-              overflow: TextOverflow.ellipsis,
-            )
-          : Row(
-              spacing: 8,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    title,
-                    maxLines: widget.titleMaxLines,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                titleSuffix,
-              ],
-            ),
+      title: titleWidget,
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,
       actions: widget.actions,
