@@ -929,5 +929,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "directorLabel": "Đạo diễn",
+  "actorsLabel": "Diễn viên",
+  "countryLabel": "Quốc gia",
+  "genreLabel": "Thể loại"
 }

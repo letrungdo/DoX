@@ -1432,4 +1432,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String confirmRemoveFromHistory(String title) {
     return 'Xóa \'$title\' khỏi lịch sử đã xem?';
   }
+
+  @override
+  String get directorLabel => 'Đạo diễn';
+
+  @override
+  String get actorsLabel => 'Diễn viên';
+
+  @override
+  String get countryLabel => 'Quốc gia';
+
+  @override
+  String get genreLabel => 'Thể loại';
 }

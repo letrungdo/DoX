@@ -1435,4 +1435,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String confirmRemoveFromHistory(String title) {
     return 'Remove \'$title\' from your watched history?';
   }
+
+  @override
+  String get directorLabel => 'Director';
+
+  @override
+  String get actorsLabel => 'Cast';
+
+  @override
+  String get countryLabel => 'Country';
+
+  @override
+  String get genreLabel => 'Genre';
 }

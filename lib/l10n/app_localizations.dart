@@ -2599,6 +2599,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove \'{title}\' from your watched history?'**
   String confirmRemoveFromHistory(String title);
+
+  /// No description provided for @directorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Director'**
+  String get directorLabel;
+
+  /// No description provided for @actorsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get actorsLabel;
+
+  /// No description provided for @countryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get countryLabel;
+
+  /// No description provided for @genreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get genreLabel;
 }
 
 class _AppLocalizationsDelegate

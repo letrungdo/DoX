@@ -950,5 +950,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "directorLabel": "Director",
+  "actorsLabel": "Cast",
+  "countryLabel": "Country",
+  "genreLabel": "Genre"
 }
