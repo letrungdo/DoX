@@ -39,7 +39,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   VideoPlayerController? _videoController;
   bool _isPlaying = false;
   bool _isFullScreen = false;
-  int _currentServer = 1;
+  MovieEpisodeServer? _selectedServer;
+  MovieEpisode? _selectedEpisode;
   bool _isLoadingStream = false;
   double _playbackSpeed = 1.0;
   double _volume = 1.0;
@@ -169,6 +170,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _masterStreamUrl = detail?.streamUrl;
       _thumbnailTrack = null;
       _hoverThumbnailCue = null;
+      if (detail != null && detail.servers.isNotEmpty) {
+        _selectedServer = detail.servers.first;
+        if (_selectedServer!.episodes.isNotEmpty) {
+          _selectedEpisode = _selectedServer!.episodes.first;
+        }
+      }
     });
 
     final thumbnailTrackUrl = detail?.thumbnailTrackUrl;
@@ -453,29 +460,55 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     await _initVideoPlayer(targetUrl, seekTo: currentPos);
   }
 
-  Future<void> _switchServer(int serverIndex) async {
-    final l10n = AppLocalizations.of(context);
-    if (serverIndex == _currentServer) return;
+  Future<void> _switchServer(MovieEpisodeServer server) async {
     setState(() {
-      _currentServer = serverIndex;
+      _selectedServer = server;
+      if (server.episodes.isNotEmpty) {
+        _selectedEpisode = server.episodes.first;
+      }
+    });
+    if (_selectedEpisode != null) {
+      await _playEpisode(_selectedEpisode!);
+    }
+  }
+
+  Future<void> _playEpisode(MovieEpisode episode) async {
+    setState(() {
+      _selectedEpisode = episode;
       _isLoadingStream = true;
     });
 
-    final streamUrl = await movieService.getStreamUrl(
-      widget.movieId,
-      movieUrl: widget.movieUrl,
-      server: serverIndex,
-      cancelToken: _cancelToken,
-    );
+    String? streamUrl = episode.m3u8Url;
+
+    // If streamUrl is null, it might be a alternative server alternative server
+    if (streamUrl == null && _selectedServer != null) {
+      final match = RegExp(r'Server (\d+)').firstMatch(_selectedServer!.name);
+      if (match != null) {
+        final serverIndex = int.tryParse(match.group(1)!);
+        if (serverIndex != null) {
+          streamUrl = await movieService.getStreamUrl(
+            widget.movieId,
+            movieUrl: widget.movieUrl,
+            server: serverIndex,
+            cancelToken: _cancelToken,
+          );
+        }
+      }
+    }
 
     if (streamUrl != null && streamUrl.isNotEmpty) {
       await _useMasterStream(streamUrl);
-    } else {
-      if (!mounted) return;
+    } else if (episode.embedUrl != null) {
+      // WebView embed support could be added here
       setState(() => _isLoadingStream = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.serverNotResponding(serverIndex))),
-      );
+    } else {
+      if (mounted) {
+        setState(() => _isLoadingStream = false);
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.videoStreamError)),
+        );
+      }
     }
   }
 
@@ -842,64 +875,104 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                       const SizedBox(height: 12),
                                     ],
                                     // Server selector
-                                    Row(
-                                      children: [
-                                        Text(
-                                          l10n.serverLabel,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                    if (_detail!.servers.isNotEmpty) ...[
+                                      Row(
+                                        children: [
+                                          Text(
+                                            l10n.serverLabel,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: SingleChildScrollView(
-                                            scrollDirection: Axis.horizontal,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 4,
-                                                  ),
-                                              child: Row(
-                                                children: [
-                                                  for (
-                                                    int s = 1;
-                                                    s <= 6;
-                                                    s++
-                                                  ) ...[
-                                                    ChoiceChip(
-                                                      label: Text(
-                                                        l10n.serverName(
-                                                          s.toString(),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: SingleChildScrollView(
+                                              scrollDirection: Axis.horizontal,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 4,
+                                                    ),
+                                                child: Row(
+                                                  children: _detail!.servers
+                                                      .map((srv) {
+                                                    final isSelected =
+                                                        _selectedServer?.name ==
+                                                            srv.name;
+                                                    return Padding(
+                                                      padding: const EdgeInsets
+                                                          .only(right: 6),
+                                                      child: ChoiceChip(
+                                                        label: Text(srv.name),
+                                                        selected: isSelected,
+                                                        showCheckmark: false,
+                                                        onSelected: (sel) {
+                                                          if (sel) {
+                                                            _switchServer(srv);
+                                                          }
+                                                        },
+                                                        labelStyle: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: isSelected
+                                                              ? Colors.white
+                                                              : null,
                                                         ),
                                                       ),
-                                                      selected:
-                                                          _currentServer == s,
-                                                      showCheckmark: false,
-                                                      onSelected: (sel) {
-                                                        if (sel) {
-                                                          _switchServer(s);
-                                                        }
-                                                      },
-                                                      labelStyle: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            _currentServer == s
-                                                            ? Colors.white
-                                                            : null,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                  ],
-                                                ],
+                                                    );
+                                                  }).toList(),
+                                                ),
                                               ),
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                      if (_selectedServer != null &&
+                                          _selectedServer!.episodes.length >
+                                              1) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          '${l10n.episodeLabel}:',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: _selectedServer!.episodes
+                                                .map((ep) {
+                                              final isSelected =
+                                                  _selectedEpisode?.slug ==
+                                                      ep.slug;
+                                              return ChoiceChip(
+                                                label: Text(
+                                                  ep.name,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                                padding: const EdgeInsets
+                                                    .symmetric(horizontal: 4),
+                                                selected: isSelected,
+                                                showCheckmark: false,
+                                                onSelected: (sel) {
+                                                  if (sel) {
+                                                    _playEpisode(ep);
+                                                  }
+                                                },
+                                              );
+                                            }).toList(),
+                                          ),
                                         ),
                                       ],
-                                    ),
-                                    const SizedBox(height: 12),
+                                      const SizedBox(height: 12),
+                                    ],
 
                                     // Description
                                     if (_detail?.description.isNotEmpty ??

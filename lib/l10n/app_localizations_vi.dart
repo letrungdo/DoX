@@ -1307,6 +1307,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get movieServerUrl => 'Movie Server URL';
 
   @override
+  String get editMovieServerUrl => 'Sửa Movie Server URL';
+
+  @override
+  String get noServersFound => 'Không có server nào';
+
+  @override
   String get serverUrlHint => 'https://...';
 
   @override
@@ -1372,6 +1378,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get relatedMovies => 'Phim liên quan';
 
   @override
+  String get categoryNew => 'Mới cập nhật';
+
+  @override
+  String get categorySingle => 'Phim lẻ';
+
+  @override
+  String get categorySeries => 'Phim bộ';
+
+  @override
+  String get categoryAnime => 'Hoạt hình';
+
+  @override
+  String get categoryTVShow => 'TV Shows';
+
+  @override
   String get loadStream => 'Tải luồng phát';
 
   @override
@@ -1388,6 +1409,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get lockRotation => 'Khóa xoay màn hình';
+
+  @override
+  String get episodeLabel => 'Tập phim';
+
+  @override
+  String get episodeFull => 'Full';
+
+  @override
+  String get episodeDefaultName => 'Tập';
 
   @override
   String get unmute => 'Bật tiếng';

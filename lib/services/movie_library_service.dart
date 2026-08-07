@@ -1,5 +1,6 @@
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/services/movie_service.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 
 typedef MovieLibraryState = ({bool isFavorite, DateTime? watchedAt});
@@ -9,6 +10,19 @@ typedef MovieLibraryBatchCallback = void Function(List<MovieLibraryItem> items);
 class MovieLibraryService {
   const MovieLibraryService();
 
+  String get _prefix =>
+      movieService.baseUrl == storageService.getPrimaryMovieServer()
+          ? 'def_'
+          : 'ext_';
+
+  String _toDbId(String movieId) => '$_prefix$movieId';
+
+  String _fromDbId(String dbId) {
+    if (dbId.startsWith('def_')) return dbId.substring(4);
+    if (dbId.startsWith('ext_')) return dbId.substring(4);
+    return dbId;
+  }
+
   Future<MovieLibraryState> getState(String movieId) async {
     final user = supabase.auth.currentUser;
     if (user == null) return (isFavorite: false, watchedAt: null);
@@ -17,7 +31,7 @@ class MovieLibraryService {
         .from('movie_library')
         .select('is_favorite, watched_at')
         .eq('user_id', user.id)
-        .eq('movie_id', movieId)
+        .eq('movie_id', _toDbId(movieId))
         .maybeSingle();
 
     return (
@@ -30,7 +44,11 @@ class MovieLibraryService {
     Iterable<String> movieIds,
   ) async {
     final user = supabase.auth.currentUser;
-    final ids = movieIds.where((id) => id.isNotEmpty).toSet().toList();
+    final ids = movieIds
+        .where((id) => id.isNotEmpty)
+        .map(_toDbId)
+        .toSet()
+        .toList();
     if (user == null || ids.isEmpty) return {};
 
     final rows = await supabase
@@ -42,7 +60,7 @@ class MovieLibraryService {
     return {
       for (final row in rows)
         if ((row['movie_id'] as String? ?? '').isNotEmpty)
-          row['movie_id'] as String: (
+          _fromDbId(row['movie_id'] as String): (
             isFavorite: row['is_favorite'] as bool? ?? false,
             watchedAt: DateTime.tryParse(row['watched_at'] as String? ?? ''),
           ),
@@ -94,7 +112,8 @@ class MovieLibraryService {
     var query = supabase
         .from('movie_library')
         .select('movie_id, movie_path, watched_at, is_favorite, updated_at')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .like('movie_id', '$_prefix%');
 
     if (watchedOnly) {
       query = query.not('watched_at', 'is', null);
@@ -131,10 +150,11 @@ class MovieLibraryService {
   }
 
   Future<MovieLibraryItem?> _hydrateMovie(Map<String, dynamic> row) async {
-    final movieId = row['movie_id'] as String? ?? '';
+    final dbId = row['movie_id'] as String? ?? '';
     final moviePath = row['movie_path'] as String? ?? '';
-    if (movieId.isEmpty || moviePath.isEmpty) return null;
+    if (dbId.isEmpty || moviePath.isEmpty) return null;
 
+    final movieId = _fromDbId(dbId);
     final state = (
       isFavorite: row['is_favorite'] as bool? ?? false,
       watchedAt: DateTime.tryParse(row['watched_at'] as String? ?? ''),
@@ -181,7 +201,7 @@ class MovieLibraryService {
 
     await supabase.from('movie_library').upsert({
       'user_id': user.id,
-      'movie_id': movie.id,
+      'movie_id': _toDbId(movie.id),
       'movie_path': movieService.toServerPath(movie.url),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
       ...extraValues,

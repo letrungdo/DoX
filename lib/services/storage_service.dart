@@ -145,6 +145,43 @@ class _StorageService {
     return prefs.setString(StorageKey.movieBaseUrl, value);
   }
 
+  String? getPrimaryMovieServer() {
+    try {
+      return prefs.getString(StorageKey.primaryMovieServer);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> setPrimaryMovieServer(String value) {
+    return prefs.setString(StorageKey.primaryMovieServer, value);
+  }
+
+  List<String> getMovieServers() {
+    try {
+      return prefs.getStringList(StorageKey.movieServers) ?? [];
+    } catch (_) {
+      // If the key exists but is not a list (e.g. legacy string), return empty and allow overwrite
+      return [];
+    }
+  }
+
+  Future<bool> setMovieServers(List<String> values) {
+    return prefs.setStringList(StorageKey.movieServers, values);
+  }
+
+  String? getMovieServerLabels() {
+    try {
+      return prefs.getString(StorageKey.movieServerLabels);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> setMovieServerLabels(String value) {
+    return prefs.setString(StorageKey.movieServerLabels, value);
+  }
+
   String? getMovieCategories() {
     return prefs.getString(StorageKey.movieCategories);
   }
@@ -159,6 +196,14 @@ class _StorageService {
 
   Future<bool> setMovieLabel(String value) {
     return prefs.setString(StorageKey.movieLabel, value);
+  }
+
+  String? getMovieSiteType() {
+    return prefs.getString(StorageKey.movieSiteType);
+  }
+
+  Future<bool> setMovieSiteType(String value) {
+    return prefs.setString(StorageKey.movieSiteType, value);
   }
 
   /// Bottom tab order as [AppTab] names; null when the user never reordered.
