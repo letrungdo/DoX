@@ -2299,6 +2299,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save anyway'**
   String get lowPriceWarningSaveAnyway;
+
+  /// No description provided for @movie.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies'**
+  String get movie;
+
+  /// No description provided for @movieTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Movie Tab'**
+  String get movieTab;
+
+  /// No description provided for @movieCountStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Loaded: {count}/{total}'**
+  String movieCountStatus(int count, String total);
+
+  /// No description provided for @searchMoviesPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search movies, actors...'**
+  String get searchMoviesPlaceholder;
+
+  /// No description provided for @noMoviesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No movies found'**
+  String get noMoviesFound;
+
+  /// No description provided for @loadMoviesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load movie library.'**
+  String get loadMoviesFailed;
+
+  /// No description provided for @invalidMovieServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid Movie Server URL.'**
+  String get invalidMovieServerUrl;
+
+  /// No description provided for @movieServerUrlUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Movie Server URL updated.'**
+  String get movieServerUrlUpdated;
+
+  /// No description provided for @updateMovieServerFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update movie server.'**
+  String get updateMovieServerFailed;
+
+  /// No description provided for @movieServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Movie Server URL'**
+  String get movieServerUrl;
+
+  /// No description provided for @serverUrlHint.
+  ///
+  /// In en, this message translates to:
+  /// **'https://...'**
+  String get serverUrlHint;
+
+  /// No description provided for @serverUrlHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Label and categories will be synced automatically.'**
+  String get serverUrlHelperText;
+
+  /// No description provided for @saveAndSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & sync'**
+  String get saveAndSync;
+
+  /// No description provided for @noWatchedMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'No watched movies yet.'**
+  String get noWatchedMovies;
+
+  /// No description provided for @noFavoriteMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'No favorite movies yet.'**
+  String get noFavoriteMovies;
+
+  /// No description provided for @changeMovieServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Movie Server URL'**
+  String get changeMovieServerUrl;
+
+  /// No description provided for @watchedMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Watched movies'**
+  String get watchedMovies;
+
+  /// No description provided for @favoriteMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite movies'**
+  String get favoriteMovies;
+
+  /// No description provided for @scrollToTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll to top'**
+  String get scrollToTop;
+
+  /// No description provided for @noCategoriesConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'No categories configured.'**
+  String get noCategoriesConfigured;
+
+  /// No description provided for @enterMovieServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Movie Server URL to load categories.'**
+  String get enterMovieServerUrl;
+
+  /// No description provided for @syncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get syncing;
+
+  /// No description provided for @vietsub.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietsub'**
+  String get vietsub;
+
+  /// No description provided for @updateFavoriteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update favorite.'**
+  String get updateFavoriteFailed;
+
+  /// No description provided for @videoStreamError.
+  ///
+  /// In en, this message translates to:
+  /// **'Video stream connection error.'**
+  String get videoStreamError;
+
+  /// No description provided for @serverNotResponding.
+  ///
+  /// In en, this message translates to:
+  /// **'Server {index} not responding.'**
+  String serverNotResponding(int index);
+
+  /// No description provided for @removeFromFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from favorites'**
+  String get removeFromFavorites;
+
+  /// No description provided for @addToFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favorites'**
+  String get addToFavorites;
+
+  /// No description provided for @serverName.
+  ///
+  /// In en, this message translates to:
+  /// **'Server {name}'**
+  String serverName(String name);
+
+  /// No description provided for @relatedMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Related movies'**
+  String get relatedMovies;
+
+  /// No description provided for @loadStream.
+  ///
+  /// In en, this message translates to:
+  /// **'Load stream'**
+  String get loadStream;
+
+  /// No description provided for @resolutionQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution quality'**
+  String get resolutionQuality;
+
+  /// No description provided for @volume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get volume;
+
+  /// No description provided for @playbackSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback speed'**
+  String get playbackSpeed;
+
+  /// No description provided for @unlockRotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock rotation'**
+  String get unlockRotation;
+
+  /// No description provided for @lockRotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock rotation'**
+  String get lockRotation;
+
+  /// No description provided for @unmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get unmute;
+
+  /// No description provided for @mute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get mute;
 }
 
 class _AppLocalizationsDelegate

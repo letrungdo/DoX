@@ -57,3 +57,5 @@ tool/.chicken_dates_migrated.json
 
 # Supabase CLI state is machine-specific; migration SQL stays versioned.
 supabase/.temp/
+
+.artifacts

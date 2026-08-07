@@ -6,6 +6,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     super.key,
     this.title, //
     this.titleSuffix,
+    this.titleMaxLines = 1,
     this.height = Dimens.appBarHeight,
     this.leading,
     this.leadingWidth,
@@ -14,6 +15,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.bottom,
   });
   final String? title;
+  final int titleMaxLines;
 
   /// Sits right after [title], e.g. an `AppBarSyncIcon` that spins while data
   /// is being fetched.
@@ -45,12 +47,22 @@ class _DoAppBarState extends State<DoAppBar> {
       title: title == null
           ? null
           : titleSuffix == null
-          ? Text(title)
+          ? Text(
+              title,
+              maxLines: widget.titleMaxLines,
+              overflow: TextOverflow.ellipsis,
+            )
           : Row(
               spacing: 8,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: widget.titleMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 titleSuffix,
               ],
             ),

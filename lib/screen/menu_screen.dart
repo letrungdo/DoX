@@ -107,6 +107,11 @@ class _MenuScreenState<V extends MenuViewModel>
           l10n.fengShuiCompass,
           () => context.pushRoute(const FengShuiCompassRoute()),
         ),
+        _menuButton(
+          Icons.movie_rounded,
+          l10n.movie,
+          () => context.pushRoute(const MovieRoute()),
+        ),
         _menuButton(Icons.info_outline_rounded, l10n.about, () {
           showAboutDialog(
             applicationVersion: appInfo.version, //

@@ -1273,4 +1273,125 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get lowPriceWarningSaveAnyway => 'Vẫn lưu';
+
+  @override
+  String get movie => 'Phim';
+
+  @override
+  String get movieTab => 'Tab Phim';
+
+  @override
+  String movieCountStatus(int count, String total) {
+    return 'Tải: $count/$total';
+  }
+
+  @override
+  String get searchMoviesPlaceholder => 'Tìm tên phim, diễn viên...';
+
+  @override
+  String get noMoviesFound => 'Không tìm thấy phim nào';
+
+  @override
+  String get loadMoviesFailed => 'Không thể tải thư viện phim.';
+
+  @override
+  String get invalidMovieServerUrl => 'Movie Server URL không hợp lệ.';
+
+  @override
+  String get movieServerUrlUpdated => 'Đã cập nhật Movie Server URL.';
+
+  @override
+  String get updateMovieServerFailed => 'Không thể cập nhật movie server.';
+
+  @override
+  String get movieServerUrl => 'Movie Server URL';
+
+  @override
+  String get serverUrlHint => 'https://...';
+
+  @override
+  String get serverUrlHelperText => 'Nhãn và danh mục sẽ được đồng bộ tự động.';
+
+  @override
+  String get saveAndSync => 'Lưu & đồng bộ';
+
+  @override
+  String get noWatchedMovies => 'Chưa có phim nào đã xem.';
+
+  @override
+  String get noFavoriteMovies => 'Chưa có phim yêu thích.';
+
+  @override
+  String get changeMovieServerUrl => 'Đổi Movie Server URL';
+
+  @override
+  String get watchedMovies => 'Phim đã xem';
+
+  @override
+  String get favoriteMovies => 'Phim yêu thích';
+
+  @override
+  String get scrollToTop => 'Lên đầu trang';
+
+  @override
+  String get noCategoriesConfigured => 'Chưa cấu hình chuyên mục.';
+
+  @override
+  String get enterMovieServerUrl =>
+      'Nhập Movie Server URL để tải danh mục phim.';
+
+  @override
+  String get syncing => 'Đang đồng bộ...';
+
+  @override
+  String get vietsub => 'Vietsub';
+
+  @override
+  String get updateFavoriteFailed => 'Không thể cập nhật yêu thích.';
+
+  @override
+  String get videoStreamError => 'Lỗi kết nối luồng phát video.';
+
+  @override
+  String serverNotResponding(int index) {
+    return 'Server $index không phản hồi.';
+  }
+
+  @override
+  String get removeFromFavorites => 'Bỏ khỏi yêu thích';
+
+  @override
+  String get addToFavorites => 'Thêm vào yêu thích';
+
+  @override
+  String serverName(String name) {
+    return 'Server $name';
+  }
+
+  @override
+  String get relatedMovies => 'Phim liên quan';
+
+  @override
+  String get loadStream => 'Tải luồng phát';
+
+  @override
+  String get resolutionQuality => 'Chất lượng phân giải';
+
+  @override
+  String get volume => 'Âm lượng';
+
+  @override
+  String get playbackSpeed => 'Tốc độ';
+
+  @override
+  String get unlockRotation => 'Mở khóa xoay màn hình';
+
+  @override
+  String get lockRotation => 'Khóa xoay màn hình';
+
+  @override
+  String get unmute => 'Bật tiếng';
+
+  @override
+  String get mute => 'Tắt tiếng';
 }

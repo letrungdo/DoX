@@ -869,5 +869,67 @@
   "badgeNew": "New",
   "badgeUpdated": "Edited",
   "lowPriceWarningEdit": "Fix the price",
-  "lowPriceWarningSaveAnyway": "Save anyway"
+  "lowPriceWarningSaveAnyway": "Save anyway",
+  "movie": "Movies",
+  "movieTab": "Movie Tab",
+  "movieCountStatus": "Loaded: {count}/{total}",
+  "@movieCountStatus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "searchMoviesPlaceholder": "Search movies, actors...",
+  "noMoviesFound": "No movies found",
+  "loadMoviesFailed": "Could not load movie library.",
+  "invalidMovieServerUrl": "Invalid Movie Server URL.",
+  "movieServerUrlUpdated": "Movie Server URL updated.",
+  "updateMovieServerFailed": "Could not update movie server.",
+  "movieServerUrl": "Movie Server URL",
+  "serverUrlHint": "https://...",
+  "serverUrlHelperText": "Label and categories will be synced automatically.",
+  "saveAndSync": "Save & sync",
+  "noWatchedMovies": "No watched movies yet.",
+  "noFavoriteMovies": "No favorite movies yet.",
+  "changeMovieServerUrl": "Change Movie Server URL",
+  "watchedMovies": "Watched movies",
+  "favoriteMovies": "Favorite movies",
+  "scrollToTop": "Scroll to top",
+  "noCategoriesConfigured": "No categories configured.",
+  "enterMovieServerUrl": "Enter Movie Server URL to load categories.",
+  "syncing": "Syncing...",
+  "vietsub": "Vietsub",
+  "updateFavoriteFailed": "Could not update favorite.",
+  "videoStreamError": "Video stream connection error.",
+  "serverNotResponding": "Server {index} not responding.",
+  "@serverNotResponding": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "removeFromFavorites": "Remove from favorites",
+  "addToFavorites": "Add to favorites",
+  "serverName": "Server {name}",
+  "@serverName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "relatedMovies": "Related movies",
+  "loadStream": "Load stream",
+  "resolutionQuality": "Resolution quality",
+  "volume": "Volume",
+  "playbackSpeed": "Playback speed",
+  "unlockRotation": "Unlock rotation",
+  "lockRotation": "Lock rotation",
+  "unmute": "Unmute",
+  "mute": "Mute"
 }

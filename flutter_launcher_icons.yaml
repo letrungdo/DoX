@@ -18,4 +18,5 @@ flutter_launcher_icons:
     generate: false
 
   macos:
-    generate: false
+    generate: true
+    image_path: "assets/app_icon/icon_android.png"

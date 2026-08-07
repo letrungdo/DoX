@@ -1,0 +1,1732 @@
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:dio/dio.dart';
+import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/model/movie_model.dart';
+import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/services/movie_library_service.dart';
+import 'package:do_x/services/movie_service.dart';
+import 'package:do_x/utils/logger.dart';
+import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_orientation_manager/flutter_orientation_manager.dart';
+import 'package:video_player/video_player.dart';
+
+@RoutePage()
+class MovieDetailScreen extends StatefulWidget {
+  final String movieUrl;
+  final String movieId;
+  final Movie? initialMovie;
+
+  const MovieDetailScreen({
+    super.key,
+    required this.movieUrl,
+    required this.movieId,
+    this.initialMovie,
+  });
+
+  @override
+  State<MovieDetailScreen> createState() => _MovieDetailScreenState();
+}
+
+class _MovieDetailScreenState extends State<MovieDetailScreen> {
+  MovieDetail? _detail;
+  bool _isLoading = true;
+  VideoPlayerController? _videoController;
+  bool _isPlaying = false;
+  bool _isFullScreen = false;
+  int _currentServer = 1;
+  bool _isLoadingStream = false;
+  double _playbackSpeed = 1.0;
+  double _volume = 1.0;
+  double _lastAudibleVolume = 1.0;
+  bool _showVolumeControl = false;
+  bool _showControls = true;
+  Timer? _controlsTimer;
+  StreamSubscription<Orientation>? _orientationSubscription;
+  final FocusNode _videoFocusNode = FocusNode(debugLabel: 'movie-video');
+  VoidCallback? _videoValueListener;
+  int _controllerGeneration = 0;
+  int _detailGeneration = 0;
+  int _thumbnailGeneration = 0;
+  int _qualityGeneration = 0;
+
+  bool _isDragging = false;
+  bool _isTimelineHovering = false;
+  Duration _dragPosition = Duration.zero;
+  double _dragFraction = 0;
+  bool _resumeAfterDrag = false;
+  _ThumbnailTrack? _thumbnailTrack;
+  _ThumbnailCue? _hoverThumbnailCue;
+
+  final _cancelToken = CancelToken();
+
+  String _selectedQuality = 'Auto';
+  List<MovieStreamVariant> _availableQualities = const [];
+  String? _masterStreamUrl;
+  bool _isFavorite = false;
+  bool _isUpdatingFavorite = false;
+  bool _hasRecordedWatch = false;
+  bool _isRotationLocked = false;
+
+  bool get _supportsOrientationManager =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  bool get _supportsDoubleTapFullScreen =>
+      kIsWeb ||
+      (defaultTargetPlatform != TargetPlatform.android &&
+          defaultTargetPlatform != TargetPlatform.iOS);
+
+  @override
+  void initState() {
+    super.initState();
+    logger.d('MovieDetailScreen: initState');
+    _loadDetail();
+    _loadLibraryState();
+    _initOrientationListener();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final shouldAutoEnterFullScreen =
+          kIsWeb || defaultTargetPlatform == TargetPlatform.macOS;
+      if (mounted && shouldAutoEnterFullScreen) _enterFullScreen();
+    });
+  }
+
+  void _initOrientationListener() {
+    if (!_supportsOrientationManager) return;
+    _orientationSubscription = FlutterOrientationManager.orientationStream
+        .listen((orientation) {
+          if (!mounted || _isRotationLocked) return;
+          if (orientation == Orientation.landscape && !_isFullScreen) {
+            if (_videoController?.value.isInitialized == true) {
+              _enterFullScreen();
+            }
+          } else if (orientation == Orientation.portrait && _isFullScreen) {
+            _exitFullScreen();
+          }
+        });
+  }
+
+  @override
+  void didUpdateWidget(MovieDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.movieId != widget.movieId ||
+        oldWidget.movieUrl != widget.movieUrl) {
+      _hasRecordedWatch = false;
+      _isFavorite = false;
+      unawaited(_detachAndDisposeController());
+      _loadDetail();
+      _loadLibraryState();
+    }
+  }
+
+  @override
+  void dispose() {
+    logger.d('MovieDetailScreen: dispose');
+    _controllerGeneration++;
+    _detailGeneration++;
+    _thumbnailGeneration++;
+    _qualityGeneration++;
+    final controller = _videoController;
+    final listener = _videoValueListener;
+    _videoController = null;
+    _videoValueListener = null;
+    if (controller != null) {
+      if (listener != null) controller.removeListener(listener);
+      unawaited(controller.dispose());
+    }
+    _controlsTimer?.cancel();
+    _orientationSubscription?.cancel();
+    _videoFocusNode.dispose();
+    _cancelToken.cancel();
+
+    // Reset everything to normal
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (_supportsOrientationManager) {
+      FlutterOrientationManager.enableAutoRotation();
+    }
+
+    super.dispose();
+  }
+
+  Future<void> _loadDetail({bool showLoading = true}) async {
+    final generation = ++_detailGeneration;
+    if (showLoading) setState(() => _isLoading = true);
+    final detail = await movieService.getMovieDetail(
+      widget.movieUrl,
+      widget.movieId,
+      cancelToken: _cancelToken,
+    );
+    if (!mounted || generation != _detailGeneration) return;
+    setState(() {
+      _detail = detail;
+      _isLoading = false;
+      _masterStreamUrl = detail?.streamUrl;
+      _thumbnailTrack = null;
+      _hoverThumbnailCue = null;
+    });
+
+    final thumbnailTrackUrl = detail?.thumbnailTrackUrl;
+    if (thumbnailTrackUrl != null && thumbnailTrackUrl.isNotEmpty) {
+      unawaited(_loadThumbnailTrack(thumbnailTrackUrl, generation));
+    }
+
+    if (_masterStreamUrl != null && _masterStreamUrl!.isNotEmpty) {
+      unawaited(_useMasterStream(_masterStreamUrl!));
+    }
+  }
+
+  Future<void> _refreshDetail() async {
+    await Future.wait<void>([
+      _loadDetail(showLoading: false),
+      _loadLibraryState(),
+    ]);
+  }
+
+  Future<void> _loadThumbnailTrack(
+    String trackUrl,
+    int detailGeneration,
+  ) async {
+    final generation = ++_thumbnailGeneration;
+    try {
+      final response = await Dio().get<String>(
+        trackUrl,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            'Referer': '${movieService.baseUrl}/',
+            'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                'AppleWebKit/537.36 Chrome/120 Safari/537.36',
+          },
+        ),
+      );
+      final track = _ThumbnailTrack.parse(trackUrl, response.data ?? '');
+      if (!mounted ||
+          generation != _thumbnailGeneration ||
+          detailGeneration != _detailGeneration ||
+          track == null) {
+        return;
+      }
+      setState(() {
+        _thumbnailTrack = track;
+        if (_isTimelineHovering || _isDragging) {
+          _hoverThumbnailCue = track.cueAt(_dragPosition);
+        }
+      });
+      unawaited(
+        precacheImage(
+          NetworkImage(
+            track.spriteUrl,
+            headers: {'Referer': '${movieService.baseUrl}/'},
+          ),
+          context,
+        ).catchError((_) {}),
+      );
+    } catch (error, stackTrace) {
+      logger.e(
+        'MovieDetailScreen: thumbnail track unavailable',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _useMasterStream(String masterUrl) async {
+    final generation = ++_qualityGeneration;
+    setState(() {
+      _masterStreamUrl = masterUrl;
+      _selectedQuality = 'Auto';
+      _availableQualities = const [];
+      _isLoadingStream = true;
+    });
+    final variants = await movieService.getStreamVariants(masterUrl);
+    if (!mounted ||
+        generation != _qualityGeneration ||
+        masterUrl != _masterStreamUrl) {
+      return;
+    }
+    final selectedQuality = variants.isEmpty ? 'Auto' : variants.first.label;
+    final selectedUrl = variants.isEmpty ? masterUrl : variants.first.url;
+    setState(() {
+      _availableQualities = variants;
+      _selectedQuality = selectedQuality;
+    });
+    await _initVideoPlayer(selectedUrl);
+  }
+
+  String? _qualityUrlFor(String quality) {
+    final masterUrl = _masterStreamUrl;
+    if (masterUrl == null) return null;
+    if (quality == 'Auto') return masterUrl;
+    for (final variant in _availableQualities) {
+      if (variant.label == quality) return variant.url;
+    }
+    return null;
+  }
+
+  Movie get _libraryMovie {
+    final detail = _detail;
+    final initialMovie = widget.initialMovie;
+    final title = detail?.title.isNotEmpty == true
+        ? detail!.title
+        : initialMovie?.title ?? '';
+    final poster = detail?.poster.isNotEmpty == true
+        ? detail!.poster
+        : initialMovie?.poster ?? '';
+    final description = detail?.description.isNotEmpty == true
+        ? detail!.description
+        : initialMovie?.description;
+    return Movie(
+      id: widget.movieId,
+      title: title,
+      url: widget.movieUrl,
+      poster: poster,
+      description: description,
+    );
+  }
+
+  Future<void> _loadLibraryState() async {
+    final movieId = widget.movieId;
+    try {
+      final state = await movieLibraryService.getState(movieId);
+      if (!mounted || movieId != widget.movieId) return;
+      setState(() {
+        _isFavorite = state.isFavorite;
+      });
+    } catch (error, stackTrace) {
+      logger.e(
+        'MovieDetailScreen: load library state failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _recordWatched() async {
+    if (_hasRecordedWatch) return;
+    _hasRecordedWatch = true;
+    try {
+      await movieLibraryService.markWatched(_libraryMovie);
+    } catch (error, stackTrace) {
+      _hasRecordedWatch = false;
+      logger.e(
+        'MovieDetailScreen: mark watched failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final l10n = AppLocalizations.of(context);
+    if (_isUpdatingFavorite) return;
+    final nextValue = !_isFavorite;
+    setState(() => _isUpdatingFavorite = true);
+    try {
+      await movieLibraryService.setFavorite(_libraryMovie, nextValue);
+      if (!mounted) return;
+      setState(() => _isFavorite = nextValue);
+    } catch (error, stackTrace) {
+      logger.e(
+        'MovieDetailScreen: update favorite failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.updateFavoriteFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingFavorite = false);
+    }
+  }
+
+  Future<void> _initVideoPlayer(String url, {Duration? seekTo}) async {
+    final generation = ++_controllerGeneration;
+    final oldController = _videoController;
+    final oldListener = _videoValueListener;
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _isLoadingStream = true;
+      _showControls = true;
+      _videoController = null;
+      _videoValueListener = null;
+      _isTimelineHovering = false;
+    });
+
+    if (oldController != null) {
+      if (oldListener != null) oldController.removeListener(oldListener);
+      await WidgetsBinding.instance.endOfFrame;
+      await oldController.dispose();
+    }
+    if (!mounted || generation != _controllerGeneration) return;
+
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      httpHeaders: {'Referer': '${movieService.baseUrl}/'},
+    );
+
+    try {
+      await controller.initialize();
+      await controller.setPlaybackSpeed(_playbackSpeed);
+      await controller.setVolume(_volume);
+      if (seekTo != null) {
+        await controller.seekTo(seekTo);
+      }
+      await controller.play();
+
+      if (!mounted || generation != _controllerGeneration) {
+        await controller.dispose();
+        return;
+      }
+
+      void videoValueListener() {
+        if (!mounted ||
+            generation != _controllerGeneration ||
+            !identical(_videoController, controller)) {
+          return;
+        }
+        final isPlaying = controller.value.isPlaying;
+        if (isPlaying != _isPlaying) {
+          setState(() => _isPlaying = isPlaying);
+          if (isPlaying) _startControlsTimer();
+        }
+      }
+
+      setState(() {
+        _videoController = controller;
+        _videoValueListener = videoValueListener;
+        _isLoadingStream = false;
+        _isPlaying = true;
+      });
+      controller.addListener(videoValueListener);
+      _startControlsTimer();
+      unawaited(_recordWatched());
+    } catch (e) {
+      await controller.dispose();
+      if (!mounted || generation != _controllerGeneration) return;
+      setState(() {
+        _isLoadingStream = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.videoStreamError)),
+      );
+    }
+  }
+
+  Future<void> _detachAndDisposeController() async {
+    _controllerGeneration++;
+    final controller = _videoController;
+    final listener = _videoValueListener;
+    if (controller == null) return;
+
+    if (mounted) {
+      setState(() {
+        _videoController = null;
+        _videoValueListener = null;
+        _isPlaying = false;
+        _isTimelineHovering = false;
+      });
+      if (listener != null) {
+        controller.removeListener(listener);
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    await controller.dispose();
+  }
+
+  Future<void> _switchQuality(String quality) async {
+    if (quality == _selectedQuality || _masterStreamUrl == null) return;
+    final targetUrl = _qualityUrlFor(quality);
+    if (targetUrl == null) return;
+    final currentPos = _videoController?.value.position;
+    setState(() {
+      _selectedQuality = quality;
+    });
+    await _initVideoPlayer(targetUrl, seekTo: currentPos);
+  }
+
+  Future<void> _switchServer(int serverIndex) async {
+    final l10n = AppLocalizations.of(context);
+    if (serverIndex == _currentServer) return;
+    setState(() {
+      _currentServer = serverIndex;
+      _isLoadingStream = true;
+    });
+
+    final streamUrl = await movieService.getStreamUrl(
+      widget.movieId,
+      movieUrl: widget.movieUrl,
+      server: serverIndex,
+      cancelToken: _cancelToken,
+    );
+
+    if (streamUrl != null && streamUrl.isNotEmpty) {
+      await _useMasterStream(streamUrl);
+    } else {
+      if (!mounted) return;
+      setState(() => _isLoadingStream = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.serverNotResponding(serverIndex))),
+      );
+    }
+  }
+
+  void _startControlsTimer() {
+    _controlsTimer?.cancel();
+    if (_isPlaying && !_showVolumeControl) {
+      _controlsTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted && !_isTimelineHovering && !_isDragging) {
+          setState(() => _showControls = false);
+        }
+      });
+    }
+  }
+
+  void _togglePlayback() {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final wasPlaying = controller.value.isPlaying;
+    if (!_showControls) setState(() => _showControls = true);
+    if (wasPlaying) {
+      _controlsTimer?.cancel();
+      unawaited(controller.pause());
+    } else {
+      unawaited(controller.play());
+      _startControlsTimer();
+    }
+  }
+
+  void _toggleControls() {
+    setState(() {
+      _showControls = !_showControls;
+      if (!_showControls) _showVolumeControl = false;
+    });
+    if (_showControls) _startControlsTimer();
+  }
+
+  void _setVolume(double value) {
+    final volume = value.clamp(0.0, 1.0);
+    if (volume > 0) _lastAudibleVolume = volume;
+    setState(() => _volume = volume);
+    unawaited(_videoController?.setVolume(volume));
+  }
+
+  void _toggleMute() {
+    _setVolume(_volume > 0 ? 0 : _lastAudibleVolume);
+  }
+
+  void _toggleVolumeControl() {
+    _controlsTimer?.cancel();
+    setState(() => _showVolumeControl = !_showVolumeControl);
+    if (!_showVolumeControl) _startControlsTimer();
+  }
+
+  IconData get _volumeIcon {
+    if (_volume == 0) return Icons.volume_off_rounded;
+    if (_volume < 0.5) return Icons.volume_down_rounded;
+    return Icons.volume_up_rounded;
+  }
+
+  void _toggleRotationLock() {
+    if (!_supportsOrientationManager) return;
+    final shouldLock = !_isRotationLocked;
+    setState(() => _isRotationLocked = shouldLock);
+    if (shouldLock) {
+      FlutterOrientationManager.lockOrientation();
+    } else {
+      FlutterOrientationManager.enableAutoRotation();
+    }
+    _startControlsTimer();
+  }
+
+  KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape && _isFullScreen) {
+      _exitFullScreen();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      _seekBy(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      _seekBy(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _seekBy(Duration offset) {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final duration = controller.value.duration;
+    var target = controller.value.position + offset;
+    if (target < Duration.zero) target = Duration.zero;
+    if (duration > Duration.zero && target > duration) target = duration;
+    unawaited(controller.seekTo(target));
+    if (!_showControls) setState(() => _showControls = true);
+    _startControlsTimer();
+  }
+
+  void _updateDragPosition(
+    VideoPlayerController controller,
+    double localX,
+    double width,
+  ) {
+    final fraction = (localX / width).clamp(0.0, 1.0);
+    final target = controller.value.duration * fraction;
+    setState(() {
+      _dragFraction = fraction;
+      _dragPosition = target;
+      _hoverThumbnailCue = _thumbnailTrack?.cueAt(target);
+    });
+    unawaited(controller.seekTo(target));
+  }
+
+  void _updateHoverPreview(
+    double localX,
+    double width, {
+    bool showPreview = true,
+  }) {
+    if (width <= 0) return;
+    final fraction = (localX / width).clamp(0.0, 1.0);
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    final target = controller.value.duration * fraction;
+    _controlsTimer?.cancel();
+    setState(() {
+      _isTimelineHovering = showPreview;
+      _showControls = true;
+      _dragFraction = fraction;
+      _dragPosition = target;
+      _hoverThumbnailCue = _thumbnailTrack?.cueAt(target);
+    });
+  }
+
+  void _finishDragging(VideoPlayerController controller) {
+    final shouldResume = _resumeAfterDrag;
+    setState(() => _isDragging = false);
+    _resumeAfterDrag = false;
+    if (shouldResume) unawaited(controller.play());
+    _startControlsTimer();
+  }
+
+  void _enterFullScreen() {
+    if (_isFullScreen) return;
+    setState(() {
+      _isFullScreen = true;
+      _showControls = true;
+    });
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    if (_supportsOrientationManager && !_isRotationLocked) {
+      FlutterOrientationManager.forceToLandscape();
+    }
+  }
+
+  void _exitFullScreen() {
+    if (!_isFullScreen) return;
+    setState(() {
+      _isFullScreen = false;
+      _showControls = true;
+    });
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (_supportsOrientationManager && !_isRotationLocked) {
+      FlutterOrientationManager.resetToPortrait();
+    }
+  }
+
+  /// Toggle full screen manually
+  void _toggleFullScreen() {
+    logger.d('MovieDetailScreen: _toggleFullScreen (Manual)');
+    if (_isFullScreen) {
+      _exitFullScreen();
+    } else {
+      _enterFullScreen();
+    }
+    _startControlsTimer();
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    if (hours > 0) {
+      return '$hours:${twoDigits(minutes)}:${twoDigits(seconds)}';
+    } else {
+      return '${twoDigits(minutes)}:${twoDigits(seconds)}';
+    }
+  }
+
+  Widget _buildThumbnailPreview(
+    VideoPlayerController controller,
+    double previewWidth,
+  ) {
+    final cue = _hoverThumbnailCue;
+    final track = _thumbnailTrack;
+    if (cue == null || track == null) return VideoPlayer(controller);
+
+    final scale = previewWidth / cue.width;
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned(
+            left: -cue.x * scale,
+            top: -cue.y * scale,
+            width: track.spriteWidth * scale,
+            height: track.spriteHeight * scale,
+            child: Image.network(
+              cue.imageUrl,
+              headers: {'Referer': '${movieService.baseUrl}/'},
+              fit: BoxFit.fill,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.low,
+              errorBuilder: (_, _, _) => const ColoredBox(
+                color: Colors.black,
+                child: Center(
+                  child: Icon(Icons.image_not_supported, color: Colors.white38),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _appBarHeight(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    final titleStyle =
+        theme.appBarTheme.titleTextStyle ??
+        theme.textTheme.titleLarge ??
+        const TextStyle(fontSize: 20);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final availableWidth = screenWidth > 272 ? screenWidth - 152 : 120.0;
+    final painter = TextPainter(
+      text: TextSpan(text: title, style: titleStyle),
+      maxLines: 4,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: availableWidth);
+    final height = (painter.height + 12).clamp(48.0, 112.0);
+    painter.dispose();
+    return height;
+  }
+
+  Widget _buildServerMetadataChip({
+    required IconData icon,
+    required String label,
+    Color? color,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color ?? colorScheme.onSurfaceVariant),
+          const SizedBox(width: 5),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final title =
+        _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
+
+    return PopScope(
+      canPop: !_isFullScreen,
+      onPopInvokedWithResult: (didPop, result) {
+        if (_isFullScreen) {
+          _toggleFullScreen();
+        }
+      },
+      child: _isFullScreen
+          ? Scaffold(
+              backgroundColor: Colors.black,
+              body: SizedBox.expand(
+                child: _buildVideoPlayerArea(isFullScreen: true),
+              ),
+            )
+          : GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Scaffold(
+                appBar: DoAppBar(
+                  title: title,
+                  titleMaxLines: 4,
+                  height: _appBarHeight(context, title),
+                  actions: [
+                    IconButton(
+                      tooltip: _isFavorite
+                          ? l10n.removeFromFavorites
+                          : l10n.addToFavorites,
+                      onPressed: _isUpdatingFavorite ? null : _toggleFavorite,
+                      icon: _isUpdatingFavorite
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: _isFavorite ? Colors.pinkAccent : null,
+                            ),
+                    ),
+                  ],
+                ),
+                body: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : RefreshIndicator(
+                        onRefresh: _refreshDetail,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildVideoPlayerArea(isFullScreen: false),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if ((_detail?.views?.isNotEmpty ?? false) ||
+                                        (_detail?.likes?.isNotEmpty ?? false) ||
+                                        (_detail?.hasVietsub ?? false)) ...[
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          if (_detail?.views?.isNotEmpty ??
+                                              false)
+                                            _buildServerMetadataChip(
+                                              icon: Icons.visibility_rounded,
+                                              label: _detail!.views!,
+                                            ),
+                                          if (_detail?.likes?.isNotEmpty ??
+                                              false)
+                                            _buildServerMetadataChip(
+                                              icon: Icons.favorite_rounded,
+                                              label: _detail!.likes!,
+                                              color: Colors.pinkAccent,
+                                            ),
+                                          if (_detail?.hasVietsub ?? false)
+                                            _buildServerMetadataChip(
+                                              icon: Icons.subtitles_rounded,
+                                              label: l10n.vietsub,
+                                              color: Colors.lightGreenAccent,
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                    // Server selector
+                                    Row(
+                                      children: [
+                                        Text(
+                                          l10n.serverLabel,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 4,
+                                                  ),
+                                              child: Row(
+                                                children: [
+                                                  for (
+                                                    int s = 1;
+                                                    s <= 6;
+                                                    s++
+                                                  ) ...[
+                                                    ChoiceChip(
+                                                      label: Text(
+                                                        l10n.serverName(
+                                                          s.toString(),
+                                                        ),
+                                                      ),
+                                                      selected:
+                                                          _currentServer == s,
+                                                      showCheckmark: false,
+                                                      onSelected: (sel) {
+                                                        if (sel) {
+                                                          _switchServer(s);
+                                                        }
+                                                      },
+                                                      labelStyle: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            _currentServer == s
+                                                            ? Colors.white
+                                                            : null,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Description
+                                    if (_detail?.description.isNotEmpty ??
+                                        false)
+                                      NeuCard(
+                                        margin: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        padding: const EdgeInsets.all(12),
+                                        child: Text(
+                                          _detail!.description,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+
+                                    // Tags
+                                    if (_detail?.tags.isNotEmpty ?? false) ...[
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: _detail!.tags.map((tag) {
+                                          return Chip(
+                                            label: Text(
+                                              '#$tag',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            padding: EdgeInsets.zero,
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+
+                                    // Related movies
+                                    if (_detail?.relatedMovies.isNotEmpty ??
+                                        false) ...[
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        l10n.relatedMovies,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      SizedBox(
+                                        height: 200,
+                                        child: ListView.separated(
+                                          scrollDirection: Axis.horizontal,
+                                          clipBehavior: Clip.none,
+                                          itemCount:
+                                              _detail!.relatedMovies.length,
+                                          separatorBuilder: (_, _) =>
+                                              const SizedBox(width: 12),
+                                          itemBuilder: (context, index) {
+                                            final rel =
+                                                _detail!.relatedMovies[index];
+                                            return SizedBox(
+                                              width: 130,
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  context.replaceRoute(
+                                                    MovieDetailRoute(
+                                                      movieUrl: rel.url,
+                                                      movieId: rel.id,
+                                                      initialMovie: rel,
+                                                    ),
+                                                  );
+                                                },
+                                                child: NeuCard(
+                                                  margin: EdgeInsets.zero,
+                                                  padding: EdgeInsets.zero,
+                                                  clipBehavior: Clip.antiAlias,
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .stretch,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Image.network(
+                                                          rel.poster,
+                                                          fit: BoxFit.cover,
+                                                          errorBuilder:
+                                                              (
+                                                                _,
+                                                                _,
+                                                                _,
+                                                              ) => Container(
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              6.0,
+                                                            ),
+                                                        child: Text(
+                                                          rel.title,
+                                                          maxLines: 2,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 11,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              // Add spacing at bottom to prevent shadow clipping and respect safe area
+                              SizedBox(
+                                height: MediaQuery.paddingOf(context).bottom,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildVideoPlayerArea({required bool isFullScreen}) {
+    final controller = _videoController;
+    final l10n = AppLocalizations.of(context);
+
+    Widget playerWidget = Focus(
+      focusNode: _videoFocusNode,
+      autofocus: true,
+      onKeyEvent: _handleVideoKeyEvent,
+      child: AspectRatio(
+        aspectRatio: (controller != null && controller.value.isInitialized)
+            ? controller.value.aspectRatio
+            : 16 / 9,
+        child: Container(
+          color: Colors.black,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              if (controller != null && controller.value.isInitialized)
+                Center(
+                  child: AspectRatio(
+                    aspectRatio: controller.value.aspectRatio,
+                    child: VideoPlayer(controller),
+                  ),
+                )
+              else if (_isLoadingStream)
+                const Center(
+                  child: CircularProgressIndicator(color: Colors.pinkAccent),
+                )
+              else
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.play_circle_outline_rounded,
+                        size: 56,
+                        color: Colors.white54,
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          final qualityUrl = _qualityUrlFor(_selectedQuality);
+                          if (qualityUrl != null) {
+                            _initVideoPlayer(qualityUrl);
+                          } else {
+                            _loadDetail();
+                          }
+                        },
+                        child: Text(l10n.loadStream),
+                      ),
+                    ],
+                  ),
+                ),
+
+              if (controller != null && controller.value.isInitialized)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      _videoFocusNode.requestFocus();
+                      _toggleControls();
+                    },
+                    onDoubleTap: _supportsDoubleTapFullScreen
+                        ? () {
+                            _videoFocusNode.requestFocus();
+                            _toggleFullScreen();
+                          }
+                        : null,
+                  ),
+                ),
+
+              // Video Controls Overlay
+              if (controller != null && controller.value.isInitialized)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !_showControls,
+                    child: AnimatedOpacity(
+                      opacity: _showControls ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Stack(
+                        children: [
+                          // Bottom Gradient and Controls
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    4 +
+                                    (isFullScreen
+                                        ? MediaQuery.paddingOf(context).bottom
+                                        : 0),
+                                left: isFullScreen
+                                    ? MediaQuery.paddingOf(context).left
+                                    : 0,
+                                right: isFullScreen
+                                    ? MediaQuery.paddingOf(context).right
+                                    : 0,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.7),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      const previewWidth = 160.0;
+                                      final maxPreviewLeft =
+                                          constraints.maxWidth > previewWidth
+                                          ? constraints.maxWidth - previewWidth
+                                          : 0.0;
+                                      final previewLeft =
+                                          (constraints.maxWidth *
+                                                      _dragFraction -
+                                                  previewWidth / 2)
+                                              .clamp(0.0, maxPreviewLeft);
+
+                                      return Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            onEnter: (event) =>
+                                                _updateHoverPreview(
+                                                  event.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                ),
+                                            onHover: (event) =>
+                                                _updateHoverPreview(
+                                                  event.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                ),
+                                            onExit: (_) {
+                                              if (_isTimelineHovering) {
+                                                setState(
+                                                  () => _isTimelineHovering =
+                                                      false,
+                                                );
+                                              }
+                                              _startControlsTimer();
+                                            },
+                                            child: GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onHorizontalDragStart: (details) {
+                                                _resumeAfterDrag =
+                                                    controller.value.isPlaying;
+                                                unawaited(controller.pause());
+                                                _controlsTimer?.cancel();
+                                                setState(
+                                                  () => _isDragging = true,
+                                                );
+                                                _updateDragPosition(
+                                                  controller,
+                                                  details.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                );
+                                              },
+                                              onHorizontalDragUpdate:
+                                                  (details) {
+                                                    _updateDragPosition(
+                                                      controller,
+                                                      details.localPosition.dx,
+                                                      constraints.maxWidth,
+                                                    );
+                                                  },
+                                              onHorizontalDragEnd: (_) =>
+                                                  _finishDragging(controller),
+                                              onHorizontalDragCancel: () =>
+                                                  _finishDragging(controller),
+                                              onTapDown: (details) {
+                                                _updateDragPosition(
+                                                  controller,
+                                                  details.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                );
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                child: VideoProgressIndicator(
+                                                  controller,
+                                                  allowScrubbing: false,
+                                                  colors:
+                                                      const VideoProgressColors(
+                                                        playedColor:
+                                                            Colors.pinkAccent,
+                                                        bufferedColor:
+                                                            Colors.white30,
+                                                        backgroundColor:
+                                                            Colors.white12,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          if (_isDragging ||
+                                              _isTimelineHovering)
+                                            Positioned(
+                                              left: previewLeft,
+                                              bottom: 42,
+                                              child: IgnorePointer(
+                                                child: Container(
+                                                  width: previewWidth,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: Colors.white70,
+                                                    ),
+                                                    boxShadow: const [
+                                                      BoxShadow(
+                                                        color: Colors.black54,
+                                                        blurRadius: 8,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  clipBehavior: Clip.antiAlias,
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      AspectRatio(
+                                                        aspectRatio: 16 / 9,
+                                                        child:
+                                                            _buildThumbnailPreview(
+                                                              controller,
+                                                              previewWidth,
+                                                            ),
+                                                      ),
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              vertical: 3,
+                                                            ),
+                                                        child: Text(
+                                                          _formatDuration(
+                                                            _dragPosition,
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  Row(
+                                    children: [
+                                      const SizedBox(width: 12),
+                                      ValueListenableBuilder(
+                                        valueListenable: controller,
+                                        builder:
+                                            (
+                                              context,
+                                              VideoPlayerValue value,
+                                              child,
+                                            ) {
+                                              final currentPos = _isDragging
+                                                  ? _dragPosition
+                                                  : value.position;
+                                              return Text(
+                                                '${_formatDuration(currentPos)} / ${_formatDuration(value.duration)}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                ),
+                                              );
+                                            },
+                                      ),
+                                      const Spacer(),
+                                      // Quality Selector Button
+                                      PopupMenuButton<String>(
+                                        initialValue: _selectedQuality,
+                                        tooltip: l10n.resolutionQuality,
+                                        onSelected: (q) {
+                                          _switchQuality(q);
+                                          _startControlsTimer();
+                                        },
+                                        itemBuilder: (context) => [
+                                          const PopupMenuItem(
+                                            value: 'Auto',
+                                            child: Text('Auto'),
+                                          ),
+                                          ..._availableQualities.map(
+                                            (quality) => PopupMenuItem(
+                                              value: quality.label,
+                                              child: Text(quality.label),
+                                            ),
+                                          ),
+                                        ],
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white24,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.high_quality_rounded,
+                                                size: 16,
+                                                color: Colors.white,
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                _selectedQuality,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      IconButton(
+                                        tooltip: l10n.volume,
+                                        padding: EdgeInsets.zero,
+                                        constraints:
+                                            const BoxConstraints.tightFor(
+                                              width: 40,
+                                              height: 40,
+                                            ),
+                                        icon: Icon(
+                                          _volumeIcon,
+                                          color: _volume == 0
+                                              ? Colors.white70
+                                              : Colors.white,
+                                        ),
+                                        onPressed: _toggleVolumeControl,
+                                      ),
+                                      // Speed Picker
+                                      PopupMenuButton<double>(
+                                        initialValue: _playbackSpeed,
+                                        tooltip: l10n.playbackSpeed,
+                                        onSelected: (speed) {
+                                          setState(
+                                            () => _playbackSpeed = speed,
+                                          );
+                                          controller.setPlaybackSpeed(speed);
+                                          _startControlsTimer();
+                                        },
+                                        itemBuilder: (context) =>
+                                            [0.5, 1.0, 1.25, 1.5, 2.0]
+                                                .map(
+                                                  (s) => PopupMenuItem(
+                                                    value: s,
+                                                    child: Text('${s}x'),
+                                                  ),
+                                                )
+                                                .toList(),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                          ),
+                                          child: Text(
+                                            '${_playbackSpeed}x',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (_supportsOrientationManager)
+                                        IconButton(
+                                          tooltip: _isRotationLocked
+                                              ? l10n.unlockRotation
+                                              : l10n.lockRotation,
+                                          icon: Icon(
+                                            _isRotationLocked
+                                                ? Icons
+                                                      .screen_lock_rotation_rounded
+                                                : Icons.screen_rotation_rounded,
+                                            color: _isRotationLocked
+                                                ? Colors.pinkAccent
+                                                : Colors.white,
+                                          ),
+                                          onPressed: _toggleRotationLock,
+                                        ),
+                                      // Fullscreen button
+                                      IconButton(
+                                        icon: Icon(
+                                          isFullScreen
+                                              ? Icons.fullscreen_exit_rounded
+                                              : Icons.fullscreen_rounded,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: _toggleFullScreen,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Center Controls (Play/Pause/Skip)
+                          if (!_isDragging)
+                            Center(
+                              child: FractionallySizedBox(
+                                widthFactor: isFullScreen ? 0.5 : 0.62,
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildCenterControlButton(
+                                      icon: Icons.replay_10_rounded,
+                                      onPressed: () =>
+                                          _seekBy(const Duration(seconds: -10)),
+                                    ),
+                                    _buildCenterControlButton(
+                                      icon: _isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      size: 64,
+                                      onPressed: _togglePlayback,
+                                    ),
+                                    _buildCenterControlButton(
+                                      icon: Icons.forward_10_rounded,
+                                      onPressed: () =>
+                                          _seekBy(const Duration(seconds: 10)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          if (_showVolumeControl)
+                            Positioned(
+                              right:
+                                  12 +
+                                  (isFullScreen
+                                      ? MediaQuery.paddingOf(context).right
+                                      : 0),
+                              bottom:
+                                  58 +
+                                  (isFullScreen
+                                      ? MediaQuery.paddingOf(context).bottom
+                                      : 0),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black87,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: _volume == 0
+                                            ? l10n.unmute
+                                            : l10n.mute,
+                                        icon: Icon(
+                                          _volumeIcon,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: _toggleMute,
+                                      ),
+                                      SizedBox(
+                                        width: 120,
+                                        child: Slider(
+                                          value: _volume,
+                                          onChangeStart: (_) =>
+                                              _controlsTimer?.cancel(),
+                                          onChanged: _setVolume,
+                                          onChangeEnd: (_) {},
+                                          activeColor: Colors.pinkAccent,
+                                          inactiveColor: Colors.white30,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 38,
+                                        child: Text(
+                                          '${(_volume * 100).round()}%',
+                                          textAlign: TextAlign.right,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Top bar in FullScreen mode with back icon
+                          if (isFullScreen)
+                            Positioned(
+                              top: 12 + MediaQuery.paddingOf(context).top,
+                              left: 12 + MediaQuery.paddingOf(context).left,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _toggleFullScreen,
+                                  borderRadius: BorderRadius.circular(32),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black26,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_back_rounded,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (isFullScreen) {
+      return SizedBox.expand(child: playerWidget);
+    }
+    return playerWidget;
+  }
+
+  Widget _buildCenterControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    double size = 48,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(size),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: Colors.black38,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white24, width: 1.5),
+          ),
+          child: Icon(icon, color: Colors.white, size: size * 0.6),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThumbnailCue {
+  const _ThumbnailCue({
+    required this.start,
+    required this.end,
+    required this.imageUrl,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  final Duration start;
+  final Duration end;
+  final String imageUrl;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+}
+
+class _ThumbnailTrack {
+  const _ThumbnailTrack({
+    required this.cues,
+    required this.spriteUrl,
+    required this.spriteWidth,
+    required this.spriteHeight,
+  });
+
+  final List<_ThumbnailCue> cues;
+  final String spriteUrl;
+  final double spriteWidth;
+  final double spriteHeight;
+
+  _ThumbnailCue? cueAt(Duration position) {
+    for (final cue in cues) {
+      if (position >= cue.start && position < cue.end) return cue;
+    }
+    if (cues.isNotEmpty && position >= cues.last.end) return cues.last;
+    return null;
+  }
+
+  static _ThumbnailTrack? parse(String trackUrl, String source) {
+    final cuePattern = RegExp(
+      r'^(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+'
+      r'(\d{2}:\d{2}:\d{2}\.\d{3})\s*\r?\n'
+      r'([^\r\n#]+)#xywh=(\d+),(\d+),(\d+),(\d+)',
+      multiLine: true,
+    );
+    final cues = <_ThumbnailCue>[];
+    var spriteWidth = 0.0;
+    var spriteHeight = 0.0;
+
+    for (final match in cuePattern.allMatches(source)) {
+      final x = double.parse(match.group(4)!);
+      final y = double.parse(match.group(5)!);
+      final width = double.parse(match.group(6)!);
+      final height = double.parse(match.group(7)!);
+      final imageUrl = Uri.parse(
+        trackUrl,
+      ).resolve(match.group(3)!.trim()).toString();
+      cues.add(
+        _ThumbnailCue(
+          start: _parseTimestamp(match.group(1)!),
+          end: _parseTimestamp(match.group(2)!),
+          imageUrl: imageUrl,
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+        ),
+      );
+      spriteWidth = spriteWidth < x + width ? x + width : spriteWidth;
+      spriteHeight = spriteHeight < y + height ? y + height : spriteHeight;
+    }
+
+    if (cues.isEmpty) return null;
+    return _ThumbnailTrack(
+      cues: cues,
+      spriteUrl: cues.first.imageUrl,
+      spriteWidth: spriteWidth,
+      spriteHeight: spriteHeight,
+    );
+  }
+
+  static Duration _parseTimestamp(String timestamp) {
+    final parts = timestamp.split(RegExp(r'[:.]'));
+    return Duration(
+      hours: int.parse(parts[0]),
+      minutes: int.parse(parts[1]),
+      seconds: int.parse(parts[2]),
+      milliseconds: int.parse(parts[3]),
+    );
+  }
+}

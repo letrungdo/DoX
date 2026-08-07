@@ -129,6 +129,38 @@ class _StorageService {
     return prefs.setBool(StorageKey.showLunarTab, value);
   }
 
+  bool getShowMovieTab() {
+    return prefs.getBool(StorageKey.showMovieTab) ?? true;
+  }
+
+  Future<bool> setShowMovieTab(bool value) {
+    return prefs.setBool(StorageKey.showMovieTab, value);
+  }
+
+  String? getMovieBaseUrl() {
+    return prefs.getString(StorageKey.movieBaseUrl);
+  }
+
+  Future<bool> setMovieBaseUrl(String value) {
+    return prefs.setString(StorageKey.movieBaseUrl, value);
+  }
+
+  String? getMovieCategories() {
+    return prefs.getString(StorageKey.movieCategories);
+  }
+
+  Future<bool> setMovieCategories(String value) {
+    return prefs.setString(StorageKey.movieCategories, value);
+  }
+
+  String? getMovieLabel() {
+    return prefs.getString(StorageKey.movieLabel);
+  }
+
+  Future<bool> setMovieLabel(String value) {
+    return prefs.setString(StorageKey.movieLabel, value);
+  }
+
   /// Bottom tab order as [AppTab] names; null when the user never reordered.
   List<String>? getTabOrder() {
     return prefs.getStringList(StorageKey.tabOrder);
