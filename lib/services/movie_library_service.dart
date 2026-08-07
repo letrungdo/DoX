@@ -100,6 +100,27 @@ class MovieLibraryService {
     return _upsertMovie(movie, extraValues: {'is_favorite': isFavorite});
   }
 
+  Future<void> removeFromHistory(String movieId) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final dbId = _toDbId(movieId);
+    final state = await getState(movieId);
+    if (state.isFavorite) {
+      await supabase
+          .from('movie_library')
+          .update({'watched_at': null})
+          .eq('user_id', user.id)
+          .eq('movie_id', dbId);
+    } else {
+      await supabase
+          .from('movie_library')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('movie_id', dbId);
+    }
+  }
+
   Future<List<Movie>> _getMovies({
     bool watchedOnly = false,
     bool favoritesOnly = false,
