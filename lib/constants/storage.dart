@@ -22,8 +22,12 @@ class StorageKey {
   static const showLunarTab = "showLunarTab";
   static const showMovieTab = "showMovieTab";
   static const movieBaseUrl = "movieBaseUrl";
+  static const primaryMovieServer = "primaryMovieServer";
+  static const movieServers = "movieServers";
+  static const movieServerLabels = "movieServerLabels";
   static const movieCategories = "movieCategories";
   static const movieLabel = "movieLabel";
+  static const movieSiteType = "movieSiteType";
   static const tabOrder = "tabOrder";
   static const electricReminder = "electricReminder";
 

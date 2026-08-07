@@ -73,6 +73,7 @@ class MovieDetail {
   final String? thumbnailTrackUrl;
   final List<String> tags;
   final List<Movie> relatedMovies;
+  final List<MovieEpisodeServer> servers;
 
   const MovieDetail({
     required this.id,
@@ -87,6 +88,31 @@ class MovieDetail {
     this.thumbnailTrackUrl,
     this.tags = const [],
     this.relatedMovies = const [],
+    this.servers = const [],
+  });
+}
+
+class MovieEpisodeServer {
+  final String name;
+  final List<MovieEpisode> episodes;
+
+  const MovieEpisodeServer({
+    required this.name,
+    required this.episodes,
+  });
+}
+
+class MovieEpisode {
+  final String name;
+  final String slug;
+  final String? m3u8Url;
+  final String? embedUrl;
+
+  const MovieEpisode({
+    required this.name,
+    required this.slug,
+    this.m3u8Url,
+    this.embedUrl,
   });
 }
 

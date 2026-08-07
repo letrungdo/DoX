@@ -2360,6 +2360,18 @@ abstract class AppLocalizations {
   /// **'Movie Server URL'**
   String get movieServerUrl;
 
+  /// No description provided for @editMovieServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Movie Server URL'**
+  String get editMovieServerUrl;
+
+  /// No description provided for @noServersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No servers found'**
+  String get noServersFound;
+
   /// No description provided for @serverUrlHint.
   ///
   /// In en, this message translates to:
@@ -2480,6 +2492,36 @@ abstract class AppLocalizations {
   /// **'Related movies'**
   String get relatedMovies;
 
+  /// No description provided for @categoryNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Updates'**
+  String get categoryNew;
+
+  /// No description provided for @categorySingle.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature Films'**
+  String get categorySingle;
+
+  /// No description provided for @categorySeries.
+  ///
+  /// In en, this message translates to:
+  /// **'TV Series'**
+  String get categorySeries;
+
+  /// No description provided for @categoryAnime.
+  ///
+  /// In en, this message translates to:
+  /// **'Animation'**
+  String get categoryAnime;
+
+  /// No description provided for @categoryTVShow.
+  ///
+  /// In en, this message translates to:
+  /// **'TV Shows'**
+  String get categoryTVShow;
+
   /// No description provided for @loadStream.
   ///
   /// In en, this message translates to:
@@ -2515,6 +2557,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lock rotation'**
   String get lockRotation;
+
+  /// No description provided for @episodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Episodes'**
+  String get episodeLabel;
+
+  /// No description provided for @episodeFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get episodeFull;
+
+  /// No description provided for @episodeDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode'**
+  String get episodeDefaultName;
 
   /// No description provided for @unmute.
   ///

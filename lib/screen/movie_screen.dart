@@ -8,6 +8,7 @@ import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
@@ -70,13 +71,18 @@ class _MovieScreenState extends State<MovieScreen> {
   }
 
   Future<void> _initData() async {
-    setState(() => _isLoading = true);
-    await movieService.discoverConfig();
-    _categories = movieService.getCategories();
-    if (_categories.isNotEmpty) {
-      _selectedCategory = _categories.first;
+    try {
+      setState(() => _isLoading = true);
+      await movieService.discoverConfig();
+      _categories = movieService.getCategories();
+      if (_categories.isNotEmpty) {
+        _selectedCategory = _categories.first;
+      }
+      await _loadMovies(refresh: true);
+    } catch (e, st) {
+      logger.e('MovieScreen _initData failed', error: e, stackTrace: st);
+      setState(() => _isLoading = false);
     }
-    await _loadMovies(refresh: true);
   }
 
   @override
@@ -228,7 +234,12 @@ class _MovieScreenState extends State<MovieScreen> {
     if (!mounted || generation != _loadGeneration) return;
     setState(() {
       _isLoading = false;
-      _totalMovies = response.total;
+      if (response.total > 0) {
+        _totalMovies = response.total;
+      } else if (refresh) {
+        _totalMovies = fetched.length;
+      }
+
       if (refresh) {
         _movies = fetched;
         _movieIds.clear();
@@ -275,7 +286,10 @@ class _MovieScreenState extends State<MovieScreen> {
     if (!mounted || generation != _loadGeneration) return;
     setState(() {
       _isLoadingMore = false;
-      _totalMovies = response.total;
+      if (response.total > 0) {
+        _totalMovies = response.total;
+      }
+
       if (fetched.isEmpty) {
         _hasMore = false;
       } else {
@@ -391,44 +405,12 @@ class _MovieScreenState extends State<MovieScreen> {
   }
 
   Future<void> _showServerUrlDialog() async {
-    final l10n = AppLocalizations.of(context);
-    _serverUrlController.text = movieService.baseUrl ?? '';
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.movieServerUrl),
-        content: TextField(
-          controller: _serverUrlController,
-          autofocus: true,
-          keyboardType: TextInputType.url,
-          decoration: InputDecoration(
-            hintText: l10n.serverUrlHint,
-            helperText: l10n.serverUrlHelperText,
-          ),
-          onSubmitted: (_) async {
-            final updated = await _updateMovieServer(_serverUrlController.text);
-            if (updated && dialogContext.mounted) {
-              Navigator.pop(dialogContext);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final updated = await _updateMovieServer(
-                _serverUrlController.text,
-              );
-              if (updated && dialogContext.mounted) {
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: Text(l10n.saveAndSync),
-          ),
-        ],
+      builder: (dialogContext) => _ServerManagementDialog(
+        onServerChanged: () {
+          if (mounted) _initData();
+        },
       ),
     );
   }
@@ -585,8 +567,18 @@ class _MovieScreenState extends State<MovieScreen> {
                                 final isSelected =
                                     _collection == _MovieCollection.browse &&
                                     cat.id == _selectedCategory?.id;
+
+                                final label = switch (cat.id) {
+                                  'new' => l10n.categoryNew,
+                                  'phim-le' => l10n.categorySingle,
+                                  'phim-bo' => l10n.categorySeries,
+                                  'hoat-hinh' => l10n.categoryAnime,
+                                  'tv-shows' => l10n.categoryTVShow,
+                                  _ => cat.name,
+                                };
+
                                 return ChoiceChip(
-                                  label: Text(cat.name),
+                                  label: Text(label),
                                   selected: isSelected,
                                   showCheckmark: false,
                                   onSelected: (selected) {
@@ -677,7 +669,7 @@ class _MovieScreenState extends State<MovieScreen> {
                             gridDelegate:
                                 const SliverGridDelegateWithMaxCrossAxisExtent(
                                   maxCrossAxisExtent: 220,
-                                  childAspectRatio: 0.85,
+                                  childAspectRatio: 1.0,
                                   crossAxisSpacing: 12,
                                   mainAxisSpacing: 12,
                                 ),
@@ -954,6 +946,253 @@ class _MovieCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ServerManagementDialog extends StatefulWidget {
+  final VoidCallback onServerChanged;
+
+  const _ServerManagementDialog({required this.onServerChanged});
+
+  @override
+  State<_ServerManagementDialog> createState() =>
+      _ServerManagementDialogState();
+}
+
+class _ServerManagementDialogState extends State<_ServerManagementDialog> {
+  late List<String> _servers;
+  late String? _currentBaseUrl;
+  late String? _primaryServer;
+
+  final _urlController = TextEditingController();
+  String? _editingUrl;
+  bool _isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServers();
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  void _loadServers() {
+    _servers = movieService.getServers();
+    _currentBaseUrl = movieService.baseUrl;
+    _primaryServer = storageService.getPrimaryMovieServer();
+  }
+
+  void _refreshServers() {
+    if (!mounted) return;
+    setState(() {
+      _loadServers();
+    });
+  }
+
+  Future<void> _selectServer(String url) async {
+    if (_isAdding || _editingUrl != null) return;
+    if (url == _currentBaseUrl) return;
+    await movieService.updateBaseUrl(url);
+    widget.onServerChanged();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _handleSave() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+
+    if (_isAdding) {
+      await movieService.updateBaseUrl(url);
+    } else if (_editingUrl != null) {
+      final isPrimary = _editingUrl == _primaryServer;
+      final servers = storageService.getMovieServers();
+      final index = servers.indexOf(_editingUrl!);
+
+      if (index != -1) {
+        servers[index] = url;
+        await storageService.setMovieServers(servers);
+        if (isPrimary) {
+          await storageService.setPrimaryMovieServer(url);
+        }
+        if (movieService.baseUrl == _editingUrl) {
+          await movieService.updateBaseUrl(url);
+        }
+      }
+    }
+
+    setState(() {
+      _isAdding = false;
+      _editingUrl = null;
+      _urlController.clear();
+      _loadServers();
+    });
+    widget.onServerChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final isInputMode = _isAdding || _editingUrl != null;
+
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(isInputMode
+              ? (_isAdding ? l10n.enterMovieServerUrl : l10n.editMovieServerUrl)
+              : l10n.movieServerUrl),
+          if (!isInputMode)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded),
+              onPressed: () {
+                setState(() {
+                  _isAdding = true;
+                  _urlController.clear();
+                });
+              },
+            ),
+        ],
+      ),
+      content: Container(
+        width: double.maxFinite,
+        constraints: const BoxConstraints(maxHeight: 400),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isInputMode)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: TextField(
+                  controller: _urlController,
+                  autofocus: true,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    hintText: l10n.serverUrlHint,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      onPressed: _handleSave,
+                    ),
+                  ),
+                  onSubmitted: (_) => _handleSave(),
+                ),
+              ),
+            Flexible(
+              child: _servers.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(l10n.noServersFound),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _servers.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final url = _servers[index];
+                        final isPrimary = url == _primaryServer;
+                        final isSelected = url == _currentBaseUrl;
+                        final isCurrentlyEditing = url == _editingUrl;
+
+                        return ListTile(
+                          dense: true,
+                          enabled: !isInputMode,
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            isSelected
+                                ? Icons.radio_button_checked_rounded
+                                : Icons.radio_button_off_rounded,
+                            color: isSelected ? theme.colorScheme.primary : null,
+                            size: 20,
+                          ),
+                          title: Text(
+                            movieService.getLabelForUrl(url),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected ? theme.colorScheme.primary : null,
+                            ),
+                          ),
+                          subtitle: Text(
+                            url,
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: isInputMode
+                              ? (isCurrentlyEditing
+                                  ? const Icon(Icons.edit_note_rounded,
+                                      color: Colors.orange)
+                                  : null)
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined,
+                                          size: 18),
+                                      onPressed: () {
+                                        setState(() {
+                                          _editingUrl = url;
+                                          _urlController.text = url;
+                                          _isAdding = false;
+                                        });
+                                      },
+                                    ),
+                                    if (!isPrimary)
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.delete_outline_rounded,
+                                            size: 18),
+                                        onPressed: () async {
+                                          await movieService.deleteServer(url);
+                                          _refreshServers();
+                                          if (isSelected) {
+                                            widget.onServerChanged();
+                                          }
+                                        },
+                                      ),
+                                    if (isPrimary) const SizedBox(width: 40),
+                                  ],
+                                ),
+                          onTap: () => _selectServer(url),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        if (isInputMode)
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isAdding = false;
+                _editingUrl = null;
+                _urlController.clear();
+              });
+            },
+            child: Text(l10n.cancel),
+          ),
+        if (!isInputMode)
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.close),
+          ),
+        if (isInputMode)
+          FilledButton(
+            onPressed: _handleSave,
+            child: Text(l10n.save),
+          ),
+      ],
     );
   }
 }

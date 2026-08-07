@@ -5,6 +5,8 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:html/parser.dart' as html_parser;
 
+enum MovieSiteType { html, ophim }
+
 class MovieService {
   static final MovieService _instance = MovieService._internal();
   factory MovieService() => _instance;
@@ -13,10 +15,14 @@ class MovieService {
   }
 
   late String? baseUrl;
+  late MovieSiteType _siteType;
   late Dio _dio;
 
   void _initDio() {
     baseUrl = storageService.getMovieBaseUrl();
+    final typeStr = storageService.getMovieSiteType();
+    _siteType = typeStr == 'ophim' ? MovieSiteType.ophim : MovieSiteType.html;
+
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl ?? '',
@@ -34,22 +40,96 @@ class MovieService {
   /// Update base URL manually, re-initialize Dio, and discover config
   Future<void> updateBaseUrl(String newUrl) async {
     String formattedUrl = newUrl.trim();
-    if (formattedUrl.isEmpty) {
-      await storageService.setMovieBaseUrl('');
-      _initDio();
-      return;
-    }
+    if (formattedUrl.isEmpty) return;
     if (formattedUrl.endsWith('/')) {
       formattedUrl = formattedUrl.substring(0, formattedUrl.length - 1);
     }
+
+    final servers = storageService.getMovieServers().toSet();
+    if (servers.add(formattedUrl)) {
+      await storageService.setMovieServers(servers.toList());
+    }
+
+    // Set as primary if none exists
+    if (storageService.getPrimaryMovieServer() == null) {
+      await storageService.setPrimaryMovieServer(formattedUrl);
+    }
+
     await storageService.setMovieBaseUrl(formattedUrl);
     _initDio();
     await discoverConfig();
   }
 
+  Future<void> deleteServer(String url) async {
+    final primary = storageService.getPrimaryMovieServer();
+    final servers = storageService.getMovieServers();
+    servers.remove(url);
+    await storageService.setMovieServers(servers);
+
+    if (baseUrl == url) {
+      if (servers.isNotEmpty) {
+        await updateBaseUrl(servers.first);
+      } else {
+        await storageService.setMovieBaseUrl('');
+        _initDio();
+      }
+    }
+
+    if (primary == url) {
+      await storageService.setPrimaryMovieServer(
+        servers.isNotEmpty ? servers.first : '',
+      );
+    }
+  }
+
+  List<String> getServers() {
+    return storageService.getMovieServers();
+  }
+
   /// Discover Label and Categories from the current baseUrl
   Future<void> discoverConfig() async {
     if (baseUrl == null || baseUrl!.isEmpty) return;
+
+    // Detect Ophim
+    final primaryServer = storageService.getPrimaryMovieServer();
+    final checkPrimary = primaryServer ?? '';
+
+    final isPrimary = baseUrl == checkPrimary ||
+        (baseUrl != null &&
+            checkPrimary.isNotEmpty &&
+            baseUrl!.contains(checkPrimary.replaceFirst('https://', '')));
+
+    if (isPrimary) {
+      await storageService.setMovieSiteType('ophim');
+      _siteType = MovieSiteType.ophim;
+
+      // Ensure we use the exact primary URL if it matches
+      if (baseUrl != checkPrimary && checkPrimary.isNotEmpty) {
+        await storageService.setMovieBaseUrl(checkPrimary);
+        baseUrl = checkPrimary;
+        _initDio();
+      }
+    } else {
+      // Try to detect by fetching a common endpoint
+      try {
+        final check = await _dio.get('/danh-sach/phim-moi-cap-nhat?page=1');
+        if (check.data is Map && check.data['status'] == true) {
+          await storageService.setMovieSiteType('ophim');
+          _siteType = MovieSiteType.ophim;
+        } else {
+          await storageService.setMovieSiteType('html');
+          _siteType = MovieSiteType.html;
+        }
+      } catch (_) {
+        await storageService.setMovieSiteType('html');
+        _siteType = MovieSiteType.html;
+      }
+    }
+
+    if (_siteType == MovieSiteType.ophim) {
+      await _discoverOphimConfig();
+      return;
+    }
 
     try {
       final response = await _dio.get('/');
@@ -118,6 +198,44 @@ class MovieService {
     }
   }
 
+  Future<void> _discoverOphimConfig() async {
+    try {
+      await updateLabel('Ophim');
+
+      final categories = <MovieCategory>[
+        const MovieCategory(id: 'new', name: 'Mới cập nhật', path: '/danh-sach/phim-moi-cap-nhat'),
+        const MovieCategory(id: 'phim-le', name: 'Phim lẻ', path: '/v1/api/danh-sach/phim-le'),
+        const MovieCategory(id: 'phim-bo', name: 'Phim bộ', path: '/v1/api/danh-sach/phim-bo'),
+        const MovieCategory(id: 'hoat-hinh', name: 'Hoạt hình', path: '/v1/api/danh-sach/hoat-hinh'),
+        const MovieCategory(id: 'tv-shows', name: 'TV Shows', path: '/v1/api/danh-sach/tv-shows'),
+      ];
+
+      // Fetch genres
+      try {
+        final response = await _dio.get('/the-loai');
+        if (response.data is Map && response.data['status'] == 'success') {
+          final List<dynamic> items = response.data['data']['items'];
+          for (final item in items) {
+            final slug = item['slug'];
+            categories.add(
+              MovieCategory(
+                id: 'genre_$slug',
+                name: item['name'],
+                path: '/v1/api/the-loai/$slug',
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        logger.e('MovieService fetch genres failed', error: e);
+      }
+
+      await updateCategories(categories);
+    } catch (e) {
+      logger.e('MovieService discoverOphimConfig failed', error: e);
+    }
+  }
+
   List<MovieCategory> getCategories() {
     final raw = storageService.getMovieCategories();
     if (raw == null || raw.isEmpty) return [];
@@ -139,8 +257,30 @@ class MovieService {
     return storageService.getMovieLabel() ?? 'Movie';
   }
 
+  String getLabelForUrl(String url) {
+    final raw = storageService.getMovieServerLabels();
+    if (raw == null) return url;
+    try {
+      final Map<String, dynamic> map = jsonDecode(raw);
+      return map[url] as String? ?? url;
+    } catch (_) {
+      return url;
+    }
+  }
+
   Future<void> updateLabel(String label) async {
     await storageService.setMovieLabel(label);
+    if (baseUrl != null) {
+      final raw = storageService.getMovieServerLabels();
+      Map<String, dynamic> map = {};
+      if (raw != null) {
+        try {
+          map = jsonDecode(raw);
+        } catch (_) {}
+      }
+      map[baseUrl!] = label;
+      await storageService.setMovieServerLabels(jsonEncode(map));
+    }
   }
 
   /// Helper to fix relative URLs
@@ -333,6 +473,11 @@ class MovieService {
     if (baseUrl == null || baseUrl!.isEmpty) {
       return const MovieResponse(movies: [], total: 0);
     }
+
+    if (_siteType == MovieSiteType.ophim) {
+      return _getOphimMovies(categoryPath, page: page, cancelToken: cancelToken);
+    }
+
     try {
       String path = categoryPath;
       if (page > 1) {
@@ -365,6 +510,11 @@ class MovieService {
     if (baseUrl == null || baseUrl!.isEmpty) {
       return const MovieResponse(movies: [], total: 0);
     }
+
+    if (_siteType == MovieSiteType.ophim) {
+      return _searchOphimMovies(keyword, page: page, cancelToken: cancelToken);
+    }
+
     try {
       final cleanKeyword = keyword.trim().toLowerCase().replaceAll(' ', '+');
       String path = '/search/$cleanKeyword/';
@@ -382,7 +532,6 @@ class MovieService {
     }
   }
 
-  /// Fetch detail page HTML and extract metadata & stream
   Future<MovieDetail?> getMovieDetail(
     String movieUrl,
     String movieId, {
@@ -390,6 +539,13 @@ class MovieService {
     bool includeStream = true,
   }) async {
     if (baseUrl == null || baseUrl!.isEmpty) return null;
+
+    final isOphim = _siteType == MovieSiteType.ophim;
+
+    if (isOphim) {
+      return _getOphimDetail(movieUrl, movieId, cancelToken: cancelToken);
+    }
+
     try {
       final response = await _dio.get(movieUrl, cancelToken: cancelToken);
       final htmlStr = response.data.toString();
@@ -455,6 +611,23 @@ class MovieService {
         }
       }
 
+      final servers = <MovieEpisodeServer>[];
+      for (int i = 1; i <= 6; i++) {
+        servers.add(
+          MovieEpisodeServer(
+            name: 'Server $i',
+            episodes: [
+              MovieEpisode(
+                name: 'Full',
+                slug: movieId,
+                // We'll fetch the actual stream URL when switching servers in UI
+                m3u8Url: i == 1 ? streamUrl : null,
+              ),
+            ],
+          ),
+        );
+      }
+
       final thumbnailTrackMatch = RegExp(
         r'''["']([^"']+\.vtt)["']''',
         caseSensitive: false,
@@ -474,6 +647,7 @@ class MovieService {
         thumbnailTrackUrl: thumbnailTrackUrl.isEmpty ? null : thumbnailTrackUrl,
         tags: tags,
         relatedMovies: relatedMovies,
+        servers: servers,
       );
     } catch (e) {
       if (e is! DioException || e.type != DioExceptionType.cancel) {
@@ -594,6 +768,175 @@ class MovieService {
         logger.e('MovieService get stream variants failed', error: error);
       }
       return [];
+    }
+  }
+
+  // --- Ophim JSON API Adapters ---
+
+  Future<MovieResponse> _getOphimMovies(
+    String path, {
+    int page = 1,
+    Map<String, dynamic>? extraParams,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await _dio.get(
+        path,
+        queryParameters: {'page': page, ...?extraParams},
+        cancelToken: cancelToken,
+      );
+      var data = response.data;
+      if (data is String) {
+        try {
+          data = jsonDecode(data);
+        } catch (_) {}
+      }
+      if (data is! Map) return const MovieResponse(movies: [], total: 0);
+
+      final List<dynamic> items = data['items'] ?? data['data']?['items'] ?? [];
+      final cdnImage = data['data']?['APP_DOMAIN_CDN_IMAGE'] ?? '';
+
+      final movies = items.map((item) {
+        final slug = item['slug'];
+        final thumb = item['thumb_url'] ?? '';
+
+        return Movie(
+          id: item['_id'] ?? slug,
+          title: item['name'] ?? '',
+          url: slug,
+          poster: (thumb.startsWith('http') || cdnImage.isEmpty)
+              ? thumb
+              : '$cdnImage/$thumb',
+          badge: item['year']?.toString(),
+          hasVietsub: (item['lang'] ?? '')
+              .toString()
+              .toLowerCase()
+              .contains('sub'),
+        );
+      }).toList();
+
+      final pagination = data['pagination'] ??
+          (data['data'] is Map ? data['data']['pagination'] : null) ??
+          (data['data'] is Map && data['data']['params'] is Map
+              ? data['data']['params']['pagination']
+              : null);
+
+      int totalCount = 0;
+      if (pagination != null) {
+        final rawTotal = pagination['totalItems'];
+        totalCount = rawTotal is int
+            ? rawTotal
+            : int.tryParse(rawTotal?.toString() ?? '') ?? 0;
+      }
+
+      return MovieResponse(
+        movies: movies,
+        total: totalCount > 0 ? totalCount : (page == 1 ? movies.length : 0),
+      );
+    } catch (e) {
+      if (e is! DioException || e.type != DioExceptionType.cancel) {
+        logger.e('MovieService _getOphimMovies failed', error: e);
+      }
+      return const MovieResponse(movies: [], total: 0);
+    }
+  }
+
+  Future<MovieResponse> _searchOphimMovies(
+    String keyword, {
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async {
+    return _getOphimMovies(
+      '/v1/api/tim-kiem',
+      page: page,
+      extraParams: {'keyword': keyword},
+      cancelToken: cancelToken,
+    );
+  }
+
+  Future<MovieDetail?> _getOphimDetail(
+    String urlOrSlug,
+    String movieId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      String slug = urlOrSlug;
+      final uri = Uri.tryParse(urlOrSlug);
+      if (uri != null && uri.host.isNotEmpty) {
+        slug = uri.pathSegments.where((s) => s.isNotEmpty).last;
+      }
+      while (slug.startsWith('/')) {
+        slug = slug.substring(1);
+      }
+
+      final response = await _dio.get('/phim/$slug', cancelToken: cancelToken);
+      dynamic data = response.data;
+      if (data is String) {
+        try {
+          data = jsonDecode(data);
+        } catch (_) {}
+      }
+      if (data is! Map || data['status'] != true) return null;
+
+      final movieData = data['movie'];
+      final episodesData = data['episodes'] as List<dynamic>? ?? [];
+
+      String poster = movieData['poster_url'] ?? movieData['thumb_url'] ?? '';
+      if (poster.isNotEmpty && !poster.startsWith('http')) {
+        // Fallback to APP_DOMAIN_CDN_IMAGE from previous list if available,
+        // but here we don't have it directly. Most Ophim APIs provide full URLs in detail.
+      }
+
+      final servers = <MovieEpisodeServer>[];
+      String? firstStreamUrl;
+
+      for (final srv in episodesData) {
+        final serverName = srv['server_name']?.toString() ?? 'Server';
+        final serverData = srv['server_data'] as List<dynamic>? ?? [];
+        final episodes = <MovieEpisode>[];
+
+        for (final ep in serverData) {
+          final epM3u8 = ep['link_m3u8']?.toString();
+          final epEmbed = ep['link_embed']?.toString();
+          firstStreamUrl ??= epM3u8;
+
+          episodes.add(
+            MovieEpisode(
+              name: ep['name']?.toString() ?? 'Tập',
+              slug: ep['slug']?.toString() ?? '',
+              m3u8Url: epM3u8,
+              embedUrl: epEmbed,
+            ),
+          );
+        }
+        if (episodes.isNotEmpty) {
+          servers.add(MovieEpisodeServer(name: serverName, episodes: episodes));
+        }
+      }
+
+      return MovieDetail(
+        id: movieData['_id'] ?? slug,
+        title: movieData['name'] ?? '',
+        url: slug,
+        poster: poster,
+        description: movieData['content'] ?? '',
+        views: movieData['view']?.toString(),
+        hasVietsub: (movieData['lang'] ?? '')
+            .toString()
+            .toLowerCase()
+            .contains('sub'),
+        streamUrl: firstStreamUrl,
+        tags:
+            (movieData['category'] as List<dynamic>? ?? [])
+                .map((e) => e['name'] as String)
+                .toList(),
+        servers: servers,
+      );
+    } catch (e) {
+      if (e is! DioException || e.type != DioExceptionType.cancel) {
+        logger.e('MovieService _getOphimDetail failed', error: e);
+      }
+      return null;
     }
   }
 }

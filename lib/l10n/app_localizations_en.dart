@@ -1309,6 +1309,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get movieServerUrl => 'Movie Server URL';
 
   @override
+  String get editMovieServerUrl => 'Edit Movie Server URL';
+
+  @override
+  String get noServersFound => 'No servers found';
+
+  @override
   String get serverUrlHint => 'https://...';
 
   @override
@@ -1375,6 +1381,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get relatedMovies => 'Related movies';
 
   @override
+  String get categoryNew => 'New Updates';
+
+  @override
+  String get categorySingle => 'Feature Films';
+
+  @override
+  String get categorySeries => 'TV Series';
+
+  @override
+  String get categoryAnime => 'Animation';
+
+  @override
+  String get categoryTVShow => 'TV Shows';
+
+  @override
   String get loadStream => 'Load stream';
 
   @override
@@ -1391,6 +1412,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lockRotation => 'Lock rotation';
+
+  @override
+  String get episodeLabel => 'Episodes';
+
+  @override
+  String get episodeFull => 'Full';
+
+  @override
+  String get episodeDefaultName => 'Episode';
 
   @override
   String get unmute => 'Unmute';
