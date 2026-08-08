@@ -1417,6 +1417,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockRotation => 'Lock rotation';
 
   @override
+  String get zoomToFill => 'Fill screen';
+
+  @override
+  String get zoomToFit => 'Fit screen';
+
+  @override
   String get episodeLabel => 'Episodes';
 
   @override

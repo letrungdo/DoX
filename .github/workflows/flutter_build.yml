@@ -91,6 +91,7 @@ jobs:
           file: build/app/outputs/flutter-apk/app-release.apk
           asset_name: app-release.apk
           tag: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
           overwrite: true
 
   build-ios:
@@ -153,4 +154,56 @@ jobs:
           file: build/ios/ipa/do_x.ipa
           asset_name: do_x.ipa
           tag: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
           overwrite: true
+
+  update-release-notes:
+    needs:
+      - build-android
+      - build-ios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        uses: ./.github/actions/get-pubspec-version
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_TAG: ${{ steps.get_version.outputs.version }}
+        run: |
+          previous_tag="$({
+            gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name'
+          } | while IFS= read -r tag; do
+            if [[ "$tag" != "$CURRENT_TAG" ]]; then
+              echo "$tag"
+              break
+            fi
+          done)"
+
+          if [[ -n "$previous_tag" ]]; then
+            git rev-parse --verify "${previous_tag}^{commit}"
+            commit_range="${previous_tag}..${GITHUB_SHA}"
+          else
+            commit_range="${GITHUB_SHA}"
+          fi
+
+          commit_notes="$(git log --no-merges --format='- %s (`%h`)' "$commit_range")"
+
+          {
+            echo "## Changes"
+            echo
+            if [[ -n "$commit_notes" ]]; then
+              echo "$commit_notes"
+            else
+              echo "No non-merge commits since the previous release."
+            fi
+          } > release-notes.md
+
+          gh release edit "$CURRENT_TAG" --notes-file release-notes.md

@@ -37,6 +37,19 @@ class MovieService {
     );
   }
 
+  /// The server saved as primary (the Ophim-style API); `null` when none is set.
+  String? get primaryServer {
+    final primary = storageService.getPrimaryMovieServer();
+    return (primary == null || primary.isEmpty) ? null : primary;
+  }
+
+  /// Whether [url] is the primary server.
+  bool isPrimary(String? url) => url != null && url.isNotEmpty && url == primaryServer;
+
+  /// True when the active server is the primary one, which is the only source
+  /// that exposes genre / country listings.
+  bool get isPrimaryServer => isPrimary(baseUrl);
+
   /// Takes what the user typed — `example.com`, `example.com/`, or a full URL —
   /// and returns the canonical form stored for a server.
   String normalizeServerUrl(String rawUrl) {
@@ -58,7 +71,7 @@ class MovieService {
     }
 
     // Set as primary if none exists
-    if (storageService.getPrimaryMovieServer() == null) {
+    if (primaryServer == null) {
       await storageService.setPrimaryMovieServer(formattedUrl);
     }
 
@@ -68,7 +81,7 @@ class MovieService {
   }
 
   Future<void> deleteServer(String url) async {
-    final primary = storageService.getPrimaryMovieServer();
+    final wasPrimary = isPrimary(url);
     final servers = storageService.getMovieServers();
     servers.remove(url);
     await storageService.setMovieServers(servers);
@@ -82,7 +95,7 @@ class MovieService {
       }
     }
 
-    if (primary == url) {
+    if (wasPrimary) {
       await storageService.setPrimaryMovieServer(servers.isNotEmpty ? servers.first : '');
     }
   }
@@ -96,12 +109,11 @@ class MovieService {
     if (baseUrl == null || baseUrl!.isEmpty) return;
 
     // Detect Ophim
-    final primaryServer = storageService.getPrimaryMovieServer();
     final checkPrimary = primaryServer ?? '';
 
-    final isPrimary =
-        baseUrl == checkPrimary ||
-        (baseUrl != null && checkPrimary.isNotEmpty && baseUrl!.contains(checkPrimary.replaceFirst('https://', '')));
+    // Also accept a match that differs only by scheme from the stored primary
+    // URL, which the canonicalisation below then tidies up.
+    final isPrimary = isPrimaryServer || (checkPrimary.isNotEmpty && baseUrl!.contains(checkPrimary.replaceFirst('https://', '')));
 
     if (isPrimary) {
       await storageService.setMovieSiteType('ophim');
@@ -428,14 +440,23 @@ class MovieService {
     return MovieResponse(movies: movies, total: total);
   }
 
-  /// Get movies by category (trending, recent) with pagination
-  Future<MovieResponse> getMoviesByCategory(String categoryPath, {int page = 1, CancelToken? cancelToken}) async {
+  /// Get movies by category (trending, recent) with pagination.
+  ///
+  /// [genreSlug] and [countrySlug] are Ophim-only extra filters; they stack on
+  /// top of [categoryPath] so a country and a genre can be applied together.
+  Future<MovieResponse> getMoviesByCategory(
+    String categoryPath, {
+    int page = 1,
+    String? genreSlug,
+    String? countrySlug,
+    CancelToken? cancelToken,
+  }) async {
     if (baseUrl == null || baseUrl!.isEmpty) {
       return const MovieResponse(movies: [], total: 0);
     }
 
     if (_siteType == MovieSiteType.ophim) {
-      return _getOphimMovies(categoryPath, page: page, cancelToken: cancelToken);
+      return _getOphimFiltered(categoryPath, page: page, genreSlug: genreSlug, countrySlug: countrySlug, cancelToken: cancelToken);
     }
 
     try {
@@ -453,11 +474,11 @@ class MovieService {
 
       final response = await _dio.get(path, cancelToken: cancelToken);
       return _parseMovieResponse(response.data);
-    } catch (e) {
-      if (e is! DioException || e.type != DioExceptionType.cancel) {
-        logger.e('MovieService getMoviesByCategory failed', error: e);
-      }
-      return const MovieResponse(movies: [], total: 0);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return const MovieResponse(movies: [], total: 0);
+      logger.e('MovieService getMoviesByCategory failed', error: e);
+      // Surfaced so the screen can tell "no results" from "no connection".
+      rethrow;
     }
   }
 
@@ -480,11 +501,10 @@ class MovieService {
 
       final response = await _dio.get(path, cancelToken: cancelToken);
       return _parseMovieResponse(response.data.toString());
-    } catch (e) {
-      if (e is! DioException || e.type != DioExceptionType.cancel) {
-        logger.e('MovieService searchMovies failed', error: e);
-      }
-      return const MovieResponse(movies: [], total: 0);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return const MovieResponse(movies: [], total: 0);
+      logger.e('MovieService searchMovies failed', error: e);
+      rethrow;
     }
   }
 
@@ -720,12 +740,44 @@ class MovieService {
       }
 
       return MovieResponse(movies: movies, total: totalCount > 0 ? totalCount : (page == 1 ? movies.length : 0));
-    } catch (e) {
-      if (e is! DioException || e.type != DioExceptionType.cancel) {
-        logger.e('MovieService _getOphimMovies failed', error: e);
-      }
-      return const MovieResponse(movies: [], total: 0);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return const MovieResponse(movies: [], total: 0);
+      logger.e('MovieService _getOphimMovies failed', error: e);
+      rethrow;
     }
+  }
+
+  /// Applies the genre / country filters on top of a list endpoint.
+  ///
+  /// The `/v1/api/...` listings take `category` and `country` as query params,
+  /// so both filters stack. The legacy "mới cập nhật" feed takes neither, so as
+  /// soon as a filter is set we swap it for the matching v1 listing.
+  Future<MovieResponse> _getOphimFiltered(
+    String categoryPath, {
+    int page = 1,
+    String? genreSlug,
+    String? countrySlug,
+    CancelToken? cancelToken,
+  }) {
+    final hasFilter = (genreSlug != null && genreSlug.isNotEmpty) || (countrySlug != null && countrySlug.isNotEmpty);
+    if (!hasFilter) {
+      return _getOphimMovies(categoryPath, page: page, cancelToken: cancelToken);
+    }
+
+    var path = categoryPath;
+    final params = <String, dynamic>{};
+
+    if (path.startsWith('/v1/api/')) {
+      if (genreSlug != null && genreSlug.isNotEmpty) params['category'] = genreSlug;
+      if (countrySlug != null && countrySlug.isNotEmpty) params['country'] = countrySlug;
+    } else if (genreSlug != null && genreSlug.isNotEmpty) {
+      path = '/v1/api/the-loai/$genreSlug';
+      if (countrySlug != null && countrySlug.isNotEmpty) params['country'] = countrySlug;
+    } else {
+      path = '/v1/api/quoc-gia/$countrySlug';
+    }
+
+    return _getOphimMovies(path, page: page, extraParams: params, cancelToken: cancelToken);
   }
 
   Future<MovieResponse> _searchOphimMovies(String keyword, {int page = 1, CancelToken? cancelToken}) async {

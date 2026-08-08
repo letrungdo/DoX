@@ -1414,6 +1414,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get lockRotation => 'Khóa xoay màn hình';
 
   @override
+  String get zoomToFill => 'Phủ kín màn hình';
+
+  @override
+  String get zoomToFit => 'Vừa khung hình';
+
+  @override
   String get episodeLabel => 'Tập phim';
 
   @override

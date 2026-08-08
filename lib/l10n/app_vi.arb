@@ -917,6 +917,8 @@
   "playbackSpeed": "Tốc độ",
   "unlockRotation": "Mở khóa xoay màn hình",
   "lockRotation": "Khóa xoay màn hình",
+  "zoomToFill": "Phủ kín màn hình",
+  "zoomToFit": "Vừa khung hình",
   "episodeLabel": "Tập phim",
   "episodeFull": "Full",
   "episodeDefaultName": "Tập",

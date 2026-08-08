@@ -66,10 +66,7 @@ class MovieResponse {
   final List<Movie> movies;
   final int total;
 
-  const MovieResponse({
-    required this.movies,
-    required this.total,
-  });
+  const MovieResponse({required this.movies, required this.total});
 }
 
 class MovieDetail {
@@ -122,10 +119,7 @@ class MovieEpisodeServer {
   final String name;
   final List<MovieEpisode> episodes;
 
-  const MovieEpisodeServer({
-    required this.name,
-    required this.episodes,
-  });
+  const MovieEpisodeServer({required this.name, required this.episodes});
 }
 
 class MovieEpisode {
@@ -134,22 +128,11 @@ class MovieEpisode {
   final String? m3u8Url;
   final String? embedUrl;
 
-  const MovieEpisode({
-    required this.name,
-    required this.slug,
-    this.m3u8Url,
-    this.embedUrl,
-  });
+  const MovieEpisode({required this.name, required this.slug, this.m3u8Url, this.embedUrl});
 }
 
 class MovieStreamVariant {
-  const MovieStreamVariant({
-    required this.label,
-    required this.url,
-    required this.width,
-    required this.height,
-    required this.bandwidth,
-  });
+  const MovieStreamVariant({required this.label, required this.url, required this.width, required this.height, required this.bandwidth});
 
   final String label;
   final String url;
@@ -163,21 +146,34 @@ class MovieCategory {
   final String name;
   final String path;
 
-  const MovieCategory({
-    required this.id,
-    required this.name,
-    required this.path,
-  });
+  const MovieCategory({required this.id, required this.name, required this.path});
 
   factory MovieCategory.fromJson(Map<String, dynamic> json) {
-    return MovieCategory(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      path: json['path'] as String? ?? '',
-    );
+    return MovieCategory(id: json['id'] as String? ?? '', name: json['name'] as String? ?? '', path: json['path'] as String? ?? '');
   }
 
   Map<String, dynamic> toJson() {
     return {'id': id, 'name': name, 'path': path};
+  }
+}
+
+/// Which server a saved library row belongs to. Rows from the primary (Ophim)
+/// server and from any extra server share one table, so their ids are namespaced
+/// by [prefix] to keep the two catalogues apart.
+enum MovieLibraryScope {
+  primary('def_'),
+  external('ext_');
+
+  const MovieLibraryScope(this.prefix);
+
+  final String prefix;
+
+  String toDbId(String movieId) => '$prefix$movieId';
+
+  static String stripPrefix(String dbId) {
+    for (final scope in values) {
+      if (dbId.startsWith(scope.prefix)) return dbId.substring(scope.prefix.length);
+    }
+    return dbId;
   }
 }
