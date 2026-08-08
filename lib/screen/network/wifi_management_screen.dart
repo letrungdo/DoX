@@ -2,7 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/screen/local_network_screen.dart';
+import 'package:do_x/screen/network/local_network_screen.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';

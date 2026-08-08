@@ -28,13 +28,13 @@ import 'package:do_x/screen/locket/login_screen.dart' as _i11;
 import 'package:do_x/screen/locket/trimmer_screen.dart' as _i20;
 import 'package:do_x/screen/lunar_screen.dart' as _i12;
 import 'package:do_x/screen/main_screen.dart' as _i13;
-import 'package:do_x/screen/market_detail_screen.dart' as _i14;
 import 'package:do_x/screen/menu_screen.dart' as _i15;
-import 'package:do_x/screen/movie_detail_screen.dart' as _i16;
-import 'package:do_x/screen/movie_screen.dart' as _i17;
-import 'package:do_x/screen/news_screen.dart' as _i18;
+import 'package:do_x/screen/movie/movie_detail_screen.dart' as _i16;
+import 'package:do_x/screen/movie/movie_screen.dart' as _i17;
+import 'package:do_x/screen/network/wifi_management_screen.dart' as _i21;
+import 'package:do_x/screen/news/market_detail_screen.dart' as _i14;
+import 'package:do_x/screen/news/news_screen.dart' as _i18;
 import 'package:do_x/screen/settings_screen.dart' as _i19;
-import 'package:do_x/screen/wifi_management_screen.dart' as _i21;
 import 'package:flutter/foundation.dart' as _i25;
 import 'package:flutter/material.dart' as _i23;
 
