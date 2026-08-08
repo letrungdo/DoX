@@ -7,6 +7,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.title, //
     this.titleStyle,
     this.titleSuffix,
+    this.onTitleTap,
     this.subtitle,
     this.titleMaxLines = 1,
     this.height = Dimens.appBarHeight,
@@ -29,6 +30,10 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   /// is being fetched.
   final Widget? titleSuffix;
 
+  /// Makes the title block tappable, for a screen whose title doubles as the
+  /// entry point to a picker.
+  final VoidCallback? onTitleTap;
+
   /// Displayed below the [title].
   final Widget? subtitle;
 
@@ -45,8 +50,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<DoAppBar> createState() => _DoAppBarState();
 
   @override
-  Size get preferredSize =>
-      Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
+  Size get preferredSize => Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
 }
 
 class _DoAppBarState extends State<DoAppBar> {
@@ -62,16 +66,17 @@ class _DoAppBarState extends State<DoAppBar> {
         title,
         style: widget.titleStyle,
         maxLines: widget.titleMaxLines,
-        overflow: widget.titleMaxLines == null
-            ? TextOverflow.clip
-            : TextOverflow.ellipsis,
+        overflow: widget.titleMaxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
       );
 
       if (titleSuffix != null) {
         titleWidget = Row(
           spacing: 8,
           mainAxisSize: MainAxisSize.min,
-          children: [Flexible(child: titleWidget), titleSuffix],
+          children: [
+            Flexible(child: titleWidget),
+            titleSuffix,
+          ],
         );
       }
 
@@ -82,6 +87,10 @@ class _DoAppBarState extends State<DoAppBar> {
           children: [titleWidget, subtitle],
         );
       }
+
+      if (widget.onTitleTap != null) {
+        titleWidget = GestureDetector(behavior: HitTestBehavior.opaque, onTap: widget.onTitleTap, child: titleWidget);
+      }
     }
 
     return AppBar(
@@ -89,7 +98,9 @@ class _DoAppBarState extends State<DoAppBar> {
       title: titleWidget,
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,
-      actions: widget.actions,
+      // AppBar stretches actions to the full toolbar height, which pushes a
+      // neumorphic button's shadow past the bar; centring keeps it intact.
+      actions: widget.actions?.map((action) => Center(child: action)).toList(),
       toolbarHeight: widget.height,
       actionsPadding: const EdgeInsets.only(right: 10),
       bottom: widget.bottom,

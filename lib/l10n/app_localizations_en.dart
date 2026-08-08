@@ -1315,7 +1315,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noServersFound => 'No servers found';
 
   @override
-  String get serverUrlHint => 'https://...';
+  String get serverUrlHint => 'example.com';
 
   @override
   String get serverUrlHelperText =>
@@ -1331,13 +1331,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noFavoriteMovies => 'No favorite movies yet.';
 
   @override
-  String get changeMovieServerUrl => 'Change Movie Server URL';
-
-  @override
   String get watchedMovies => 'Watched movies';
 
   @override
   String get favoriteMovies => 'Favorite movies';
+
+  @override
+  String get minimize => 'Minimize';
 
   @override
   String get scrollToTop => 'Scroll to top';

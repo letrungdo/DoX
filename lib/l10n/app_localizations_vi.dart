@@ -1313,7 +1313,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noServersFound => 'Không có server nào';
 
   @override
-  String get serverUrlHint => 'https://...';
+  String get serverUrlHint => 'example.com';
 
   @override
   String get serverUrlHelperText => 'Nhãn và danh mục sẽ được đồng bộ tự động.';
@@ -1328,13 +1328,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noFavoriteMovies => 'Chưa có phim yêu thích.';
 
   @override
-  String get changeMovieServerUrl => 'Đổi Movie Server URL';
-
-  @override
   String get watchedMovies => 'Phim đã xem';
 
   @override
   String get favoriteMovies => 'Phim yêu thích';
+
+  @override
+  String get minimize => 'Thu nhỏ';
 
   @override
   String get scrollToTop => 'Lên đầu trang';

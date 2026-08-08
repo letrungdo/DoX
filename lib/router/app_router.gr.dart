@@ -356,6 +356,16 @@ class MovieDetailRoute extends _i22.PageRouteInfo<MovieDetailRouteArgs> {
     required String movieUrl,
     required String movieId,
     _i26.Movie? initialMovie,
+    bool embedded = false,
+    double minimizeProgress = 1,
+    _i25.ValueChanged<bool>? onFullScreenChanged,
+    _i16.MovieDetailController? controller,
+    _i25.ValueChanged<_i26.Movie>? onRelatedMovieTap,
+    _i25.VoidCallback? onClose,
+    _i25.VoidCallback? onMinimize,
+    _i23.GestureDragStartCallback? onPlayerDragStart,
+    _i23.GestureDragUpdateCallback? onPlayerDragUpdate,
+    _i23.GestureDragEndCallback? onPlayerDragEnd,
     List<_i22.PageRouteInfo>? children,
   }) : super(
          MovieDetailRoute.name,
@@ -364,6 +374,16 @@ class MovieDetailRoute extends _i22.PageRouteInfo<MovieDetailRouteArgs> {
            movieUrl: movieUrl,
            movieId: movieId,
            initialMovie: initialMovie,
+           embedded: embedded,
+           minimizeProgress: minimizeProgress,
+           onFullScreenChanged: onFullScreenChanged,
+           controller: controller,
+           onRelatedMovieTap: onRelatedMovieTap,
+           onClose: onClose,
+           onMinimize: onMinimize,
+           onPlayerDragStart: onPlayerDragStart,
+           onPlayerDragUpdate: onPlayerDragUpdate,
+           onPlayerDragEnd: onPlayerDragEnd,
          ),
          initialChildren: children,
        );
@@ -379,6 +399,16 @@ class MovieDetailRoute extends _i22.PageRouteInfo<MovieDetailRouteArgs> {
         movieUrl: args.movieUrl,
         movieId: args.movieId,
         initialMovie: args.initialMovie,
+        embedded: args.embedded,
+        minimizeProgress: args.minimizeProgress,
+        onFullScreenChanged: args.onFullScreenChanged,
+        controller: args.controller,
+        onRelatedMovieTap: args.onRelatedMovieTap,
+        onClose: args.onClose,
+        onMinimize: args.onMinimize,
+        onPlayerDragStart: args.onPlayerDragStart,
+        onPlayerDragUpdate: args.onPlayerDragUpdate,
+        onPlayerDragEnd: args.onPlayerDragEnd,
       );
     },
   );
@@ -390,6 +420,16 @@ class MovieDetailRouteArgs {
     required this.movieUrl,
     required this.movieId,
     this.initialMovie,
+    this.embedded = false,
+    this.minimizeProgress = 1,
+    this.onFullScreenChanged,
+    this.controller,
+    this.onRelatedMovieTap,
+    this.onClose,
+    this.onMinimize,
+    this.onPlayerDragStart,
+    this.onPlayerDragUpdate,
+    this.onPlayerDragEnd,
   });
 
   final _i25.Key? key;
@@ -400,9 +440,29 @@ class MovieDetailRouteArgs {
 
   final _i26.Movie? initialMovie;
 
+  final bool embedded;
+
+  final double minimizeProgress;
+
+  final _i25.ValueChanged<bool>? onFullScreenChanged;
+
+  final _i16.MovieDetailController? controller;
+
+  final _i25.ValueChanged<_i26.Movie>? onRelatedMovieTap;
+
+  final _i25.VoidCallback? onClose;
+
+  final _i25.VoidCallback? onMinimize;
+
+  final _i23.GestureDragStartCallback? onPlayerDragStart;
+
+  final _i23.GestureDragUpdateCallback? onPlayerDragUpdate;
+
+  final _i23.GestureDragEndCallback? onPlayerDragEnd;
+
   @override
   String toString() {
-    return 'MovieDetailRouteArgs{key: $key, movieUrl: $movieUrl, movieId: $movieId, initialMovie: $initialMovie}';
+    return 'MovieDetailRouteArgs{key: $key, movieUrl: $movieUrl, movieId: $movieId, initialMovie: $initialMovie, embedded: $embedded, minimizeProgress: $minimizeProgress, onFullScreenChanged: $onFullScreenChanged, controller: $controller, onRelatedMovieTap: $onRelatedMovieTap, onClose: $onClose, onMinimize: $onMinimize, onPlayerDragStart: $onPlayerDragStart, onPlayerDragUpdate: $onPlayerDragUpdate, onPlayerDragEnd: $onPlayerDragEnd}';
   }
 
   @override
@@ -412,7 +472,17 @@ class MovieDetailRouteArgs {
     return key == other.key &&
         movieUrl == other.movieUrl &&
         movieId == other.movieId &&
-        initialMovie == other.initialMovie;
+        initialMovie == other.initialMovie &&
+        embedded == other.embedded &&
+        minimizeProgress == other.minimizeProgress &&
+        onFullScreenChanged == other.onFullScreenChanged &&
+        controller == other.controller &&
+        onRelatedMovieTap == other.onRelatedMovieTap &&
+        onClose == other.onClose &&
+        onMinimize == other.onMinimize &&
+        onPlayerDragStart == other.onPlayerDragStart &&
+        onPlayerDragUpdate == other.onPlayerDragUpdate &&
+        onPlayerDragEnd == other.onPlayerDragEnd;
   }
 
   @override
@@ -420,7 +490,17 @@ class MovieDetailRouteArgs {
       key.hashCode ^
       movieUrl.hashCode ^
       movieId.hashCode ^
-      initialMovie.hashCode;
+      initialMovie.hashCode ^
+      embedded.hashCode ^
+      minimizeProgress.hashCode ^
+      onFullScreenChanged.hashCode ^
+      controller.hashCode ^
+      onRelatedMovieTap.hashCode ^
+      onClose.hashCode ^
+      onMinimize.hashCode ^
+      onPlayerDragStart.hashCode ^
+      onPlayerDragUpdate.hashCode ^
+      onPlayerDragEnd.hashCode;
 }
 
 /// generated route for
