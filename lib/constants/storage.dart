@@ -12,15 +12,25 @@ class StorageKey {
 
   // SharedPreferences
   static const themeMode = "themeMode";
-  static const tabIndex = "tabIndex";
+
+  /// Pages placed in the bottom bar / in the menu, in user order.
+  static const tabPages = "tabPages";
+  static const menuPages = "menuPages";
+
+  /// Bottom tab to restore on launch, by page name.
+  static const activeTabPage = "activeTabPage";
   static const routerIp = "routerIp";
   static const chickenNotifications = "chickenNotifications";
   static const chickenLunarDisplay = "chickenLunarDisplay";
   static const locale = "locale";
+
+  // Superseded by [tabPages]/[menuPages]; only read to migrate old installs.
+  static const tabIndex = "tabIndex";
   static const showMyLifeTab = "showMyLifeTab";
   static const showElectricTab = "showElectricTab";
   static const showLunarTab = "showLunarTab";
-  static const showMovieTab = "showMovieTab";
+  static const tabOrder = "tabOrder";
+
   static const movieBaseUrl = "movieBaseUrl";
   static const primaryMovieServer = "primaryMovieServer";
   static const movieServers = "movieServers";
@@ -28,7 +38,7 @@ class StorageKey {
   static const movieCategories = "movieCategories";
   static const movieLabel = "movieLabel";
   static const movieSiteType = "movieSiteType";
-  static const tabOrder = "tabOrder";
+
   static const electricReminder = "electricReminder";
 
   /// Last known chicken data (batches + global sales/expenses), shown while the

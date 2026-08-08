@@ -302,11 +302,47 @@ abstract class AppLocalizations {
   /// **'Electricity management'**
   String get electricityTitle;
 
-  /// No description provided for @tabOrder.
+  /// No description provided for @pageLayout.
   ///
   /// In en, this message translates to:
-  /// **'Tab order & visibility'**
-  String get tabOrder;
+  /// **'Tabs & menu'**
+  String get pageLayout;
+
+  /// No description provided for @menuTabAlwaysPinned.
+  ///
+  /// In en, this message translates to:
+  /// **'The Menu tab is always shown.'**
+  String get menuTabAlwaysPinned;
+
+  /// No description provided for @bottomTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom tabs'**
+  String get bottomTabs;
+
+  /// No description provided for @moveToMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to menu'**
+  String get moveToMenu;
+
+  /// No description provided for @moveToBottomTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to bottom tabs'**
+  String get moveToBottomTabs;
+
+  /// No description provided for @noPagesHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet.'**
+  String get noPagesHere;
+
+  /// No description provided for @maxTabsReached.
+  ///
+  /// In en, this message translates to:
+  /// **'The bottom bar holds up to {count} pages.'**
+  String maxTabsReached(int count);
 
   /// No description provided for @electricReminder.
   ///
@@ -578,6 +614,12 @@ abstract class AppLocalizations {
   /// **'Lunar'**
   String get lunar;
 
+  /// No description provided for @lunarTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get lunarTab;
+
   /// No description provided for @lunarCalendar.
   ///
   /// In en, this message translates to:
@@ -794,11 +836,23 @@ abstract class AppLocalizations {
   /// **'Wifi Management'**
   String get wifiManagement;
 
+  /// No description provided for @wifiShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Wifi'**
+  String get wifiShort;
+
   /// No description provided for @fengShuiCompass.
   ///
   /// In en, this message translates to:
   /// **'Feng shui compass'**
   String get fengShuiCompass;
+
+  /// No description provided for @compass.
+  ///
+  /// In en, this message translates to:
+  /// **'Compass'**
+  String get compass;
 
   /// No description provided for @fengShuiHouseFacing.
   ///

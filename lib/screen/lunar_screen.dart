@@ -3,14 +3,13 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
-import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 @RoutePage()
@@ -21,7 +20,7 @@ class LunarScreen extends StatefulWidget {
   State<LunarScreen> createState() => _LunarScreenState();
 }
 
-class _LunarScreenState extends State<LunarScreen> {
+class _LunarScreenState extends State<LunarScreen> with TabReselect {
   /// Month currently focused in the calendar (drives the header + page).
   late DateTime _focusedDay;
   late DateTime _selected;
@@ -29,44 +28,19 @@ class _LunarScreenState extends State<LunarScreen> {
   static final _firstDay = DateTime(2000);
   static final _lastDay = DateTime(2100, 12, 31);
 
-  MainViewModel? _mainViewModel;
-  late final Future<void> Function() _tabReselectHandler;
-
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _selected = DateTime(now.year, now.month, now.day);
     _focusedDay = _selected;
-    _tabReselectHandler = _handleTabReselect;
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final mainViewModel = context.read<MainViewModel>();
-    if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(
-      LunarRoute.name,
-      _tabReselectHandler,
-    );
-    _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(
-      LunarRoute.name,
-      _tabReselectHandler,
-    );
-  }
+  String get tabRouteName => LunarRoute.name;
 
   @override
-  void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(
-      LunarRoute.name,
-      _tabReselectHandler,
-    );
-    super.dispose();
-  }
-
-  Future<void> _handleTabReselect() async {
+  Future<void> onTabReselect() async {
     _goToToday();
   }
 

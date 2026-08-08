@@ -11,11 +11,11 @@ import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
-import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
@@ -47,21 +47,18 @@ class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
   Widget wrappedRoute(BuildContext context) => this;
 }
 
-class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
+class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
+    with TabReselect {
   late int _selectedYear;
 
   /// The year to ask the server for; null when the picker is on "all", which
   /// is the one case that needs every year.
   int? get _yearFilter => _selectedYear == 0 ? null : _selectedYear;
   final _scrollController = ScrollController();
-  MainViewModel? _mainViewModel;
-  late final Future<void> Function() _tabReselectHandler;
-
   @override
   void initState() {
     super.initState();
     _selectedYear = vm.currentDisplayYear();
-    _tabReselectHandler = _handleTabReselect;
   }
 
   @override
@@ -77,27 +74,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final mainViewModel = context.read<MainViewModel>();
-    if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(
-      ChickenRoute.name,
-      _tabReselectHandler,
-    );
-    _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(
-      ChickenRoute.name,
-      _tabReselectHandler,
-    );
-  }
-
-  @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(
-      ChickenRoute.name,
-      _tabReselectHandler,
-    );
     _scrollController.dispose();
     super.dispose();
   }
@@ -116,7 +93,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel> {
     });
   }
 
-  Future<void> _handleTabReselect() async {
+  @override
+  String get tabRouteName => ChickenRoute.name;
+
+  @override
+  Future<void> onTabReselect() async {
     if (_scrollController.hasClients) {
       await _scrollController.animateTo(
         0,

@@ -1,5 +1,5 @@
 import 'package:do_x/l10n/app_localizations.dart';
-import 'package:do_x/constants/enum/app_tab.dart';
+import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/router/app_router.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/router/navigator_observer.dart';
@@ -49,12 +49,17 @@ class _MyAppState extends State<MyApp> {
     notificationService.electricNotificationMonth.value = null;
 
     appVm.requestElectricMonth(month);
-    if (!appVm.showElectricTab) appVm.setShowElectricTab(true);
-    final electricIndex = appVm.visibleTabs.indexOf(AppTab.electric);
-    if (electricIndex >= 0) storageService.setTabIndex(electricIndex);
+    // The page is only reachable as a tab when the user kept it in the bottom
+    // bar; otherwise it lives in the menu and has to be pushed.
+    final isTab = appVm.tabPages.contains(AppPage.electric);
+    if (isTab) storageService.setActiveTabPage(AppPage.electric.name);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      appRouter.navigate(const MainRoute(children: [ElectricRoute()]));
+      if (isTab) {
+        appRouter.navigate(const MainRoute(children: [ElectricRoute()]));
+      } else {
+        appRouter.push(const ElectricRoute());
+      }
     });
   }
 

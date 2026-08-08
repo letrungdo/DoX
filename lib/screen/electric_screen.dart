@@ -11,9 +11,9 @@ import 'package:do_x/model/electric/electric_merged.dart';
 import 'package:do_x/model/electric/electric_models.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/electric_view_model.dart';
-import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
@@ -62,48 +62,24 @@ class ElectricScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _ElectricScreenState
-    extends ScreenState<ElectricScreen, ElectricViewModel> {
+    extends ScreenState<ElectricScreen, ElectricViewModel>
+    with TabReselect {
   final _scrollController = ScrollController();
   final _monthlySectionKey = GlobalKey();
   final _highlightedMonthlyItemKey = GlobalKey();
   DateTime? _lastFocusedMonth;
 
-  MainViewModel? _mainViewModel;
-  late final Future<void> Function() _tabReselectHandler;
-
-  @override
-  void initState() {
-    _tabReselectHandler = _handleTabReselect;
-    super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final mainViewModel = context.read<MainViewModel>();
-    if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(
-      ElectricRoute.name,
-      _tabReselectHandler,
-    );
-    _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(
-      ElectricRoute.name,
-      _tabReselectHandler,
-    );
-  }
-
   @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(
-      ElectricRoute.name,
-      _tabReselectHandler,
-    );
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleTabReselect() async {
+  @override
+  String get tabRouteName => ElectricRoute.name;
+
+  @override
+  Future<void> onTabReselect() async {
     if (_scrollController.hasClients) {
       await _scrollController.animateTo(
         0,

@@ -41,7 +41,20 @@
   "menu": "Menu",
   "electricity": "Electricity",
   "electricityTitle": "Electricity management",
-  "tabOrder": "Tab order & visibility",
+  "pageLayout": "Tabs & menu",
+  "menuTabAlwaysPinned": "The Menu tab is always shown.",
+  "bottomTabs": "Bottom tabs",
+  "moveToMenu": "Move to menu",
+  "moveToBottomTabs": "Move to bottom tabs",
+  "noPagesHere": "Nothing here yet.",
+  "maxTabsReached": "The bottom bar holds up to {count} pages.",
+  "@maxTabsReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "electricReminder": "Monthly electricity reminder",
   "electricNotificationTitle": "Electricity bill time ⚡",
   "electricNotificationBody": "Check last month's power usage and bill in the app!",
@@ -124,6 +137,7 @@
   "chicken": "Chicken",
   "myLife": "MyLife",
   "lunar": "Lunar",
+  "lunarTab": "Calendar",
   "lunarCalendar": "Lunar calendar",
   "lunarToday": "Today",
   "lunarSolarDate": "Solar",
@@ -174,7 +188,9 @@
   "dark": "Dark",
   "system": "System",
   "wifiManagement": "Wifi Management",
+  "wifiShort": "Wifi",
   "fengShuiCompass": "Feng shui compass",
+  "compass": "Compass",
   "fengShuiHouseFacing": "House facing",
   "fengShuiSitting": "Sitting (back)",
   "fengShuiTrigram": "Trigram",
