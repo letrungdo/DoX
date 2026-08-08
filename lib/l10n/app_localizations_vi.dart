@@ -1307,6 +1307,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get movieServerUrl => 'Movie Server URL';
 
   @override
+  String get addMovieServerUrl => 'Thêm Movie Server URL';
+
+  @override
   String get editMovieServerUrl => 'Sửa Movie Server URL';
 
   @override

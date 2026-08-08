@@ -1,3 +1,4 @@
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -105,7 +106,15 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(isInputMode ? (_isAdding ? l10n.enterMovieServerUrl : l10n.editMovieServerUrl) : l10n.movieServerUrl),
+          // Expanded + ellipsis: a long localized title must not push the
+          // add button out of the dialog.
+          Expanded(
+            child: Text(
+              isInputMode ? (_isAdding ? l10n.addMovieServerUrl : l10n.editMovieServerUrl) : l10n.movieServerUrl,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           if (!isInputMode)
             NeuIconButton(
               size: _actionButtonSize,
@@ -240,6 +249,6 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
         if (!isInputMode) TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.close)),
         if (isInputMode) FilledButton(onPressed: _handleSave, child: Text(l10n.save)),
       ],
-    );
+    ).dialogConstrainedBox();
   }
 }

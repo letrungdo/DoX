@@ -890,6 +890,7 @@
   "movieServerUrlUpdated": "Movie Server URL updated.",
   "updateMovieServerFailed": "Could not update movie server.",
   "movieServerUrl": "Movie Server URL",
+  "addMovieServerUrl": "Add Movie Server URL",
   "editMovieServerUrl": "Edit Movie Server URL",
   "noServersFound": "No servers found",
   "serverUrlHint": "example.com",

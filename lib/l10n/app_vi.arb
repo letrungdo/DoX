@@ -869,6 +869,7 @@
   "movieServerUrlUpdated": "Đã cập nhật Movie Server URL.",
   "updateMovieServerFailed": "Không thể cập nhật movie server.",
   "movieServerUrl": "Movie Server URL",
+  "addMovieServerUrl": "Thêm Movie Server URL",
   "editMovieServerUrl": "Sửa Movie Server URL",
   "noServersFound": "Không có server nào",
   "serverUrlHint": "example.com",

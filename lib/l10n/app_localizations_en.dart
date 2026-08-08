@@ -1309,6 +1309,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get movieServerUrl => 'Movie Server URL';
 
   @override
+  String get addMovieServerUrl => 'Add Movie Server URL';
+
+  @override
   String get editMovieServerUrl => 'Edit Movie Server URL';
 
   @override

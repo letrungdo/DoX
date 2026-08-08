@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flutter/material.dart';
 
@@ -47,9 +48,7 @@ Future<ActionButtonType?> showAppDialog(
                         (e) => DialogActionButton(
                           text: e.text,
                           textStyle: e.textStyle,
-                          kind: e.type == ActionButtonType.cancel
-                              ? DialogActionKind.cancel
-                              : DialogActionKind.primary,
+                          kind: e.type == ActionButtonType.cancel ? DialogActionKind.cancel : DialogActionKind.primary,
                           onPressed: () {
                             e.onPressed?.call(context);
                             if (e.autoClose) {
@@ -61,7 +60,7 @@ Future<ActionButtonType?> showAppDialog(
                       .toList(),
                 ),
               ],
-      );
+      ).dialogConstrainedBox();
     },
   );
 }
