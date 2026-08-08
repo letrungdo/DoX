@@ -114,7 +114,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String get electricityTitle => 'Quản lý điện';
 
   @override
-  String get tabOrder => 'Thứ tự & hiển thị tab';
+  String get pageLayout => 'Tab & menu';
+
+  @override
+  String get menuTabAlwaysPinned => 'Tab Menu luôn được hiển thị.';
+
+  @override
+  String get bottomTabs => 'Tab dưới màn hình';
+
+  @override
+  String get moveToMenu => 'Chuyển vào menu';
+
+  @override
+  String get moveToBottomTabs => 'Chuyển ra tab dưới';
+
+  @override
+  String get noPagesHere => 'Chưa có mục nào.';
+
+  @override
+  String maxTabsReached(int count) {
+    return 'Thanh tab dưới chỉ chứa tối đa $count trang.';
+  }
 
   @override
   String get electricReminder => 'Thông báo tiền điện hàng tháng';
@@ -271,6 +291,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get lunar => 'Âm lịch';
 
   @override
+  String get lunarTab => 'Lịch';
+
+  @override
   String get lunarCalendar => 'Lịch âm';
 
   @override
@@ -384,7 +407,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get wifiManagement => 'Quản lý Wifi';
 
   @override
+  String get wifiShort => 'Wifi';
+
+  @override
   String get fengShuiCompass => 'La bàn phong thủy';
+
+  @override
+  String get compass => 'La bàn';
 
   @override
   String get fengShuiHouseFacing => 'Hướng nhà';

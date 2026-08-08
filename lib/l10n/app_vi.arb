@@ -34,7 +34,20 @@
   "menu": "Menu",
   "electricity": "Điện",
   "electricityTitle": "Quản lý điện",
-  "tabOrder": "Thứ tự & hiển thị tab",
+  "pageLayout": "Tab & menu",
+  "menuTabAlwaysPinned": "Tab Menu luôn được hiển thị.",
+  "bottomTabs": "Tab dưới màn hình",
+  "moveToMenu": "Chuyển vào menu",
+  "moveToBottomTabs": "Chuyển ra tab dưới",
+  "noPagesHere": "Chưa có mục nào.",
+  "maxTabsReached": "Thanh tab dưới chỉ chứa tối đa {count} trang.",
+  "@maxTabsReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "electricReminder": "Thông báo tiền điện hàng tháng",
   "electricNotificationTitle": "Đến kỳ chốt tiền điện ⚡",
   "electricNotificationBody": "Xem điện năng tiêu thụ và tiền điện tháng vừa rồi trong app nhé!",
@@ -117,6 +130,7 @@
   "chicken": "Gà",
   "locket": "Locket",
   "lunar": "Âm lịch",
+  "lunarTab": "Lịch",
   "lunarCalendar": "Lịch âm",
   "lunarToday": "Hôm nay",
   "lunarSolarDate": "Dương lịch",
@@ -167,7 +181,9 @@
   "dark": "Tối",
   "system": "Hệ thống",
   "wifiManagement": "Quản lý Wifi",
+  "wifiShort": "Wifi",
   "fengShuiCompass": "La bàn phong thủy",
+  "compass": "La bàn",
   "fengShuiHouseFacing": "Hướng nhà",
   "fengShuiSitting": "Tọa (lưng nhà)",
   "fengShuiTrigram": "Quái",

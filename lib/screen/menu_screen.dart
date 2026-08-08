@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/enum/app_page.dart';
+import 'package:do_x/extensions/app_page_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -8,6 +10,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
+import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
@@ -72,18 +75,24 @@ class _MenuScreenState<V extends MenuViewModel>
         alignment: Alignment.center, //
         child: Text("© letrungdo. Ver ${appInfo.version}"),
       ),
+      // Two slivers rather than one column with a Spacer: the page list is
+      // user-defined now, so it has to be able to grow past one screen while
+      // the account button still sits at the bottom when it doesn't.
       body: CustomScrollView(
         slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: _buildMainActions(l10n).webConstrainedBox(),
+            ),
+          ),
           SliverFillRemaining(
             hasScrollBody: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: Column(
-                children: [
-                  _buildMainActions(l10n).webConstrainedBox(),
-                  const Spacer(),
-                  _buildBottomActions(l10n).webConstrainedBox(),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: _buildBottomActions(l10n).webConstrainedBox(),
               ),
             ),
           ),
@@ -92,26 +101,24 @@ class _MenuScreenState<V extends MenuViewModel>
     );
   }
 
+  /// The pages the user left out of the bottom bar, in the order they set in
+  /// Settings, plus the entries that only ever live here.
   Widget _buildMainActions(AppLocalizations l10n) {
+    final pages = context.select<AppViewModel, List<AppPage>>(
+      (vm) => vm.menuPages,
+    );
     return Column(
       // 16: these are raised rows, so the gap has to clear their shadow reach.
       spacing: 16,
       children: [
-        _menuButton(
-          Icons.wifi_rounded,
-          l10n.wifiManagement,
-          () => context.pushRoute(const WifiManagementRoute()),
-        ),
-        _menuButton(
-          Icons.explore_rounded,
-          l10n.fengShuiCompass,
-          () => context.pushRoute(const FengShuiCompassRoute()),
-        ),
-        _menuButton(
-          Icons.movie_rounded,
-          l10n.movie,
-          () => context.pushRoute(const MovieRoute()),
-        ),
+        for (final page in pages)
+          _menuButton(
+            page.icon,
+            page.label(l10n),
+            // Pushed on the root stack, so the page opens on top of the bottom
+            // bar with a back button instead of replacing a tab.
+            () => context.pushRoute(page.route),
+          ),
         _menuButton(Icons.info_outline_rounded, l10n.about, () {
           showAboutDialog(
             applicationVersion: appInfo.version, //

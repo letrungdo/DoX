@@ -22,14 +22,6 @@ class _StorageService {
     return prefs.setString(StorageKey.themeMode, value.name);
   }
 
-  int getTabIndex() {
-    return prefs.getInt(StorageKey.tabIndex) ?? 1;
-  }
-
-  Future<bool> setTabIndex(int index) {
-    return prefs.setInt(StorageKey.tabIndex, index);
-  }
-
   String? getRouterIp() {
     return prefs.getString(StorageKey.routerIp);
   }
@@ -105,38 +97,6 @@ class _StorageService {
     return prefs.setString(StorageKey.locale, value);
   }
 
-  bool getShowLocketTab() {
-    return prefs.getBool(StorageKey.showLocketTab) ?? false;
-  }
-
-  Future<bool> setShowLocketTab(bool value) {
-    return prefs.setBool(StorageKey.showLocketTab, value);
-  }
-
-  bool getShowElectricTab() {
-    return prefs.getBool(StorageKey.showElectricTab) ?? true;
-  }
-
-  Future<bool> setShowElectricTab(bool value) {
-    return prefs.setBool(StorageKey.showElectricTab, value);
-  }
-
-  bool getShowLunarTab() {
-    return prefs.getBool(StorageKey.showLunarTab) ?? true;
-  }
-
-  Future<bool> setShowLunarTab(bool value) {
-    return prefs.setBool(StorageKey.showLunarTab, value);
-  }
-
-  bool getShowMovieTab() {
-    return prefs.getBool(StorageKey.showMovieTab) ?? true;
-  }
-
-  Future<bool> setShowMovieTab(bool value) {
-    return prefs.setBool(StorageKey.showMovieTab, value);
-  }
-
   String? getMovieBaseUrl() {
     return prefs.getString(StorageKey.movieBaseUrl);
   }
@@ -206,13 +166,59 @@ class _StorageService {
     return prefs.setString(StorageKey.movieSiteType, value);
   }
 
-  /// Bottom tab order as [AppTab] names; null when the user never reordered.
-  List<String>? getTabOrder() {
+  /// Bottom bar pages as `AppPage` names, in user order; null until the user
+  /// changes the layout for the first time.
+  List<String>? getTabPages() {
+    return prefs.getStringList(StorageKey.tabPages);
+  }
+
+  Future<bool> setTabPages(List<String> value) {
+    return prefs.setStringList(StorageKey.tabPages, value);
+  }
+
+  /// Menu pages as `AppPage` names, in user order; null until the user changes
+  /// the layout for the first time.
+  List<String>? getMenuPages() {
+    return prefs.getStringList(StorageKey.menuPages);
+  }
+
+  Future<bool> setMenuPages(List<String> value) {
+    return prefs.setStringList(StorageKey.menuPages, value);
+  }
+
+  /// Name of the bottom tab to open on launch; null before the user ever
+  /// switched tabs (or when upgrading from the index-based key).
+  String? getActiveTabPage() {
+    return prefs.getString(StorageKey.activeTabPage);
+  }
+
+  Future<bool> setActiveTabPage(String value) {
+    return prefs.setString(StorageKey.activeTabPage, value);
+  }
+
+  /// Pre-layout tab order, read once to migrate an upgrading install.
+  List<String>? getLegacyTabOrder() {
     return prefs.getStringList(StorageKey.tabOrder);
   }
 
-  Future<bool> setTabOrder(List<String> value) {
-    return prefs.setStringList(StorageKey.tabOrder, value);
+  /// Pre-layout active tab, as a position in the bottom bar. Only read as a
+  /// fallback for [getActiveTabPage]; 1 is where the app used to start.
+  int getLegacyTabIndex() {
+    return prefs.getInt(StorageKey.tabIndex) ?? 1;
+  }
+
+  /// Pre-layout visibility switches, read once to migrate an upgrading
+  /// install. Defaults match what those settings shipped with.
+  bool getLegacyShowLocketTab() {
+    return prefs.getBool(StorageKey.showLocketTab) ?? false;
+  }
+
+  bool getLegacyShowElectricTab() {
+    return prefs.getBool(StorageKey.showElectricTab) ?? true;
+  }
+
+  bool getLegacyShowLunarTab() {
+    return prefs.getBool(StorageKey.showLunarTab) ?? true;
   }
 
   bool getElectricReminderEnabled() {

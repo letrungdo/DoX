@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/constants/enum/app_tab.dart';
+import 'package:do_x/constants/enum/app_page.dart';
+import 'package:do_x/extensions/app_page_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -127,7 +128,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _buildTabOrderCard(context, l10n, appVm),
+          _buildLayoutCard(context, l10n, appVm),
         ],
       ),
     );
@@ -162,33 +163,14 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  String _tabLabel(AppTab tab, AppLocalizations l10n) {
-    return switch (tab) {
-      AppTab.news => l10n.news,
-      AppTab.chicken => l10n.chicken,
-      AppTab.locket => l10n.locket,
-      AppTab.electric => l10n.electricity,
-      AppTab.lunar => l10n.lunarCalendar,
-      AppTab.menu => l10n.menu,
-    };
-  }
-
-  bool _tabVisible(AppTab tab, AppViewModel appVm) {
-    return switch (tab) {
-      AppTab.locket => appVm.showLocketTab,
-      AppTab.electric => appVm.showElectricTab,
-      AppTab.lunar => appVm.showLunarTab,
-      _ => true,
-    };
-  }
-
-  /// Drag to reorder the bottom tabs; hideable tabs get a visibility switch.
-  Widget _buildTabOrderCard(
+  /// Lets the user decide what the app looks like: drag to reorder within a
+  /// section, or use the move button to send a page from the bottom bar to the
+  /// menu and back.
+  Widget _buildLayoutCard(
     BuildContext context,
     AppLocalizations l10n,
     AppViewModel appVm,
   ) {
-    final tabs = appVm.tabOrder;
     return NeuCard(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -213,58 +195,120 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 14),
-                Text(
-                  l10n.tabOrder,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.pageLayout,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        l10n.menuTabAlwaysPinned,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            onReorderItem: (oldIndex, newIndex) {
-              final order = List.of(tabs);
-              final tab = order.removeAt(oldIndex);
-              order.insert(newIndex, tab);
-              appVm.setTabOrder(order);
-            },
-            children: [
-              for (var i = 0; i < tabs.length; i++)
-                ListTile(
-                  key: ValueKey(tabs[i]),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-                  leading: ReorderableDragStartListener(
-                    index: i,
-                    child: Icon(
-                      Icons.drag_handle_rounded,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  title: Text(_tabLabel(tabs[i], l10n)),
-                  trailing: tabs[i].isHideable
-                      ? Switch.adaptive(
-                          value: _tabVisible(tabs[i], appVm),
-                          onChanged: (value) {
-                            switch (tabs[i]) {
-                              case AppTab.locket:
-                                appVm.setShowLocketTab(value);
-                              case AppTab.electric:
-                                appVm.setShowElectricTab(value);
-                              case AppTab.lunar:
-                                appVm.setShowLunarTab(value);
-                              default:
-                                break;
-                            }
-                          },
-                        )
-                      : null,
-                ),
-            ],
+          _buildSectionHeader(
+            context,
+            "${l10n.bottomTabs} (${appVm.tabPages.length}/${AppPage.maxTabs})",
           ),
+          _buildPageList(
+            context,
+            l10n,
+            pages: appVm.tabPages,
+            onReorder: appVm.reorderTabPages,
+            moveIcon: Icons.arrow_downward_rounded,
+            moveTooltip: l10n.moveToMenu,
+            onMove: appVm.movePageToMenu,
+            emptyLabel: l10n.noPagesHere,
+          ),
+          _buildSectionHeader(context, l10n.menu),
+          _buildPageList(
+            context,
+            l10n,
+            pages: appVm.menuPages,
+            onReorder: appVm.reorderMenuPages,
+            moveIcon: Icons.arrow_upward_rounded,
+            moveTooltip: l10n.moveToBottomTabs,
+            onMove: (page) {
+              if (appVm.movePageToTabs(page)) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.maxTabsReached(AppPage.maxTabs))),
+              );
+            },
+            emptyLabel: l10n.noPagesHere,
+          ),
+          const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+      child: Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageList(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required List<AppPage> pages,
+    required void Function(int oldIndex, int newIndex) onReorder,
+    required IconData moveIcon,
+    required String moveTooltip,
+    required void Function(AppPage page) onMove,
+    required String emptyLabel,
+  }) {
+    if (pages.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+        child: Text(emptyLabel, style: Theme.of(context).textTheme.bodySmall),
+      );
+    }
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      onReorderItem: onReorder,
+      children: [
+        for (var i = 0; i < pages.length; i++)
+          ListTile(
+            key: ValueKey(pages[i]),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+            leading: ReorderableDragStartListener(
+              index: i,
+              child: Icon(
+                Icons.drag_handle_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            title: Row(
+              children: [
+                Icon(pages[i].icon, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(pages[i].label(l10n))),
+              ],
+            ),
+            trailing: IconButton(
+              icon: Icon(moveIcon),
+              tooltip: moveTooltip,
+              onPressed: () => onMove(pages[i]),
+            ),
+          ),
+      ],
     );
   }
 

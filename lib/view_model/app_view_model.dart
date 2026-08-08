@@ -1,4 +1,4 @@
-import 'package:do_x/constants/enum/app_tab.dart';
+import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -14,33 +14,66 @@ class AppViewModel extends CoreViewModel {
       : null;
   Locale? get locale => _locale;
 
-  bool _showLocketTab = storageService.getShowLocketTab();
-  bool get showLocketTab => _showLocketTab;
-
-  bool _showElectricTab = storageService.getShowElectricTab();
-  bool get showElectricTab => _showElectricTab;
-
-  bool _showLunarTab = storageService.getShowLunarTab();
-  bool get showLunarTab => _showLunarTab;
-
-  List<AppTab> _tabOrder = AppTab.sanitizeOrder(storageService.getTabOrder());
+  PageLayout _layout = AppPage.layoutFromStorage();
 
   DateTime? _electricMonthToHighlight;
   DateTime? get electricMonthToHighlight => _electricMonthToHighlight;
 
-  /// Full user-defined order, including hidden tabs (for the Settings list).
-  List<AppTab> get tabOrder => _tabOrder;
+  /// Pages the user put in the bottom bar, in order, without the pinned menu
+  /// tab — this is the list Settings edits.
+  List<AppPage> get tabPages => List.unmodifiable(_layout.tabs);
 
-  /// Tabs actually shown in the bottom bar, in user order.
-  List<AppTab> get visibleTabs {
-    return _tabOrder.where((tab) {
-      return switch (tab) {
-        AppTab.locket => _showLocketTab,
-        AppTab.electric => _showElectricTab,
-        AppTab.lunar => _showLunarTab,
-        _ => true,
-      };
-    }).toList();
+  /// Pages the user left in the menu, in order.
+  List<AppPage> get menuPages => List.unmodifiable(_layout.menu);
+
+  /// What the bottom bar actually renders: the user's tabs plus the always
+  /// pinned menu tab, so Settings is reachable in any layout.
+  List<AppPage> get visibleTabs => [..._layout.tabs, AppPage.menu];
+
+  bool get canAddTab => _layout.tabs.length < AppPage.maxTabs;
+
+  /// Moves [page] into the bottom bar at [index] (appended when omitted).
+  /// Returns false when the bar is already full.
+  bool movePageToTabs(AppPage page, {int? index}) {
+    if (page == AppPage.menu || _layout.tabs.contains(page)) return false;
+    if (!canAddTab) return false;
+    final tabs = List.of(_layout.tabs);
+    final menu = List.of(_layout.menu)..remove(page);
+    tabs.insert((index ?? tabs.length).clamp(0, tabs.length), page);
+    _saveLayout(tabs, menu);
+    return true;
+  }
+
+  /// Moves [page] out of the bottom bar and into the menu at [index]
+  /// (appended when omitted).
+  void movePageToMenu(AppPage page, {int? index}) {
+    if (page == AppPage.menu || _layout.menu.contains(page)) return;
+    final tabs = List.of(_layout.tabs)..remove(page);
+    final menu = List.of(_layout.menu);
+    menu.insert((index ?? menu.length).clamp(0, menu.length), page);
+    _saveLayout(tabs, menu);
+  }
+
+  void reorderTabPages(int oldIndex, int newIndex) {
+    final tabs = List.of(_layout.tabs);
+    tabs.insert(newIndex, tabs.removeAt(oldIndex));
+    _saveLayout(tabs, _layout.menu);
+  }
+
+  void reorderMenuPages(int oldIndex, int newIndex) {
+    final menu = List.of(_layout.menu);
+    menu.insert(newIndex, menu.removeAt(oldIndex));
+    _saveLayout(_layout.tabs, menu);
+  }
+
+  void _saveLayout(List<AppPage> tabs, List<AppPage> menu) {
+    _layout = AppPage.sanitize(
+      tabs.map((e) => e.name).toList(),
+      menu.map((e) => e.name).toList(),
+    );
+    notifyListeners();
+    storageService.setTabPages(_layout.tabs.map((e) => e.name).toList());
+    storageService.setMenuPages(_layout.menu.map((e) => e.name).toList());
   }
 
   void toggleThemeMode() {
@@ -69,30 +102,6 @@ class AppViewModel extends CoreViewModel {
     _locale = locale;
     notifyListeners();
     storageService.setLocale(locale.languageCode);
-  }
-
-  void setShowLocketTab(bool value) {
-    _showLocketTab = value;
-    notifyListeners();
-    storageService.setShowLocketTab(value);
-  }
-
-  void setShowElectricTab(bool value) {
-    _showElectricTab = value;
-    notifyListeners();
-    storageService.setShowElectricTab(value);
-  }
-
-  void setShowLunarTab(bool value) {
-    _showLunarTab = value;
-    notifyListeners();
-    storageService.setShowLunarTab(value);
-  }
-
-  void setTabOrder(List<AppTab> value) {
-    _tabOrder = List.of(value);
-    notifyListeners();
-    storageService.setTabOrder(_tabOrder.map((e) => e.name).toList());
   }
 
   void requestElectricMonth(DateTime month) {

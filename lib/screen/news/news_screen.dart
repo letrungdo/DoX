@@ -14,11 +14,11 @@ import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/news/coin_chart.dart';
 import 'package:do_x/view_model/news/news_view_model.dart';
-import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
@@ -51,11 +51,10 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _NewsScreenState<V extends NewsViewModel>
-    extends ScreenState<NewsScreen, V> {
+    extends ScreenState<NewsScreen, V>
+    with TabReselect {
   final colsRatio = [40, 30, 30];
   final _scrollController = ScrollController();
-  MainViewModel? _mainViewModel;
-  late final Future<void> Function() _tabReselectHandler;
 
   /// The push socket only needs to run while this tab is actually on screen.
   bool _isVisible = true;
@@ -63,38 +62,16 @@ class _NewsScreenState<V extends NewsViewModel>
   WebSocketService get _socketService => context.read<WebSocketService>();
 
   @override
-  void initState() {
-    _tabReselectHandler = _handleTabReselect;
-    super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final mainViewModel = context.read<MainViewModel>();
-    if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(
-      NewsRoute.name,
-      _tabReselectHandler,
-    );
-    _mainViewModel = mainViewModel;
-    mainViewModel.registerTabReselectHandler(
-      NewsRoute.name,
-      _tabReselectHandler,
-    );
-  }
-
-  @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(
-      NewsRoute.name,
-      _tabReselectHandler,
-    );
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleTabReselect() async {
+  @override
+  String get tabRouteName => NewsRoute.name;
+
+  @override
+  Future<void> onTabReselect() async {
     if (_scrollController.hasClients) {
       await _scrollController.animateTo(
         0,

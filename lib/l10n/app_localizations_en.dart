@@ -114,7 +114,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get electricityTitle => 'Electricity management';
 
   @override
-  String get tabOrder => 'Tab order & visibility';
+  String get pageLayout => 'Tabs & menu';
+
+  @override
+  String get menuTabAlwaysPinned => 'The Menu tab is always shown.';
+
+  @override
+  String get bottomTabs => 'Bottom tabs';
+
+  @override
+  String get moveToMenu => 'Move to menu';
+
+  @override
+  String get moveToBottomTabs => 'Move to bottom tabs';
+
+  @override
+  String get noPagesHere => 'Nothing here yet.';
+
+  @override
+  String maxTabsReached(int count) {
+    return 'The bottom bar holds up to $count pages.';
+  }
 
   @override
   String get electricReminder => 'Monthly electricity reminder';
@@ -270,6 +290,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lunar => 'Lunar';
 
   @override
+  String get lunarTab => 'Calendar';
+
+  @override
   String get lunarCalendar => 'Lunar calendar';
 
   @override
@@ -384,7 +407,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wifiManagement => 'Wifi Management';
 
   @override
+  String get wifiShort => 'Wifi';
+
+  @override
   String get fengShuiCompass => 'Feng shui compass';
+
+  @override
+  String get compass => 'Compass';
 
   @override
   String get fengShuiHouseFacing => 'House facing';

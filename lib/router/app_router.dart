@@ -1,5 +1,5 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:do_x/constants/enum/app_tab.dart';
+import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
@@ -15,6 +15,15 @@ final _supabaseAuthGuard = AutoRouteGuard.simple((resolver, _) {
   }
 });
 
+/// Requires the Locket account (separate from the Supabase one).
+final _locketAuthGuard = AutoRouteGuard.simple((resolver, _) {
+  if (appData.user?.idToken != null) {
+    resolver.next();
+  } else {
+    resolver.redirectUntil(LoginRoute());
+  }
+});
+
 @AutoRouterConfig(replaceInRouteName: 'Screen|Page,Route')
 class _AppRouter extends RootStackRouter {
   @override
@@ -22,14 +31,12 @@ class _AppRouter extends RootStackRouter {
 
   @override
   List<AutoRoute> get routes {
-    // The stored index is a position in the user-ordered visible tab list, so
-    // resolve it to a tab id before marking a child route as initial.
-    final visibleTabs = AppTab.visibleFromStorage();
-    final initialTabIndex = storageService.getTabIndex();
-    final initialTab =
-        (initialTabIndex >= 0 && initialTabIndex < visibleTabs.length)
-        ? visibleTabs[initialTabIndex]
-        : AppTab.news;
+    // Every movable page is declared twice: once as a tab child of MainRoute,
+    // and once on the root stack under [_pushPrefix]. Which one a
+    // `pushRoute`/tab switch resolves to is decided by the router that handles
+    // it, so the same PageRouteInfo works in both placements and the user can
+    // move a page between the bottom bar and the menu freely.
+    final initialTab = _initialTab();
 
     return [
       CustomRoute(
@@ -39,7 +46,7 @@ class _AppRouter extends RootStackRouter {
         transitionsBuilder: TransitionsBuilders.fadeIn,
         children: [
           AutoRoute(
-            initial: initialTab == AppTab.news,
+            initial: initialTab == AppPage.news,
             path: 'news',
             page: newsTab.page,
             children: [
@@ -48,7 +55,7 @@ class _AppRouter extends RootStackRouter {
             ],
           ),
           AutoRoute(
-            initial: initialTab == AppTab.chicken,
+            initial: initialTab == AppPage.chicken,
             path: 'chicken',
             page: chickenTab.page,
             guards: [_supabaseAuthGuard],
@@ -65,21 +72,13 @@ class _AppRouter extends RootStackRouter {
           ),
           AutoRoute(
             path: 'locket',
-            initial: initialTab == AppTab.locket,
+            initial: initialTab == AppPage.locket,
             page: locketTab.page,
             children: [
               AutoRoute(
                 path: '',
                 page: LocketRoute.page,
-                guards: [
-                  AutoRouteGuard.simple((resolver, _) {
-                    if (appData.user?.idToken != null) {
-                      resolver.next();
-                    } else {
-                      resolver.redirectUntil(LoginRoute());
-                    }
-                  }),
-                ],
+                guards: [_locketAuthGuard],
               ),
               CustomRoute(
                 path: 'login',
@@ -91,40 +90,119 @@ class _AppRouter extends RootStackRouter {
             ],
           ),
           AutoRoute(
-            initial: initialTab == AppTab.electric,
+            initial: initialTab == AppPage.electric,
             path: 'electric',
             page: ElectricRoute.page,
           ),
           AutoRoute(
-            initial: initialTab == AppTab.lunar,
+            initial: initialTab == AppPage.lunar,
             path: 'lunar',
             page: LunarRoute.page,
           ),
           AutoRoute(
-            initial: initialTab == AppTab.menu,
+            initial: initialTab == AppPage.wifi,
+            path: 'wifi',
+            page: WifiManagementRoute.page,
+          ),
+          AutoRoute(
+            initial: initialTab == AppPage.fengShui,
+            path: 'feng-shui',
+            page: FengShuiCompassRoute.page,
+          ),
+          AutoRoute(
+            initial: initialTab == AppPage.movie,
+            path: 'movie',
+            page: MovieRoute.page,
+          ),
+          AutoRoute(
+            initial: initialTab == AppPage.menu,
             path: 'menu',
             page: MenuRoute.page,
           ),
         ],
       ),
       AutoRoute(path: '/login', page: AppLoginRoute.page),
-      AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
-      AutoRoute(path: '/feng-shui-compass', page: FengShuiCompassRoute.page),
-      AutoRoute(
-        path: '/movie',
-        page: MovieRoute.page,
-        guards: [_supabaseAuthGuard],
-      ),
-      AutoRoute(
-        path: '/movie/detail',
-        page: MovieDetailRoute.page,
-        guards: [_supabaseAuthGuard],
-      ),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
+      ..._pushableFeatureRoutes,
       RedirectRoute(path: '*', redirectTo: '/'),
     ];
   }
+
+  /// Root-stack copies of the feature pages, used when a page lives in the
+  /// menu and is pushed on top of the bottom bar instead of being a tab.
+  /// Their sub-pages are here too, so a pushed page navigates within the root
+  /// stack the same way it navigates inside its tab.
+  List<AutoRoute> get _pushableFeatureRoutes => [
+    AutoRoute(path: '$_pushPrefix/news', page: NewsRoute.page),
+    AutoRoute(path: '$_pushPrefix/news/detail', page: MarketDetailRoute.page),
+    AutoRoute(
+      path: '$_pushPrefix/chicken',
+      page: ChickenRoute.page,
+      guards: [_supabaseAuthGuard],
+    ),
+    AutoRoute(
+      path: '$_pushPrefix/chicken/:batchId',
+      page: ChickenBatchDetailRoute.page,
+    ),
+    AutoRoute(
+      path: '$_pushPrefix/chicken/statistics',
+      page: ChickenStatisticsRoute.page,
+    ),
+    AutoRoute(
+      path: '$_pushPrefix/chicken/cock-sales',
+      page: CockSalesRoute.page,
+    ),
+    AutoRoute(
+      path: '$_pushPrefix/chicken/global-expenses',
+      page: GlobalExpensesRoute.page,
+    ),
+    AutoRoute(
+      path: '$_pushPrefix/locket',
+      page: LocketRoute.page,
+      guards: [_locketAuthGuard],
+    ),
+    CustomRoute(
+      path: '$_pushPrefix/locket/login',
+      page: LoginRoute.page,
+      transitionsBuilder: TransitionsBuilders.fadeIn,
+    ),
+    AutoRoute(path: '$_pushPrefix/locket/account', page: AccountRoute.page),
+    AutoRoute(path: '$_pushPrefix/locket/trimmer', page: TrimmerRoute.page),
+    AutoRoute(path: '$_pushPrefix/electric', page: ElectricRoute.page),
+    AutoRoute(path: '$_pushPrefix/lunar', page: LunarRoute.page),
+    AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
+    AutoRoute(path: '/feng-shui-compass', page: FengShuiCompassRoute.page),
+    AutoRoute(
+      path: '/movie',
+      page: MovieRoute.page,
+      guards: [_supabaseAuthGuard],
+    ),
+    AutoRoute(
+      path: '/movie/detail',
+      page: MovieDetailRoute.page,
+      guards: [_supabaseAuthGuard],
+    ),
+  ];
+
+  /// The tab to mark as initial: the one the user was last on, as long as it
+  /// is still in the bottom bar.
+  AppPage _initialTab() {
+    final tabs = AppPage.tabsFromStorage();
+    var tab = AppPage.byName(storageService.getActiveTabPage());
+    if (tab == null) {
+      // Upgrading from the index-based key: resolve it against today's bar.
+      final legacyIndex = storageService.getLegacyTabIndex();
+      if (legacyIndex >= 0 && legacyIndex < tabs.length) {
+        tab = tabs[legacyIndex];
+      }
+    }
+    return (tab != null && tabs.contains(tab)) ? tab : tabs.first;
+  }
 }
+
+/// Path prefix keeping the root-stack copies of tab pages from colliding with
+/// the tab URLs.
+const _pushPrefix = '/p';
 
 const newsTab = EmptyShellRoute('NewsTab');
 const locketTab = EmptyShellRoute('LocketTab');

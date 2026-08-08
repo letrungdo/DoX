@@ -16,6 +16,7 @@ import 'package:do_x/screen/movie/movie_poster_card.dart';
 import 'package:do_x/screen/movie/movie_server_dialog.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
+import 'package:do_x/store/immersive_mode.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
@@ -178,6 +179,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    immersiveMode.value = false;
     if (_supportsDeviceRotation) {
       unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]));
     }
@@ -577,6 +579,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
 
   Future<void> _closeOverlay() async {
     if (_playingMovie == null) return;
+    immersiveMode.value = false;
     setState(() {
       _playingMovie = null;
       _entryRect = null;
@@ -684,15 +687,20 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
           unawaited(_closeOverlay());
         }
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            child: _buildBrowser(context, emptyMessage: emptyMessage, movieLabel: movieLabel, baseUrl: baseUrl, l10n: l10n),
-          ),
-          if (_playingMovie != null) _buildPlayerOverlay(context, _playingMovie!),
-        ],
+      // The overlay is laid out against the space this screen actually got,
+      // not the window: as a bottom tab that space stops above the tab bar, so
+      // measuring the window would drop the mini bar behind it.
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: _buildBrowser(context, emptyMessage: emptyMessage, movieLabel: movieLabel, baseUrl: baseUrl, l10n: l10n),
+            ),
+            if (_playingMovie != null) _buildPlayerOverlay(context, _playingMovie!, constraints.biggest),
+          ],
+        ),
       ),
     );
   }
@@ -1070,8 +1078,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
 
   /// The YouTube-style player: a rect that lerps between the tapped card (or
   /// the mini bar) and the whole screen, hosting the detail page inside.
-  Widget _buildPlayerOverlay(BuildContext context, Movie movie) {
-    final size = MediaQuery.sizeOf(context);
+  Widget _buildPlayerOverlay(BuildContext context, Movie movie, Size size) {
     final viewPadding = MediaQuery.paddingOf(context);
     final fullRect = Offset.zero & size;
     // Landscape keeps the notch on a side, so the bar is inset there as well as
@@ -1128,7 +1135,11 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
                     minimizeProgress: t,
                     controller: _detailController,
                     onFullScreenChanged: (isFullScreen) {
-                      if (mounted) setState(() => _isDetailFullScreen = isFullScreen);
+                      if (!mounted) return;
+                      // Full-screen video has to cover the bottom tab bar too
+                      // when this page is one of the tabs.
+                      immersiveMode.value = isFullScreen;
+                      setState(() => _isDetailFullScreen = isFullScreen);
                     },
                     onRelatedMovieTap: (related) => setState(() => _playingMovie = related),
                     onClose: () => unawaited(_closeOverlay()),
