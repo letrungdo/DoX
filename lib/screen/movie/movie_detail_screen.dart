@@ -484,7 +484,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
     String? streamUrl = episode.m3u8Url;
 
-    // If streamUrl is null, it might be a alternative server alternative server
+    // If streamUrl is null, it might be an alternative server
     if (streamUrl == null && _selectedServer != null) {
       final match = RegExp(r'Server (\d+)').firstMatch(_selectedServer!.name);
       if (match != null) {
