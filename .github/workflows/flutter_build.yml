@@ -1,4 +1,4 @@
-name: Build Flutter Android and iOS
+name: Build Flutter Android, iOS, and macOS
 
 on:
   push:
@@ -157,10 +157,74 @@ jobs:
           target_commit: ${{ github.sha }}
           overwrite: true
 
+  build-macos:
+    runs-on: macos-15
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate environment files
+        uses: ./.github/actions/generate-env-files
+        with:
+          environment: ${{ env.BUILD_ENV }}
+          dart_define_base64: ${{ secrets.DART_DEFINE_BASE64 }}
+          google_services_base64: ${{ secrets.GOOGLE_SERVICES_BASE64 }}
+          google_service_info_base64: ${{ secrets.GOOGLE_SERVICE_INFO_BASE64 }}
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        uses: ./.github/actions/get-pubspec-version
+
+      - name: Set XCode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version-file: pubspec.yaml
+
+      - name: Build macOS app
+        run: |
+          flutter build macos --release \
+            --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
+            --obfuscate --split-debug-info=build/obfuscate
+
+      - name: Package DMG
+        run: |
+          app_path="build/macos/Build/Products/Release/Do X.app"
+          staging_path="build/macos/dmg"
+
+          test -d "$app_path"
+          mkdir -p "$staging_path"
+          ditto "$app_path" "$staging_path/Do X.app"
+          ln -s /Applications "$staging_path/Applications"
+
+          hdiutil create \
+            -volname "Do X" \
+            -srcfolder "$staging_path" \
+            -format UDZO \
+            -ov \
+            "build/macos/do-x.dmg"
+
+      - name: Upload DMG to Release
+        uses: svenstaro/upload-release-action@2.9.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/macos/do-x.dmg
+          asset_name: do-x.dmg
+          tag: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
+          overwrite: true
+
   update-release-notes:
     needs:
       - build-android
       - build-ios
+      - build-macos
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
