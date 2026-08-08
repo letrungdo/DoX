@@ -37,13 +37,20 @@ class MovieService {
     );
   }
 
+  /// Takes what the user typed — `example.com`, `example.com/`, or a full URL —
+  /// and returns the canonical form stored for a server.
+  String normalizeServerUrl(String rawUrl) {
+    var url = rawUrl.trim();
+    if (url.isEmpty) return '';
+    if (!url.contains('://')) url = 'https://$url';
+    if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+    return url;
+  }
+
   /// Update base URL manually, re-initialize Dio, and discover config
   Future<void> updateBaseUrl(String newUrl) async {
-    String formattedUrl = newUrl.trim();
+    final formattedUrl = normalizeServerUrl(newUrl);
     if (formattedUrl.isEmpty) return;
-    if (formattedUrl.endsWith('/')) {
-      formattedUrl = formattedUrl.substring(0, formattedUrl.length - 1);
-    }
 
     final servers = storageService.getMovieServers().toSet();
     if (servers.add(formattedUrl)) {
@@ -76,9 +83,7 @@ class MovieService {
     }
 
     if (primary == url) {
-      await storageService.setPrimaryMovieServer(
-        servers.isNotEmpty ? servers.first : '',
-      );
+      await storageService.setPrimaryMovieServer(servers.isNotEmpty ? servers.first : '');
     }
   }
 
@@ -94,10 +99,9 @@ class MovieService {
     final primaryServer = storageService.getPrimaryMovieServer();
     final checkPrimary = primaryServer ?? '';
 
-    final isPrimary = baseUrl == checkPrimary ||
-        (baseUrl != null &&
-            checkPrimary.isNotEmpty &&
-            baseUrl!.contains(checkPrimary.replaceFirst('https://', '')));
+    final isPrimary =
+        baseUrl == checkPrimary ||
+        (baseUrl != null && checkPrimary.isNotEmpty && baseUrl!.contains(checkPrimary.replaceFirst('https://', '')));
 
     if (isPrimary) {
       await storageService.setMovieSiteType('ophim');
@@ -137,9 +141,7 @@ class MovieService {
       final document = html_parser.parse(htmlStr);
 
       // 1. Discover Label
-      String? label = document
-          .querySelector('meta[property="og:site_name"]')
-          ?.attributes['content'];
+      String? label = document.querySelector('meta[property="og:site_name"]')?.attributes['content'];
       label ??= document.querySelector('title')?.text.split('|').first.trim();
       label ??= document.querySelector('title')?.text.split('-').first.trim();
       if (label != null && label.isNotEmpty) {
@@ -151,9 +153,7 @@ class MovieService {
       final seenPaths = <String>{};
 
       // Common selectors for menus
-      final navLinks = document.querySelectorAll(
-        'nav a, .menu a, .navbar a, #main-menu a, .list-category a',
-      );
+      final navLinks = document.querySelectorAll('nav a, .menu a, .navbar a, #main-menu a, .list-category a');
 
       for (final link in navLinks) {
         final name = link.text.trim();
@@ -163,25 +163,11 @@ class MovieService {
         if (path == '/' || path == baseUrl) continue;
 
         // Filter for interesting paths
-        final isCategory =
-            path.contains('/category/') ||
-            path.contains('/trending/') ||
-            path.contains('/video/') ||
-            path.contains('/tag/');
+        final isCategory = path.contains('/category/') || path.contains('/trending/') || path.contains('/video/') || path.contains('/tag/');
 
         if (isCategory && !seenPaths.contains(path)) {
-          final id = path
-              .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')
-              .toLowerCase();
-          categories.add(
-            MovieCategory(
-              id: id,
-              name: name,
-              path: path.startsWith('http')
-                  ? path.replaceFirst(baseUrl!, '')
-                  : path,
-            ),
-          );
+          final id = path.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_').toLowerCase();
+          categories.add(MovieCategory(id: id, name: name, path: path.startsWith('http') ? path.replaceFirst(baseUrl!, '') : path));
           seenPaths.add(path);
         }
       }
@@ -190,9 +176,7 @@ class MovieService {
         await updateCategories(categories);
       }
 
-      logger.d(
-        'MovieService discoverConfig success: Label=$label, Cats=${categories.length}',
-      );
+      logger.d('MovieService discoverConfig success: Label=$label, Cats=${categories.length}');
     } catch (e) {
       logger.e('MovieService discoverConfig failed', error: e);
     }
@@ -217,13 +201,7 @@ class MovieService {
           final List<dynamic> items = response.data['data']['items'];
           for (final item in items) {
             final slug = item['slug'];
-            categories.add(
-              MovieCategory(
-                id: 'genre_$slug',
-                name: item['name'],
-                path: '/v1/api/the-loai/$slug',
-              ),
-            );
+            categories.add(MovieCategory(id: 'genre_$slug', name: item['name'], path: '/v1/api/the-loai/$slug'));
           }
         }
       } catch (e) {
@@ -237,13 +215,7 @@ class MovieService {
           final List<dynamic> items = response.data['data']['items'];
           for (final item in items) {
             final slug = item['slug'];
-            categories.add(
-              MovieCategory(
-                id: 'country_$slug',
-                name: item['name'],
-                path: '/v1/api/quoc-gia/$slug',
-              ),
-            );
+            categories.add(MovieCategory(id: 'country_$slug', name: item['name'], path: '/v1/api/quoc-gia/$slug'));
           }
         }
       } catch (e) {
@@ -326,10 +298,7 @@ class MovieService {
   }
 
   bool _isVietsub(String value) {
-    return RegExp(
-      r'viet\s*sub|việt\s*sub',
-      caseSensitive: false,
-    ).hasMatch(value);
+    return RegExp(r'viet\s*sub|việt\s*sub', caseSensitive: false).hasMatch(value);
   }
 
   /// Helper to extract movie ID from URL slug (e.g. "...-3982.html" => "3982")
@@ -385,15 +354,10 @@ class MovieService {
     final mainContent = document.querySelector('#main-content');
     final container = mainContent ?? document;
 
-    final items = container.querySelectorAll(
-      '.movie-item, .movie-carousel-top-item, .trending-movie-item, .last-film-box li a',
-    );
+    final items = container.querySelectorAll('.movie-item, .movie-carousel-top-item, .trending-movie-item, .last-film-box li a');
 
     for (final item in items) {
-      final anchor =
-          item.localName == 'a'
-              ? item
-              : item.querySelector('a') ?? item.parent;
+      final anchor = item.localName == 'a' ? item : item.querySelector('a') ?? item.parent;
       if (anchor == null || anchor.localName != 'a') continue;
 
       final href = anchor.attributes['href'] ?? '';
@@ -404,12 +368,7 @@ class MovieService {
 
       final title =
           anchor.attributes['title'] ??
-          anchor
-              .querySelector(
-                '.movie-title-1, .movie-name-1, .trending-movie-name, .list-top-movie-item-vn',
-              )
-              ?.text
-              .trim() ??
+          anchor.querySelector('.movie-title-1, .movie-name-1, .trending-movie-name, .list-top-movie-item-vn')?.text.trim() ??
           '';
 
       if (title.isEmpty) continue;
@@ -419,31 +378,16 @@ class MovieService {
       if (imgEl != null) {
         poster = imgEl.attributes['src'] ?? imgEl.attributes['data-src'] ?? '';
       } else {
-        final style =
-            anchor
-                .querySelector('.list-top-movie-item-thumb')
-                ?.attributes['style'] ??
-            '';
+        final style = anchor.querySelector('.list-top-movie-item-thumb')?.attributes['style'] ?? '';
         final bgMatch = RegExp(r"url\('?([^'\)]+)'?\)").firstMatch(style);
         if (bgMatch != null) poster = bgMatch.group(1) ?? '';
       }
 
-      final subtitle = anchor
-          .querySelector('.meta-sub, .ribbon-sub')
-          ?.text
-          .trim();
-      final badge =
-          anchor.querySelector('.ribbon-sub, .ribbon')?.text.trim() ?? subtitle;
-      final views = anchor
-          .querySelector(
-            '.meta-viewed, .ribbon-viewed, .list-top-movie-item-view',
-          )
-          ?.text
-          .trim();
+      final subtitle = anchor.querySelector('.meta-sub, .ribbon-sub')?.text.trim();
+      final badge = anchor.querySelector('.ribbon-sub, .ribbon')?.text.trim() ?? subtitle;
+      final views = anchor.querySelector('.meta-viewed, .ribbon-viewed, .list-top-movie-item-view')?.text.trim();
       final likes = anchor.querySelector('.meta-like')?.text.trim();
-      final hasVietsub = _isVietsub(
-        [title, subtitle, badge].whereType<String>().join(' '),
-      );
+      final hasVietsub = _isVietsub([title, subtitle, badge].whereType<String>().join(' '));
 
       movies.add(
         Movie(
@@ -485,11 +429,7 @@ class MovieService {
   }
 
   /// Get movies by category (trending, recent) with pagination
-  Future<MovieResponse> getMoviesByCategory(
-    String categoryPath, {
-    int page = 1,
-    CancelToken? cancelToken,
-  }) async {
+  Future<MovieResponse> getMoviesByCategory(String categoryPath, {int page = 1, CancelToken? cancelToken}) async {
     if (baseUrl == null || baseUrl!.isEmpty) {
       return const MovieResponse(movies: [], total: 0);
     }
@@ -522,11 +462,7 @@ class MovieService {
   }
 
   /// Search movies by keyword with pagination
-  Future<MovieResponse> searchMovies(
-    String keyword, {
-    int page = 1,
-    CancelToken? cancelToken,
-  }) async {
+  Future<MovieResponse> searchMovies(String keyword, {int page = 1, CancelToken? cancelToken}) async {
     if (baseUrl == null || baseUrl!.isEmpty) {
       return const MovieResponse(movies: [], total: 0);
     }
@@ -552,12 +488,7 @@ class MovieService {
     }
   }
 
-  Future<MovieDetail?> getMovieDetail(
-    String movieUrl,
-    String movieId, {
-    CancelToken? cancelToken,
-    bool includeStream = true,
-  }) async {
+  Future<MovieDetail?> getMovieDetail(String movieUrl, String movieId, {CancelToken? cancelToken, bool includeStream = true}) async {
     if (baseUrl == null || baseUrl!.isEmpty) return null;
 
     final isOphim = _siteType == MovieSiteType.ophim;
@@ -573,44 +504,31 @@ class MovieService {
 
       final title =
           document.querySelector('h1.header-title')?.text.trim() ??
-          document
-              .querySelector('meta[property="og:title"]')
-              ?.attributes['content'] ??
+          document.querySelector('meta[property="og:title"]')?.attributes['content'] ??
           '';
 
       final description =
           document.querySelector('#film-content-wrapper p')?.text.trim() ??
-          document
-              .querySelector('meta[name="description"]')
-              ?.attributes['content'] ??
+          document.querySelector('meta[name="description"]')?.attributes['content'] ??
           '';
 
       final poster = _fixUrl(
-        document
-                .querySelector('meta[property="og:image"]')
-                ?.attributes['content'] ??
+        document.querySelector('meta[property="og:image"]')?.attributes['content'] ??
             document.querySelector('img.thumb')?.attributes['src'],
       );
 
       final tagElements = document.querySelectorAll('.tag-list .tag-link');
-      final tags = tagElements
-          .map((e) => e.text.trim())
-          .where((t) => t.isNotEmpty)
-          .toList();
+      final tags = tagElements.map((e) => e.text.trim()).where((t) => t.isNotEmpty).toList();
       final views = document.querySelector('.icon-view')?.text.trim();
       final likes = document.querySelector('.icon-like')?.text.trim();
       final hasVietsub = _isVietsub([title, description, ...tags].join(' '));
 
-      final relatedMovies = _parseMovieResponse(
-        htmlStr,
-      ).movies.where((m) => m.id != movieId).toList();
+      final relatedMovies = _parseMovieResponse(htmlStr).movies.where((m) => m.id != movieId).toList();
 
       String? streamUrl;
       if (includeStream) {
         // Attempt to extract direct stream URL from inline script first.
-        final atobMatch = RegExp(
-          r'window\.atob\("([^"]+)"\)',
-        ).firstMatch(htmlStr);
+        final atobMatch = RegExp(r'window\.atob\("([^"]+)"\)').firstMatch(htmlStr);
         if (atobMatch != null) {
           final b64 = atobMatch.group(1);
           if (b64 != null) {
@@ -622,12 +540,7 @@ class MovieService {
 
         // If inline script didn't contain stream or failed, call AJAX server 1.
         if (streamUrl == null || streamUrl.isEmpty) {
-          streamUrl = await getStreamUrl(
-            movieId,
-            movieUrl: movieUrl,
-            server: 1,
-            cancelToken: cancelToken,
-          );
+          streamUrl = await getStreamUrl(movieId, movieUrl: movieUrl, server: 1, cancelToken: cancelToken);
         }
       }
 
@@ -648,10 +561,7 @@ class MovieService {
         );
       }
 
-      final thumbnailTrackMatch = RegExp(
-        r'''["']([^"']+\.vtt)["']''',
-        caseSensitive: false,
-      ).firstMatch(htmlStr);
+      final thumbnailTrackMatch = RegExp(r'''["']([^"']+\.vtt)["']''', caseSensitive: false).firstMatch(htmlStr);
       final thumbnailTrackUrl = _fixUrl(thumbnailTrackMatch?.group(1));
 
       return MovieDetail(
@@ -678,12 +588,7 @@ class MovieService {
   }
 
   /// Call POST /ajax API to get player HTML snippet, then decode base64 m3u8 stream
-  Future<String?> getStreamUrl(
-    String movieId, {
-    String? movieUrl,
-    int server = 1,
-    CancelToken? cancelToken,
-  }) async {
+  Future<String?> getStreamUrl(String movieId, {String? movieUrl, int server = 1, CancelToken? cancelToken}) async {
     if (baseUrl == null || baseUrl!.isEmpty) return null;
     try {
       final response = await _dio.post(
@@ -703,9 +608,7 @@ class MovieService {
       final data = response.data;
       if (data is Map && data.containsKey('player')) {
         final playerHtml = data['player'].toString();
-        final match = RegExp(
-          r'window\.atob\("([^"]+)"\)',
-        ).firstMatch(playerHtml);
+        final match = RegExp(r'window\.atob\("([^"]+)"\)').firstMatch(playerHtml);
         if (match != null) {
           final b64 = match.group(1);
           if (b64 != null) {
@@ -721,17 +624,11 @@ class MovieService {
     return null;
   }
 
-  Future<List<MovieStreamVariant>> getStreamVariants(
-    String masterUrl, {
-    CancelToken? cancelToken,
-  }) async {
+  Future<List<MovieStreamVariant>> getStreamVariants(String masterUrl, {CancelToken? cancelToken}) async {
     try {
       final response = await _dio.get<String>(
         masterUrl,
-        options: Options(
-          responseType: ResponseType.plain,
-          headers: {'Referer': '${baseUrl ?? ''}/'},
-        ),
+        options: Options(responseType: ResponseType.plain, headers: {'Referer': '${baseUrl ?? ''}/'}),
         cancelToken: cancelToken,
       );
       final source = response.data ?? '';
@@ -742,16 +639,11 @@ class MovieService {
         final metadata = lines[index].trim();
         if (!metadata.startsWith('#EXT-X-STREAM-INF:')) continue;
 
-        final resolution = RegExp(
-          r'RESOLUTION=(\d+)x(\d+)',
-          caseSensitive: false,
-        ).firstMatch(metadata);
+        final resolution = RegExp(r'RESOLUTION=(\d+)x(\d+)', caseSensitive: false).firstMatch(metadata);
         if (resolution == null) continue;
 
         var urlIndex = index + 1;
-        while (urlIndex < lines.length &&
-            (lines[urlIndex].trim().isEmpty ||
-                lines[urlIndex].trim().startsWith('#'))) {
+        while (urlIndex < lines.length && (lines[urlIndex].trim().isEmpty || lines[urlIndex].trim().startsWith('#'))) {
           urlIndex++;
         }
         if (urlIndex >= lines.length) continue;
@@ -759,14 +651,7 @@ class MovieService {
         final width = int.parse(resolution.group(1)!);
         final height = int.parse(resolution.group(2)!);
         final bandwidth =
-            int.tryParse(
-              RegExp(
-                    r'(?:AVERAGE-)?BANDWIDTH=(\d+)',
-                    caseSensitive: false,
-                  ).firstMatch(metadata)?.group(1) ??
-                  '',
-            ) ??
-            0;
+            int.tryParse(RegExp(r'(?:AVERAGE-)?BANDWIDTH=(\d+)', caseSensitive: false).firstMatch(metadata)?.group(1) ?? '') ?? 0;
         final variant = MovieStreamVariant(
           label: '${height}p',
           url: Uri.parse(masterUrl).resolve(lines[urlIndex].trim()).toString(),
@@ -780,8 +665,7 @@ class MovieService {
         }
       }
 
-      final variants = variantsByHeight.values.toList()
-        ..sort((a, b) => b.height.compareTo(a.height));
+      final variants = variantsByHeight.values.toList()..sort((a, b) => b.height.compareTo(a.height));
       return variants;
     } catch (error) {
       if (error is! DioException || error.type != DioExceptionType.cancel) {
@@ -793,18 +677,9 @@ class MovieService {
 
   // --- Ophim JSON API Adapters ---
 
-  Future<MovieResponse> _getOphimMovies(
-    String path, {
-    int page = 1,
-    Map<String, dynamic>? extraParams,
-    CancelToken? cancelToken,
-  }) async {
+  Future<MovieResponse> _getOphimMovies(String path, {int page = 1, Map<String, dynamic>? extraParams, CancelToken? cancelToken}) async {
     try {
-      final response = await _dio.get(
-        path,
-        queryParameters: {'page': page, ...?extraParams},
-        cancelToken: cancelToken,
-      );
+      final response = await _dio.get(path, queryParameters: {'page': page, ...?extraParams}, cancelToken: cancelToken);
       var data = response.data;
       if (data is String) {
         try {
@@ -827,35 +702,24 @@ class MovieService {
           quality: item['quality']?.toString(),
           language: item['lang']?.toString(),
           url: slug,
-          poster: (thumb.startsWith('http') || cdnImage.isEmpty)
-              ? thumb
-              : '$cdnImage/$thumb',
+          poster: (thumb.startsWith('http') || cdnImage.isEmpty) ? thumb : '$cdnImage/$thumb',
           badge: item['year']?.toString(),
-          hasVietsub: (item['lang'] ?? '')
-              .toString()
-              .toLowerCase()
-              .contains('sub'),
+          hasVietsub: (item['lang'] ?? '').toString().toLowerCase().contains('sub'),
         );
       }).toList();
 
-      final pagination = data['pagination'] ??
+      final pagination =
+          data['pagination'] ??
           (data['data'] is Map ? data['data']['pagination'] : null) ??
-          (data['data'] is Map && data['data']['params'] is Map
-              ? data['data']['params']['pagination']
-              : null);
+          (data['data'] is Map && data['data']['params'] is Map ? data['data']['params']['pagination'] : null);
 
       int totalCount = 0;
       if (pagination != null) {
         final rawTotal = pagination['totalItems'];
-        totalCount = rawTotal is int
-            ? rawTotal
-            : int.tryParse(rawTotal?.toString() ?? '') ?? 0;
+        totalCount = rawTotal is int ? rawTotal : int.tryParse(rawTotal?.toString() ?? '') ?? 0;
       }
 
-      return MovieResponse(
-        movies: movies,
-        total: totalCount > 0 ? totalCount : (page == 1 ? movies.length : 0),
-      );
+      return MovieResponse(movies: movies, total: totalCount > 0 ? totalCount : (page == 1 ? movies.length : 0));
     } catch (e) {
       if (e is! DioException || e.type != DioExceptionType.cancel) {
         logger.e('MovieService _getOphimMovies failed', error: e);
@@ -864,24 +728,11 @@ class MovieService {
     }
   }
 
-  Future<MovieResponse> _searchOphimMovies(
-    String keyword, {
-    int page = 1,
-    CancelToken? cancelToken,
-  }) async {
-    return _getOphimMovies(
-      '/v1/api/tim-kiem',
-      page: page,
-      extraParams: {'keyword': keyword},
-      cancelToken: cancelToken,
-    );
+  Future<MovieResponse> _searchOphimMovies(String keyword, {int page = 1, CancelToken? cancelToken}) async {
+    return _getOphimMovies('/v1/api/tim-kiem', page: page, extraParams: {'keyword': keyword}, cancelToken: cancelToken);
   }
 
-  Future<MovieDetail?> _getOphimDetail(
-    String urlOrSlug,
-    String movieId, {
-    CancelToken? cancelToken,
-  }) async {
+  Future<MovieDetail?> _getOphimDetail(String urlOrSlug, String movieId, {CancelToken? cancelToken}) async {
     try {
       String slug = urlOrSlug;
       final uri = Uri.tryParse(urlOrSlug);
@@ -927,12 +778,7 @@ class MovieService {
           firstStreamUrl ??= epM3u8;
 
           episodes.add(
-            MovieEpisode(
-              name: ep['name']?.toString() ?? 'Tập',
-              slug: ep['slug']?.toString() ?? '',
-              m3u8Url: epM3u8,
-              embedUrl: epEmbed,
-            ),
+            MovieEpisode(name: ep['name']?.toString() ?? 'Tập', slug: ep['slug']?.toString() ?? '', m3u8Url: epM3u8, embedUrl: epEmbed),
           );
         }
         if (episodes.isNotEmpty) {
@@ -951,27 +797,12 @@ class MovieService {
         poster: poster,
         description: movieData['content'] ?? '',
         views: movieData['view']?.toString(),
-        hasVietsub: (movieData['lang'] ?? '')
-            .toString()
-            .toLowerCase()
-            .contains('sub'),
+        hasVietsub: (movieData['lang'] ?? '').toString().toLowerCase().contains('sub'),
         streamUrl: firstStreamUrl,
-        tags:
-            (movieData['category'] as List<dynamic>? ?? [])
-                .map((e) => e['name'] as String)
-                .toList(),
-        actors:
-            (movieData['actor'] as List<dynamic>? ?? [])
-                .whereType<String>()
-                .toList(),
-        directors:
-            (movieData['director'] as List<dynamic>? ?? [])
-                .whereType<String>()
-                .toList(),
-        countries:
-            (movieData['country'] as List<dynamic>? ?? [])
-                .map((e) => e['name'] as String)
-                .toList(),
+        tags: (movieData['category'] as List<dynamic>? ?? []).map((e) => e['name'] as String).toList(),
+        actors: (movieData['actor'] as List<dynamic>? ?? []).whereType<String>().toList(),
+        directors: (movieData['director'] as List<dynamic>? ?? []).whereType<String>().toList(),
+        countries: (movieData['country'] as List<dynamic>? ?? []).map((e) => e['name'] as String).toList(),
         servers: servers,
       );
     } catch (e) {

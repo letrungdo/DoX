@@ -2375,7 +2375,7 @@ abstract class AppLocalizations {
   /// No description provided for @serverUrlHint.
   ///
   /// In en, this message translates to:
-  /// **'https://...'**
+  /// **'example.com'**
   String get serverUrlHint;
 
   /// No description provided for @serverUrlHelperText.
@@ -2402,12 +2402,6 @@ abstract class AppLocalizations {
   /// **'No favorite movies yet.'**
   String get noFavoriteMovies;
 
-  /// No description provided for @changeMovieServerUrl.
-  ///
-  /// In en, this message translates to:
-  /// **'Change Movie Server URL'**
-  String get changeMovieServerUrl;
-
   /// No description provided for @watchedMovies.
   ///
   /// In en, this message translates to:
@@ -2419,6 +2413,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Favorite movies'**
   String get favoriteMovies;
+
+  /// No description provided for @minimize.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize'**
+  String get minimize;
 
   /// No description provided for @scrollToTop.
   ///

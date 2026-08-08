@@ -5,14 +5,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
-import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/movie/movie_detail_screen.dart';
+import 'package:do_x/screen/movie/movie_player_layout.dart';
+import 'package:do_x/screen/movie/movie_poster_card.dart';
+import 'package:do_x/screen/movie/movie_server_dialog.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
-import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +29,10 @@ class MovieScreen extends StatefulWidget {
   State<MovieScreen> createState() => _MovieScreenState();
 }
 
-class _MovieScreenState extends State<MovieScreen> {
+/// How long the card→player zoom and the minimise/expand snap take.
+const _overlayAnimationDuration = Duration(milliseconds: 300);
+
+class _MovieScreenState extends State<MovieScreen> with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   late final TextEditingController _serverUrlController;
   final _scrollController = ScrollController();
@@ -52,6 +56,22 @@ class _MovieScreenState extends State<MovieScreen> {
   String _searchQuery = '';
   _MovieCollection _collection = _MovieCollection.browse;
 
+  /// 1 = detail page fills the screen, 0 = collapsed to the mini player bar.
+  late final AnimationController _overlayController;
+
+  /// The movie the overlay is showing; `null` when no player is open.
+  Movie? _playingMovie;
+
+  /// Rect of the tapped card, used as the origin of the opening zoom. Cleared
+  /// once the overlay has finished expanding.
+  Rect? _entryRect;
+  bool _isDetailFullScreen = false;
+
+  /// True from the moment a drag starts on the mini bar until it ends, so the
+  /// recognizer is not torn down the instant the bar stops being mini.
+  bool _isDraggingMiniBar = false;
+  final _detailController = MovieDetailController();
+
   bool get _supportsDeviceRotation =>
       !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
@@ -59,6 +79,7 @@ class _MovieScreenState extends State<MovieScreen> {
   void initState() {
     super.initState();
     _serverUrlController = TextEditingController(text: movieService.baseUrl ?? '');
+    _overlayController = AnimationController(vsync: this, duration: _overlayAnimationDuration);
     if (_supportsDeviceRotation) {
       unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
     }
@@ -86,6 +107,7 @@ class _MovieScreenState extends State<MovieScreen> {
     if (_supportsDeviceRotation) {
       unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]));
     }
+    _overlayController.dispose();
     _searchController.dispose();
     _serverUrlController.dispose();
     _scrollController.dispose();
@@ -286,14 +308,8 @@ class _MovieScreenState extends State<MovieScreen> {
         title: Text(l10n.removeFromHistory),
         content: Text(l10n.confirmRemoveFromHistory(movie.title)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.delete),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete)),
         ],
       ),
     );
@@ -329,10 +345,66 @@ class _MovieScreenState extends State<MovieScreen> {
     }
   }
 
+  /// Opens [movie] in the overlay, zooming out of the card at [cardRect]
+  /// instead of pushing a route, so playback survives minimising.
+  Future<void> _openMovie(Movie movie, Rect cardRect) async {
+    setState(() {
+      _playingMovie = movie;
+      _entryRect = cardRect;
+      _isDetailFullScreen = false;
+    });
+    await _overlayController.animateTo(1, duration: _overlayAnimationDuration, curve: Curves.easeOutCubic);
+    if (!mounted) return;
+    setState(() => _entryRect = null);
+  }
+
+  void _minimizeOverlay() {
+    _overlayController.animateTo(0, duration: _overlayAnimationDuration, curve: Curves.easeOutCubic);
+  }
+
+  void _expandOverlay() {
+    _overlayController.animateTo(1, duration: _overlayAnimationDuration, curve: Curves.easeOutCubic);
+  }
+
+  Future<void> _closeOverlay() async {
+    if (_playingMovie == null) return;
+    setState(() {
+      _playingMovie = null;
+      _entryRect = null;
+      _isDetailFullScreen = false;
+    });
+    _overlayController.value = 0;
+    // The library may have gained a watch/favourite entry while it was open.
+    if (_collection == _MovieCollection.browse) {
+      await _refreshLibraryStates();
+    } else {
+      await _loadMovies(refresh: true);
+    }
+  }
+
+  void _onOverlayDragUpdate(DragUpdateDetails details, double travel) {
+    if (travel <= 0) return;
+    _overlayController.value = (_overlayController.value - (details.primaryDelta ?? 0) / travel).clamp(0.0, 1.0);
+  }
+
+  void _onOverlayDragEnd(DragEndDetails details) {
+    final velocity = details.velocity.pixelsPerSecond.dy;
+    if (velocity > 400) {
+      _minimizeOverlay();
+    } else if (velocity < -400) {
+      _expandOverlay();
+    } else if (_overlayController.value > 0.5) {
+      _expandOverlay();
+    } else {
+      _minimizeOverlay();
+    }
+  }
+
   Future<bool> _updateMovieServer(String rawUrl) async {
     final l10n = AppLocalizations.of(context);
     if (_isSyncingServer) return false;
-    final url = rawUrl.trim();
+    // `https://` is optional in the field; the service fills it in.
+    final url = movieService.normalizeServerUrl(rawUrl);
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasAuthority || (uri.scheme != 'http' && uri.scheme != 'https')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidMovieServerUrl)));
@@ -367,7 +439,7 @@ class _MovieScreenState extends State<MovieScreen> {
   Future<void> _showServerUrlDialog() async {
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => _ServerManagementDialog(
+      builder: (dialogContext) => MovieServerDialog(
         onServerChanged: () {
           if (mounted) _initData();
         },
@@ -386,207 +458,323 @@ class _MovieScreenState extends State<MovieScreen> {
       _MovieCollection.browse => l10n.noMoviesFound,
     };
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        appBar: DoAppBar(
-          title: movieLabel,
-          actions: [
-            NeuIconButton(tooltip: l10n.changeMovieServerUrl, icon: Icons.link_rounded, onPressed: _showServerUrlDialog),
-            const SizedBox(width: 8),
-            NeuIconButton(
-              tooltip: l10n.watchedMovies,
-              color: _collection == _MovieCollection.watched ? Theme.of(context).colorScheme.primary : null,
-              icon: Icons.history_rounded,
-              onPressed: () => _selectCollection(_MovieCollection.watched),
+    return PopScope(
+      canPop: _playingMovie == null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop || _playingMovie == null) return;
+        if (_isDetailFullScreen) {
+          _detailController.exitFullScreen();
+          return;
+        }
+        if (_overlayController.value > 0) {
+          _minimizeOverlay();
+        } else {
+          unawaited(_closeOverlay());
+        }
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: _buildBrowser(context, emptyMessage: emptyMessage, movieLabel: movieLabel, baseUrl: baseUrl, l10n: l10n),
+          ),
+          if (_playingMovie != null) _buildPlayerOverlay(context, _playingMovie!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBrowser(
+    BuildContext context, {
+    required String emptyMessage,
+    required String movieLabel,
+    required String? baseUrl,
+    required AppLocalizations l10n,
+  }) {
+    return Scaffold(
+      appBar: DoAppBar(
+        title: movieLabel,
+        // The title doubles as the server picker, replacing the old link action.
+        onTitleTap: _showServerUrlDialog,
+        titleSuffix: Icon(Icons.expand_more_rounded, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        actions: [
+          NeuIconButton(
+            size: appBarActionSize,
+            iconSize: 18,
+            depth: appBarActionDepth,
+            tooltip: l10n.watchedMovies,
+            color: _collection == _MovieCollection.watched ? Theme.of(context).colorScheme.primary : null,
+            icon: Icons.history_rounded,
+            onPressed: () => _selectCollection(_MovieCollection.watched),
+          ),
+          const SizedBox(width: 8),
+          NeuIconButton(
+            size: appBarActionSize,
+            iconSize: 18,
+            depth: appBarActionDepth,
+            tooltip: l10n.favoriteMovies,
+            color: _collection == _MovieCollection.favorites ? Theme.of(context).colorScheme.primary : null,
+            icon: Icons.favorite_rounded,
+            onPressed: () => _selectCollection(_MovieCollection.favorites),
+          ),
+        ],
+      ),
+      // Hidden while the player overlay is up so it never fights the mini bar.
+      floatingActionButton: (baseUrl == null || baseUrl.isEmpty || _playingMovie != null)
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!_isLoading && _movies.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))],
+                      ),
+                      child: Text(
+                        l10n.movieCountStatus(_movies.length, _totalMovies > 0 ? _totalMovies.toString() : '...'),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+                      ),
+                    ),
+                  ),
+                if (_showScrollToTop)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: NeuIconButton(tooltip: l10n.scrollToTop, icon: Icons.vertical_align_top_rounded, onPressed: _scrollToTop),
+                  ),
+              ],
             ),
-            const SizedBox(width: 8),
-            NeuIconButton(
-              tooltip: l10n.favoriteMovies,
-              color: _collection == _MovieCollection.favorites ? Theme.of(context).colorScheme.primary : null,
-              icon: Icons.favorite_rounded,
-              onPressed: () => _selectCollection(_MovieCollection.favorites),
-            ),
-          ],
-        ),
-        floatingActionButton: (baseUrl == null || baseUrl.isEmpty)
-            ? null
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (!_isLoading && _movies.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))],
-                        ),
-                        child: Text(
-                          l10n.movieCountStatus(_movies.length, _totalMovies > 0 ? _totalMovies.toString() : '...'),
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: (baseUrl == null || baseUrl.isEmpty)
+            ? _buildServerConfig()
+            : RefreshIndicator(
+                onRefresh: () => _loadMovies(refresh: true),
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: InputDecoration(
+                            hintText: l10n.searchMoviesPlaceholder,
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _onSearchChanged('');
+                                    },
+                                  )
+                                : null,
+                            isDense: true,
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  if (_showScrollToTop)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: NeuIconButton(tooltip: l10n.scrollToTop, icon: Icons.vertical_align_top_rounded, onPressed: _scrollToTop),
+                    if (_searchQuery.isEmpty && _categories.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 46,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            clipBehavior: Clip.none,
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _categories.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final cat = _categories[index];
+                              final isSelected = _collection == _MovieCollection.browse && cat.id == _selectedCategory?.id;
+
+                              final label = switch (cat.id) {
+                                'new' => l10n.categoryNew,
+                                'phim-le' => l10n.categorySingle,
+                                'phim-bo' => l10n.categorySeries,
+                                'hoat-hinh' => l10n.categoryAnime,
+                                'tv-shows' => l10n.categoryTVShow,
+                                _ => cat.name,
+                              };
+
+                              return NeuChip(
+                                label: label,
+                                isSelected: isSelected,
+                                onTap: () {
+                                  if (_collection != _MovieCollection.browse || cat.id != _selectedCategory?.id) {
+                                    setState(() {
+                                      _collection = _MovieCollection.browse;
+                                      _selectedCategory = cat;
+                                    });
+                                    _loadMovies(refresh: true);
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    if (_searchQuery.isEmpty && _categories.isEmpty && _collection == _MovieCollection.browse)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Center(
+                            child: Text(l10n.noCategoriesConfigured, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          ),
+                        ),
+                      ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    if (_isLoading)
+                      const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
+                    else if (_movies.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.movie_outlined, size: 64, color: Colors.grey),
+                              const SizedBox(height: 12),
+                              Text(emptyMessage, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          8,
+                          16,
+                          MediaQuery.paddingOf(context).bottom + 50 + (_playingMovie != null ? miniPlayerHeight + 16 : 0),
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 220,
+                            childAspectRatio: 1.0,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          delegate: SliverChildBuilderDelegate((context, index) {
+                            if (index >= _movies.length) {
+                              return const Card(child: Center(child: CircularProgressIndicator()));
+                            }
+                            final movie = _movies[index];
+                            final libraryState = _libraryStates[movie.id];
+                            return MoviePosterCard(
+                              movie: movie,
+                              isWatched: libraryState?.watchedAt != null,
+                              isFavorite: libraryState?.isFavorite ?? false,
+                              onTap: (cardRect) => _openMovie(movie, cardRect),
+                              onLongPress: () => _handleMovieLongPress(movie),
+                            );
+                          }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  /// The YouTube-style player: a rect that lerps between the tapped card (or
+  /// the mini bar) and the whole screen, hosting the detail page inside.
+  Widget _buildPlayerOverlay(BuildContext context, Movie movie) {
+    final size = MediaQuery.sizeOf(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final fullRect = Offset.zero & size;
+    final miniRect = Rect.fromLTWH(8, size.height - bottomInset - 8 - miniPlayerHeight, size.width - 16, miniPlayerHeight);
+    final travel = fullRect.height - miniRect.height;
+
+    return AnimatedBuilder(
+      animation: _overlayController,
+      builder: (context, _) {
+        final t = _overlayController.value;
+        final origin = _entryRect ?? miniRect;
+        final rect = _isDetailFullScreen ? fullRect : Rect.lerp(origin, fullRect, t)!;
+        final isMini = t < 0.02;
+
+        return Positioned.fromRect(
+          rect: rect,
+          child: Material(
+            elevation: t < 1 ? 12 : 0,
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(14 * (1 - t)),
+            clipBehavior: Clip.antiAlias,
+            child: GestureDetector(
+              // Opaque so the browser list underneath never receives taps that
+              // land on a gap of the overlay.
+              behavior: HitTestBehavior.opaque,
+              // Only the collapsed bar reacts to a tap; expanded, its own
+              // widgets handle everything.
+              onTap: isMini ? _expandOverlay : null,
+              // Keeps working past the mini threshold once the drag has begun,
+              // otherwise the recognizer would vanish mid-gesture.
+              onVerticalDragStart: isMini || _isDraggingMiniBar ? (_) => _isDraggingMiniBar = true : null,
+              onVerticalDragUpdate: isMini || _isDraggingMiniBar ? (details) => _onOverlayDragUpdate(details, travel) : null,
+              onVerticalDragEnd: isMini || _isDraggingMiniBar
+                  ? (details) {
+                      _isDraggingMiniBar = false;
+                      _onOverlayDragEnd(details);
+                    }
+                  : null,
+              onVerticalDragCancel: isMini || _isDraggingMiniBar ? () => _isDraggingMiniBar = false : null,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  MovieDetailScreen(
+                    movieUrl: movie.url,
+                    movieId: movie.id,
+                    initialMovie: movie,
+                    embedded: true,
+                    minimizeProgress: t,
+                    controller: _detailController,
+                    onFullScreenChanged: (isFullScreen) {
+                      if (mounted) setState(() => _isDetailFullScreen = isFullScreen);
+                    },
+                    onRelatedMovieTap: (related) => setState(() => _playingMovie = related),
+                    onClose: () => unawaited(_closeOverlay()),
+                    onMinimize: _minimizeOverlay,
+                    onPlayerDragUpdate: (details) => _onOverlayDragUpdate(details, travel),
+                    onPlayerDragEnd: _onOverlayDragEnd,
+                  ),
+                  // The tapped poster, fading out over the page it grew from.
+                  if (_entryRect != null && t < 1)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Opacity(
+                          opacity: 1 - t,
+                          child: CachedNetworkImage(imageUrl: movie.poster, fit: BoxFit.cover),
+                        ),
+                      ),
                     ),
                 ],
               ),
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: (baseUrl == null || baseUrl.isEmpty)
-              ? _buildServerConfig()
-              : RefreshIndicator(
-                  onRefresh: () => _loadMovies(refresh: true),
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: _onSearchChanged,
-                            decoration: InputDecoration(
-                              hintText: l10n.searchMoviesPlaceholder,
-                              prefixIcon: const Icon(Icons.search_rounded),
-                              suffixIcon: _searchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear_rounded),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        _onSearchChanged('');
-                                      },
-                                    )
-                                  : null,
-                              isDense: true,
-                              filled: true,
-                              fillColor: Theme.of(context).colorScheme.surface,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_searchQuery.isEmpty && _categories.isNotEmpty)
-                        SliverToBoxAdapter(
-                          child: SizedBox(
-                            height: 46,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              clipBehavior: Clip.none,
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _categories.length,
-                              separatorBuilder: (_, _) => const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                final cat = _categories[index];
-                                final isSelected = _collection == _MovieCollection.browse && cat.id == _selectedCategory?.id;
-
-                                final label = switch (cat.id) {
-                                  'new' => l10n.categoryNew,
-                                  'phim-le' => l10n.categorySingle,
-                                  'phim-bo' => l10n.categorySeries,
-                                  'hoat-hinh' => l10n.categoryAnime,
-                                  'tv-shows' => l10n.categoryTVShow,
-                                  _ => cat.name,
-                                };
-
-                                return NeuChip(
-                                  label: label,
-                                  isSelected: isSelected,
-                                  onTap: () {
-                                    if (_collection != _MovieCollection.browse || cat.id != _selectedCategory?.id) {
-                                      setState(() {
-                                        _collection = _MovieCollection.browse;
-                                        _selectedCategory = cat;
-                                      });
-                                      _loadMovies(refresh: true);
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      if (_searchQuery.isEmpty && _categories.isEmpty && _collection == _MovieCollection.browse)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Center(
-                              child: Text(l10n.noCategoriesConfigured, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                            ),
-                          ),
-                        ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                      if (_isLoading)
-                        const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
-                      else if (_movies.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.movie_outlined, size: 64, color: Colors.grey),
-                                const SizedBox(height: 12),
-                                Text(emptyMessage, style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.paddingOf(context).bottom + 50),
-                          sliver: SliverGrid(
-                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 220,
-                              childAspectRatio: 1.0,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                            ),
-                            delegate: SliverChildBuilderDelegate((context, index) {
-                              if (index >= _movies.length) {
-                                return const Card(child: Center(child: CircularProgressIndicator()));
-                              }
-                              final movie = _movies[index];
-                              final libraryState = _libraryStates[movie.id];
-                              return _MovieCard(
-                                movie: movie,
-                                isWatched: libraryState?.watchedAt != null,
-                                isFavorite: libraryState?.isFavorite ?? false,
-                                onTap: () async {
-                                  await context.pushRoute(MovieDetailRoute(movieUrl: movie.url, movieId: movie.id, initialMovie: movie));
-                                  if (!mounted) return;
-                                  if (_collection == _MovieCollection.browse) {
-                                    await _refreshLibraryStates();
-                                  } else {
-                                    await _loadMovies(refresh: true);
-                                  }
-                                },
-                                onLongPress: () => _handleMovieLongPress(movie),
-                              );
-                            }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -639,362 +827,6 @@ class _MovieScreenState extends State<MovieScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MovieCard extends StatelessWidget {
-  final Movie movie;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-  final bool isWatched;
-  final bool isFavorite;
-
-  const _MovieCard({
-    required this.movie,
-    required this.onTap,
-    this.onLongPress,
-    this.isWatched = false,
-    this.isFavorite = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final displayBadge = movie.hasVietsub ? l10n.vietsub : movie.badge;
-    return NeuCard(
-      margin: EdgeInsets.zero,
-      padding: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CachedNetworkImage(
-                  imageUrl: movie.poster,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey.shade900,
-                    child: const Center(child: Icon(Icons.movie, color: Colors.white24)),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey.shade800,
-                    child: const Icon(Icons.broken_image_rounded, color: Colors.white38),
-                  ),
-                ),
-                if (displayBadge != null && displayBadge.isNotEmpty)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.pinkAccent.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(6)),
-                      child: Text(
-                        displayBadge,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                if (isWatched || isFavorite)
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.68), borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isWatched) const Icon(Icons.check_circle_rounded, color: Colors.lightGreenAccent, size: 17),
-                          if (isWatched && isFavorite) const SizedBox(width: 4),
-                          if (isFavorite) const Icon(Icons.favorite_rounded, color: Colors.pinkAccent, size: 17),
-                        ],
-                      ),
-                    ),
-                  ),
-                if ((movie.views?.isNotEmpty ?? false) || (movie.likes?.isNotEmpty ?? false))
-                  Positioned(
-                    bottom: 6,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(6)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (movie.views?.isNotEmpty ?? false) ...[
-                            const Icon(Icons.visibility_rounded, size: 11, color: Colors.white70),
-                            const SizedBox(width: 3),
-                            Text(movie.views!, style: const TextStyle(color: Colors.white, fontSize: 10)),
-                          ],
-                          if ((movie.views?.isNotEmpty ?? false) && (movie.likes?.isNotEmpty ?? false)) const SizedBox(width: 7),
-                          if (movie.likes?.isNotEmpty ?? false) ...[
-                            const Icon(Icons.favorite_rounded, size: 11, color: Colors.pinkAccent),
-                            const SizedBox(width: 3),
-                            Text(movie.likes!, style: const TextStyle(color: Colors.white, fontSize: 10)),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  movie.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.2),
-                ),
-                if (movie.originalTitle != null &&
-                    movie.originalTitle!.isNotEmpty &&
-                    movie.originalTitle != movie.title)
-                  Text(
-                    movie.originalTitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                      height: 1.2,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ServerManagementDialog extends StatefulWidget {
-  final VoidCallback onServerChanged;
-
-  const _ServerManagementDialog({required this.onServerChanged});
-
-  @override
-  State<_ServerManagementDialog> createState() => _ServerManagementDialogState();
-}
-
-class _ServerManagementDialogState extends State<_ServerManagementDialog> {
-  late List<String> _servers;
-  late String? _currentBaseUrl;
-  late String? _primaryServer;
-
-  final _urlController = TextEditingController();
-  String? _editingUrl;
-  bool _isAdding = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadServers();
-  }
-
-  @override
-  void dispose() {
-    _urlController.dispose();
-    super.dispose();
-  }
-
-  void _loadServers() {
-    _servers = movieService.getServers();
-    _currentBaseUrl = movieService.baseUrl;
-    _primaryServer = storageService.getPrimaryMovieServer();
-  }
-
-  void _refreshServers() {
-    if (!mounted) return;
-    setState(() {
-      _loadServers();
-    });
-  }
-
-  Future<void> _selectServer(String url) async {
-    if (_isAdding || _editingUrl != null) return;
-    if (url == _currentBaseUrl) return;
-    await movieService.updateBaseUrl(url);
-    widget.onServerChanged();
-    if (mounted) Navigator.of(context).pop();
-  }
-
-  Future<void> _handleSave() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) return;
-
-    if (_isAdding) {
-      await movieService.updateBaseUrl(url);
-    } else if (_editingUrl != null) {
-      final isPrimary = _editingUrl == _primaryServer;
-      final servers = storageService.getMovieServers();
-      final index = servers.indexOf(_editingUrl!);
-
-      if (index != -1) {
-        servers[index] = url;
-        await storageService.setMovieServers(servers);
-        if (isPrimary) {
-          await storageService.setPrimaryMovieServer(url);
-        }
-        if (movieService.baseUrl == _editingUrl) {
-          await movieService.updateBaseUrl(url);
-        }
-      }
-    }
-
-    setState(() {
-      _isAdding = false;
-      _editingUrl = null;
-      _urlController.clear();
-      _loadServers();
-    });
-    widget.onServerChanged();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final isInputMode = _isAdding || _editingUrl != null;
-
-    return AlertDialog(
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(isInputMode ? (_isAdding ? l10n.enterMovieServerUrl : l10n.editMovieServerUrl) : l10n.movieServerUrl),
-          if (!isInputMode)
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline_rounded),
-              onPressed: () {
-                setState(() {
-                  _isAdding = true;
-                  _urlController.clear();
-                });
-              },
-            ),
-        ],
-      ),
-      content: Container(
-        width: double.maxFinite,
-        constraints: const BoxConstraints(maxHeight: 400),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isInputMode)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: TextField(
-                  controller: _urlController,
-                  autofocus: true,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    hintText: l10n.serverUrlHint,
-                    suffixIcon: IconButton(icon: const Icon(Icons.check_circle_outline_rounded), onPressed: _handleSave),
-                  ),
-                  onSubmitted: (_) => _handleSave(),
-                ),
-              ),
-            Flexible(
-              child: _servers.isEmpty
-                  ? Center(
-                      child: Padding(padding: const EdgeInsets.all(20.0), child: Text(l10n.noServersFound)),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _servers.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final url = _servers[index];
-                        final isPrimary = url == _primaryServer;
-                        final isSelected = url == _currentBaseUrl;
-                        final isCurrentlyEditing = url == _editingUrl;
-
-                        return ListTile(
-                          dense: true,
-                          enabled: !isInputMode,
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(
-                            isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                            color: isSelected ? theme.colorScheme.primary : null,
-                            size: 20,
-                          ),
-                          title: Text(
-                            movieService.getLabelForUrl(url),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? theme.colorScheme.primary : null,
-                            ),
-                          ),
-                          subtitle: Text(
-                            url,
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: isInputMode
-                              ? (isCurrentlyEditing ? const Icon(Icons.edit_note_rounded, color: Colors.orange) : null)
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_outlined, size: 18),
-                                      onPressed: () {
-                                        setState(() {
-                                          _editingUrl = url;
-                                          _urlController.text = url;
-                                          _isAdding = false;
-                                        });
-                                      },
-                                    ),
-                                    if (!isPrimary)
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                                        onPressed: () async {
-                                          await movieService.deleteServer(url);
-                                          _refreshServers();
-                                          if (isSelected) {
-                                            widget.onServerChanged();
-                                          }
-                                        },
-                                      ),
-                                    if (isPrimary) const SizedBox(width: 40),
-                                  ],
-                                ),
-                          onTap: () => _selectServer(url),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        if (isInputMode)
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _isAdding = false;
-                _editingUrl = null;
-                _urlController.clear();
-              });
-            },
-            child: Text(l10n.cancel),
-          ),
-        if (!isInputMode) TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.close)),
-        if (isInputMode) FilledButton(onPressed: _handleSave, child: Text(l10n.save)),
-      ],
     );
   }
 }
