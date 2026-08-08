@@ -2564,6 +2564,18 @@ abstract class AppLocalizations {
   /// **'Lock rotation'**
   String get lockRotation;
 
+  /// No description provided for @zoomToFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill screen'**
+  String get zoomToFill;
+
+  /// No description provided for @zoomToFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit screen'**
+  String get zoomToFit;
+
   /// No description provided for @episodeLabel.
   ///
   /// In en, this message translates to:

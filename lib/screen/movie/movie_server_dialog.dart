@@ -42,7 +42,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
   void _loadServers() {
     _servers = movieService.getServers();
     _currentBaseUrl = movieService.baseUrl;
-    _primaryServer = storageService.getPrimaryMovieServer();
+    _primaryServer = movieService.primaryServer;
   }
 
   void _refreshServers() {
@@ -68,7 +68,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
     if (_isAdding) {
       await movieService.updateBaseUrl(url);
     } else if (_editingUrl != null) {
-      final isPrimary = _editingUrl == _primaryServer;
+      final isPrimary = movieService.isPrimary(_editingUrl);
       final servers = storageService.getMovieServers();
       final index = servers.indexOf(_editingUrl!);
 

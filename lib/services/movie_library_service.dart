@@ -1,6 +1,5 @@
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/services/movie_service.dart';
-import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 
 typedef MovieLibraryState = ({bool isFavorite, DateTime? watchedAt});
@@ -10,15 +9,11 @@ typedef MovieLibraryBatchCallback = void Function(List<MovieLibraryItem> items);
 class MovieLibraryService {
   const MovieLibraryService();
 
-  String get _prefix => movieService.baseUrl == storageService.getPrimaryMovieServer() ? 'def_' : 'ext_';
+  MovieLibraryScope get _scope => movieService.isPrimaryServer ? MovieLibraryScope.primary : MovieLibraryScope.external;
 
-  String _toDbId(String movieId) => '$_prefix$movieId';
+  String _toDbId(String movieId) => _scope.toDbId(movieId);
 
-  String _fromDbId(String dbId) {
-    if (dbId.startsWith('def_')) return dbId.substring(4);
-    if (dbId.startsWith('ext_')) return dbId.substring(4);
-    return dbId;
-  }
+  String _fromDbId(String dbId) => MovieLibraryScope.stripPrefix(dbId);
 
   Future<MovieLibraryState> getState(String movieId) async {
     final user = supabase.auth.currentUser;
@@ -97,7 +92,7 @@ class MovieLibraryService {
         .from('movie_library')
         .select('movie_id, movie_path, watched_at, is_favorite, updated_at')
         .eq('user_id', user.id)
-        .like('movie_id', '$_prefix%');
+        .like('movie_id', '${_scope.prefix}%');
 
     if (watchedOnly) {
       query = query.not('watched_at', 'is', null);

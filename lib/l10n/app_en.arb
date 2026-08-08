@@ -938,6 +938,8 @@
   "playbackSpeed": "Playback speed",
   "unlockRotation": "Unlock rotation",
   "lockRotation": "Lock rotation",
+  "zoomToFill": "Fill screen",
+  "zoomToFit": "Fit screen",
   "episodeLabel": "Episodes",
   "episodeFull": "Full",
   "episodeDefaultName": "Episode",

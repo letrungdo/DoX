@@ -128,6 +128,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _hasRecordedWatch = false;
   bool _isRotationLocked = false;
 
+  /// Full screen only: `true` crops the video to cover the whole screen,
+  /// `false` keeps the whole frame visible. Toggled by the button or a pinch.
+  bool _isVideoCover = false;
+
   Duration? _virtualSeekPosition;
   Timer? _virtualSeekTimer;
 
@@ -221,6 +225,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _detail = detail;
       _isLoading = false;
       _masterStreamUrl = detail?.streamUrl;
+      // The stream request is fired below; claiming it here means the retry
+      // button can never flash in the gap before it starts.
+      _isLoadingStream = (detail?.streamUrl ?? '').isNotEmpty;
       _thumbnailTrack = null;
       _hoverThumbnailCue = null;
       if (detail != null && detail.servers.isNotEmpty) {
@@ -698,6 +705,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _startControlsTimer();
   }
 
+  void _setVideoCover(bool isCover) {
+    if (_isVideoCover == isCover) return;
+    setState(() => _isVideoCover = isCover);
+    _startControlsTimer();
+  }
+
   void _start2xSpeed() {
     if (_videoController == null || !_videoController!.value.isInitialized) {
       return;
@@ -834,10 +847,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (originalTitle != null) _buildOriginalTitleBar(originalTitle, subtitleStripStyle(context, originalTitle)),
+                          if (originalTitle != null)
+                            // Landscape keeps the notch on the side: text is
+                            // inset, the video stays full bleed.
+                            SafeArea(
+                              top: false,
+                              bottom: false,
+                              child: _buildOriginalTitleBar(originalTitle, subtitleStripStyle(context, originalTitle)),
+                            ),
                           // Pinned above the scrollable body so playback stays in view.
-                          _buildVideoPlayerArea(isFullScreen: false),
-                          Expanded(child: _buildDetailBody()),
+                          SafeArea(top: false, bottom: false, child: _buildVideoPlayerArea(isFullScreen: false)),
+                          Expanded(child: SafeArea(top: false, bottom: false, child: _buildDetailBody())),
                         ],
                       ),
               ),
@@ -881,6 +901,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final aspectRatio = (controller?.value.isInitialized ?? false) ? controller!.value.aspectRatio : 16 / 9;
     final screenWidth = mediaQuery.size.width;
     final playerWidth = miniPlayerWidth + (screenWidth - miniPlayerWidth) * t;
+    // Landscape puts the notch and the rounded corners on the sides, where the
+    // header controls and the body text would otherwise run underneath them.
+    // The video itself stays full bleed.
+    final sideInsets = EdgeInsets.only(left: mediaQuery.padding.left, right: mediaQuery.padding.right);
     // Fixed so the player can be clamped against the space the header leaves.
     final headerHeight = mediaQuery.padding.top + titleFit.height + (originalTitle != null ? embeddedSubtitleHeight : 0);
 
@@ -940,8 +964,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       builder: (context, constraints) {
         // Capped against the space left under the header, so a wide desktop
         // window (or a landscape phone) still leaves a body to scroll.
+        // The insets fade in with the page: expanded, the video sits inside
+        // them; collapsed to the mini bar, the host already places it clear of
+        // the edges, so applying them there would shift the bar sideways.
+        final activeSideInsets = sideInsets * t;
         final fullPlayerHeight = inlinePlayerHeight(
-          width: screenWidth,
+          width: screenWidth - sideInsets.horizontal,
           aspectRatio: aspectRatio,
           availableHeight: constraints.maxHeight - headerHeight,
         );
@@ -950,7 +978,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           math.max(miniPlayerHeight, constraints.maxHeight - headerHeight * t),
         );
         // The box is still card-sized while the opening zoom runs.
-        final boxedPlayerWidth = math.min(playerWidth, constraints.maxWidth);
+        final boxedPlayerWidth = math.min(playerWidth, constraints.maxWidth - activeSideInsets.horizontal);
         return Material(
           color: theme.colorScheme.surface,
           child: Column(
@@ -971,30 +999,36 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     heightFactor: t,
                     child: Opacity(
                       opacity: t,
-                      child: SizedBox(height: headerHeight, child: header),
+                      child: SizedBox(
+                        height: headerHeight,
+                        child: Padding(padding: sideInsets, child: header),
+                      ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(
-                height: playerHeight,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: boxedPlayerWidth,
-                      height: playerHeight,
-                      child: GestureDetector(
-                        onVerticalDragStart: widget.onPlayerDragStart,
-                        onVerticalDragUpdate: widget.onPlayerDragUpdate,
-                        onVerticalDragEnd: widget.onPlayerDragEnd,
-                        child: _buildVideoPlayerArea(isFullScreen: false, fillParent: true, compact: t < 0.6),
+              Padding(
+                padding: activeSideInsets,
+                child: SizedBox(
+                  height: playerHeight,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: boxedPlayerWidth,
+                        height: playerHeight,
+                        child: GestureDetector(
+                          onVerticalDragStart: widget.onPlayerDragStart,
+                          onVerticalDragUpdate: widget.onPlayerDragUpdate,
+                          onVerticalDragEnd: widget.onPlayerDragEnd,
+                          child: _buildVideoPlayerArea(isFullScreen: false, fillParent: true, compact: t < 0.6),
+                        ),
                       ),
-                    ),
-                    if (t < 1)
-                      Expanded(
-                        child: Opacity(opacity: 1 - t, child: _buildMiniChrome(title, alternateTitle ?? originalTitle)),
-                      ),
-                  ],
+                      if (t < 1)
+                        Expanded(
+                          child: Opacity(opacity: 1 - t, child: _buildMiniChrome(title, alternateTitle ?? originalTitle)),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               Expanded(
@@ -1003,7 +1037,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     opacity: t,
                     child: IgnorePointer(
                       ignoring: t < 0.99,
-                      child: _isLoading ? const Center(child: CircularProgressIndicator()) : _buildDetailBody(),
+                      child: Padding(
+                        padding: sideInsets,
+                        child: _isLoading ? const Center(child: CircularProgressIndicator()) : _buildDetailBody(),
+                      ),
                     ),
                   ),
                 ),
@@ -1087,10 +1124,27 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             alignment: Alignment.bottomCenter,
             children: [
               if (controller != null && controller.value.isInitialized)
-                Center(
-                  child: AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller)),
-                )
-              else if (_isLoadingStream)
+                // Zoomed full screen covers the screen, notch area included, so
+                // the sides are cropped rather than letterboxed. Everything else
+                // keeps the whole frame visible.
+                (isFullScreen && _isVideoCover)
+                    ? SizedBox.expand(
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          clipBehavior: Clip.hardEdge,
+                          child: SizedBox(
+                            width: controller.value.size.width,
+                            height: controller.value.size.height,
+                            child: VideoPlayer(controller),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller)),
+                      )
+              // `_isLoading` counts too: the detail request runs before the
+              // stream one, and without it the retry button flashes up first.
+              else if (_isLoadingStream || _isLoading)
                 const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
               else
                 Center(
@@ -1142,6 +1196,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     },
                     onLongPressStart: (_) => _start2xSpeed(),
                     onLongPressEnd: (_) => _stop2xSpeed(),
+                    // Pinch out fills the screen, pinch in goes back to the
+                    // whole frame — the way a video player is expected to zoom.
+                    onScaleUpdate: isFullScreen
+                        ? (details) {
+                            if (details.pointerCount < 2) return;
+                            if (details.scale > 1.15) {
+                              _setVideoCover(true);
+                            } else if (details.scale < 0.85) {
+                              _setVideoCover(false);
+                            }
+                          }
+                        : null,
                   ),
                 ),
 
@@ -1280,6 +1346,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                           onLongPress: _toggleMute,
                                         ),
                                       ),
+                                      // Fit / fill toggle, full screen only —
+                                      // inline there is nothing to crop to.
+                                      if (isFullScreen)
+                                        IconButton(
+                                          tooltip: _isVideoCover ? l10n.zoomToFit : l10n.zoomToFill,
+                                          icon: Icon(
+                                            _isVideoCover ? Icons.zoom_in_map_rounded : Icons.zoom_out_map_rounded,
+                                            color: Colors.white,
+                                          ),
+                                          onPressed: () => _setVideoCover(!_isVideoCover),
+                                        ),
                                       // Fullscreen button
                                       IconButton(
                                         icon: Icon(
