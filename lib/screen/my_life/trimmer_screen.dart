@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:easy_video_editor/easy_video_editor.dart';
@@ -146,7 +147,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
             ],
           ),
         ],
-      ),
+      ).dialogConstrainedBox(),
     );
     if (downscale != true) return null; // user will adjust the trim slider
 

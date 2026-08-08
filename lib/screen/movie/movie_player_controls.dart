@@ -1,4 +1,3 @@
-import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:flutter/material.dart';
@@ -107,59 +106,107 @@ class _SkipBadge extends StatelessWidget {
   }
 }
 
-/// Mute button + slider shown above the volume icon.
-class PlayerVolumePopup extends StatelessWidget {
-  const PlayerVolumePopup({
+/// Volume button of the bottom bar: tap opens the slider, hold mutes.
+///
+/// Deliberately ink-free: over a video, a material ripple/highlight paints as a
+/// grey block, and neither [IconButton] nor [InkResponse] can be talked out of
+/// it entirely. A bare gesture detector also keeps `onLongPress` for itself,
+/// which an ancestor detector would lose to the button's own tap recognizer.
+class PlayerVolumeButton extends StatelessWidget {
+  const PlayerVolumeButton({
     super.key,
-    required this.volume,
     required this.icon,
-    required this.onToggleMute,
-    required this.onChanged,
-    required this.onChangeStart,
+    required this.tooltip,
+    required this.onTap,
+    required this.onLongPress,
+    this.muted = false,
   });
 
-  final double volume;
+  static const size = 40.0;
+
   final IconData icon;
-  final VoidCallback onToggleMute;
-  final ValueChanged<double> onChanged;
-  final VoidCallback onChangeStart;
+  final String tooltip;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    return Tooltip(
+      message: tooltip,
+      // A tooltip defaults to long press on touch, which would pop its bubble
+      // over the button every time the user holds to mute. Hover still works.
+      triggerMode: TooltipTriggerMode.manual,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: SizedBox.square(
+          dimension: size,
+          child: Icon(icon, size: 22, color: muted ? Colors.white70 : Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+/// Vertical volume slider that pops up over the volume button. It carries no
+/// speaker icon of its own — the button it grows out of already is one.
+class PlayerVolumePopup extends StatelessWidget {
+  const PlayerVolumePopup({super.key, required this.volume, required this.onChanged, required this.onChangeStart});
+
+  final double volume;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onChangeStart;
+
+  /// Wide enough for "100" to stay on one line and for the upright slider to
+  /// keep a usable touch target.
+  static const width = 42.0;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        width: width,
+        padding: const EdgeInsets.fromLTRB(2, 6, 2, 2),
         decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.white24),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              tooltip: volume == 0 ? l10n.unmute : l10n.mute,
-              icon: Icon(icon, color: Colors.white),
-              onPressed: onToggleMute,
+            Text(
+              '${(volume * 100).round()}',
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.visible,
+              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
             ),
             SizedBox(
-              width: 120,
-              child: Slider(
-                value: volume,
-                onChangeStart: (_) => onChangeStart(),
-                onChanged: onChanged,
-                activeColor: Colors.pinkAccent,
-                inactiveColor: Colors.white30,
-              ),
-            ),
-            SizedBox(
+              height: 120,
+              // The box width is the slider's touch depth once it stands up.
               width: 38,
-              child: Text(
-                '${(volume * 100).round()}%',
-                textAlign: TextAlign.right,
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: SliderTheme(
+                  // A default Slider reserves its overlay radius at both ends,
+                  // which reads as dead space once the slider stands upright.
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                  ),
+                  child: Slider(
+                    value: volume,
+                    onChangeStart: (_) => onChangeStart(),
+                    onChanged: onChanged,
+                    activeColor: Colors.pinkAccent,
+                    inactiveColor: Colors.white30,
+                  ),
+                ),
               ),
             ),
           ],

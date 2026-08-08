@@ -4,6 +4,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/num_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/electric/electric_merged.dart';
@@ -193,7 +194,7 @@ class _ElectricScreenState
             ],
           ),
         ],
-      ),
+      ).dialogConstrainedBox(),
     );
     if (confirmed == true) await vm.removeActiveAccount();
   }
@@ -220,7 +221,7 @@ class _ElectricScreenState
             ],
           ),
         ],
-      ),
+      ).dialogConstrainedBox(),
     );
     if (confirmed != true) return false;
     await vm.forgetSavedAccount(account);

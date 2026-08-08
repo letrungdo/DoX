@@ -2360,6 +2360,12 @@ abstract class AppLocalizations {
   /// **'Movie Server URL'**
   String get movieServerUrl;
 
+  /// No description provided for @addMovieServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Movie Server URL'**
+  String get addMovieServerUrl;
+
   /// No description provided for @editMovieServerUrl.
   ///
   /// In en, this message translates to:

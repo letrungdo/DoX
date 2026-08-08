@@ -94,6 +94,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Timer? _controlsTimer;
   StreamSubscription<Orientation>? _orientationSubscription;
   final FocusNode _videoFocusNode = FocusNode(debugLabel: 'movie-video');
+
+  /// Anchors the volume popup to the volume button, whatever the bar layout is.
+  final LayerLink _volumeButtonLink = LayerLink();
   VoidCallback? _videoValueListener;
   int _controllerGeneration = 0;
   int _detailGeneration = 0;
@@ -545,8 +548,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     unawaited(_videoController?.setVolume(volume));
   }
 
+  /// Long-pressing the volume button mutes, and restores the level it was at.
   void _toggleMute() {
     _setVolume(_volume > 0 ? 0 : _lastAudibleVolume);
+    HapticFeedback.selectionClick();
+    _startControlsTimer();
   }
 
   void _toggleVolumeControl() {
@@ -752,30 +758,37 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   /// The original title, shown as a strip right under the app bar so it stays
   /// visible while the body scrolls.
-  Widget _buildOriginalTitleBar(String originalTitle) {
+  Widget _buildOriginalTitleBar(String originalTitle, TextStyle style) {
     final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       color: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-      child: Text(
-        originalTitle,
-        maxLines: subtitleMaxLines,
-        overflow: TextOverflow.ellipsis,
-        style:
-            theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)) ??
-            const TextStyle(fontSize: 12),
-      ),
+      child: Text(originalTitle, maxLines: subtitleMaxLines, overflow: TextOverflow.ellipsis, style: style),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final title = _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
-    final originalTitle = _detail?.originalTitle ?? widget.initialMovie?.originalTitle;
-    final titleFit = appBarTitleFit(context, title);
-    final hasOriginalTitle = originalTitle != null && originalTitle.isNotEmpty && originalTitle != title;
+    final rawTitle = _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
+    // The bracketed alternate name rides in the bar under the title; the
+    // original name gets its own strip right below the bar.
+    final titleParts = splitMovieTitle(rawTitle);
+    final title = titleParts.title;
+    final alternateTitle = titleParts.subtitle;
+    final rawOriginalTitle = (_detail?.originalTitle ?? widget.initialMovie?.originalTitle)?.trim();
+    final originalTitle =
+        (rawOriginalTitle == null || rawOriginalTitle.isEmpty || rawOriginalTitle == title || rawOriginalTitle == alternateTitle)
+        ? null
+        : rawOriginalTitle;
+    final titleFit = appBarTitleFit(
+      context,
+      title,
+      subtitle: alternateTitle,
+      // The overlay header keeps its title block to a tighter budget.
+      subtitleLines: widget.embedded ? 1 : subtitleMaxLines,
+    );
 
     return PopScope(
       // Embedded, the host owns the back button — it minimises, and asks this
@@ -792,13 +805,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               body: SizedBox.expand(child: _buildVideoPlayerArea(isFullScreen: true)),
             )
           : widget.embedded
-          ? _buildEmbedded(context, title: title, originalTitle: hasOriginalTitle ? originalTitle : null, titleFit: titleFit)
+          ? _buildEmbedded(context, title: title, alternateTitle: alternateTitle, originalTitle: originalTitle, titleFit: titleFit)
           : GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               child: Scaffold(
                 appBar: DoAppBar(
                   title: title,
                   titleStyle: titleFit.titleStyle,
+                  subtitle: alternateTitle == null
+                      ? null
+                      : Text(alternateTitle, style: titleFit.subtitleStyle, maxLines: subtitleMaxLines, overflow: TextOverflow.ellipsis),
                   titleMaxLines: titleMaxLines,
                   height: titleFit.height,
                   actions: [
@@ -818,7 +834,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (hasOriginalTitle) _buildOriginalTitleBar(originalTitle),
+                          if (originalTitle != null) _buildOriginalTitleBar(originalTitle, subtitleStripStyle(context, originalTitle)),
                           // Pinned above the scrollable body so playback stays in view.
                           _buildVideoPlayerArea(isFullScreen: false),
                           Expanded(child: _buildDetailBody()),
@@ -850,7 +866,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   /// The page as it lives inside the `MovieScreen` overlay. [minimizeProgress]
   /// (1 = expanded, 0 = mini bar) drives every size here, so a drag reads as
   /// the player shrinking into the bottom bar while the rest fades away.
-  Widget _buildEmbedded(BuildContext context, {required String title, required String? originalTitle, required AppBarTitleFit titleFit}) {
+  Widget _buildEmbedded(
+    BuildContext context, {
+    required String title,
+    required String? alternateTitle,
+    required String? originalTitle,
+    required AppBarTitleFit titleFit,
+  }) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final t = widget.minimizeProgress.clamp(0.0, 1.0);
@@ -858,7 +880,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final controller = _videoController;
     final aspectRatio = (controller?.value.isInitialized ?? false) ? controller!.value.aspectRatio : 16 / 9;
     final screenWidth = mediaQuery.size.width;
-    final fullPlayerHeight = math.max(screenWidth / aspectRatio, minPlayerHeight);
     final playerWidth = miniPlayerWidth + (screenWidth - miniPlayerWidth) * t;
     // Fixed so the player can be clamped against the space the header leaves.
     final headerHeight = mediaQuery.padding.top + titleFit.height + (originalTitle != null ? embeddedSubtitleHeight : 0);
@@ -874,7 +895,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             children: [
               IconButton(tooltip: l10n.minimize, icon: const Icon(Icons.keyboard_arrow_down_rounded), onPressed: widget.onMinimize),
               Expanded(
-                child: Text(title, style: titleFit.titleStyle, maxLines: titleMaxLines, overflow: TextOverflow.ellipsis),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: titleFit.titleStyle, maxLines: titleMaxLines, overflow: TextOverflow.ellipsis),
+                    if (alternateTitle != null)
+                      Text(alternateTitle, style: titleFit.subtitleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
               const SizedBox(width: 8),
               NeuIconButton(
@@ -899,9 +929,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 originalTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)) ??
-                    const TextStyle(fontSize: 12),
+                style: subtitleStripStyle(context, originalTitle, maxLines: 1),
               ),
             ),
           ),
@@ -910,7 +938,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Landscape phones leave less room than the aspect ratio asks for.
+        // Capped against the space left under the header, so a wide desktop
+        // window (or a landscape phone) still leaves a body to scroll.
+        final fullPlayerHeight = inlinePlayerHeight(
+          width: screenWidth,
+          aspectRatio: aspectRatio,
+          availableHeight: constraints.maxHeight - headerHeight,
+        );
         final playerHeight = math.min(
           miniPlayerHeight + (fullPlayerHeight - miniPlayerHeight) * t,
           math.max(miniPlayerHeight, constraints.maxHeight - headerHeight * t),
@@ -958,7 +992,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     ),
                     if (t < 1)
                       Expanded(
-                        child: Opacity(opacity: 1 - t, child: _buildMiniChrome(title, originalTitle)),
+                        child: Opacity(opacity: 1 - t, child: _buildMiniChrome(title, alternateTitle ?? originalTitle)),
                       ),
                   ],
                 ),
@@ -1236,12 +1270,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                         },
                                       ),
                                       const Spacer(),
-                                      IconButton(
-                                        tooltip: l10n.volume,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-                                        icon: Icon(_volumeIcon, color: _volume == 0 ? Colors.white70 : Colors.white),
-                                        onPressed: _toggleVolumeControl,
+                                      CompositedTransformTarget(
+                                        link: _volumeButtonLink,
+                                        child: PlayerVolumeButton(
+                                          icon: _volumeIcon,
+                                          muted: _volume == 0,
+                                          tooltip: _volume == 0 ? l10n.unmute : l10n.volume,
+                                          onTap: _toggleVolumeControl,
+                                          onLongPress: _toggleMute,
+                                        ),
                                       ),
                                       // Fullscreen button
                                       IconButton(
@@ -1270,14 +1307,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
                           if (_showVolumeControl)
                             Positioned(
-                              right: 12 + (isFullScreen ? MediaQuery.paddingOf(context).right : 0),
-                              bottom: 58 + (isFullScreen ? MediaQuery.paddingOf(context).bottom : 0),
-                              child: PlayerVolumePopup(
-                                volume: _volume,
-                                icon: _volumeIcon,
-                                onToggleMute: _toggleMute,
-                                onChanged: _setVolume,
-                                onChangeStart: () => _controlsTimer?.cancel(),
+                              left: 0,
+                              top: 0,
+                              // Follows the button itself, so it stays centred
+                              // on it no matter how the bar is laid out.
+                              child: CompositedTransformFollower(
+                                link: _volumeButtonLink,
+                                showWhenUnlinked: false,
+                                targetAnchor: Alignment.topCenter,
+                                followerAnchor: Alignment.bottomCenter,
+                                offset: const Offset(0, -4),
+                                child: PlayerVolumePopup(
+                                  volume: _volume,
+                                  onChanged: _setVolume,
+                                  onChangeStart: () => _controlsTimer?.cancel(),
+                                ),
                               ),
                             ),
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/screen/movie/movie_detail_screen.dart';
@@ -311,7 +312,7 @@ class _MovieScreenState extends State<MovieScreen> with SingleTickerProviderStat
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
           TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete)),
         ],
-      ),
+      ).dialogConstrainedBox(),
     );
 
     if (confirm == true) {
