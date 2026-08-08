@@ -93,6 +93,25 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     };
   }
 
+  /// [BottomNavigationBar] reserves the whole home-indicator inset below its
+  /// items, which on iOS leaves them floating a finger's width above the edge.
+  /// Keeping half of it still clears the indicator while pulling the bar down
+  /// into the safe area.
+  Widget _tightenSafeArea(BuildContext context, Widget bar) {
+    final mediaQuery = MediaQuery.of(context);
+    final inset = mediaQuery.viewPadding.bottom;
+    if (inset <= 0) return bar;
+
+    final reduced = inset / 2;
+    return MediaQuery(
+      data: mediaQuery.copyWith(
+        viewPadding: mediaQuery.viewPadding.copyWith(bottom: reduced),
+        padding: mediaQuery.padding.copyWith(bottom: reduced),
+      ),
+      child: bar,
+    );
+  }
+
   /// Full-screen video asks for the whole screen, so the bar disappears
   /// instead of eating the bottom of the player.
   Widget _hideWhileImmersive(Widget bar) {
@@ -150,40 +169,43 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
               // Flush with the scaffold, no shade: an upward shadow here read as
               // a seam across the whole screen instead of a lifted bar.
               bottomNavigationBar: _hideWhileImmersive(
-                ColoredBox(
-                  color: context.neu.base,
-                  child: BottomNavigationBar(
-                    currentIndex: tabsRouter.activeIndex.clamp(
-                      0,
-                      routes.length - 1,
-                    ),
-                    onTap: (value) async {
-                      final page = tabs[value];
-                      if (page.requiresSupabaseAuth &&
-                          supabase.auth.currentSession == null) {
-                        await context.pushRoute(const AppLoginRoute());
-                        if (supabase.auth.currentSession == null) return;
-                      }
-                      if (value == tabsRouter.activeIndex) {
-                        // If the tab has a detail screen pushed on its nested
-                        // stack, re-tapping goes back one level instead of
-                        // reloading the tab's root.
-                        final innerRouter = tabsRouter.stackRouterOfIndex(
-                          value,
-                        );
-                        if (innerRouter != null && innerRouter.canPop()) {
-                          await innerRouter.maybePop();
+                _tightenSafeArea(
+                  context,
+                  ColoredBox(
+                    color: context.neu.base,
+                    child: BottomNavigationBar(
+                      currentIndex: tabsRouter.activeIndex.clamp(
+                        0,
+                        routes.length - 1,
+                      ),
+                      onTap: (value) async {
+                        final page = tabs[value];
+                        if (page.requiresSupabaseAuth &&
+                            supabase.auth.currentSession == null) {
+                          await context.pushRoute(const AppLoginRoute());
+                          if (supabase.auth.currentSession == null) return;
+                        }
+                        if (value == tabsRouter.activeIndex) {
+                          // If the tab has a detail screen pushed on its nested
+                          // stack, re-tapping goes back one level instead of
+                          // reloading the tab's root.
+                          final innerRouter = tabsRouter.stackRouterOfIndex(
+                            value,
+                          );
+                          if (innerRouter != null && innerRouter.canPop()) {
+                            await innerRouter.maybePop();
+                            return;
+                          }
+                          await vm.handleTabReselect(routes[value].routeName);
                           return;
                         }
+                        tabsRouter.setActiveIndex(value);
+                        storageService.setActiveTabPage(page.name);
+                        // Switching to another tab re-fetches that tab's data.
                         await vm.handleTabReselect(routes[value].routeName);
-                        return;
-                      }
-                      tabsRouter.setActiveIndex(value);
-                      storageService.setActiveTabPage(page.name);
-                      // Switching to another tab re-fetches that tab's data.
-                      await vm.handleTabReselect(routes[value].routeName);
-                    },
-                    items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
+                      },
+                      items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
+                    ),
                   ),
                 ),
               ),
