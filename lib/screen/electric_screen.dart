@@ -46,6 +46,45 @@ class _ChartColors {
       : compareLight;
 }
 
+/// Asks before dropping stored credentials; true when they were removed.
+///
+/// Top level rather than a method on the screen: the settings page runs the
+/// same flow, and both reach the view model through the provider.
+Future<bool> confirmForgetElectricAccount(
+  BuildContext context,
+  ElectricAccount account,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final vm = context.read<ElectricViewModel>();
+  final confirmed = await showAppConfirmDialog(
+    context,
+    title: l10n.logout,
+    message: l10n.forgetAccountConfirm(account.displayName),
+    confirmText: l10n.delete,
+    isDestructive: true,
+  );
+  if (!confirmed) return false;
+  await vm.forgetSavedAccount(account);
+  return true;
+}
+
+/// Signs a second meter's account in alongside the ones already added.
+Future<void> showElectricAddAccountDialog(BuildContext context) async {
+  final vm = context.read<ElectricViewModel>();
+  final credentials = await showAppModal<({String username, String password})>(
+    context,
+    // The dialog sits above the screen's provider, so the saved accounts are
+    // passed in instead of read from the view model.
+    builder: (dialogContext) => _AddAccountDialog(
+      savedAccounts: vm.availableSavedAccounts,
+      onForgetSavedAccount: (account) =>
+          confirmForgetElectricAccount(context, account),
+    ),
+  );
+  if (credentials == null) return;
+  vm.addAccount(username: credentials.username, password: credentials.password);
+}
+
 @RoutePage()
 class ElectricScreen extends StatefulScreen implements AutoRouteWrapper {
   const ElectricScreen({super.key});
@@ -96,29 +135,19 @@ class _ElectricScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final settingsButton = IconButton(
+      tooltip: l10n.settings,
+      onPressed: () =>
+          context.router.push(ElectricSettingsRoute(electricVm: vm)),
+      icon: const Icon(Icons.settings_outlined, size: 24),
+    );
     return AppScaffold(
       appBar: DoAppBar(
         title: l10n.electricityTitle,
         titleSuffix: AppBarSyncIcon<ElectricViewModel>(
           selector: (vm) => vm.isFetching,
         ),
-        actions: [
-          Selector<ElectricViewModel, (ElectricStatus, bool)>(
-            selector: (_, vm) => (vm.status, vm.isMergedView),
-            builder: (context, state, _) {
-              final (status, mergedView) = state;
-              // The merged tab has no single account to sign out of.
-              if (status != ElectricStatus.loggedIn || mergedView) {
-                return const SizedBox.shrink();
-              }
-              return IconButton(
-                tooltip: l10n.logout,
-                onPressed: () => _confirmRemoveAccount(l10n),
-                icon: const Icon(Icons.logout_rounded, size: 24),
-              );
-            },
-          ),
-        ],
+        actions: [settingsButton],
       ),
       body: Selector<ElectricViewModel, ElectricStatus>(
         selector: (_, vm) => vm.status,
@@ -129,7 +158,8 @@ class _ElectricScreenState
             ),
             ElectricStatus.loggedOut => _LoginForm(
               onSubmit: _login,
-              onForgetSavedAccount: _confirmForgetSavedAccount,
+              onForgetSavedAccount: (account) =>
+                  confirmForgetElectricAccount(context, account),
             ),
             ElectricStatus.loggedIn => RefreshIndicator.adaptive(
               onRefresh: () => vm.onRefresh(showLoading: true), //
@@ -143,46 +173,6 @@ class _ElectricScreenState
 
   void _login(String username, String password) {
     vm.addAccount(username: username, password: password);
-  }
-
-  Future<void> _confirmRemoveAccount(AppLocalizations l10n) async {
-    final name = vm.activeAccount?.displayName ?? "";
-    final confirmed = await showAppConfirmDialog(
-      context,
-      title: l10n.logout,
-      message: l10n.removeAccountConfirm(name),
-      confirmText: l10n.logout,
-    );
-    if (confirmed) await vm.removeActiveAccount();
-  }
-
-  /// Asks before dropping stored credentials; true when they were removed.
-  Future<bool> _confirmForgetSavedAccount(ElectricAccount account) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showAppConfirmDialog(
-      context,
-      title: l10n.logout,
-      message: l10n.forgetAccountConfirm(account.displayName),
-      confirmText: l10n.delete,
-      isDestructive: true,
-    );
-    if (!confirmed) return false;
-    await vm.forgetSavedAccount(account);
-    return true;
-  }
-
-  Future<void> _showAddAccountDialog(AppLocalizations l10n) async {
-    final credentials = await showAppModal<({String username, String password})>(
-      context,
-      // The dialog sits above this screen's provider, so the saved accounts are
-      // passed in instead of read from the view model.
-      builder: (context) => _AddAccountDialog(
-        savedAccounts: vm.availableSavedAccounts,
-        onForgetSavedAccount: _confirmForgetSavedAccount,
-      ),
-    );
-    if (credentials == null) return;
-    _login(credentials.username, credentials.password);
   }
 
   Widget _buildContent(AppLocalizations l10n) {
@@ -324,17 +314,6 @@ class _ElectricScreenState
                 selected: vm.isMergedView,
                 onTap: vm.switchToMergedView,
               ),
-            NeuCard(
-              radius: 14,
-              depth: 0.5,
-              onTap: () => _showAddAccountDialog(l10n),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Icon(
-                Icons.person_add_alt_1_rounded,
-                size: 18,
-                color: scheme.onSurface,
-              ),
-            ),
           ],
         );
       },

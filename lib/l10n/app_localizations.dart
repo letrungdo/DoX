@@ -1526,6 +1526,24 @@ abstract class AppLocalizations {
   /// **'All batches, revenue and expenses of the current account will be permanently deleted. This action cannot be undone.'**
   String get deleteAllChickenDataWarning;
 
+  /// No description provided for @confirmPasswordToDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password to confirm the deletion.'**
+  String get confirmPasswordToDelete;
+
+  /// No description provided for @passwordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password.'**
+  String get passwordRequired;
+
+  /// No description provided for @passwordIncorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'That password is not correct.'**
+  String get passwordIncorrect;
+
   /// No description provided for @deletingData.
   ///
   /// In en, this message translates to:

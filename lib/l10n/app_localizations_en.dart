@@ -805,6 +805,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'All batches, revenue and expenses of the current account will be permanently deleted. This action cannot be undone.';
 
   @override
+  String get confirmPasswordToDelete =>
+      'Enter your password to confirm the deletion.';
+
+  @override
+  String get passwordRequired => 'Enter your password.';
+
+  @override
+  String get passwordIncorrect => 'That password is not correct.';
+
+  @override
   String get deletingData => 'Deleting data';
 
   @override

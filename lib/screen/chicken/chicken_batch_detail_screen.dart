@@ -26,6 +26,7 @@ import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
+import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
@@ -1298,29 +1299,19 @@ class _ChickenBatchDetailScreenState
     );
   }
 
-  void _confirmDelete(ChickenBatch batch) {
+  /// A batch carries every sale and expense booked against it, so deleting one
+  /// asks for the password rather than settling for a second tap.
+  Future<void> _confirmDelete(ChickenBatch batch) async {
     final l10n = AppLocalizations.of(context);
-    showAppModal(
+    final confirmed = await showPasswordConfirmDialog(
       context,
-      builder: (context) => CuteDialog(
-        icon: Assets.images.henCute,
-        title: l10n.deleteBatch,
-        accent: context.colors.danger,
-        confirmText: l10n.delete,
-        isDestructive: true,
-        onConfirm: () {
-          unawaited(_runWrite(vm.deleteBatch(batch.id)));
-          Navigator.pop(context);
-          context.router.back();
-        },
-        children: [
-          Text(
-            l10n.confirmDeleteBatch(batch.name),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+      title: l10n.deleteBatch,
+      message: l10n.confirmDeleteBatch(batch.name),
+      confirmText: l10n.delete,
     );
+    if (!confirmed || !mounted) return;
+    unawaited(_runWrite(vm.deleteBatch(batch.id)));
+    context.router.back();
   }
 
   void _showEditInfoDialog(ChickenBatch batch) {

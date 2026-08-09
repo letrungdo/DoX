@@ -149,6 +149,9 @@ class _AppLoginScreenState
             textInputAction: isSignUp
                 ? TextInputAction.next
                 : TextInputAction.done,
+            // Enter on the last field does what the button does, so a hardware
+            // keyboard never has to reach for the mouse.
+            onSubmitted: isSignUp ? null : (_) => _submit(),
             onChanged: vm.onPasswordChanged,
             validator: (value) => _validatePassword(l10n, value),
           ),
@@ -158,6 +161,7 @@ class _AppLoginScreenState
               labelText: l10n.confirmPassword,
               autofillHints: const [AutofillHints.newPassword],
               textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
               onChanged: vm.onConfirmPasswordChanged,
               validator: (value) =>
                   value == vm.password ? null : l10n.passwordMismatch,

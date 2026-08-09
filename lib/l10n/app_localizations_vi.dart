@@ -806,6 +806,16 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tất cả lứa gà, doanh thu và chi phí của tài khoản hiện tại sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.';
 
   @override
+  String get confirmPasswordToDelete =>
+      'Nhập mật khẩu của bạn để xác nhận xóa.';
+
+  @override
+  String get passwordRequired => 'Vui lòng nhập mật khẩu.';
+
+  @override
+  String get passwordIncorrect => 'Mật khẩu không đúng.';
+
+  @override
   String get deletingData => 'Đang xóa dữ liệu';
 
   @override

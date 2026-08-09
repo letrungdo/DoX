@@ -3,10 +3,10 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/settings/page_layout_editor.dart';
 import 'package:do_x/view_model/app_view_model.dart';
-import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/setting_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -24,7 +24,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          _buildSettingCard(
+          SettingCard(
             icon: Icons.language_rounded,
             color: Colors.blue,
             title: Text(l10n.language),
@@ -50,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _buildSettingCard(
+          SettingCard(
             icon: Icons.palette_outlined,
             color: Theme.of(context).colorScheme.primary,
             title: Text(l10n.themeMode),
@@ -80,88 +80,10 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Selector<ChickenViewModel, bool>(
-            selector: (_, vm) => vm.vaccinationNotificationsEnabled,
-            builder: (context, enabled, _) => _buildSettingCard(
-              icon: Icons.notifications_active_outlined,
-              color: Colors.green.shade700,
-              title: Text(l10n.vaccinationNotifications),
-              trailing: Switch.adaptive(
-                value: enabled,
-                onChanged: (value) =>
-                    _setVaccinationReminder(context, l10n, value),
-              ),
-              onTap: () => _setVaccinationReminder(context, l10n, !enabled),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Selector<ChickenViewModel, bool>(
-            selector: (_, vm) => vm.useLunarCalendar,
-            builder: (context, useLunar, _) => _buildSettingCard(
-              icon: Icons.calendar_month_rounded,
-              color: Colors.deepPurple,
-              title: Text(l10n.chickenLunarCalendar),
-              trailing: Switch.adaptive(
-                value: useLunar,
-                onChanged: (value) =>
-                    context.read<ChickenViewModel>().setUseLunarCalendar(value),
-              ),
-              onTap: () => context.read<ChickenViewModel>().setUseLunarCalendar(
-                !useLunar,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildSettingCard(
-            icon: Icons.electric_bolt_rounded,
-            color: Colors.amber.shade700,
-            title: Text(l10n.electricReminder),
-            trailing: Switch.adaptive(
-              value: appVm.electricReminderEnabled,
-              onChanged: (value) =>
-                  _setElectricReminder(context, l10n, appVm, value),
-            ),
-            onTap: () => _setElectricReminder(
-              context,
-              l10n,
-              appVm,
-              !appVm.electricReminderEnabled,
-            ),
-          ),
-          const SizedBox(height: 14),
           _buildLayoutCard(context, l10n, appVm),
         ],
       ),
     );
-  }
-
-  Future<void> _setElectricReminder(
-    BuildContext context,
-    AppLocalizations l10n,
-    AppViewModel appVm,
-    bool value,
-  ) async {
-    final changed = await appVm.setElectricReminderEnabled(value);
-    if (value && !changed && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.notificationPermissionDenied)),
-      );
-    }
-  }
-
-  Future<void> _setVaccinationReminder(
-    BuildContext context,
-    AppLocalizations l10n,
-    bool value,
-  ) async {
-    final chickenVm = context.read<ChickenViewModel>();
-    chickenVm.setCurrentContext(context);
-    final changed = await chickenVm.setVaccinationNotificationsEnabled(value);
-    if (value && !changed && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.notificationPermissionDenied)),
-      );
-    }
   }
 
   /// Lets the user decide what the app looks like: drag to reorder within a
@@ -218,38 +140,6 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 8),
         ],
       ).contentConstrainedBox(),
-    );
-  }
-
-  Widget _buildSettingCard({
-    required IconData icon,
-    required Color color,
-    required Widget title,
-    required Widget trailing,
-    VoidCallback? onTap,
-  }) {
-    return NeuCard(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        onTap: onTap,
-        leading: Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color),
-        ),
-        title: DefaultTextStyle.merge(
-          style: const TextStyle(fontWeight: FontWeight.w600),
-          child: title,
-        ),
-        trailing: trailing,
-      ),
     );
   }
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
@@ -31,13 +30,15 @@ import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
-import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+/// Everything the app bar's overflow menu can do. The screen keeps only the
+/// add button beside it, so the bar stays readable in landscape too.
+enum _ChickenMenuAction { statistics, sharing, settings }
 
 @RoutePage()
 class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -109,33 +110,35 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Watched narrowly: the app bar sits outside the body's Consumer, and only
+    // this one flag decides whether the title is a picker.
+    final hasOtherDataSources = context.select<ChickenViewModel, bool>(
+      (vm) => vm.dataSources.length > 1,
+    );
     return AppScaffold(
       appBar: DoAppBar(
         title: l10n.chickenManagement,
-        titleSuffix: AppBarSyncIcon<ChickenViewModel>(
-          selector: (vm) => vm.isFetching,
+        // With someone else's data shared in, the title doubles as the source
+        // picker — the same idea as the movie screen's server picker.
+        onTitleTap: hasOtherDataSources ? _showDataSourcePicker : null,
+        // The caret belongs to the title, so it sits right against it; the sync
+        // icon is its own thing and keeps the usual gap.
+        titleSuffixSpacing: hasOtherDataSources ? 2 : 8,
+        titleSuffix: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasOtherDataSources) ...[
+              Icon(
+                Icons.expand_more_rounded,
+                size: 20,
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+            ],
+            AppBarSyncIcon<ChickenViewModel>(selector: (vm) => vm.isFetching),
+          ],
         ),
         actions: [
-          Consumer<ChickenViewModel>(
-            builder: (context, vm, child) => vm.dataSources.length > 1
-                ? IconButton(
-                    icon: const Icon(Icons.switch_account_outlined),
-                    onPressed: _showDataSourcePicker,
-                    tooltip: l10n.viewChickenDataFrom,
-                  )
-                : const SizedBox.shrink(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.group_outlined),
-            onPressed: _showSharingDialog,
-            tooltip: l10n.chickenSharing,
-          ),
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () =>
-                context.router.push(const ChickenStatisticsRoute()),
-            tooltip: l10n.profitStatistics,
-          ),
           Consumer<ChickenViewModel>(
             builder: (context, vm, child) => IconButton(
               icon: ChickenAddIcon(
@@ -145,30 +148,27 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
               onPressed: vm.isReadOnly ? null : _showAddBatchDialog,
             ),
           ),
-          if (kDebugMode)
-            Consumer<ChickenViewModel>(
-              builder: (context, vm, child) => PopupMenuButton<String>(
-                enabled: !vm.isReadOnly,
-                onSelected: (value) {
-                  switch (value) {
-                    case 'import':
-                      _importFromJsonFile();
-                    case 'delete_all':
-                      _showDeleteAllDataDialog();
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(value: 'import', child: Text(l10n.importData)),
-                  PopupMenuItem(
-                    value: 'delete_all',
-                    child: Text(
-                      l10n.deleteAllChickenData,
-                      style: TextStyle(color: context.colors.danger),
-                    ),
-                  ),
-                ],
+          PopupMenuButton<_ChickenMenuAction>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: _onMenuAction,
+            itemBuilder: (context) => [
+              _menuItem(
+                _ChickenMenuAction.statistics,
+                Icons.bar_chart,
+                l10n.profitStatistics,
               ),
-            ),
+              _menuItem(
+                _ChickenMenuAction.sharing,
+                Icons.group_outlined,
+                l10n.chickenSharing,
+              ),
+              _menuItem(
+                _ChickenMenuAction.settings,
+                Icons.settings_outlined,
+                l10n.settings,
+              ),
+            ],
+          ),
         ],
       ),
       body: Consumer<ChickenViewModel>(
@@ -230,74 +230,110 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             items.add(_buildBatchCard(batch));
           }
 
-          return Column(
-            children: [
-              if (vm.isReadOnly)
-                Material(
-                  color: context.theme.colorScheme.secondaryContainer,
-                  child: ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.visibility_outlined),
-                    title: Text(l10n.sharedReadOnly(vm.activeOwnerEmail ?? '')),
+          // Landscape leaves so little height that a pinned header would take
+          // most of it, so there the header rides the list instead.
+          final isLandscape =
+              MediaQuery.orientationOf(context) == Orientation.landscape;
+
+          final header = <Widget>[
+            if (vm.isReadOnly)
+              Material(
+                color: context.theme.colorScheme.secondaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.visibility_outlined, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.sharedReadOnly(vm.activeOwnerEmail ?? ''),
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              const ChickenStaleBanner(sections: {ChickenSection.batches}),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildFeatureCard(
-                        icon: Assets.images.feedCute.svg(width: 32, height: 32),
-                        title: l10n.commonExpenses,
-                        accent: context.colors.warning,
-                        accentSoft: context.colors.warningSoft,
-                        onTap: () =>
-                            context.router.push(const GlobalExpensesRoute()),
-                      ),
+              ),
+            const ChickenStaleBanner(sections: {ChickenSection.batches}),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildFeatureCard(
+                      icon: Assets.images.feedCute.svg(width: 32, height: 32),
+                      title: l10n.commonExpenses,
+                      accent: context.colors.warning,
+                      accentSoft: context.colors.warningSoft,
+                      onTap: () =>
+                          context.router.push(const GlobalExpensesRoute()),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _buildFeatureCard(
-                        icon: Assets.images.roosterCute.svg(
-                          width: 32,
-                          height: 32,
-                        ),
-                        title: l10n.sellGrownChicken,
-                        accent: context.colors.danger,
-                        accentSoft: context.colors.dangerSoft,
-                        onTap: () =>
-                            context.router.push(const CockSalesRoute()),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _buildFeatureCard(
+                      icon: Assets.images.roosterCute.svg(
+                        width: 32,
+                        height: 32,
                       ),
+                      title: l10n.sellGrownChicken,
+                      accent: context.colors.danger,
+                      accentSoft: context.colors.dangerSoft,
+                      onTap: () => context.router.push(const CockSalesRoute()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  YearFilter(
+                    selectedYear: _selectedYear,
+                    years: years,
+                    includeAll: true,
+                    onChanged: (year) {
+                      setState(() => _selectedYear = year);
+                      // A different year is a different list — start it from
+                      // the top instead of keeping the old scroll offset.
+                      _scrollToTop();
+                      // Another year means another read: the server only
+                      // sent the one that was selected.
+                      vm.ensureLoaded({
+                        ChickenSection.batches,
+                      }, year: _yearFilter);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: TotalAmountText(totalRevenue)),
+                ],
+              ),
+            ),
+          ];
+
+          final emptyState = vm.isLoading
+              ? const SizedBox.shrink()
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Assets.images.chickCute.svg(width: 72, height: 72),
+                    const SizedBox(height: 12),
+                    Text(
+                      _selectedYear == 0
+                          ? l10n.noBatchesYet
+                          : l10n.noBatchesInYear(_selectedYear),
                     ),
                   ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: [
-                    YearFilter(
-                      selectedYear: _selectedYear,
-                      years: years,
-                      includeAll: true,
-                      onChanged: (year) {
-                        setState(() => _selectedYear = year);
-                        // A different year is a different list — start it from
-                        // the top instead of keeping the old scroll offset.
-                        _scrollToTop();
-                        // Another year means another read: the server only
-                        // sent the one that was selected.
-                        vm.ensureLoaded({
-                          ChickenSection.batches,
-                        }, year: _yearFilter);
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(child: TotalAmountText(totalRevenue)),
-                  ],
-                ),
-              ),
+                );
+
+          return Column(
+            children: [
+              if (!isLandscape) ...header,
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () =>
@@ -308,37 +344,39 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                             controller: _scrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              SizedBox(
-                                height: constraints.maxHeight,
-                                child: vm.isLoading
-                                    ? const SizedBox.shrink()
-                                    : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Assets.images.chickCute.svg(
-                                            width: 72,
-                                            height: 72,
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            _selectedYear == 0
-                                                ? l10n.noBatchesYet
-                                                : l10n.noBatchesInYear(
-                                                    _selectedYear,
-                                                  ),
-                                          ),
-                                        ],
+                              if (isLandscape) ...header,
+                              isLandscape
+                                  ? Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 32,
                                       ),
-                              ),
+                                      child: emptyState,
+                                    )
+                                  : SizedBox(
+                                      height: constraints.maxHeight,
+                                      child: emptyState,
+                                    ),
                             ],
                           ),
                         )
                       : ListView(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-                          children: items,
+                          children: [
+                            if (isLandscape) ...header,
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                14,
+                                16,
+                                20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: items,
+                              ),
+                            ),
+                          ],
                         ),
                 ),
               ),
@@ -347,6 +385,37 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         },
       ).contentConstrainedBox(),
     );
+  }
+
+  PopupMenuItem<_ChickenMenuAction> _menuItem(
+    _ChickenMenuAction action,
+    IconData icon,
+    String label, {
+    Color? color,
+  }) {
+    return PopupMenuItem(
+      value: action,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(label, style: TextStyle(color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onMenuAction(_ChickenMenuAction action) {
+    switch (action) {
+      case _ChickenMenuAction.statistics:
+        context.router.push(const ChickenStatisticsRoute());
+      case _ChickenMenuAction.sharing:
+        unawaited(_showSharingDialog());
+      case _ChickenMenuAction.settings:
+        context.router.push(const ChickenSettingsRoute());
+    }
   }
 
   Widget _buildFeatureCard({
@@ -611,139 +680,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         style: DoTextTheme.pill.copyWith(fontSize: 12, color: color),
       ),
     );
-  }
-
-  Future<void> _importFromJsonFile() async {
-    final l10n = AppLocalizations.of(context);
-    const jsonTypeGroup = XTypeGroup(
-      label: 'JSON',
-      extensions: ['json'],
-      mimeTypes: ['application/json'],
-      uniformTypeIdentifiers: ['public.json'],
-    );
-
-    BuildContext? progressDialogContext;
-    try {
-      final file = await openFile(acceptedTypeGroups: [jsonTypeGroup]);
-      if (file == null) return;
-
-      var jsonString = utf8.decode(await file.readAsBytes());
-      if (jsonString.startsWith('\uFEFF')) {
-        jsonString = jsonString.substring(1);
-      }
-
-      progressDialogContext = await _showImportProgressDialog();
-      final count = await vm.importFromJson(jsonString);
-      if (progressDialogContext.mounted) Navigator.pop(progressDialogContext);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.importedRecords(count, file.name))),
-      );
-    } catch (e) {
-      final dialogContext = progressDialogContext;
-      if (dialogContext != null && dialogContext.mounted) {
-        Navigator.pop(dialogContext);
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        context.errorSnackBar(l10n.importFileFailed(e.toString())),
-      );
-    }
-  }
-
-  Future<BuildContext> _showImportProgressDialog() {
-    final shown = Completer<BuildContext>();
-    showAppModal<void>(
-      context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        if (!shown.isCompleted) shown.complete(dialogContext);
-        return PopScope(
-          canPop: false,
-          child: Consumer<ChickenViewModel>(
-            builder: (context, vm, child) {
-              final percent = (vm.importProgress * 100).round();
-              return AppDialog(
-                title: AppLocalizations.of(context).importingData,
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LinearProgressIndicator(value: vm.importProgress),
-                    const SizedBox(height: 12),
-                    Text("$percent%"),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-    return shown.future;
-  }
-
-  void _showDeleteAllDataDialog() {
-    final l10n = AppLocalizations.of(context);
-    showAppModal<void>(
-      context,
-      builder: (dialogContext) => CuteDialog(
-        title: l10n.confirmDeleteAllChickenData,
-        accent: context.colors.danger,
-        confirmText: l10n.deleteData,
-        isDestructive: true,
-        onConfirm: () {
-          Navigator.pop(dialogContext);
-          _deleteAllData();
-        },
-        children: [
-          Text(l10n.deleteAllChickenDataWarning, textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteAllData() async {
-    final l10n = AppLocalizations.of(context);
-    final shown = Completer<BuildContext>();
-    showAppModal<void>(
-      context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        if (!shown.isCompleted) shown.complete(dialogContext);
-        return PopScope(
-          canPop: false,
-          child: AppDialog(
-            title: l10n.deletingData,
-            content: Row(
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(width: 20),
-                Expanded(child: Text(l10n.pleaseWait)),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    final dialogContext = await shown.future;
-
-    try {
-      final count = await vm.deleteAllData();
-      if (dialogContext.mounted) Navigator.pop(dialogContext);
-      if (!mounted) return;
-      final message = count == 0
-          ? l10n.noDataToDelete
-          : l10n.deletedAllData(count);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    } catch (e) {
-      if (dialogContext.mounted) Navigator.pop(dialogContext);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        context.errorSnackBar(l10n.deleteDataFailed(e.toString())),
-      );
-    }
   }
 
   /// Adds a batch. If the insert fails the view model has already removed it

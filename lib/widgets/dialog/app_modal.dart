@@ -270,44 +270,51 @@ class AppBottomSheet extends StatelessWidget {
         final left = math.max(0.0, viewPadding.left - margin);
         final right = math.max(0.0, viewPadding.right - margin);
 
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: screenSize.height * maxHeightFactor,
+        // A Material rather than a decorated Container: the body is usually a
+        // list of tiles, and their ink has to land on the sheet's own surface.
+        // Painted on a plain Container it would go to the Material behind the
+        // sheet instead — invisible, and Flutter asserts about it.
+        return Material(
+          color: theme.colorScheme.surface,
+          clipBehavior: Clip.antiAlias,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(Dimens.sheetRadius),
           ),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(Dimens.sheetRadius),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: screenSize.height * maxHeightFactor,
             ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(left: left, right: right),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (showDragHandle) const _SheetDragHandle(),
-                if (title != null) ...[
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      showDragHandle ? 0 : 16,
-                      20,
-                      0,
-                    ),
-                    child: Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+            child: Padding(
+              padding: EdgeInsets.only(left: left, right: right),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showDragHandle) const _SheetDragHandle(),
+                  if (title != null) ...[
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        showDragHandle ? 0 : 16,
+                        20,
+                        0,
+                      ),
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
+                    const Divider(height: 20),
+                  ],
+                  Flexible(
+                    child: scrollable
+                        ? SingleChildScrollView(child: body)
+                        : body,
                   ),
-                  const Divider(height: 20),
                 ],
-                Flexible(
-                  child: scrollable ? SingleChildScrollView(child: body) : body,
-                ),
-              ],
+              ),
             ),
           ),
         );

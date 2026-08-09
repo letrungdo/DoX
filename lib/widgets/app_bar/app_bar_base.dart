@@ -7,6 +7,7 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.title, //
     this.titleStyle,
     this.titleSuffix,
+    this.titleSuffixSpacing = 8,
     this.onTitleTap,
     this.subtitle,
     this.titleMaxLines = 1,
@@ -29,6 +30,10 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   /// Sits right after [title], e.g. an `AppBarSyncIcon` that spins while data
   /// is being fetched.
   final Widget? titleSuffix;
+
+  /// Gap between [title] and [titleSuffix]. Tighten it when the suffix opens
+  /// with a caret, which reads as part of the title rather than beside it.
+  final double titleSuffixSpacing;
 
   /// Makes the title block tappable, for a screen whose title doubles as the
   /// entry point to a picker.
@@ -74,7 +79,7 @@ class _DoAppBarState extends State<DoAppBar> {
 
       if (titleSuffix != null) {
         titleWidget = Row(
-          spacing: 8,
+          spacing: widget.titleSuffixSpacing,
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(child: titleWidget),

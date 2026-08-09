@@ -18,6 +18,7 @@ class DoTextField extends StatefulWidget {
     this.maxLines = 1,
     this.maxLength,
     this.textInputAction,
+    this.onSubmitted,
     this.style,
     this.suffixIcon,
   });
@@ -35,6 +36,11 @@ class DoTextField extends StatefulWidget {
   final int? maxLines;
   final int? maxLength;
   final TextInputAction? textInputAction;
+
+  /// Fired when the keyboard's action key is pressed — the hook a form uses to
+  /// let Enter do what its submit button does.
+  final ValueChanged<String>? onSubmitted;
+
   final TextStyle? style;
   final Widget? suffixIcon;
 
@@ -96,6 +102,7 @@ class _DoTextFieldState extends State<DoTextField> {
         FocusManager.instance.primaryFocus?.unfocus();
       },
       onChanged: widget.onChanged,
+      onFieldSubmitted: widget.onSubmitted,
       validator: widget.validator,
     );
   }

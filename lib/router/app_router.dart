@@ -63,6 +63,7 @@ class _AppRouter extends RootStackRouter {
               AutoRoute(path: '', page: ChickenRoute.page),
               AutoRoute(path: ':batchId', page: ChickenBatchDetailRoute.page),
               AutoRoute(path: 'statistics', page: ChickenStatisticsRoute.page),
+              AutoRoute(path: 'settings', page: ChickenSettingsRoute.page),
               AutoRoute(path: 'cock-sales', page: CockSalesRoute.page),
               AutoRoute(
                 path: 'global-expenses',
@@ -159,6 +160,10 @@ class _AppRouter extends RootStackRouter {
       page: ChickenStatisticsRoute.page,
     ),
     AutoRoute(
+      path: '$_pushPrefix/chicken/settings',
+      page: ChickenSettingsRoute.page,
+    ),
+    AutoRoute(
       path: '$_pushPrefix/chicken/cock-sales',
       page: CockSalesRoute.page,
     ),
@@ -179,6 +184,10 @@ class _AppRouter extends RootStackRouter {
     AutoRoute(path: '$_pushPrefix/myLife/account', page: AccountRoute.page),
     AutoRoute(path: '$_pushPrefix/myLife/trimmer', page: TrimmerRoute.page),
     AutoRoute(path: '$_pushPrefix/electric', page: ElectricRoute.page),
+    AutoRoute(
+      path: '$_pushPrefix/electric/settings',
+      page: ElectricSettingsRoute.page,
+    ),
     AutoRoute(path: '$_pushPrefix/lunar', page: LunarRoute.page),
     AutoRoute(path: '/wifi-management', page: WifiManagementRoute.page),
     AutoRoute(path: '/feng-shui-compass', page: FengShuiCompassRoute.page),
