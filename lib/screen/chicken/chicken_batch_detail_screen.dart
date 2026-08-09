@@ -145,17 +145,19 @@ class _ChickenBatchDetailScreenState
           _buildExpenseSection(batch),
           const SizedBox(height: 16),
           _buildVaccinationSection(batch),
-          const SizedBox(height: 28),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => _confirmDelete(batch),
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: Text(l10n.deleteThisBatch),
-              style: TextButton.styleFrom(
-                foregroundColor: context.colors.danger,
+          if (!vm.isReadOnly) ...[
+            const SizedBox(height: 28),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _confirmDelete(batch),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: Text(l10n.deleteThisBatch),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.colors.danger,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -368,13 +370,14 @@ class _ChickenBatchDetailScreenState
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: _buildEditButton(
-                    () => _showEditInfoDialog(batch),
-                    size: 20,
+                if (!vm.isReadOnly)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: _buildEditButton(
+                      () => _showEditInfoDialog(batch),
+                      size: 20,
+                    ),
                   ),
-                ),
               ],
             ),
             Padding(
@@ -492,10 +495,12 @@ class _ChickenBatchDetailScreenState
         : context.theme.colorScheme.onSurfaceVariant;
     return InkWell(
       borderRadius: BorderRadius.circular(10),
-      onTap: () {
-        vm.setCurrentContext(context);
-        unawaited(_runWrite(vm.toggleVaccination(batch.id, v.id)));
-      },
+      onTap: vm.isReadOnly
+          ? null
+          : () {
+              vm.setCurrentContext(context);
+              unawaited(_runWrite(vm.toggleVaccination(batch.id, v.id)));
+            },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
         child: Row(
@@ -554,11 +559,12 @@ class _ChickenBatchDetailScreenState
               color: context.colors.money,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            visualDensity: VisualDensity.compact,
-            onPressed: () => _showExpenseDialog(batch),
-          ),
+          if (!vm.isReadOnly)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _showExpenseDialog(batch),
+            ),
         ],
       ),
       children: [
@@ -575,7 +581,9 @@ class _ChickenBatchDetailScreenState
         ...batch.expenses.map(
           (e) => InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: () => _showExpenseDialog(batch, expense: e),
+            onTap: vm.isReadOnly
+                ? null
+                : () => _showExpenseDialog(batch, expense: e),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
               child: Row(
@@ -742,7 +750,7 @@ class _ChickenBatchDetailScreenState
           ]),
         ],
         // Sold out: nothing left to sell, so hide the record button.
-        if (!soldOut) ...[
+        if (!soldOut && !vm.isReadOnly) ...[
           const SizedBox(height: 12),
           NeuButton(
             onPressed: () => _showSaleDialog(batch),
@@ -792,7 +800,7 @@ class _ChickenBatchDetailScreenState
       child: NeuCard(
         radius: 12,
         depth: 0.6,
-        onTap: () => _showSaleDialog(batch, sale: sale),
+        onTap: vm.isReadOnly ? null : () => _showSaleDialog(batch, sale: sale),
         padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
         child: Row(
           children: [
@@ -875,9 +883,10 @@ class _ChickenBatchDetailScreenState
                 color: context.colors.money,
               ),
             ),
-            const SizedBox(width: 8),
-            // Edit affordance: same target as tapping the row itself.
-            _buildEditButton(() => _showSaleDialog(batch, sale: sale)),
+            if (!vm.isReadOnly) ...[
+              const SizedBox(width: 8),
+              _buildEditButton(() => _showSaleDialog(batch, sale: sale)),
+            ],
           ],
         ),
       ),

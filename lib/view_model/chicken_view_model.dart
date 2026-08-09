@@ -47,6 +47,19 @@ class ChickenViewModel extends CoreViewModel {
   final ChickenAuth _auth;
   final _uuid = const Uuid();
 
+  List<ChickenDataSource> _dataSources = [];
+  List<ChickenDataSource> get dataSources => _dataSources;
+
+  List<ChickenShareViewer> _shareViewers = [];
+  List<ChickenShareViewer> get shareViewers => _shareViewers;
+
+  String? _activeOwnerId;
+  String? _activeOwnerEmail;
+
+  String? get activeOwnerId => _activeOwnerId ?? _auth.userId;
+  String? get activeOwnerEmail => _activeOwnerEmail;
+  bool get isReadOnly => activeOwnerId != null && activeOwnerId != _auth.userId;
+
   List<ChickenBatch> _batches = [];
   List<ChickenBatch> get batches => _batches;
 
@@ -171,7 +184,7 @@ class ChickenViewModel extends CoreViewModel {
   /// soon as a session is available (restoring it is async, so this is retried
   /// from the auth listener); a cache written by another account is discarded.
   void _restoreFromCache() {
-    if (_cacheRestored || !_auth.isSignedIn) return;
+    if (_cacheRestored || !_auth.isSignedIn || isReadOnly) return;
     _cacheRestored = true;
     // Writes made offline in an earlier session go back on the queue, and are
     // pushed by the first load that follows.
@@ -365,7 +378,7 @@ class ChickenViewModel extends CoreViewModel {
   void _saveCache() {
     // Nothing worth caching until the first successful fetch: an empty list
     // must never be stored as if it were the user's data.
-    if (!_auth.isSignedIn || _loadedSections.isEmpty) return;
+    if (!_auth.isSignedIn || isReadOnly || _loadedSections.isEmpty) return;
     try {
       // The timestamps are the last successful *fetch* of each section, not
       // the time of this write, so the "data as of …" notice stays truthful
@@ -466,8 +479,12 @@ class ChickenViewModel extends CoreViewModel {
           // The persisted session is restored asynchronously, so this is often
           // the first moment the cache can be matched against a user.
           _restoreFromCache();
+          unawaited(loadSharing());
         case AuthChangeEvent.signedIn:
+          _activeOwnerId = _auth.userId;
+          _activeOwnerEmail = null;
           _restoreFromCache();
+          unawaited(loadSharing());
           // Cached data is already on screen: refresh it silently.
           unawaited(loadData(sections: _requestedSections));
         case AuthChangeEvent.signedOut:
@@ -479,6 +496,10 @@ class ChickenViewModel extends CoreViewModel {
           _syncedAt.clear();
           _failedSections.clear();
           _serverYears.clear();
+          _dataSources = [];
+          _shareViewers = [];
+          _activeOwnerId = null;
+          _activeOwnerEmail = null;
           _cacheSaveTimer?.cancel();
           _syncRetryTimer?.cancel();
           // The cache goes, the queue stays: it holds work the user believes is
@@ -510,6 +531,8 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initData() {
     super.initData();
+    _activeOwnerId ??= _auth.userId;
+    if (_auth.isSignedIn) unawaited(loadSharing());
     if (!_auth.isSignedIn && vaccinationNotificationsEnabled) {
       unawaited(notificationService.cancelVaccinationNotifications());
     }
@@ -630,6 +653,7 @@ class ChickenViewModel extends CoreViewModel {
       final data = await _repository.getChickenData(
         sections: sections,
         year: serverYear,
+        ownerId: activeOwnerId,
       );
       final batches = data.batches;
       if (batches != null) {
@@ -693,9 +717,71 @@ class ChickenViewModel extends CoreViewModel {
       notifyListenersSafe();
     }
     // Scheduling local notifications can be slow; keep it off the UI path.
-    if (sections.contains(ChickenSection.batches)) {
+    if (sections.contains(ChickenSection.batches) && !isReadOnly) {
       unawaited(_syncVaccinationNotifications());
     }
+  }
+
+  Future<void> loadSharing() async {
+    if (!_auth.isSignedIn) return;
+    try {
+      final results = await Future.wait([
+        _repository.getDataSources(),
+        _repository.getShareViewers(),
+      ]);
+      _dataSources = results[0] as List<ChickenDataSource>;
+      _shareViewers = results[1] as List<ChickenShareViewer>;
+      final activeId = activeOwnerId;
+      if (activeId != null &&
+          !_dataSources.any((source) => source.ownerId == activeId)) {
+        await _loadTask;
+        _activeOwnerId = _auth.userId;
+        _activeOwnerEmail = null;
+        _clearLoadedData();
+        await loadData(sections: _requestedSections);
+      }
+      notifyListenersSafe();
+    } catch (e) {
+      logger.e('load chicken sharing failed', error: e);
+    }
+  }
+
+  Future<void> selectDataSource(ChickenDataSource source) async {
+    if (source.ownerId == activeOwnerId) return;
+    await _loadTask;
+    if (_queue.isNotEmpty) {
+      await syncPending();
+      if (_queue.isNotEmpty) {
+        throw StateError('Please wait for pending changes to sync first.');
+      }
+    }
+    _activeOwnerId = source.ownerId;
+    _activeOwnerEmail = source.email;
+    _clearLoadedData();
+    notifyListenersSafe();
+    await loadData(sections: _requestedSections);
+  }
+
+  Future<void> shareWith(String email) async {
+    await _repository.shareWith(email);
+    await loadSharing();
+  }
+
+  Future<void> revokeShare(String viewerId) async {
+    await _repository.revokeShare(viewerId);
+    await loadSharing();
+  }
+
+  void _clearLoadedData() {
+    _batches = [];
+    _globalCockSales = [];
+    _globalExpenses = [];
+    _loadedSections.clear();
+    _loadedYear.clear();
+    _syncedAt.clear();
+    _failedSections.clear();
+    _serverYears.clear();
+    _pendingDeletedBatchIds.clear();
   }
 
   /// Sends a change that was already applied to the local lists to the server.
@@ -711,6 +797,11 @@ class ChickenViewModel extends CoreViewModel {
     List<PendingOp> ops, {
     required VoidCallback rollback,
   }) async {
+    if (isReadOnly) {
+      rollback();
+      notifyListenersSafe();
+      throw StateError('Shared chicken data is read-only.');
+    }
     // Anything already queued has to land first, or this write could reach the
     // server ahead of the change it builds on.
     if (_queue.isNotEmpty) {
@@ -1020,6 +1111,7 @@ class ChickenViewModel extends CoreViewModel {
   /// Imports data from the JSON format described in [ChickenImportService].
   /// Returns the number of imported records, or throws on invalid input.
   Future<int> importFromJson(String jsonString) async {
+    if (isReadOnly) throw StateError('Shared chicken data is read-only.');
     final data = ChickenImportService.parse(jsonString);
     final userId = _auth.userId;
     if (userId == null) throw StateError('Bạn cần đăng nhập trước khi import.');
@@ -1050,6 +1142,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<int> deleteAllData() async {
+    if (isReadOnly) throw StateError('Shared chicken data is read-only.');
     if (_auth.userId == null) {
       throw StateError('Bạn cần đăng nhập trước khi xóa dữ liệu.');
     }
@@ -1126,7 +1219,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> _syncVaccinationNotifications() async {
-    if (!vaccinationNotificationsEnabled) return;
+    if (isReadOnly || !vaccinationNotificationsEnabled) return;
     try {
       await notificationService.scheduleVaccinations(_batches);
     } catch (e) {

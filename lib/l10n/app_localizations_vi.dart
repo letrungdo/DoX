@@ -512,6 +512,50 @@ class AppLocalizationsVi extends AppLocalizations {
   String get chickenManagement => 'Quản lý gà';
 
   @override
+  String get chickenSharing => 'Chia sẻ dữ liệu gà';
+
+  @override
+  String get chickenSharingDescription =>
+      'Người được thêm có thể xem toàn bộ dữ liệu gà nhưng không thể thêm, sửa hoặc xóa.';
+
+  @override
+  String get shareWithEmail => 'Chia sẻ với email';
+
+  @override
+  String get shareAction => 'Chia sẻ';
+
+  @override
+  String get sharedWith => 'Người đang có quyền xem';
+
+  @override
+  String get notSharedYet => 'Chưa chia sẻ với ai.';
+
+  @override
+  String get shareAccessAdded => 'Đã cấp quyền chỉ xem.';
+
+  @override
+  String shareAccessFailed(String error) {
+    return 'Không thể chia sẻ: $error';
+  }
+
+  @override
+  String get revokeAccess => 'Thu hồi quyền';
+
+  @override
+  String get viewChickenDataFrom => 'Xem dữ liệu gà của';
+
+  @override
+  String get myChickenData => 'Dữ liệu của tôi';
+
+  @override
+  String sharedReadOnly(String email) {
+    return 'Đang xem của $email · Chỉ xem';
+  }
+
+  @override
+  String get readOnly => 'Chỉ xem';
+
+  @override
   String get sellRoosterMeat => 'Bán gà đá / gà thịt';
 
   @override

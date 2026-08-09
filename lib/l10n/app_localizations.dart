@@ -1034,6 +1034,84 @@ abstract class AppLocalizations {
   /// **'Chicken Management'**
   String get chickenManagement;
 
+  /// No description provided for @chickenSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Share chicken data'**
+  String get chickenSharing;
+
+  /// No description provided for @chickenSharingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'People you add can view all chicken data, but cannot add, edit, or delete anything.'**
+  String get chickenSharingDescription;
+
+  /// No description provided for @shareWithEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Share with email'**
+  String get shareWithEmail;
+
+  /// No description provided for @shareAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get shareAction;
+
+  /// No description provided for @sharedWith.
+  ///
+  /// In en, this message translates to:
+  /// **'People with access'**
+  String get sharedWith;
+
+  /// No description provided for @notSharedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not shared with anyone yet.'**
+  String get notSharedYet;
+
+  /// No description provided for @shareAccessAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only access granted.'**
+  String get shareAccessAdded;
+
+  /// No description provided for @shareAccessFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share: {error}'**
+  String shareAccessFailed(String error);
+
+  /// No description provided for @revokeAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke access'**
+  String get revokeAccess;
+
+  /// No description provided for @viewChickenDataFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'View chicken data from'**
+  String get viewChickenDataFrom;
+
+  /// No description provided for @myChickenData.
+  ///
+  /// In en, this message translates to:
+  /// **'My data'**
+  String get myChickenData;
+
+  /// No description provided for @sharedReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing {email} · Read only'**
+  String sharedReadOnly(String email);
+
+  /// No description provided for @readOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read only'**
+  String get readOnly;
+
   /// No description provided for @sellRoosterMeat.
   ///
   /// In en, this message translates to:

@@ -99,7 +99,7 @@ class _GlobalExpensesScreenState
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.feedCute),
-            onPressed: () => _showExpenseDialog(),
+            onPressed: vm.isReadOnly ? null : () => _showExpenseDialog(),
           ),
         ],
       ),
@@ -187,7 +187,8 @@ class _GlobalExpensesScreenState
                                                   .onSurfaceVariant,
                                             ),
                                           ),
-                                          if (vm.globalExpenses.isEmpty) ...[
+                                          if (vm.globalExpenses.isEmpty &&
+                                              !vm.isReadOnly) ...[
                                             const SizedBox(height: 16),
                                             NeuButton(
                                               onPressed: () =>
@@ -215,7 +216,9 @@ class _GlobalExpensesScreenState
                           itemBuilder: (context, index) {
                             final expense = expenses[index];
                             return ChickenListTileCard(
-                              onTap: () => _showExpenseDialog(expense),
+                              onTap: vm.isReadOnly
+                                  ? null
+                                  : () => _showExpenseDialog(expense),
                               leading: _expenseSvg(expense.type),
                               title: Row(
                                 children: [

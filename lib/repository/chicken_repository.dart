@@ -32,6 +32,38 @@ typedef ChickenData = ({
   Map<ChickenSection, Set<int>> years,
 });
 
+class ChickenDataSource {
+  const ChickenDataSource({
+    required this.ownerId,
+    required this.email,
+    required this.isOwner,
+  });
+
+  final String ownerId;
+  final String email;
+  final bool isOwner;
+
+  factory ChickenDataSource.fromRow(Map<String, dynamic> row) =>
+      ChickenDataSource(
+        ownerId: row['owner_id'] as String,
+        email: row['owner_email'] as String,
+        isOwner: row['is_owner'] as bool,
+      );
+}
+
+class ChickenShareViewer {
+  const ChickenShareViewer({required this.userId, required this.email});
+
+  final String userId;
+  final String email;
+
+  factory ChickenShareViewer.fromRow(Map<String, dynamic> row) =>
+      ChickenShareViewer(
+        userId: row['viewer_id'] as String,
+        email: row['viewer_email'] as String,
+      );
+}
+
 class ChickenRepository {
   SupabaseClient get _client => supabase;
 
@@ -52,11 +84,12 @@ class ChickenRepository {
   Future<ChickenData> getChickenData({
     Set<ChickenSection>? sections,
     int? year,
+    String? ownerId,
   }) async {
     final wanted = sections ?? ChickenSection.values.toSet();
     final reads = await Future.wait([
-      for (final section in wanted) _readSection(section, year),
-      _readYears(),
+      for (final section in wanted) _readSection(section, year, ownerId),
+      _readYears(ownerId),
     ]);
     final rows = {
       for (final (index, section) in wanted.indexed)
@@ -79,10 +112,17 @@ class ChickenRepository {
     );
   }
 
-  Future<List<dynamic>> _readSection(ChickenSection section, int? year) async {
+  Future<List<dynamic>> _readSection(
+    ChickenSection section,
+    int? year,
+    String? ownerId,
+  ) async {
+    final shared = ownerId != null && ownerId != _client.auth.currentUser?.id;
     final rows = await _client.rpc(
-      section.functionName,
-      params: {'p_year': ?year},
+      shared
+          ? 'get_shared_${section.functionName.substring(4)}'
+          : section.functionName,
+      params: {'p_year': ?year, if (shared) 'p_owner_id': ownerId},
     );
     return (rows as List?) ?? const [];
   }
@@ -91,14 +131,45 @@ class ChickenRepository {
   /// data on screen, so with a year filter in place they would otherwise only
   /// ever offer the year already being shown; this keeps them complete for
   /// about a hundred bytes.
-  Future<Map<ChickenSection, Set<int>>> _readYears() async {
-    final data = await _client.rpc('get_chicken_years') as Map<String, dynamic>;
+  Future<Map<ChickenSection, Set<int>>> _readYears(String? ownerId) async {
+    final shared = ownerId != null && ownerId != _client.auth.currentUser?.id;
+    final data =
+        await _client.rpc(
+              shared ? 'get_shared_chicken_years' : 'get_chicken_years',
+              params: {if (shared) 'p_owner_id': ownerId},
+            )
+            as Map<String, dynamic>;
     return {
       for (final section in ChickenSection.values)
         section: ((data[section.wireName] as List?) ?? const [])
             .map((year) => (year as num).toInt())
             .toSet(),
     };
+  }
+
+  Future<List<ChickenDataSource>> getDataSources() async {
+    final rows = await _client.rpc('get_chicken_data_sources') as List;
+    return rows
+        .map((row) => ChickenDataSource.fromRow(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<ChickenShareViewer>> getShareViewers() async {
+    final rows = await _client.rpc('get_chicken_share_viewers') as List;
+    return rows
+        .map((row) => ChickenShareViewer.fromRow(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> shareWith(String email) async {
+    await _client.rpc('share_chicken_data', params: {'p_email': email.trim()});
+  }
+
+  Future<void> revokeShare(String viewerId) async {
+    await _client.rpc(
+      'revoke_chicken_share',
+      params: {'p_viewer_id': viewerId},
+    );
   }
 
   // --- Writes ---------------------------------------------------------------

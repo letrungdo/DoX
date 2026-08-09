@@ -512,6 +512,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chickenManagement => 'Chicken Management';
 
   @override
+  String get chickenSharing => 'Share chicken data';
+
+  @override
+  String get chickenSharingDescription =>
+      'People you add can view all chicken data, but cannot add, edit, or delete anything.';
+
+  @override
+  String get shareWithEmail => 'Share with email';
+
+  @override
+  String get shareAction => 'Share';
+
+  @override
+  String get sharedWith => 'People with access';
+
+  @override
+  String get notSharedYet => 'Not shared with anyone yet.';
+
+  @override
+  String get shareAccessAdded => 'Read-only access granted.';
+
+  @override
+  String shareAccessFailed(String error) {
+    return 'Could not share: $error';
+  }
+
+  @override
+  String get revokeAccess => 'Revoke access';
+
+  @override
+  String get viewChickenDataFrom => 'View chicken data from';
+
+  @override
+  String get myChickenData => 'My data';
+
+  @override
+  String sharedReadOnly(String email) {
+    return 'Viewing $email · Read only';
+  }
+
+  @override
+  String get readOnly => 'Read only';
+
+  @override
   String get sellRoosterMeat => 'Sell rooster / meat';
 
   @override

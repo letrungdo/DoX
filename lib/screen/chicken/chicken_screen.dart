@@ -25,6 +25,7 @@ import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
@@ -115,36 +116,55 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           selector: (vm) => vm.isFetching,
         ),
         actions: [
+          Consumer<ChickenViewModel>(
+            builder: (context, vm, child) => IconButton(
+              icon: const Icon(Icons.switch_account_outlined),
+              onPressed: vm.dataSources.length > 1
+                  ? _showDataSourcePicker
+                  : null,
+              tooltip: l10n.viewChickenDataFrom,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_outlined),
+            onPressed: _showSharingDialog,
+            tooltip: l10n.chickenSharing,
+          ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
             onPressed: () =>
                 context.router.push(const ChickenStatisticsRoute()),
             tooltip: l10n.profitStatistics,
           ),
-          IconButton(
-            icon: ChickenAddIcon(icon: Assets.images.chickCute),
-            onPressed: _showAddBatchDialog,
+          Consumer<ChickenViewModel>(
+            builder: (context, vm, child) => IconButton(
+              icon: ChickenAddIcon(icon: Assets.images.chickCute),
+              onPressed: vm.isReadOnly ? null : _showAddBatchDialog,
+            ),
           ),
           if (kDebugMode)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                switch (value) {
-                  case 'import':
-                    _importFromJsonFile();
-                  case 'delete_all':
-                    _showDeleteAllDataDialog();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(value: 'import', child: Text(l10n.importData)),
-                PopupMenuItem(
-                  value: 'delete_all',
-                  child: Text(
-                    l10n.deleteAllChickenData,
-                    style: TextStyle(color: context.colors.danger),
+            Consumer<ChickenViewModel>(
+              builder: (context, vm, child) => PopupMenuButton<String>(
+                enabled: !vm.isReadOnly,
+                onSelected: (value) {
+                  switch (value) {
+                    case 'import':
+                      _importFromJsonFile();
+                    case 'delete_all':
+                      _showDeleteAllDataDialog();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: 'import', child: Text(l10n.importData)),
+                  PopupMenuItem(
+                    value: 'delete_all',
+                    child: Text(
+                      l10n.deleteAllChickenData,
+                      style: TextStyle(color: context.colors.danger),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
         ],
       ),
@@ -209,6 +229,19 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
 
           return Column(
             children: [
+              if (vm.isReadOnly)
+                Material(
+                  color: context.theme.colorScheme.secondaryContainer,
+                  child: ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.visibility_outlined),
+                    title: Text(l10n.sharedReadOnly(vm.activeOwnerEmail ?? '')),
+                    trailing: TextButton(
+                      onPressed: _showDataSourcePicker,
+                      child: Text(l10n.viewChickenDataFrom),
+                    ),
+                  ),
+                ),
               const ChickenStaleBanner(sections: {ChickenSection.batches}),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -730,6 +763,150 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         SnackBar(content: Text(l10n.saveFailed(error.toString()))),
       );
     }
+  }
+
+  Future<void> _showDataSourcePicker() async {
+    final l10n = AppLocalizations.of(context);
+    await vm.loadSharing();
+    if (!mounted) return;
+    await showAppBottomSheet<void>(
+      context,
+      title: l10n.viewChickenDataFrom,
+      builder: (sheetContext) => ListView(
+        shrinkWrap: true,
+        children: [
+          for (final source in vm.dataSources)
+            ListTile(
+              leading: Icon(
+                source.isOwner
+                    ? Icons.person_outline
+                    : Icons.visibility_outlined,
+              ),
+              title: Text(source.isOwner ? l10n.myChickenData : source.email),
+              subtitle: source.isOwner
+                  ? Text(source.email)
+                  : Text(l10n.readOnly),
+              trailing: source.ownerId == vm.activeOwnerId
+                  ? const Icon(Icons.check)
+                  : null,
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                try {
+                  await vm.selectDataSource(source);
+                } catch (error) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error.toString())));
+                }
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSharingDialog() async {
+    final l10n = AppLocalizations.of(context);
+    final emailController = TextEditingController();
+    var loading = false;
+    String? errorText;
+    await vm.loadSharing();
+    if (!mounted) return;
+
+    await showAppModal<void>(
+      context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AppDialog(
+          title: l10n.chickenSharing,
+          scrollable: true,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.chickenSharingDescription),
+              const SizedBox(height: 16),
+              CuteTextField(
+                controller: emailController,
+                label: l10n.shareWithEmail,
+                keyboardType: TextInputType.emailAddress,
+                errorText: errorText,
+                onChanged: (_) {
+                  if (errorText != null) setState(() => errorText = null);
+                },
+              ),
+              const SizedBox(height: 20),
+              Text(l10n.sharedWith, style: context.theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              if (vm.shareViewers.isEmpty)
+                Text(l10n.notSharedYet)
+              else
+                for (final viewer in vm.shareViewers)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(viewer.email),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.person_remove_outlined),
+                      tooltip: l10n.revokeAccess,
+                      onPressed: loading
+                          ? null
+                          : () async {
+                              setState(() => loading = true);
+                              try {
+                                await vm.revokeShare(viewer.userId);
+                              } finally {
+                                if (dialogContext.mounted) {
+                                  setState(() => loading = false);
+                                }
+                              }
+                            },
+                    ),
+                  ),
+            ],
+          ),
+          actions: [
+            DialogActionButton(
+              text: l10n.cancel,
+              kind: DialogActionKind.cancel,
+              onPressed: () => Navigator.pop(dialogContext),
+            ),
+            DialogActionButton(
+              text: l10n.shareAction,
+              loading: loading,
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (!email.contains('@')) {
+                  setState(() => errorText = l10n.emailInvalid);
+                  return;
+                }
+                setState(() {
+                  loading = true;
+                  errorText = null;
+                });
+                try {
+                  await vm.shareWith(email);
+                  emailController.clear();
+                  if (!dialogContext.mounted) return;
+                  setState(() => loading = false);
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text(l10n.shareAccessAdded)),
+                  );
+                } catch (error) {
+                  if (!dialogContext.mounted) return;
+                  setState(() {
+                    loading = false;
+                    errorText = l10n.shareAccessFailed(error.toString());
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+    emailController.dispose();
   }
 
   void _showAddBatchDialog() {

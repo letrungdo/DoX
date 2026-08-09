@@ -46,6 +46,7 @@ class _FakeRepository extends ChickenRepository {
   Future<ChickenData> getChickenData({
     Set<ChickenSection>? sections,
     int? year,
+    String? ownerId,
   }) async => (
     batches: batches,
     globalCockSales: cockSales,

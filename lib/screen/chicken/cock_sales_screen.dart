@@ -106,7 +106,7 @@ class _CockSalesScreenState
         actions: [
           IconButton(
             icon: ChickenAddIcon(icon: Assets.images.roosterCute),
-            onPressed: () => _showSaleDialog(),
+            onPressed: vm.isReadOnly ? null : () => _showSaleDialog(),
           ),
         ],
       ),
@@ -229,7 +229,8 @@ class _CockSalesScreenState
                                                   .onSurfaceVariant,
                                             ),
                                           ),
-                                          if (vm.globalCockSales.isEmpty) ...[
+                                          if (vm.globalCockSales.isEmpty &&
+                                              !vm.isReadOnly) ...[
                                             const SizedBox(height: 16),
                                             NeuButton(
                                               onPressed: () =>
@@ -264,7 +265,9 @@ class _CockSalesScreenState
                                 ? context.colors.meatSoft
                                 : context.colors.dangerSoft;
                             return ChickenListTileCard(
-                              onTap: () => _showSaleDialog(sale),
+                              onTap: vm.isReadOnly
+                                  ? null
+                                  : () => _showSaleDialog(sale),
                               leading: Container(
                                 width: 44,
                                 height: 44,

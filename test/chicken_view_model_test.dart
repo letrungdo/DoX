@@ -64,6 +64,7 @@ class _FakeRepository extends ChickenRepository {
   /// it never shows.
   final requestedSections = <Set<ChickenSection>>[];
   final requestedYears = <int?>[];
+  final requestedOwners = <String?>[];
 
   /// Years the server claims to hold, for the year pickers.
   Map<ChickenSection, Set<int>> years = const {};
@@ -72,11 +73,13 @@ class _FakeRepository extends ChickenRepository {
   Future<ChickenData> getChickenData({
     Set<ChickenSection>? sections,
     int? year,
+    String? ownerId,
   }) async {
     getDataCalls++;
     final wanted = sections ?? ChickenSection.values.toSet();
     requestedSections.add(wanted);
     requestedYears.add(year);
+    requestedOwners.add(ownerId);
     if (readFailure != null) throw readFailure!;
 
     /// The server answers for stored years [year - 1, year]; see the SQL.
@@ -99,6 +102,23 @@ class _FakeRepository extends ChickenRepository {
       years: years,
     );
   }
+
+  @override
+  Future<List<ChickenDataSource>> getDataSources() async => const [
+    ChickenDataSource(
+      ownerId: 'user-1',
+      email: 'owner@example.com',
+      isOwner: true,
+    ),
+    ChickenDataSource(
+      ownerId: 'shared-owner',
+      email: 'shared@example.com',
+      isOwner: false,
+    ),
+  ];
+
+  @override
+  Future<List<ChickenShareViewer>> getShareViewers() async => const [];
 
   @override
   Future<void> apply(PendingOp op) async {
@@ -985,6 +1005,29 @@ void main() {
 
       expect(vm.currentDisplayYear(DateTime(2026, 1, 20)), 2025);
 
+      vm.dispose();
+    });
+  });
+
+  group('read-only sharing', () {
+    test('loads the selected owner and rejects local writes', () async {
+      final repository = _FakeRepository()..batches = [_batch()];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches});
+
+      await vm.selectDataSource(
+        const ChickenDataSource(
+          ownerId: 'shared-owner',
+          email: 'shared@example.com',
+          isOwner: false,
+        ),
+      );
+
+      expect(vm.isReadOnly, isTrue);
+      expect(repository.requestedOwners.last, 'shared-owner');
+      await expectLater(vm.addExpense('batch-1', _expense()), throwsStateError);
+      expect(vm.batches.single.expenses, isEmpty);
       vm.dispose();
     });
   });
