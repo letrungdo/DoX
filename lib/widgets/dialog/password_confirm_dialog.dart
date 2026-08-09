@@ -1,5 +1,4 @@
 import 'package:do_x/constants/dimens.dart';
-import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
@@ -21,9 +20,9 @@ Future<bool> showPasswordConfirmDialog(
   required String title,
   required String message,
   required String confirmText,
+  String? prompt,
 }) async {
-  final email = supabase.auth.currentUser?.email;
-  if (email == null) {
+  if (supabase.auth.currentUser?.email == null) {
     return showAppConfirmDialog(
       context,
       title: title,
@@ -32,17 +31,41 @@ Future<bool> showPasswordConfirmDialog(
       isDestructive: true,
     );
   }
+  final password = await showPasswordVerifyDialog(
+    context,
+    title: title,
+    message: message,
+    confirmText: confirmText,
+    prompt: prompt,
+  );
+  return password != null;
+}
 
-  final confirmed = await showAppModal<bool>(
+/// The same dialog, handing back the password it verified — for a caller that
+/// has to pass it on, such as the account deletion the server re-checks.
+///
+/// Null when the dialog was dismissed, or when nobody is signed in and there is
+/// therefore nothing to verify against.
+Future<String?> showPasswordVerifyDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmText,
+  String? prompt,
+}) {
+  final email = supabase.auth.currentUser?.email;
+  if (email == null) return Future.value(null);
+
+  return showAppModal<String>(
     context,
     builder: (dialogContext) => _PasswordConfirmDialog(
       email: email,
       title: title,
       message: message,
       confirmText: confirmText,
+      prompt: prompt,
     ),
   );
-  return confirmed ?? false;
 }
 
 /// A widget rather than a `StatefulBuilder` around a locally held controller:
@@ -55,12 +78,17 @@ class _PasswordConfirmDialog extends StatefulWidget {
     required this.title,
     required this.message,
     required this.confirmText,
+    this.prompt,
   });
 
   final String email;
   final String title;
   final String message;
   final String confirmText;
+
+  /// Line above the field. Defaults to the generic "type your password to
+  /// confirm the deletion".
+  final String? prompt;
 
   @override
   State<_PasswordConfirmDialog> createState() => _PasswordConfirmDialogState();
@@ -95,7 +123,7 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
         password: password,
       );
       if (!mounted) return;
-      Navigator.pop(context, true);
+      Navigator.pop(context, password);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -118,30 +146,24 @@ class _PasswordConfirmDialogState extends State<_PasswordConfirmDialog> {
         children: [
           Text(widget.message),
           const SizedBox(height: Dimens.modalItemSpacing),
-          Text(l10n.confirmPasswordToDelete),
+          Text(widget.prompt ?? l10n.confirmPasswordToDelete),
           const SizedBox(height: Dimens.modalItemSpacing),
           PasswordField(
             controller: _controller,
             labelText: l10n.passwordLabel,
+            errorText: errorText,
             onSubmitted: (_) => _confirm(),
             onChanged: (_) {
               if (_errorText != null) setState(() => _errorText = null);
             },
           ),
-          if (errorText != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              errorText,
-              style: TextStyle(color: context.colors.danger, fontSize: 13),
-            ),
-          ],
         ],
       ),
       actions: [
         DialogActionButton(
           text: l10n.cancel,
           kind: DialogActionKind.cancel,
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () => Navigator.pop(context),
         ),
         DialogActionButton(
           text: widget.confirmText,

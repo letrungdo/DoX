@@ -542,6 +542,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đã cấp quyền chỉ xem nhưng chưa gửi được email thông báo.';
 
   @override
+  String get shareEmailNotRegistered =>
+      'Email này chưa có tài khoản Do X — hãy nhờ họ đăng ký trước.';
+
+  @override
+  String get shareEmailIsYourself =>
+      'Đây là email của chính bạn — dữ liệu vốn đã là của bạn.';
+
+  @override
   String shareAccessFailed(String error) {
     return 'Không thể chia sẻ: $error';
   }

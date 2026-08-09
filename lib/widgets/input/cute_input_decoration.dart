@@ -24,6 +24,9 @@ InputDecoration cuteInputDecoration(
     suffixText: suffixText,
     suffixIcon: suffixIcon,
     errorText: errorText,
+    // A one-line default ellipsised anything longer than a few words, which is
+    // most of what a server hands back.
+    errorMaxLines: 4,
     filled: true,
     fillColor: scheme.surfaceContainerLow,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

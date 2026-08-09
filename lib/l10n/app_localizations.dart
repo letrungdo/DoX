@@ -1088,6 +1088,18 @@ abstract class AppLocalizations {
   /// **'Read-only access granted, but the notification email could not be sent.'**
   String get shareAccessAddedEmailFailed;
 
+  /// No description provided for @shareEmailNotRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'No Do X account uses that email yet — ask them to sign up first.'**
+  String get shareEmailNotRegistered;
+
+  /// No description provided for @shareEmailIsYourself.
+  ///
+  /// In en, this message translates to:
+  /// **'That is your own email — the data is already yours.'**
+  String get shareEmailIsYourself;
+
   /// No description provided for @shareAccessFailed.
   ///
   /// In en, this message translates to:

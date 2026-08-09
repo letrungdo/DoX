@@ -12,6 +12,7 @@ class DoTextField extends StatefulWidget {
     this.obscureText = false,
     this.labelText,
     this.validator,
+    this.errorText,
     this.autofillHints,
     this.decoration,
     this.textAlign = TextAlign.start,
@@ -30,6 +31,10 @@ class DoTextField extends StatefulWidget {
   final bool obscureText;
   final String? labelText;
   final String? Function(String?)? validator;
+
+  /// Error shown under the field, for a message that comes back from a server
+  /// rather than from a [validator].
+  final String? errorText;
   final Iterable<String>? autofillHints;
   final InputDecoration? decoration;
   final TextAlign textAlign;
@@ -92,7 +97,11 @@ class _DoTextFieldState extends State<DoTextField> {
           InputDecoration(
             labelText: widget.labelText,
             hintText: widget.placeholder,
+            errorText: widget.errorText,
             suffixIcon: widget.suffixIcon,
+            // A validator message longer than a few words is ellipsised on the
+            // single line Material gives it by default.
+            errorMaxLines: 4,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20), //
             ), //

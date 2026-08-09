@@ -21,9 +21,10 @@ After the work is done and `fvm flutter analyze` is clean:
    which both the CLI and the VS Code Dart extension read — never pass
    `--line-length`, and never reformat files you did not otherwise change.
 3. **Suggest a commit message in English** — Conventional Commits style
-   (`feat:`, `fix:`, `refactor:`, `chore:`), subject in the imperative, plus a
-   short body when the change spans more than one area. Suggest it; do not
-   commit unless asked.
+   (`feat:`, `fix:`, `refactor:`, `chore:`), imperative, **subject line only**,
+   no body. One line that says what changed, e.g.
+   `fix: report password and sharing failures inside their dialog`. Suggest it;
+   do not commit unless asked.
 
 ## Building a new page
 

@@ -16,6 +16,7 @@ class PasswordField extends StatefulWidget {
     this.controller,
     this.onChanged,
     this.validator,
+    this.errorText,
     this.autofillHints,
     this.textInputAction,
     this.onSubmitted,
@@ -26,6 +27,7 @@ class PasswordField extends StatefulWidget {
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
   final FormFieldValidator<String>? validator;
+  final String? errorText;
   final Iterable<String>? autofillHints;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
@@ -51,6 +53,7 @@ class _PasswordFieldState extends State<PasswordField> {
       onSubmitted: widget.onSubmitted,
       onChanged: widget.onChanged,
       validator: widget.validator,
+      errorText: widget.errorText,
       suffixIcon: IconButton(
         tooltip: _obscured ? l10n.showPassword : l10n.hidePassword,
         onPressed: () => setState(() => _obscured = !_obscured),

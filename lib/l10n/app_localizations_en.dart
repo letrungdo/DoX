@@ -542,6 +542,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Read-only access granted, but the notification email could not be sent.';
 
   @override
+  String get shareEmailNotRegistered =>
+      'No Do X account uses that email yet — ask them to sign up first.';
+
+  @override
+  String get shareEmailIsYourself =>
+      'That is your own email — the data is already yours.';
+
+  @override
   String shareAccessFailed(String error) {
     return 'Could not share: $error';
   }

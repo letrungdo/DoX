@@ -11,8 +11,7 @@ import 'package:do_x/widgets/account_avatar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/dialog/dialog_action_button.dart';
-import 'package:do_x/widgets/input/password_field.dart';
+import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -332,51 +331,13 @@ class _AppAccountScreenState
   /// Deleting an account cannot be walked back, so the dialog asks for the
   /// password rather than settling for a second tap.
   Future<void> _confirmDelete(AppLocalizations l10n) async {
-    final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final password = await showAppModal<String>(
+    final password = await showPasswordVerifyDialog(
       context,
-      builder: (dialogContext) => AppDialog(
-        title: l10n.deleteAccount,
-        scrollable: true,
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(l10n.deleteAccountWarning),
-              const SizedBox(height: Dimens.modalItemSpacing),
-              Text(l10n.deleteAccountPasswordPrompt),
-              const SizedBox(height: Dimens.modalItemSpacing),
-              PasswordField(
-                controller: controller,
-                labelText: l10n.passwordLabel,
-                validator: (value) =>
-                    (value ?? '').isEmpty ? l10n.passwordTooShort : null,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          DialogActionButton(
-            text: l10n.cancel,
-            kind: DialogActionKind.cancel,
-            onPressed: () => Navigator.pop(dialogContext),
-          ),
-          DialogActionButton(
-            text: l10n.deleteAccount,
-            kind: DialogActionKind.destructive,
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              Navigator.pop(dialogContext, controller.text);
-            },
-          ),
-        ],
-      ),
+      title: l10n.deleteAccount,
+      message: l10n.deleteAccountWarning,
+      prompt: l10n.deleteAccountPasswordPrompt,
+      confirmText: l10n.deleteAccount,
     );
-    controller.dispose();
     if (password == null || !mounted) return;
     await vm.deleteAccount(password);
   }

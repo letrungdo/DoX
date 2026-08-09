@@ -237,6 +237,8 @@
   "shareAccessAdded": "Đã cấp quyền chỉ xem.",
   "shareAccessAddedEmailSent": "Đã cấp quyền chỉ xem và gửi email thông báo.",
   "shareAccessAddedEmailFailed": "Đã cấp quyền chỉ xem nhưng chưa gửi được email thông báo.",
+  "shareEmailNotRegistered": "Email này chưa có tài khoản Do X — hãy nhờ họ đăng ký trước.",
+  "shareEmailIsYourself": "Đây là email của chính bạn — dữ liệu vốn đã là của bạn.",
   "shareAccessFailed": "Không thể chia sẻ: {error}",
   "@shareAccessFailed": {"placeholders": {"error": {"type": "String"}}},
   "revokeAccess": "Thu hồi quyền",

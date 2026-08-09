@@ -9,6 +9,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/repository/chicken_repository.dart';
+import 'package:do_x/screen/chicken/chicken_sharing_dialog.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/theme/text_theme.dart';
@@ -24,7 +25,6 @@ import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
@@ -412,7 +412,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
       case _ChickenMenuAction.statistics:
         context.router.push(const ChickenStatisticsRoute());
       case _ChickenMenuAction.sharing:
-        unawaited(_showSharingDialog());
+        unawaited(showChickenSharingDialog(context));
       case _ChickenMenuAction.settings:
         context.router.push(const ChickenSettingsRoute());
     }
@@ -739,116 +739,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         ],
       ),
     );
-  }
-
-  Future<void> _showSharingDialog() async {
-    final l10n = AppLocalizations.of(context);
-    final emailController = TextEditingController();
-    var loading = false;
-    String? errorText;
-    await vm.loadSharing();
-    if (!mounted) return;
-
-    await showAppModal<void>(
-      context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setState) => AppDialog(
-          title: l10n.chickenSharing,
-          scrollable: true,
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.chickenSharingDescription),
-              const SizedBox(height: 16),
-              CuteTextField(
-                controller: emailController,
-                label: l10n.shareWithEmail,
-                keyboardType: TextInputType.emailAddress,
-                errorText: errorText,
-                onChanged: (_) {
-                  if (errorText != null) setState(() => errorText = null);
-                },
-              ),
-              const SizedBox(height: 20),
-              Text(l10n.sharedWith, style: context.theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              if (vm.shareViewers.isEmpty)
-                Text(l10n.notSharedYet)
-              else
-                for (final viewer in vm.shareViewers)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(viewer.email),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.person_remove_outlined),
-                      tooltip: l10n.revokeAccess,
-                      onPressed: loading
-                          ? null
-                          : () async {
-                              setState(() => loading = true);
-                              try {
-                                await vm.revokeShare(viewer.userId);
-                              } finally {
-                                if (dialogContext.mounted) {
-                                  setState(() => loading = false);
-                                }
-                              }
-                            },
-                    ),
-                  ),
-            ],
-          ),
-          actions: [
-            DialogActionButton(
-              text: l10n.close,
-              kind: DialogActionKind.cancel,
-              onPressed: () => Navigator.pop(dialogContext),
-            ),
-            DialogActionButton(
-              text: l10n.shareAction,
-              loading: loading,
-              onPressed: () async {
-                FocusManager.instance.primaryFocus?.unfocus();
-                final email = emailController.text.trim();
-                if (!email.contains('@')) {
-                  setState(() => errorText = l10n.emailInvalid);
-                  return;
-                }
-                setState(() {
-                  loading = true;
-                  errorText = null;
-                });
-                try {
-                  final emailSent = await vm.shareWith(email);
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext);
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        emailSent
-                            ? l10n.shareAccessAddedEmailSent
-                            : l10n.shareAccessAddedEmailFailed,
-                      ),
-                    ),
-                  );
-                } catch (error) {
-                  if (!dialogContext.mounted) return;
-                  setState(() {
-                    loading = false;
-                    errorText = l10n.shareAccessFailed(error.toString());
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-    emailController.dispose();
   }
 
   void _showAddBatchDialog() {
