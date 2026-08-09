@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:do_x/constants/enum/chart_interval.dart';
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/model/candle.dart';
+import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/model/rate_push_model.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
@@ -37,15 +38,22 @@ class MarketDetailViewModel extends CoreViewModel {
   Color? _color;
   Color? get color => _color;
 
+  /// The REST snapshot. Everything the socket pushes wins over it, but only
+  /// crypto and commodities are pushed at all — for an index or a US stock this
+  /// is the only source of the day's numbers.
+  MarketOverview? _overview;
+  MarketOverview? get overview => _overview;
+
   double? _dayChange;
-  double? get dayChange => _dayChange;
+  double? get dayChange => _dayChange ?? _overview?.dayChange;
   double? _dayChangePercent;
-  double? get dayChangePercent => _dayChangePercent;
+  double? get dayChangePercent =>
+      _dayChangePercent ?? _overview?.dayChangePercent;
 
   double? _high52;
-  double? get high52 => _high52;
+  double? get high52 => _high52 ?? _overview?.high52;
   double? _low52;
-  double? get low52 => _low52;
+  double? get low52 => _low52 ?? _overview?.low52;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -72,6 +80,21 @@ class MarketDetailViewModel extends CoreViewModel {
   void initData() {
     super.initData();
     fetchBars(showLoading: true);
+    _fetchOverview();
+  }
+
+  /// The snapshot is a per-market fact, not a per-timeframe one, so it is
+  /// refetched on a refresh but left alone when the interval changes.
+  Future<void> _fetchOverview() async {
+    final res = await _fxRateService.getMarketOverviews(
+      markets: [code],
+      cancelToken: cancelToken,
+    );
+    final data = res.data?[code];
+    if (data == null) return;
+    _overview = data;
+    _price ??= data.price;
+    notifyListenersSafe();
   }
 
   @override
@@ -93,7 +116,7 @@ class MarketDetailViewModel extends CoreViewModel {
 
   Future<void> onRefresh() {
     renewCancelToken('onRefresh');
-    return fetchBars(showLoading: true);
+    return Future.wait([fetchBars(showLoading: true), _fetchOverview()]);
   }
 
   Future<void> fetchBars({bool showLoading = false}) async {

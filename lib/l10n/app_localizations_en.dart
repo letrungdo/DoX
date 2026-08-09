@@ -42,6 +42,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get low52Week => '52W Low';
 
   @override
+  String get priceRef => 'Prev close';
+
+  @override
+  String get changeYear => '1Y change';
+
+  @override
+  String get marketCap => 'Market cap';
+
+  @override
+  String get volume24h => '24h volume';
+
+  @override
+  String get tradeVolume => 'Volume';
+
+  @override
+  String get tradeValue => 'Turnover';
+
+  @override
   String get retry => 'Retry';
 
   @override
@@ -468,6 +486,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get marketPicker => 'Choose markets';
+
+  @override
+  String marketSelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get marketEmpty => 'No market selected yet.';
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get unselectAll => 'Clear all';
+
+  @override
+  String get marketGroupCommodity => 'Commodities';
+
+  @override
+  String get marketGroupCrypto => 'Crypto';
+
+  @override
+  String get marketGroupVnIndex => 'Vietnam indices';
+
+  @override
+  String get marketGroupWorldIndex => 'World indices';
+
+  @override
+  String get marketGroupUsStock => 'US stocks';
+
+  @override
   String get goldPrice => 'Gold Price';
 
   @override
@@ -484,6 +534,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goldNewsSources => 'Sources';
+
+  @override
+  String goldNewsDetails(int count) {
+    return 'Details ($count)';
+  }
+
+  @override
+  String get goldNewsCollapse => 'Collapse';
 
   @override
   String goldNewsUpdatedAt(String time) {

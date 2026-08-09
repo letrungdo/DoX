@@ -1,3 +1,4 @@
+import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/constants/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -240,6 +241,23 @@ class _StorageService {
 
   Future<bool> setElectricReminderEnabled(bool value) {
     return prefs.setBool(StorageKey.electricReminder, value);
+  }
+
+  /// Markets shown on the news page. Unknown codes (a symbol the API dropped,
+  /// or an install rolled back to an older build) are filtered out on read, and
+  /// an empty result falls back to the defaults so the card is never blank.
+  List<MarketCode> getMarketCodes() {
+    final raw = prefs.getStringList(StorageKey.marketCodes);
+    if (raw == null) return MarketCode.defaults;
+    final codes = raw.map(MarketCode.from).nonNulls.toList();
+    return codes.isEmpty ? MarketCode.defaults : codes;
+  }
+
+  Future<bool> setMarketCodes(List<MarketCode> value) {
+    return prefs.setStringList(
+      StorageKey.marketCodes,
+      value.map((e) => e.code).toList(),
+    );
   }
 
   // --- Pending background app update ---------------------------------------

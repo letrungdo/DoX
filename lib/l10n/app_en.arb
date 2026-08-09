@@ -11,6 +11,12 @@
   "priceClose": "Close",
   "high52Week": "52W High",
   "low52Week": "52W Low",
+  "priceRef": "Prev close",
+  "changeYear": "1Y change",
+  "marketCap": "Market cap",
+  "volume24h": "24h volume",
+  "tradeVolume": "Volume",
+  "tradeValue": "Turnover",
   "retry": "Retry",
   "error": "Error",
   "crop": "Crop",
@@ -214,12 +220,38 @@
       }
     }
   },
+  "marketPicker": "Choose markets",
+  "marketSelected": "{count} selected",
+  "@marketSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketEmpty": "No market selected yet.",
+  "selectAll": "Select all",
+  "unselectAll": "Clear all",
+  "marketGroupCommodity": "Commodities",
+  "marketGroupCrypto": "Crypto",
+  "marketGroupVnIndex": "Vietnam indices",
+  "marketGroupWorldIndex": "World indices",
+  "marketGroupUsStock": "US stocks",
   "goldPrice": "Gold Price",
   "exchangeRate": "Exchange rate",
   "market": "Market",
   "goldNews": "Gold price drivers",
   "goldNewsEmpty": "No digest for today yet.",
   "goldNewsSources": "Sources",
+  "goldNewsDetails": "Details ({count})",
+  "@goldNewsDetails": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "goldNewsCollapse": "Collapse",
   "goldNewsUpdatedAt": "Compiled {time}",
   "@goldNewsUpdatedAt": {
     "placeholders": {

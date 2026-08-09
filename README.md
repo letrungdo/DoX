@@ -72,14 +72,24 @@ Example `envs/dev/dart-define.env`:
 
 ```dotenv
 FLAVOR=dev
-GOOGLE_SHEET_KEY=
-ML_API_KEY_IOS=
-ML_API_KEY_ANDROID=
-ML_API_KEY_WEB=
+ML_API_KEY=
 FIREBASE_API_KEY_IOS=
 FIREBASE_API_KEY_ANDROID=
 FIREBASE_API_KEY_WEB=
+MARKET_API_URL=
+MARKET_WS_URL=
+SUPABASE_URL=
+SUPABASE_KEY=
+ML_API_URL=
+ELECTRIC_API_URL=
 ```
+
+The backends the app talks to are configured here, not in the source — see
+`lib/constants/env.dart`. `MARKET_API_URL` / `MARKET_WS_URL` are the market data
+REST and websocket hosts. Fixed addresses stay in the code that calls them: the
+public APIs (Google, open-meteo, Cloudflare), the GitHub releases endpoint the
+updater polls, and the companion site in `AuthLinks`, which the platform
+manifests have to agree with anyway.
 
 Never commit real values. Restore the Firebase files to their platform runners,
 then start the app:

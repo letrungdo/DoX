@@ -125,24 +125,45 @@ class _MarketDetailScreenState
     );
   }
 
+  /// The session's numbers, then the longer-range ones. Rows whose value the
+  /// market doesn't publish are dropped rather than shown as dashes: the
+  /// Vietnamese indices carry no 52-week band, only crypto has a market cap.
   Widget _buildStats(MarketDetailViewModel vm) {
     final l10n = AppLocalizations.of(context);
-    final rows = <(String, double?)>[
-      (l10n.high52Week, vm.high52),
-      (l10n.low52Week, vm.low52),
-    ];
+    final overview = vm.overview;
+    final yearChange = overview?.yearChangePercent;
+    final rows = <(String, double?, String)>[
+      (l10n.priceOpen, overview?.open, ''),
+      (l10n.priceHigh, overview?.high, ''),
+      (l10n.priceLow, overview?.low, ''),
+      (l10n.priceRef, overview?.refPrice, ''),
+      (l10n.high52Week, vm.high52, ''),
+      (l10n.low52Week, vm.low52, ''),
+      if (yearChange != null) (l10n.changeYear, yearChange, '%'),
+      (l10n.marketCap, overview?.marketCap, 'compact'),
+      (l10n.volume24h, overview?.volume24h, 'compact'),
+      (l10n.tradeVolume, overview?.dayVolume, 'compact'),
+      (l10n.tradeValue, overview?.dayValue, 'compact'),
+    ].where((row) => row.$2 != null).toList();
+
     return Column(
       children: [
-        for (final row in rows)
+        for (final (label, value, format) in rows)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(row.$1, style: context.textTheme.secondary),
+                Text(label, style: context.textTheme.secondary),
                 Text(
-                  (row.$2).formatUnit(digit: 3),
-                  style: context.textTheme.primary.bold,
+                  switch (format) {
+                    'compact' => value.formatCompact(),
+                    '%' => "${value.formatUnit(hasPlus: true)}%",
+                    _ => value.formatUnit(digit: 3),
+                  },
+                  style: context.textTheme.primary.bold.copyWith(
+                    color: format == '%' ? value.getColor() : null,
+                  ),
                 ),
               ],
             ),

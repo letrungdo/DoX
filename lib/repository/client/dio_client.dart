@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/app_const.dart';
+import 'package:do_x/constants/env.dart';
 import 'package:do_x/repository/client/http_client_adapter.dart';
 import 'package:do_x/repository/client/interceptor/firebase_interceptor.dart';
 import 'package:do_x/repository/client/interceptor/interceptor.dart';
@@ -26,9 +27,7 @@ class DioClient {
   static final dio = DioClient.create();
 
   static Dio createMyLife() {
-    final dio = Dio(
-      _baseOptions.copyWith(baseUrl: "https://api.mylifecam.com"),
-    );
+    final dio = Dio(_baseOptions.copyWith(baseUrl: Envs.myLifeApiUrl));
     dio.interceptors.addAll([
       RetryInterceptor(dio),
       MyLifeInterceptor(), //

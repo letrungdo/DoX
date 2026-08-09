@@ -38,13 +38,16 @@ flutter config --no-analytics >/dev/null 2>&1 || true
 mkdir -p envs
 {
   printf 'FLAVOR="%s"\n' "${FLAVOR:-}"
-  printf 'ML_API_KEY_IOS="%s"\n' "${ML_API_KEY_IOS:-}"
-  printf 'ML_API_KEY_ANDROID="%s"\n' "${ML_API_KEY_ANDROID:-}"
-  printf 'ML_API_KEY_WEB="%s"\n' "${ML_API_KEY_WEB:-}"
+  printf 'ML_API_KEY="%s"\n' "${ML_API_KEY:-}"
   printf 'FIREBASE_API_KEY_IOS="%s"\n' "${FIREBASE_API_KEY_IOS:-}"
   printf 'FIREBASE_API_KEY_ANDROID="%s"\n' "${FIREBASE_API_KEY_ANDROID:-}"
   printf 'FIREBASE_API_KEY_WEB="%s"\n' "${FIREBASE_API_KEY_WEB:-}"
-  printf 'GOOGLE_SHEET_KEY="%s"\n' "${GOOGLE_SHEET_KEY:-}"
+  printf 'MARKET_API_URL="%s"\n' "${MARKET_API_URL:-}"
+  printf 'MARKET_WS_URL="%s"\n' "${MARKET_WS_URL:-}"
+  printf 'SUPABASE_URL="%s"\n' "${SUPABASE_URL:-}"
+  printf 'SUPABASE_KEY="%s"\n' "${SUPABASE_KEY:-}"
+  printf 'ML_API_URL="%s"\n' "${ML_API_URL:-}"
+  printf 'ELECTRIC_API_URL="%s"\n' "${ELECTRIC_API_URL:-}"
 } > envs/dart-define.env
 
 flutter pub get

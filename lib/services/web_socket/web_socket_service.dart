@@ -8,6 +8,7 @@ import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:toastification/toastification.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:do_x/constants/env.dart';
 
 class WebSocketService {
   static const _maxRetries = 3;
@@ -32,7 +33,7 @@ class WebSocketService {
   }
 
   void _connect(BuildContext context) async {
-    final wssUrl = Uri.parse("wss://stream.market-data.example");
+    final wssUrl = Uri.parse(Envs.marketWsUrl);
     await disconnect();
     _manuallyClosed = false;
     _channel = IOWebSocketChannel.connect(

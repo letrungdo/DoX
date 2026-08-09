@@ -23,7 +23,7 @@ class FirebaseUtil {
     }
     return Result.guardFuture<AuthResponse>(() async {
       final response = await DioClient.dio.post(
-        "https://securetoken.googleapis.com/v1/token?key=${Envs.myLifeApiKey.iOS}",
+        "https://securetoken.googleapis.com/v1/token?key=${Envs.myLifeApiKey}",
         options: Options(headers: authHeader),
         data: {
           "grant_type": "refresh_token", //

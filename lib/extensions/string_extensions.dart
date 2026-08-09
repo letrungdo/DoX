@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:decimal/decimal.dart';
 import 'package:do_x/constants/app_const.dart';
 import 'package:flutter/foundation.dart';
+import 'package:do_x/constants/auth_links.dart';
 
 extension StringNullableExtensions on String? {
   bool get isNullOrEmpty => this?.isEmpty ?? true;
@@ -40,7 +41,7 @@ extension StringNullableExtensions on String? {
 
   String withProxy() {
     if (kIsWeb) {
-      return "https://app.xn--t-lia.vn/api/proxy?url=${Uri.encodeComponent(this ?? "")}";
+      return "${AuthLinks.webBase}/api/proxy?url=${Uri.encodeComponent(this ?? "")}";
     }
     return this ?? "";
   }

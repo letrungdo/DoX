@@ -21,6 +21,22 @@ extension DoubleNullableExtensions on double? {
     return value.toDecimal().formatUnit(digit: digit, hasPlus: hasPlus);
   }
 
+  /// Market caps and turnovers run to twelve digits, which no stat row has the
+  /// width for — shortened to a K/M/B/T suffix, which reads the same in both of
+  /// the app's languages. Anything under a thousand keeps the plain format.
+  String formatCompact({int digit = 2}) {
+    final value = this;
+    if (value == null) return AppConst.dash;
+    const units = [(1e12, 'T'), (1e9, 'B'), (1e6, 'M'), (1e3, 'K')];
+    final magnitude = value.abs();
+    for (final (size, suffix) in units) {
+      if (magnitude >= size) {
+        return '${(value / size).toStringAsFixed(digit)}$suffix';
+      }
+    }
+    return formatUnit();
+  }
+
   Color? getColor() {
     final valueNumber = this;
 

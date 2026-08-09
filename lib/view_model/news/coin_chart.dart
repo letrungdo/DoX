@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:do_x/constants/enum/market_code.dart';
+import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/model/rate_push_model.dart';
 import 'package:do_x/services/fx_rate_service.dart';
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
@@ -110,9 +113,52 @@ mixin CoinChartMixin on CoreViewModel {
 
   Map<MarketCode, ChartData> coinChartMap = {};
 
-  Future<void> getMarket() async {
+  /// The markets on the card, in the order the picker left them. Persisted, so
+  /// the list survives a restart.
+  List<MarketCode> _markets = storageService.getMarketCodes();
+  List<MarketCode> get markets => _markets;
+
+  /// Applied optimistically: the rows reorder straight away, and each one keeps
+  /// showing its old chart (or an empty slot) until the refetch lands.
+  Future<void> setMarkets(List<MarketCode> value) async {
+    if (const ListEquality<MarketCode>().equals(value, _markets)) return;
+    _markets = value;
+    coinChartMap = {
+      for (final code in value)
+        if (coinChartMap[code] != null) code: coinChartMap[code]!,
+    };
+    notifyListenersSafe();
+    await storageService.setMarketCodes(value);
+    await getMarket();
+  }
+
+  /// Day change, session range and the rest, keyed by code. Missing while the
+  /// first fetch runs, and for any group whose endpoint failed.
+  Map<MarketCode, MarketOverview> marketOverviews = {};
+
+  /// Bars and snapshots are independent — the sparkline needs one, the change
+  /// chip the other — so they are fetched side by side.
+  Future<void> getMarket() => Future.wait([_getBars(), _getOverviews()]);
+
+  Future<void> _getOverviews() async {
+    final res = await fxRateService.getMarketOverviews(
+      markets: _markets,
+      cancelToken: cancelToken,
+    );
+    final data = res.data;
+    // No error dialog: the row still has its chart, and the next refresh
+    // picks the snapshot up.
+    if (data == null || data.isEmpty) return;
+    marketOverviews = data;
+    notifyListenersSafe();
+  }
+
+  Future<void> _getBars() async {
     notifyInInitState();
-    final res = await fxRateService.getMarket(cancelToken: cancelToken);
+    final res = await fxRateService.getMarket(
+      markets: _markets,
+      cancelToken: cancelToken,
+    );
     if (res.isCancelByUser) {
       return;
     }
@@ -129,9 +175,11 @@ mixin CoinChartMixin on CoreViewModel {
     // every row disappear for the duration of a refresh.
     final map = <MarketCode, ChartData>{};
     final data = res.data ?? [];
-    for (final e in data) {
-      final code = e.code;
-      if (code == null) continue;
+    // Walked in the user's order, not the response's, so the rows stay where
+    // the picker put them.
+    for (final code in _markets) {
+      final e = data.firstWhereOrNull((c) => c.code == code);
+      if (e == null) continue;
 
       // Sort by time ascending so the x-axis is chronological even if the API
       // returns bars out of order, then keep the most recent window.

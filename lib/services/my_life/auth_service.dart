@@ -17,7 +17,7 @@ class AuthService {
   }) async {
     return Result.guardFuture<UserModel>(() async {
       final response = await dio.post(
-        "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${Envs.myLifeApiKey.iOS}",
+        "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${Envs.myLifeApiKey}",
         options: Options(headers: FirebaseUtil.authHeader),
         data: {
           "email": email, //

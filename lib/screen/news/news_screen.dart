@@ -11,8 +11,10 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/news/market_picker_sheet.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/services/fx_rate_service.dart';
@@ -24,6 +26,7 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +62,10 @@ class _NewsScreenState<V extends NewsViewModel>
 
   /// The push socket only needs to run while this tab is actually on screen.
   bool _isVisible = true;
+
+  /// The digest opens collapsed: the paragraph is the headline, the bullets and
+  /// their source links only come out once the reader asks for them.
+  bool _isNewsExpanded = false;
 
   WebSocketService get _socketService => context.read<WebSocketService>();
 
@@ -187,9 +194,16 @@ class _NewsScreenState<V extends NewsViewModel>
         icon: Icons.show_chart_rounded, //
         color: colors.money,
         title: l10n.market,
+        action: NeuIconButton(
+          icon: Icons.tune_rounded,
+          size: 32,
+          iconSize: 17,
+          tooltip: l10n.marketPicker,
+          onPressed: _pickMarkets,
+        ),
       ),
       const SizedBox(height: 10),
-      _buildMarketCard(),
+      _buildMarketCard(l10n),
     ];
   }
 
@@ -346,6 +360,7 @@ class _NewsScreenState<V extends NewsViewModel>
 
   Widget _buildDigest(AppLocalizations l10n, GoldNews news, String lang) {
     final reason = news.sentimentReason(lang);
+    final expanded = _isNewsExpanded;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -362,22 +377,68 @@ class _NewsScreenState<V extends NewsViewModel>
         const SizedBox(height: 10),
         Text(
           news.summary(lang),
+          maxLines: expanded ? null : 3,
+          overflow: expanded ? null : TextOverflow.ellipsis,
           style: context.textTheme.primary.size17.copyWith(height: 1.45),
         ),
-        if (reason != null) ...[
+        if (reason != null && expanded) ...[
           const SizedBox(height: 6),
           Text(
             reason,
             style: context.textTheme.title.size15.copyWith(height: 1.4),
           ),
         ],
-        for (final item in news.highlights) ...[
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          _buildHighlight(item, news.sourceOf(item), lang),
+        if (news.highlights.isNotEmpty) ...[
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: expanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final item in news.highlights) ...[
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        _buildHighlight(item, news.sourceOf(item), lang),
+                      ],
+                    ],
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+          _buildDigestToggle(l10n, news.highlights.length),
         ],
       ],
+    );
+  }
+
+  /// The one control that opens the digest. Collapsed it reads as "n bullets
+  /// waiting"; expanded it is the way back to the short card.
+  Widget _buildDigestToggle(AppLocalizations l10n, int count) {
+    final expanded = _isNewsExpanded;
+    final color = context.colors.info;
+    return InkWell(
+      onTap: () => setState(() => _isNewsExpanded = !expanded),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 4,
+          children: [
+            Text(
+              expanded ? l10n.goldNewsCollapse : l10n.goldNewsDetails(count),
+              style: context.textTheme.secondary.size13.bold.textColor(color),
+            ),
+            AnimatedRotation(
+              turns: expanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: Icon(Icons.expand_more_rounded, size: 18, color: color),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -521,13 +582,37 @@ class _NewsScreenState<V extends NewsViewModel>
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Widget _buildMarketCard() {
+  Future<void> _pickMarkets() async {
+    final picked = await showMarketPickerSheet(
+      context,
+      selected: vm.markets, //
+    );
+    if (picked == null) return;
+    await vm.setMarkets(picked);
+  }
+
+  Widget _buildMarketCard(AppLocalizations l10n) {
     return NeuCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        // Driven by the picked list rather than the fetched charts, so a market
+        // added from the sheet gets its row straight away and fills in when the
+        // bars arrive.
         child: Selector<V, List<MarketCode>>(
-          selector: (_, vm) => vm.coinChartMap.keys.toList(),
+          selector: (_, vm) => vm.markets,
           builder: (context, codes, _) {
+            if (codes.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 12,
+                ),
+                child: Text(
+                  l10n.marketEmpty,
+                  style: context.textTheme.title.size13,
+                ),
+              );
+            }
             return Column(
               children: [
                 for (final (index, code) in codes.indexed) ...[
@@ -544,9 +629,10 @@ class _NewsScreenState<V extends NewsViewModel>
   }
 
   Widget _buildMarketItem(MarketCode code) {
-    return Selector<V, ChartData?>(
-      selector: (_, vm) => vm.coinChartMap[code],
-      builder: (context, data, _) {
+    return Selector<V, (ChartData?, MarketOverview?)>(
+      selector: (_, vm) => (vm.coinChartMap[code], vm.marketOverviews[code]),
+      builder: (context, value, _) {
+        final (data, overview) = value;
         final trend = _trendColor(data);
         final lineColor = trend ?? context.colors.info;
         return InkWell(
@@ -595,11 +681,11 @@ class _NewsScreenState<V extends NewsViewModel>
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         TextAutoScaleWidget(
-                          (data?.price).formatUnit(digit: 3),
+                          (data?.price ?? overview?.price).formatUnit(digit: 3),
                           style: context.textTheme.primary.size15.bold,
                           textAlign: TextAlign.right,
                         ),
-                        _buildTrendChip(data),
+                        _buildTrendChip(data, overview),
                       ],
                     ),
                   ),
@@ -612,14 +698,24 @@ class _NewsScreenState<V extends NewsViewModel>
     );
   }
 
-  /// Percentage move across the visible window, tinted like the sparkline so
-  /// the row reads at a glance without comparing the chart's endpoints.
-  Widget _buildTrendChip(ChartData? data) {
+  /// The day's move, from the overview snapshot — the number a reader expects
+  /// next to a price. Until that lands (or where a group publishes no day
+  /// change) it falls back to the move across the sparkline's own window, which
+  /// is why the tint follows the value being shown rather than the line.
+  Widget _buildTrendChip(ChartData? data, MarketOverview? overview) {
     final points = data?.chartData ?? const <double>[];
-    if (points.length < 2 || points.first == 0) return const SizedBox.shrink();
-    final diff = points.last - points.first;
-    final percent = diff / points.first * 100;
-    final color = _trendColor(data) ?? context.textTheme.title.color!;
+    final dayPercent = overview?.dayChangePercent;
+    final double percent;
+    if (dayPercent != null) {
+      percent = dayPercent;
+    } else {
+      if (points.length < 2 || points.first == 0) {
+        return const SizedBox.shrink();
+      }
+      percent = (points.last - points.first) / points.first * 100;
+    }
+    final diff = percent;
+    final color = _changeColor(percent) ?? context.textTheme.title.color!;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -657,45 +753,37 @@ class _NewsScreenState<V extends NewsViewModel>
     return value > 0 ? context.colors.success : context.colors.danger;
   }
 
+  /// The five markets that shipped with the app have their own artwork; every
+  /// other code in the catalogue falls back to a tinted glyph for its group,
+  /// which keeps the column aligned without an asset per symbol.
   Widget _buildCurrencyIcon(MarketCode code) {
-    IconData? iconData;
-    Color? iconColor;
-    AssetGenImage? image;
-    switch (code) {
-      case MarketCode.xauUSD:
-        image = Assets.images.gold;
-        break;
-      case MarketCode.xagUSD:
-        image = Assets.images.silver;
-        break;
-      case MarketCode.btcUSDT:
-        image = Assets.images.btc;
-        break;
-      case MarketCode.bnbUSDT:
-        image = Assets.images.bnb;
-        break;
-      case MarketCode.ethUSDT:
-        image = Assets.images.eth;
-        break;
-      case MarketCode.vnIndex:
-        iconData = Icons.trending_up;
-        iconColor = context.colors.success;
-        break;
-    }
-    if (iconData != null) {
-      return Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: iconColor == null
-              ? null
-              : context.neuTint(iconColor, amount: 0.14),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(iconData, size: 20, color: iconColor),
-      );
-    }
-    return image!.image(width: 32, height: 32);
+    final AssetGenImage? image = switch (code) {
+      MarketCode.xauUSD => Assets.images.gold,
+      MarketCode.xagUSD => Assets.images.silver,
+      MarketCode.btcUSDT => Assets.images.btc,
+      MarketCode.bnbUSDT => Assets.images.bnb,
+      MarketCode.ethUSDT => Assets.images.eth,
+      _ => null,
+    };
+    if (image != null) return image.image(width: 32, height: 32);
+
+    final colors = context.colors;
+    final (iconData, iconColor) = switch (code.group) {
+      MarketGroup.commodity => (Icons.oil_barrel_rounded, colors.warning),
+      MarketGroup.crypto => (Icons.currency_bitcoin_rounded, colors.money),
+      MarketGroup.vnIndex => (Icons.trending_up, colors.success),
+      MarketGroup.worldIndex => (Icons.public_rounded, colors.info),
+      MarketGroup.usStock => (Icons.business_rounded, colors.info),
+    };
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: context.neuTint(iconColor, amount: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(iconData, size: 20, color: iconColor),
+    );
   }
 
   Widget _buildGoldPriceItem(GoldSymbol item) {
@@ -770,12 +858,16 @@ class _SectionHeader extends StatelessWidget {
     required this.color,
     required this.title,
     this.badge,
+    this.action,
   });
 
   final IconData icon;
   final Color color;
   final String title;
   final String? badge;
+
+  /// Control pinned to the right of the title, e.g. the market picker.
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -810,6 +902,7 @@ class _SectionHeader extends StatelessWidget {
               style: context.textTheme.secondary.size13.bold.textColor(color),
             ),
           ),
+        ?action,
       ],
     );
   }

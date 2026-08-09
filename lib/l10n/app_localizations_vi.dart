@@ -42,6 +42,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get low52Week => 'Đáy 52T';
 
   @override
+  String get priceRef => 'Tham chiếu';
+
+  @override
+  String get changeYear => 'Thay đổi 1 năm';
+
+  @override
+  String get marketCap => 'Vốn hoá';
+
+  @override
+  String get volume24h => 'KL 24h';
+
+  @override
+  String get tradeVolume => 'KL khớp';
+
+  @override
+  String get tradeValue => 'GT khớp';
+
+  @override
   String get retry => 'Thử lại';
 
   @override
@@ -468,6 +486,38 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get marketPicker => 'Chọn thị trường';
+
+  @override
+  String marketSelected(int count) {
+    return 'Đã chọn $count';
+  }
+
+  @override
+  String get marketEmpty => 'Chưa chọn thị trường nào.';
+
+  @override
+  String get selectAll => 'Chọn tất cả';
+
+  @override
+  String get unselectAll => 'Bỏ chọn tất cả';
+
+  @override
+  String get marketGroupCommodity => 'Hàng hoá';
+
+  @override
+  String get marketGroupCrypto => 'Tiền mã hoá';
+
+  @override
+  String get marketGroupVnIndex => 'Chỉ số Việt Nam';
+
+  @override
+  String get marketGroupWorldIndex => 'Chỉ số thế giới';
+
+  @override
+  String get marketGroupUsStock => 'Cổ phiếu Mỹ';
+
+  @override
   String get goldPrice => 'Giá vàng';
 
   @override
@@ -484,6 +534,14 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get goldNewsSources => 'Nguồn tham khảo';
+
+  @override
+  String goldNewsDetails(int count) {
+    return 'Chi tiết ($count)';
+  }
+
+  @override
+  String get goldNewsCollapse => 'Thu gọn';
 
   @override
   String goldNewsUpdatedAt(String time) {

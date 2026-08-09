@@ -164,6 +164,42 @@ abstract class AppLocalizations {
   /// **'52W Low'**
   String get low52Week;
 
+  /// No description provided for @priceRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Prev close'**
+  String get priceRef;
+
+  /// No description provided for @changeYear.
+  ///
+  /// In en, this message translates to:
+  /// **'1Y change'**
+  String get changeYear;
+
+  /// No description provided for @marketCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Market cap'**
+  String get marketCap;
+
+  /// No description provided for @volume24h.
+  ///
+  /// In en, this message translates to:
+  /// **'24h volume'**
+  String get volume24h;
+
+  /// No description provided for @tradeVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get tradeVolume;
+
+  /// No description provided for @tradeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Turnover'**
+  String get tradeValue;
+
   /// No description provided for @retry.
   ///
   /// In en, this message translates to:
@@ -950,6 +986,66 @@ abstract class AppLocalizations {
   /// **'{speed} Mbps'**
   String speedMbps(String speed);
 
+  /// No description provided for @marketPicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose markets'**
+  String get marketPicker;
+
+  /// No description provided for @marketSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String marketSelected(int count);
+
+  /// No description provided for @marketEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No market selected yet.'**
+  String get marketEmpty;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAll;
+
+  /// No description provided for @unselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get unselectAll;
+
+  /// No description provided for @marketGroupCommodity.
+  ///
+  /// In en, this message translates to:
+  /// **'Commodities'**
+  String get marketGroupCommodity;
+
+  /// No description provided for @marketGroupCrypto.
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto'**
+  String get marketGroupCrypto;
+
+  /// No description provided for @marketGroupVnIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietnam indices'**
+  String get marketGroupVnIndex;
+
+  /// No description provided for @marketGroupWorldIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'World indices'**
+  String get marketGroupWorldIndex;
+
+  /// No description provided for @marketGroupUsStock.
+  ///
+  /// In en, this message translates to:
+  /// **'US stocks'**
+  String get marketGroupUsStock;
+
   /// No description provided for @goldPrice.
   ///
   /// In en, this message translates to:
@@ -985,6 +1081,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sources'**
   String get goldNewsSources;
+
+  /// No description provided for @goldNewsDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details ({count})'**
+  String goldNewsDetails(int count);
+
+  /// No description provided for @goldNewsCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get goldNewsCollapse;
 
   /// No description provided for @goldNewsUpdatedAt.
   ///

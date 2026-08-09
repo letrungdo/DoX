@@ -13,13 +13,34 @@ class Envs {
 
   static final bool isDev = flavor != Flavor.prod;
 
-  static const googleSheetKey = String.fromEnvironment('GOOGLE_SHEET_KEY');
+  // --- Server endpoints ------------------------------------------------
+  //
+  // The backends a build can be pointed at live here rather than in the service
+  // that calls them, and come in through
+  // `--dart-define-from-file envs/<flavor>/dart-define.env`.
+  //
+  // Fixed addresses stay inline at their call site: the public APIs (Google,
+  // open-meteo, Cloudflare), the GitHub releases endpoint, and the companion
+  // site in [AuthLinks], which the platform manifests have to agree with.
 
-  static const myLifeApiKey = PlatformValue(
-    iOS: String.fromEnvironment('ML_API_KEY_IOS'),
-    android: String.fromEnvironment('ML_API_KEY_ANDROID'),
-    web: String.fromEnvironment('ML_API_KEY_WEB'),
-  );
+  /// Market data — quotes, bars and the overview catalogues.
+  static const marketApiUrl = String.fromEnvironment('MARKET_API_URL');
+
+  /// Real-time price push for the market data above.
+  static const marketWsUrl = String.fromEnvironment('MARKET_WS_URL');
+
+  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const supabaseKey = String.fromEnvironment('SUPABASE_KEY');
+
+  static const myLifeApiUrl = String.fromEnvironment('ML_API_URL');
+
+  /// CSKH CPC (Trung tâm CSKH Điện lực miền Trung).
+  static const electricApiUrl = String.fromEnvironment('ELECTRIC_API_URL');
+
+  /// MyLife's own API key. It is the key their iOS client ships, and every
+  /// platform authenticates with it — the app talks to MyLife's servers, not to
+  /// a per-platform Firebase project of ours.
+  static const myLifeApiKey = String.fromEnvironment('ML_API_KEY');
 
   static const firebaseApiKey = PlatformValue(
     iOS: String.fromEnvironment('FIREBASE_API_KEY_IOS'),

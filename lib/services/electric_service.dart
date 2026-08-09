@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/env.dart';
 import 'package:do_x/model/electric/electric_models.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 
 /// CSKH CPC (Trung tâm CSKH Điện lực miền Trung) API client.
 class ElectricService {
-  final dio = DioClient.create("https://cskh-api.cpc.vn");
+  final dio = DioClient.create(Envs.electricApiUrl);
 
   /// Several accounts can fetch concurrently, so the JWT is passed per
   /// request instead of being kept on the client.

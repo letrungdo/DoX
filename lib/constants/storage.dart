@@ -41,6 +41,9 @@ class StorageKey {
 
   static const electricReminder = "electricReminder";
 
+  /// Market codes shown on the news page, in user order.
+  static const marketCodes = "marketCodes";
+
   /// Last known chicken data (batches + global sales/expenses), shown while the
   /// screens refresh from the API.
   static const chickenCache = "chickenCache";

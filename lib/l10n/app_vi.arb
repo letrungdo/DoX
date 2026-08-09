@@ -11,6 +11,12 @@
   "priceClose": "Đóng cửa",
   "high52Week": "Đỉnh 52T",
   "low52Week": "Đáy 52T",
+  "priceRef": "Tham chiếu",
+  "changeYear": "Thay đổi 1 năm",
+  "marketCap": "Vốn hoá",
+  "volume24h": "KL 24h",
+  "tradeVolume": "KL khớp",
+  "tradeValue": "GT khớp",
   "retry": "Thử lại",
   "error": "Lỗi",
   "crop": "Cắt",
@@ -207,12 +213,38 @@
       }
     }
   },
+  "marketPicker": "Chọn thị trường",
+  "marketSelected": "Đã chọn {count}",
+  "@marketSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketEmpty": "Chưa chọn thị trường nào.",
+  "selectAll": "Chọn tất cả",
+  "unselectAll": "Bỏ chọn tất cả",
+  "marketGroupCommodity": "Hàng hoá",
+  "marketGroupCrypto": "Tiền mã hoá",
+  "marketGroupVnIndex": "Chỉ số Việt Nam",
+  "marketGroupWorldIndex": "Chỉ số thế giới",
+  "marketGroupUsStock": "Cổ phiếu Mỹ",
   "goldPrice": "Giá vàng",
   "exchangeRate": "Tỷ giá",
   "market": "Thị trường",
   "goldNews": "Tin ảnh hưởng giá vàng",
   "goldNewsEmpty": "Chưa có bản tin cho hôm nay.",
   "goldNewsSources": "Nguồn tham khảo",
+  "goldNewsDetails": "Chi tiết ({count})",
+  "@goldNewsDetails": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "goldNewsCollapse": "Thu gọn",
   "goldNewsUpdatedAt": "Tổng hợp {time}",
   "@goldNewsUpdatedAt": {
     "placeholders": {
