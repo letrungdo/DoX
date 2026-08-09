@@ -384,9 +384,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get solarShort => 'DL';
 
   @override
-  String get chickenLunarCalendar => 'Lịch âm (mục Gà)';
-
-  @override
   String get chickenLunarCalendarDesc => 'Hiển thị ngày ở mục Gà theo lịch âm';
 
   @override

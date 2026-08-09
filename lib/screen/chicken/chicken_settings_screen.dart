@@ -64,7 +64,7 @@ class _ChickenSettingsScreenState
                 SettingCard(
                   icon: Icons.calendar_month_rounded,
                   color: Colors.deepPurple,
-                  title: Text(l10n.chickenLunarCalendar),
+                  title: Text(l10n.lunarCalendar),
                   subtitle: Text(l10n.chickenLunarCalendarDesc),
                   trailing: Switch.adaptive(
                     value: vm.useLunarCalendar,

@@ -38,9 +38,9 @@ import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Everything the app bar's overflow menu can do. The screen keeps only the
-/// add button beside it, so the bar stays readable in landscape too.
-enum _ChickenMenuAction { statistics, sharing, settings }
+/// Everything the app bar's overflow menu can do. Statistics and add sit in the
+/// bar itself; the rest is filed here so it stays readable in landscape too.
+enum _ChickenMenuAction { sharing, settings }
 
 @RoutePage()
 class ChickenScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -142,6 +142,16 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           ],
         ),
         actions: [
+          NeuIconButton(
+            size: Dimens.appBarActionSize,
+            iconSize: 18,
+            depth: Dimens.appBarActionDepth,
+            icon: Icons.bar_chart_rounded,
+            tooltip: l10n.profitStatistics,
+            onPressed: () =>
+                context.router.push(const ChickenStatisticsRoute()),
+          ),
+          const SizedBox(width: 8),
           Consumer<ChickenViewModel>(
             builder: (context, vm, child) => ChickenAddButton(
               icon: Assets.images.chickCute,
@@ -416,11 +426,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
       position: position,
       items: [
         _menuItem(
-          _ChickenMenuAction.statistics,
-          Icons.bar_chart,
-          l10n.profitStatistics,
-        ),
-        _menuItem(
           _ChickenMenuAction.sharing,
           Icons.group_outlined,
           l10n.chickenSharing,
@@ -438,8 +443,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
 
   void _onMenuAction(_ChickenMenuAction action) {
     switch (action) {
-      case _ChickenMenuAction.statistics:
-        context.router.push(const ChickenStatisticsRoute());
       case _ChickenMenuAction.sharing:
         unawaited(showChickenSharingDialog(context));
       case _ChickenMenuAction.settings:

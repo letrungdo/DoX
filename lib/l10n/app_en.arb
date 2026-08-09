@@ -168,7 +168,6 @@
   "lunarDatePickerTitle": "Pick a date (Lunar)",
   "lunarShort": "Lunar",
   "solarShort": "Solar",
-  "chickenLunarCalendar": "Lunar calendar (Chicken)",
   "chickenLunarCalendarDesc": "Show chicken dates on the lunar calendar",
   "notificationPermissionDenied": "Unable to update the notification schedule. Please check notification permission in the device settings.",
   "vaccinationNotificationTitle": "Vaccination: {vaccination}",

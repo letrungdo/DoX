@@ -800,12 +800,6 @@ abstract class AppLocalizations {
   /// **'Solar'**
   String get solarShort;
 
-  /// No description provided for @chickenLunarCalendar.
-  ///
-  /// In en, this message translates to:
-  /// **'Lunar calendar (Chicken)'**
-  String get chickenLunarCalendar;
-
   /// No description provided for @chickenLunarCalendarDesc.
   ///
   /// In en, this message translates to:

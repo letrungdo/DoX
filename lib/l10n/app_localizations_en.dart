@@ -383,9 +383,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get solarShort => 'Solar';
 
   @override
-  String get chickenLunarCalendar => 'Lunar calendar (Chicken)';
-
-  @override
   String get chickenLunarCalendarDesc =>
       'Show chicken dates on the lunar calendar';
 
