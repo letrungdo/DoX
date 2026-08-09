@@ -85,7 +85,7 @@ jobs:
 
       # Upload APK as release asset
       - name: Upload APK to Release
-        uses: svenstaro/upload-release-action@2.9.0
+        uses: svenstaro/upload-release-action@2.11.5
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/app/outputs/flutter-apk/app-release.apk
@@ -148,7 +148,7 @@ jobs:
 
       # Upload IPA as release asset
       - name: Upload IPA to Release
-        uses: svenstaro/upload-release-action@2.9.0
+        uses: svenstaro/upload-release-action@2.11.5
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/ios/ipa/do_x.ipa
@@ -211,7 +211,7 @@ jobs:
             "build/macos/do-x.dmg"
 
       - name: Upload DMG to Release
-        uses: svenstaro/upload-release-action@2.9.0
+        uses: svenstaro/upload-release-action@2.11.5
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/macos/do-x.dmg
