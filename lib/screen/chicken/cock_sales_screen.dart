@@ -105,7 +105,10 @@ class _CockSalesScreenState
         ),
         actions: [
           IconButton(
-            icon: ChickenAddIcon(icon: Assets.images.roosterCute),
+            icon: ChickenAddIcon(
+              icon: Assets.images.roosterCute,
+              enabled: !vm.isReadOnly,
+            ),
             onPressed: vm.isReadOnly ? null : () => _showSaleDialog(),
           ),
         ],

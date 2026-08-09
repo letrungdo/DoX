@@ -41,6 +41,18 @@ class _FakeRepository extends ChickenRepository {
   List<Expense> globalExpenses = [];
   Object? readFailure;
   Object? writeFailure;
+  List<ChickenDataSource> sources = const [
+    ChickenDataSource(
+      ownerId: 'user-1',
+      email: 'owner@example.com',
+      isOwner: true,
+    ),
+    ChickenDataSource(
+      ownerId: 'shared-owner',
+      email: 'shared@example.com',
+      isOwner: false,
+    ),
+  ];
 
   /// Stands in for network latency: without it a fake write resolves in a
   /// single microtask, which is faster than any real request and hides races.
@@ -104,18 +116,7 @@ class _FakeRepository extends ChickenRepository {
   }
 
   @override
-  Future<List<ChickenDataSource>> getDataSources() async => const [
-    ChickenDataSource(
-      ownerId: 'user-1',
-      email: 'owner@example.com',
-      isOwner: true,
-    ),
-    ChickenDataSource(
-      ownerId: 'shared-owner',
-      email: 'shared@example.com',
-      isOwner: false,
-    ),
-  ];
+  Future<List<ChickenDataSource>> getDataSources() async => sources;
 
   @override
   Future<List<ChickenShareViewer>> getShareViewers() async => const [];
@@ -185,6 +186,7 @@ void main() {
   setUp(() async {
     await storageService.clearChickenCache();
     await storageService.clearChickenSyncQueue();
+    await storageService.clearChickenDataSourceSelection();
   });
 
   group('cache restore', () {
@@ -1029,6 +1031,57 @@ void main() {
       await expectLater(vm.addExpense('batch-1', _expense()), throwsStateError);
       expect(vm.batches.single.expenses, isEmpty);
       vm.dispose();
+    });
+
+    test('restores the selected shared owner after an app restart', () async {
+      final firstRepository = _FakeRepository()..batches = [_batch()];
+      final first = ChickenViewModel(
+        repository: firstRepository,
+        auth: _FakeAuth(),
+      );
+      first.initState();
+      await first.selectDataSource(firstRepository.sources.last);
+      first.dispose();
+
+      final restartedRepository = _FakeRepository()..batches = [_batch()];
+      final restarted = ChickenViewModel(
+        repository: restartedRepository,
+        auth: _FakeAuth(),
+      );
+      restarted.initState();
+      await restarted.loadSharing();
+      await restarted.ensureLoaded({ChickenSection.batches});
+
+      expect(restarted.activeOwnerId, 'shared-owner');
+      expect(restarted.activeOwnerEmail, 'shared@example.com');
+      expect(restarted.isReadOnly, isTrue);
+      expect(restartedRepository.requestedOwners.last, 'shared-owner');
+      restarted.dispose();
+    });
+
+    test('falls back to own data when restored access was revoked', () async {
+      final firstRepository = _FakeRepository();
+      final first = ChickenViewModel(
+        repository: firstRepository,
+        auth: _FakeAuth(),
+      );
+      first.initState();
+      await first.selectDataSource(firstRepository.sources.last);
+      first.dispose();
+
+      final restartedRepository = _FakeRepository()
+        ..sources = [firstRepository.sources.first];
+      final restarted = ChickenViewModel(
+        repository: restartedRepository,
+        auth: _FakeAuth(),
+      );
+      restarted.initState();
+      await restarted.loadSharing();
+
+      expect(restarted.activeOwnerId, 'user-1');
+      expect(restarted.isReadOnly, isFalse);
+      expect(storageService.getChickenDataSourceSelection(), isNull);
+      restarted.dispose();
     });
   });
 }

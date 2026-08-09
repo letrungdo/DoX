@@ -89,6 +89,19 @@ class _StorageService {
     return prefs.remove(StorageKey.chickenSyncQueue);
   }
 
+  /// Selected chicken-data owner, stored as user-scoped JSON by the view model.
+  String? getChickenDataSourceSelection() {
+    return prefs.getString(StorageKey.chickenDataSourceSelection);
+  }
+
+  Future<bool> setChickenDataSourceSelection(String value) {
+    return prefs.setString(StorageKey.chickenDataSourceSelection, value);
+  }
+
+  Future<bool> clearChickenDataSourceSelection() {
+    return prefs.remove(StorageKey.chickenDataSourceSelection);
+  }
+
   String? getLocale() {
     return prefs.getString(StorageKey.locale);
   }

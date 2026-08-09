@@ -98,7 +98,10 @@ class _GlobalExpensesScreenState
         ),
         actions: [
           IconButton(
-            icon: ChickenAddIcon(icon: Assets.images.feedCute),
+            icon: ChickenAddIcon(
+              icon: Assets.images.feedCute,
+              enabled: !vm.isReadOnly,
+            ),
             onPressed: vm.isReadOnly ? null : () => _showExpenseDialog(),
           ),
         ],

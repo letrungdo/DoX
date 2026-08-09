@@ -138,7 +138,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           ),
           Consumer<ChickenViewModel>(
             builder: (context, vm, child) => IconButton(
-              icon: ChickenAddIcon(icon: Assets.images.chickCute),
+              icon: ChickenAddIcon(
+                icon: Assets.images.chickCute,
+                enabled: !vm.isReadOnly,
+              ),
               onPressed: vm.isReadOnly ? null : _showAddBatchDialog,
             ),
           ),
@@ -236,10 +239,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                     dense: true,
                     leading: const Icon(Icons.visibility_outlined),
                     title: Text(l10n.sharedReadOnly(vm.activeOwnerEmail ?? '')),
-                    trailing: TextButton(
-                      onPressed: _showDataSourcePicker,
-                      child: Text(l10n.viewChickenDataFrom),
-                    ),
                   ),
                 ),
               const ChickenStaleBanner(sections: {ChickenSection.batches}),

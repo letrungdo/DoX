@@ -55,10 +55,53 @@ class ChickenViewModel extends CoreViewModel {
 
   String? _activeOwnerId;
   String? _activeOwnerEmail;
+  String? _selectionRestoredForUserId;
 
   String? get activeOwnerId => _activeOwnerId ?? _auth.userId;
   String? get activeOwnerEmail => _activeOwnerEmail;
   bool get isReadOnly => activeOwnerId != null && activeOwnerId != _auth.userId;
+
+  /// Restores only a selection written by the currently signed-in account.
+  /// Access is validated against [dataSources] by [loadSharing] before the
+  /// selected owner's data is trusted.
+  void _restoreDataSourceSelection() {
+    final userId = _auth.userId;
+    if (userId == null || _selectionRestoredForUserId == userId) return;
+    _selectionRestoredForUserId = userId;
+    try {
+      final raw = storageService.getChickenDataSourceSelection();
+      if (raw == null) {
+        _activeOwnerId = userId;
+        _activeOwnerEmail = null;
+        return;
+      }
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (data['version'] != 1 || data['userId'] != userId) {
+        _activeOwnerId = userId;
+        _activeOwnerEmail = null;
+        return;
+      }
+      _activeOwnerId = data['ownerId'] as String? ?? userId;
+      _activeOwnerEmail = data['ownerEmail'] as String?;
+    } catch (e) {
+      logger.e('restore chicken data source failed', error: e);
+      _activeOwnerId = userId;
+      _activeOwnerEmail = null;
+    }
+  }
+
+  Future<void> _saveDataSourceSelection(ChickenDataSource source) async {
+    final userId = _auth.userId;
+    if (userId == null) return;
+    await storageService.setChickenDataSourceSelection(
+      jsonEncode({
+        'version': 1,
+        'userId': userId,
+        'ownerId': source.ownerId,
+        'ownerEmail': source.email,
+      }),
+    );
+  }
 
   List<ChickenBatch> _batches = [];
   List<ChickenBatch> get batches => _batches;
@@ -469,6 +512,7 @@ class ChickenViewModel extends CoreViewModel {
   void initState() {
     super.initState();
     _recentChanges.restore();
+    _restoreDataSourceSelection();
     _restoreFromCache();
     // This view model lives app-wide and initState runs on every screen mount,
     // so only subscribe once. Data is (re)loaded on sign-in because screens may
@@ -478,11 +522,12 @@ class ChickenViewModel extends CoreViewModel {
         case AuthChangeEvent.initialSession:
           // The persisted session is restored asynchronously, so this is often
           // the first moment the cache can be matched against a user.
+          _restoreDataSourceSelection();
           _restoreFromCache();
           unawaited(loadSharing());
         case AuthChangeEvent.signedIn:
-          _activeOwnerId = _auth.userId;
-          _activeOwnerEmail = null;
+          _selectionRestoredForUserId = null;
+          _restoreDataSourceSelection();
           _restoreFromCache();
           unawaited(loadSharing());
           // Cached data is already on screen: refresh it silently.
@@ -500,6 +545,7 @@ class ChickenViewModel extends CoreViewModel {
           _shareViewers = [];
           _activeOwnerId = null;
           _activeOwnerEmail = null;
+          _selectionRestoredForUserId = null;
           _cacheSaveTimer?.cancel();
           _syncRetryTimer?.cancel();
           // The cache goes, the queue stays: it holds work the user believes is
@@ -531,6 +577,7 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initData() {
     super.initData();
+    _restoreDataSourceSelection();
     _activeOwnerId ??= _auth.userId;
     if (_auth.isSignedIn) unawaited(loadSharing());
     if (!_auth.isSignedIn && vaccinationNotificationsEnabled) {
@@ -725,6 +772,7 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> loadSharing() async {
     if (!_auth.isSignedIn) return;
     try {
+      _restoreDataSourceSelection();
       final results = await Future.wait([
         _repository.getDataSources(),
         _repository.getShareViewers(),
@@ -732,13 +780,18 @@ class ChickenViewModel extends CoreViewModel {
       _dataSources = results[0] as List<ChickenDataSource>;
       _shareViewers = results[1] as List<ChickenShareViewer>;
       final activeId = activeOwnerId;
-      if (activeId != null &&
-          !_dataSources.any((source) => source.ownerId == activeId)) {
+      final activeSource = _dataSources.firstWhereOrNull(
+        (source) => source.ownerId == activeId,
+      );
+      if (activeId != null && activeSource == null) {
         await _loadTask;
         _activeOwnerId = _auth.userId;
         _activeOwnerEmail = null;
         _clearLoadedData();
+        await storageService.clearChickenDataSourceSelection();
         await loadData(sections: _requestedSections);
+      } else if (activeSource != null) {
+        _activeOwnerEmail = activeSource.email;
       }
       notifyListenersSafe();
     } catch (e) {
@@ -757,6 +810,7 @@ class ChickenViewModel extends CoreViewModel {
     }
     _activeOwnerId = source.ownerId;
     _activeOwnerEmail = source.email;
+    await _saveDataSourceSelection(source);
     _clearLoadedData();
     notifyListenersSafe();
     await loadData(sections: _requestedSections);

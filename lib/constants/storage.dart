@@ -51,6 +51,9 @@ class StorageKey {
   /// When chicken records were last added/edited, for the "new"/"edited" badges.
   static const chickenRecentChanges = "chickenRecentChanges";
 
+  /// Last chicken-data owner selected by the signed-in account.
+  static const chickenDataSourceSelection = "chickenDataSourceSelection";
+
   // Pending in-background app update (resumable across app restarts).
   static const pendingUpdateVersion = "pendingUpdateVersion";
   static const pendingUpdateUrl = "pendingUpdateUrl";
