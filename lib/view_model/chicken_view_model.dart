@@ -701,9 +701,6 @@ class ChickenViewModel extends CoreViewModel {
     // now would overwrite them with a snapshot that predates them.
     if (_queue.isNotEmpty) return;
 
-    _fetching = true;
-    if (showLoading) _loading = true;
-    notifyListenersSafe();
     // The screens filter on the displayed calendar; the server stores solar
     // dates and knows nothing about the setting.
     final serverYear = _serverYearFor(year);
@@ -713,7 +710,13 @@ class ChickenViewModel extends CoreViewModel {
     };
     bool isCurrent(ChickenSection section) =>
         (_sectionRevision[section] ?? 0) == revisionAtRequest[section];
+    // Inside the try: anything thrown while raising the flags must still go
+    // through the finally, or the progress bar and the spinner stay up for the
+    // rest of the session.
     try {
+      _fetching = true;
+      if (showLoading) _loading = true;
+      notifyListenersSafe();
       final data = await _repository.getChickenData(
         sections: sections,
         year: serverYear,
@@ -834,6 +837,12 @@ class ChickenViewModel extends CoreViewModel {
     _activeOwnerEmail = source.email;
     await _saveDataSourceSelection(source);
     _clearLoadedData();
+    // Back on the user's own data: the cache restore is skipped while a shared
+    // source is selected, so do it here rather than leaving it to fire from the
+    // next screen that happens to mount. It also puts the user's own records
+    // back on screen straight away instead of showing an empty list until the
+    // fetch lands.
+    _restoreFromCache();
     notifyListenersSafe();
     await loadData(sections: _requestedSections);
   }

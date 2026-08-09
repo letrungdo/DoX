@@ -5,6 +5,7 @@ import 'package:do_x/widgets/dialog/src/dialog_helper.dart';
 import 'package:do_x/widgets/dialog/src/dialog_widget.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 abstract class CoreViewModel
     with ChangeNotifier, CancelRequestMixin, AppErrorMixin {
@@ -54,9 +55,24 @@ abstract class CoreViewModel
   }
 
   void notifyListenersSafe() {
-    if (!isDispose) {
-      notifyListeners();
+    if (isDispose) return;
+    // A screen's initState runs while the framework is building, and every
+    // ScreenState calls into its view model from there (`vm.initState()`), so a
+    // view model that notifies during that call marks the provider scope dirty
+    // mid-build. Flutter rejects that: the notification is reported as an error
+    // and *dropped*, leaving whatever it carried invisible until the next one —
+    // a spinner that never stops, data already in memory that never appears.
+    // Delivering it at the end of the frame instead loses nothing.
+    if (SchedulerBinding.instance.schedulerPhase ==
+            SchedulerPhase.persistentCallbacks ||
+        SchedulerBinding.instance.schedulerPhase ==
+            SchedulerPhase.midFrameMicrotasks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!isDispose) notifyListeners();
+      });
+      return;
     }
+    notifyListeners();
   }
 
   /// Invoke after ui render
