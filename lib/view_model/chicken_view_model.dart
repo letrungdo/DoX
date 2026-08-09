@@ -9,6 +9,7 @@ import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/model/chicken/pending_op.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
+import 'package:do_x/services/chicken_export_service.dart';
 import 'package:do_x/services/chicken_import_service.dart';
 import 'package:do_x/services/chicken_recent_changes.dart';
 import 'package:do_x/services/chicken_sync_queue.dart';
@@ -1206,6 +1207,20 @@ class ChickenViewModel extends CoreViewModel {
 
   /// Imports data from the JSON format described in [ChickenImportService].
   /// Returns the number of imported records, or throws on invalid input.
+  /// Everything this account owns, in the shape [importFromJson] reads back.
+  ///
+  /// Loads every section and every year first: the screens only ever fetch the
+  /// year they display, so exporting what happens to be in memory would quietly
+  /// drop the rest.
+  Future<String> exportToJson() async {
+    await loadData();
+    return ChickenExportService.encode(
+      batches: _batches,
+      globalSales: _globalCockSales,
+      globalExpenses: _globalExpenses,
+    );
+  }
+
   Future<int> importFromJson(String jsonString) async {
     if (isReadOnly) throw StateError('Shared chicken data is read-only.');
     final data = ChickenImportService.parse(jsonString);

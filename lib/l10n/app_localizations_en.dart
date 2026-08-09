@@ -581,6 +581,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonExpenses => 'Common expenses';
 
   @override
+  String get exportData => 'Export data (JSON)';
+
+  @override
+  String get exportDataSubtitle => 'A file you can import back later.';
+
+  @override
+  String get exportDataSuccess => 'Chicken data exported.';
+
+  @override
+  String exportFileFailed(String error) {
+    return 'Could not export the data: $error';
+  }
+
+  @override
   String get importData => 'Import data (JSON)';
 
   @override

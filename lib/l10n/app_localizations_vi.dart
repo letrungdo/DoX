@@ -581,6 +581,20 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commonExpenses => 'Chi phí chung';
 
   @override
+  String get exportData => 'Xuất dữ liệu (JSON)';
+
+  @override
+  String get exportDataSubtitle => 'File này có thể nhập lại sau.';
+
+  @override
+  String get exportDataSuccess => 'Đã xuất dữ liệu gà.';
+
+  @override
+  String exportFileFailed(String error) {
+    return 'Không xuất được dữ liệu: $error';
+  }
+
+  @override
   String get importData => 'Nhập dữ liệu (JSON)';
 
   @override

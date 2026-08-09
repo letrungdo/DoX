@@ -15,6 +15,7 @@ import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
 import 'package:do_x/widgets/setting_card.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
 /// Everything that configures the chicken section, kept here rather than in the
@@ -33,6 +34,8 @@ class ChickenSettingsScreen extends StatefulScreen implements AutoRouteWrapper {
 
 class _ChickenSettingsScreenState
     extends ScreenState<ChickenSettingsScreen, ChickenViewModel> {
+  bool _exporting = false;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -68,6 +71,21 @@ class _ChickenSettingsScreenState
                     onChanged: vm.setUseLunarCalendar,
                   ),
                   onTap: () => vm.setUseLunarCalendar(!vm.useLunarCalendar),
+                ),
+                const SizedBox(height: 14),
+                SettingCard(
+                  icon: Icons.file_download_outlined,
+                  color: Colors.teal,
+                  title: Text(l10n.exportData),
+                  subtitle: Text(l10n.exportDataSubtitle),
+                  trailing: _exporting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.chevron_right_rounded),
+                  onTap: _exporting ? null : _exportToJsonFile,
                 ),
                 // Importing is a one-off bootstrap: once there is anything in the
                 // account it would merge into existing records instead.
@@ -110,6 +128,55 @@ class _ChickenSettingsScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.notificationPermissionDenied)),
       );
+    }
+  }
+
+  /// Hands the file to the share sheet rather than writing it somewhere: on
+  /// iOS and Android `file_selector` has no save dialog, and the sheet already
+  /// covers Files, Drive, mail and the rest.
+  Future<void> _exportToJsonFile() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _exporting = true);
+    try {
+      final json = await vm.exportToJson();
+      if (!mounted) return;
+      final now = DateTime.now();
+      final name =
+          'chicken-data-${now.year}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}.json';
+      // Origin rect for the iPad popover, which has nothing to anchor to
+      // otherwise.
+      final box = context.findRenderObject() as RenderBox?;
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          subject: name,
+          files: [
+            XFile.fromData(
+              utf8.encode(json),
+              mimeType: 'application/json',
+              name: name,
+            ),
+          ],
+          fileNameOverrides: [name],
+          sharePositionOrigin: box == null
+              ? null
+              : box.localToGlobal(Offset.zero) & box.size,
+        ),
+      );
+      // Only when the file actually went somewhere — a dismissed sheet is the
+      // user changing their mind, not something to congratulate them on.
+      if (!mounted || result.status != ShareResultStatus.success) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.exportDataSuccess)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        context.errorSnackBar(l10n.exportFileFailed(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 

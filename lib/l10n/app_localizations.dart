@@ -1154,6 +1154,30 @@ abstract class AppLocalizations {
   /// **'Common expenses'**
   String get commonExpenses;
 
+  /// No description provided for @exportData.
+  ///
+  /// In en, this message translates to:
+  /// **'Export data (JSON)'**
+  String get exportData;
+
+  /// No description provided for @exportDataSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A file you can import back later.'**
+  String get exportDataSubtitle;
+
+  /// No description provided for @exportDataSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Chicken data exported.'**
+  String get exportDataSuccess;
+
+  /// No description provided for @exportFileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export the data: {error}'**
+  String exportFileFailed(String error);
+
   /// No description provided for @importData.
   ///
   /// In en, this message translates to:
