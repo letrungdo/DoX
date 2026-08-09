@@ -2,32 +2,54 @@ import 'package:do_x/services/update_controller.dart';
 import 'package:do_x/services/update_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
-class MainViewModel extends CoreViewModel {
-  final Map<String, Future<void> Function()> _tabReselectHandlers = {};
-  final Set<String> _tabsBeingReselected = {};
+/// What a tab screen offers the bottom bar: [reselect] applies the shared
+/// re-tap rule (scroll to top, or refresh when already there), while [refresh]
+/// reloads unconditionally — which is what switching *into* a tab wants, at
+/// whatever scroll position the user left it.
+typedef TabHandlers = ({
+  Future<void> Function() reselect,
+  Future<void> Function() refresh,
+});
 
-  void registerTabReselectHandler(
-    String routeName,
-    Future<void> Function() handler,
-  ) {
-    _tabReselectHandlers[routeName] = handler;
+class MainViewModel extends CoreViewModel {
+  final Map<String, TabHandlers> _tabHandlers = {};
+  final Set<String> _tabsBeingHandled = {};
+
+  void registerTabHandlers(String routeName, TabHandlers handlers) {
+    _tabHandlers[routeName] = handlers;
   }
 
-  void unregisterTabReselectHandler(
-    String routeName,
-    Future<void> Function() handler,
-  ) {
-    if (identical(_tabReselectHandlers[routeName], handler)) {
-      _tabReselectHandlers.remove(routeName);
+  void unregisterTabHandlers(String routeName, TabHandlers handlers) {
+    final registered = _tabHandlers[routeName];
+    if (registered != null &&
+        identical(registered.reselect, handlers.reselect)) {
+      _tabHandlers.remove(routeName);
     }
   }
 
-  Future<void> handleTabReselect(String routeName) async {
-    if (!_tabsBeingReselected.add(routeName)) return;
+  /// The user tapped the tab they are already on.
+  Future<void> handleTabReselect(String routeName) {
+    return _run(routeName, (handlers) => handlers.reselect());
+  }
+
+  /// The user switched to another tab, which re-fetches that tab's data.
+  Future<void> handleTabSwitch(String routeName) {
+    return _run(routeName, (handlers) => handlers.refresh());
+  }
+
+  /// One tap at a time per tab: a second one while the first is still running
+  /// would fire a duplicate request or fight the scroll animation.
+  Future<void> _run(
+    String routeName,
+    Future<void> Function(TabHandlers handlers) action,
+  ) async {
+    final handlers = _tabHandlers[routeName];
+    if (handlers == null) return;
+    if (!_tabsBeingHandled.add(routeName)) return;
     try {
-      await _tabReselectHandlers[routeName]?.call();
+      await action(handlers);
     } finally {
-      _tabsBeingReselected.remove(routeName);
+      _tabsBeingHandled.remove(routeName);
     }
   }
 

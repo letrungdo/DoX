@@ -72,16 +72,10 @@ class _NewsScreenState<V extends NewsViewModel>
   String get tabRouteName => NewsRoute.name;
 
   @override
-  Future<void> onTabReselect() async {
-    if (_scrollController.hasClients) {
-      await _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    }
-    if (mounted) await vm.onRefresh();
-  }
+  ScrollController get tabScrollController => _scrollController;
+
+  @override
+  Future<void> onTabRefresh() => vm.onRefresh();
 
   @override
   void onResume() {

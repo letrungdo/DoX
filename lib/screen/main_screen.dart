@@ -205,8 +205,9 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                         }
                         tabsRouter.setActiveIndex(value);
                         storageService.setActiveTabPage(page.name);
-                        // Switching to another tab re-fetches that tab's data.
-                        await vm.handleTabReselect(routes[value].routeName);
+                        // Switching to another tab re-fetches that tab's data,
+                        // wherever the user had scrolled it to.
+                        await vm.handleTabSwitch(routes[value].routeName);
                       },
                       items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
                     ),

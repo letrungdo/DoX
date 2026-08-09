@@ -8,6 +8,8 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/repository/client/api_dialog.dart';
 import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/screen/movie/movie_detail_screen.dart';
 import 'package:do_x/screen/movie/movie_filter_sheet.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
@@ -50,7 +52,7 @@ const _searchPrefixCenter = Offset(40, 32);
 const _filterRowHeight = 48.0;
 const _categoryRowHeight = 46.0;
 
-class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin {
+class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin, TabReselect {
   final _searchController = TextEditingController();
   late final TextEditingController _serverUrlController;
   final _scrollController = ScrollController();
@@ -195,6 +197,15 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
       _loadMoreMovies();
     }
   }
+
+  @override
+  String get tabRouteName => MovieRoute.name;
+
+  @override
+  ScrollController get tabScrollController => _scrollController;
+
+  @override
+  Future<void> onTabRefresh() => _loadMovies(refresh: true);
 
   Future<void> _scrollToTop() async {
     if (!_scrollController.hasClients) return;

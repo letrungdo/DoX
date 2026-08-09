@@ -80,15 +80,11 @@ class _ElectricScreenState
   String get tabRouteName => ElectricRoute.name;
 
   @override
-  Future<void> onTabReselect() async {
-    if (_scrollController.hasClients) {
-      await _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    }
-    if (mounted && vm.status == ElectricStatus.loggedIn) await vm.onRefresh();
+  ScrollController get tabScrollController => _scrollController;
+
+  @override
+  Future<void> onTabRefresh() async {
+    if (vm.status == ElectricStatus.loggedIn) await vm.onRefresh();
   }
 
   @override

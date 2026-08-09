@@ -8,11 +8,11 @@ import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/lunar_calendar_grid.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 @RoutePage()
 class LunarScreen extends StatefulWidget {
@@ -26,6 +26,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
   /// Month currently focused in the calendar (drives the header + page).
   late DateTime _focusedDay;
   late DateTime _selected;
+  final _scrollController = ScrollController();
 
   static final _firstDay = DateTime(2000);
   static final _lastDay = DateTime(2100, 12, 31);
@@ -39,12 +40,21 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   String get tabRouteName => LunarRoute.name;
 
   @override
-  Future<void> onTabReselect() async {
-    _goToToday();
-  }
+  ScrollController get tabScrollController => _scrollController;
+
+  /// This page has nothing to fetch, so "reload" means jumping the calendar
+  /// back to today.
+  @override
+  Future<void> onTabRefresh() async => _goToToday();
 
   void _goToToday() {
     final now = DateTime.now();
@@ -79,6 +89,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
         ],
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         // Padding inside the cap, never around it: that is what keeps a card
         // here the same width as a card on any other page.
         child: Padding(
@@ -158,140 +169,18 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
   }
 
   Widget _buildTableCalendar(BuildContext context) {
-    final scheme = context.theme.colorScheme;
-    final localeName = Localizations.localeOf(context).toString();
-
-    return TableCalendar(
-      locale: localeName,
+    return LunarCalendarGrid(
       firstDay: _firstDay,
       lastDay: _lastDay,
       focusedDay: _focusedDay,
-      currentDay: DateTime.now(),
-      rowHeight: 64,
-      daysOfWeekHeight: 26,
-      startingDayOfWeek: StartingDayOfWeek.monday,
-      headerVisible: false,
-      availableGestures: AvailableGestures.horizontalSwipe,
-      selectedDayPredicate: (day) => isSameDay(_selected, day),
-      onDaySelected: (selectedDay, focusedDay) {
+      selectedDay: _selected,
+      onDaySelected: (selected, focused) {
         setState(() {
-          _selected = DateTime(
-            selectedDay.year,
-            selectedDay.month,
-            selectedDay.day,
-          );
-          _focusedDay = focusedDay;
+          _selected = DateTime(selected.year, selected.month, selected.day);
+          _focusedDay = focused;
         });
       },
-      onPageChanged: (focusedDay) => setState(() => _focusedDay = focusedDay),
-      calendarBuilders: CalendarBuilders(
-        dowBuilder: (context, day) {
-          final label = _capitalize(DateFormat.E(localeName).format(day));
-          return Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: day.weekday == DateTime.sunday
-                    ? scheme.error
-                    : scheme.onSurfaceVariant,
-              ),
-            ),
-          );
-        },
-        defaultBuilder: (context, day, _) => _cell(context, day),
-        outsideBuilder: (context, day, _) =>
-            _cell(context, day, isOutside: true),
-        todayBuilder: (context, day, _) => _cell(context, day, isToday: true),
-        selectedBuilder: (context, day, _) => _cell(
-          context,
-          day,
-          isSelected: true,
-          isToday: isSameDay(day, DateTime.now()),
-        ),
-      ),
-    );
-  }
-
-  Widget _cell(
-    BuildContext context,
-    DateTime date, {
-    bool isToday = false,
-    bool isSelected = false,
-    bool isOutside = false,
-  }) {
-    final scheme = context.theme.colorScheme;
-    final isSunday = date.weekday == DateTime.sunday;
-
-    final lunar = LunarCalendar.solarToLunar(date.day, date.month, date.year);
-    // Show the month only every other day to reduce clutter; odd lunar days
-    // (which include mùng 1 & rằm) carry the month, even days show just the day.
-    final showLunarMonth = lunar.day.isOdd;
-
-    final baseColor = isSunday ? scheme.error : scheme.onSurface;
-    final solarColor = isOutside ? baseColor.withValues(alpha: 0.3) : baseColor;
-    // Mùng 1 & rằm stand out in red, like paper almanacs.
-    final isSpecialLunar = lunar.day == 1 || lunar.day == 15;
-    final lunarColor = isSpecialLunar ? scheme.error : scheme.onSurfaceVariant;
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        // Selected is the strong fill, today a soft tint of the same colour —
-        // the outline it used to carry was the only border on the screen.
-        color: isSelected
-            ? scheme.primaryContainer
-            : isToday
-            ? context.neuTint(scheme.primary, amount: 0.14)
-            : null,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '${date.day}',
-            style: TextStyle(
-              fontSize: 20,
-              // Tight line box on both numbers, no gap widget: most of what
-              // used to separate solar from lunar was the fonts' own leading.
-              height: 1.05,
-              fontWeight: isToday || isSelected
-                  ? FontWeight.w700
-                  : FontWeight.w500,
-              color: isSelected ? scheme.onPrimaryContainer : solarColor,
-            ),
-          ),
-          Text.rich(
-            TextSpan(
-              children: [
-                // Lunar day is emphasised; the month reads lighter beside it.
-                TextSpan(
-                  text: '${lunar.day}',
-                  style: TextStyle(
-                    fontWeight: isSpecialLunar
-                        ? FontWeight.w700
-                        : FontWeight.w600,
-                  ),
-                ),
-                if (showLunarMonth)
-                  TextSpan(
-                    text: '/${lunar.month}',
-                    style: const TextStyle(fontWeight: FontWeight.w400),
-                  ),
-              ],
-            ),
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.05,
-              color: (isSelected ? scheme.onPrimaryContainer : lunarColor)
-                  .withValues(alpha: isOutside ? 0.4 : 1),
-            ),
-          ),
-        ],
-      ),
+      onPageChanged: (focused) => setState(() => _focusedDay = focused),
     );
   }
 

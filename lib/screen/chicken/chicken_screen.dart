@@ -99,16 +99,11 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   String get tabRouteName => ChickenRoute.name;
 
   @override
-  Future<void> onTabReselect() async {
-    if (_scrollController.hasClients) {
-      await _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    }
-    if (mounted) await vm.loadData(sections: {ChickenSection.batches});
-  }
+  ScrollController get tabScrollController => _scrollController;
+
+  @override
+  Future<void> onTabRefresh() =>
+      vm.loadData(sections: {ChickenSection.batches});
 
   @override
   Widget build(BuildContext context) {

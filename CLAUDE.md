@@ -123,6 +123,33 @@ No new magic numbers for layout. Widths, radii, insets and page padding live in
   (`appBar: Navigator.of(context).canPop() ? const DoAppBar() : null`) or the
   user has no way out.
 
+### A page that backs a bottom tab — `TabReselect`
+
+`lib/screen/core/tab_reselect.mixin.dart`. Mix it in and supply the two
+page-specific pieces; the shared re-tap rule comes with it.
+
+```dart
+class _NewsScreenState extends ScreenState<NewsScreen, V> with TabReselect {
+  @override
+  String get tabRouteName => NewsRoute.name;
+
+  @override
+  ScrollController get tabScrollController => _scrollController;
+
+  @override
+  Future<void> onTabRefresh() => vm.onRefresh();
+}
+```
+
+The rule, applied identically to every tab: re-tapping a **scrolled** page
+rides it back to the top and stops there; re-tapping a page **already at the
+top** calls `onTabRefresh()`. Switching *into* a tab always refreshes, wherever
+it was scrolled to. Do not scroll or refresh by hand inside `onTabRefresh` —
+that is the mixin's job.
+
+Leave `tabScrollController` off only for a page with nothing to scroll, and
+leave `onTabRefresh` off only for one with nothing to refetch.
+
 ## Orientation
 
 The app does **not** call `SystemChrome.setPreferredOrientations`. Allowed

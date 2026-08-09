@@ -2,8 +2,17 @@ import 'package:do_x/view_model/main_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Lets a screen react to its bottom tab being tapped again (scroll to top,
-/// refresh…).
+/// Gives a bottom-tab screen the app's shared "tapped my own tab again"
+/// behaviour, so every tab answers a re-tap the same way:
+///
+/// * the page is **scrolled down** — ride back to the top, and stop there. The
+///   user is navigating, not asking for fresh data, and refetching under them
+///   would swap the list out mid-scroll.
+/// * the page is **already at the top** — there is nowhere to scroll, so the
+///   re-tap can only mean "reload this", and [onTabRefresh] runs.
+///
+/// A screen supplies the two page-specific pieces — [tabScrollController] and
+/// [onTabRefresh] — and inherits the rule itself.
 ///
 /// The same screen can also be opened from the menu, and a menu page is pushed
 /// on the root stack — above [MainViewModel]'s provider, not inside it. Hence
@@ -11,27 +20,63 @@ import 'package:provider/provider.dart';
 mixin TabReselect<S extends StatefulWidget> on State<S> {
   MainViewModel? _mainViewModel;
 
-  /// Resolved once, so register and unregister pass the same closure.
-  late final Future<void> Function() _handler = onTabReselect;
+  /// Resolved once, so register and unregister pass the same closures.
+  late final TabHandlers _handlers = (
+    reselect: _handleTabReselect,
+    refresh: _refresh,
+  );
+
+  static const _scrollToTopDuration = Duration(milliseconds: 250);
+
+  /// Anything within this many pixels of the top counts as "at the top", so a
+  /// list resting a hair off zero still refreshes.
+  static const _atTopTolerance = 1.0;
 
   /// Route name of the tab this screen backs, e.g. `NewsRoute.name`.
   String get tabRouteName;
 
-  Future<void> onTabReselect();
+  /// Controller of the page's main scroll view. Leave it null for a page with
+  /// nothing to scroll — a re-tap then always refreshes.
+  ScrollController? get tabScrollController => null;
+
+  /// Reload the page's data. Only called when the page is already at the top,
+  /// so it never has to guard against interrupting a scroll. Defaults to doing
+  /// nothing, for a page with no data to refetch.
+  Future<void> onTabRefresh() async {}
+
+  Future<void> _handleTabReselect() async {
+    final controller = tabScrollController;
+    if (controller != null && controller.hasClients) {
+      final position = controller.position;
+      if (position.pixels > position.minScrollExtent + _atTopTolerance) {
+        await controller.animateTo(
+          position.minScrollExtent,
+          duration: _scrollToTopDuration,
+          curve: Curves.easeOut,
+        );
+        return;
+      }
+    }
+    if (mounted) await onTabRefresh();
+  }
+
+  Future<void> _refresh() async {
+    if (mounted) await onTabRefresh();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final mainViewModel = context.read<MainViewModel?>();
     if (identical(_mainViewModel, mainViewModel)) return;
-    _mainViewModel?.unregisterTabReselectHandler(tabRouteName, _handler);
+    _mainViewModel?.unregisterTabHandlers(tabRouteName, _handlers);
     _mainViewModel = mainViewModel;
-    mainViewModel?.registerTabReselectHandler(tabRouteName, _handler);
+    mainViewModel?.registerTabHandlers(tabRouteName, _handlers);
   }
 
   @override
   void dispose() {
-    _mainViewModel?.unregisterTabReselectHandler(tabRouteName, _handler);
+    _mainViewModel?.unregisterTabHandlers(tabRouteName, _handlers);
     super.dispose();
   }
 }
