@@ -34,9 +34,17 @@ class DoButton extends StatelessWidget {
     );
     if (isBusy) {
       return Stack(
+        // Without this the stack hands the button *loose* constraints, so a
+        // button its parent had stretched to full width shrank to the width of
+        // its label the moment it went busy — while the spinner, laid out by
+        // Positioned.fill, stayed centred on the full width and ended up
+        // sitting off to the side of it. Passthrough lets the button see the
+        // same constraints it gets when it is idle, so going busy no longer
+        // changes its size.
+        fit: StackFit.passthrough,
         children: [
           button, //
-          if (isBusy) Positioned.fill(child: Loading()),
+          Positioned.fill(child: Loading()),
         ],
       );
     }
