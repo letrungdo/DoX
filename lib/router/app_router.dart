@@ -122,6 +122,16 @@ class _AppRouter extends RootStackRouter {
         ],
       ),
       AutoRoute(path: '/login', page: AppLoginRoute.page),
+      AutoRoute(
+        path: '/account',
+        page: AppAccountRoute.page,
+        guards: [_supabaseAuthGuard],
+      ),
+      // Neither of these is guarded: both are reached *without* a session, by
+      // someone on their way to one. A guard would bounce them to the login
+      // form they came from.
+      AutoRoute(path: '/account/password', page: UpdatePasswordRoute.page),
+      AutoRoute(path: '/login/code', page: VerifyOtpRoute.page),
       AutoRoute(path: '/settings', page: SettingsRoute.page),
       ..._pushableFeatureRoutes,
       RedirectRoute(path: '*', redirectTo: '/'),

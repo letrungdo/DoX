@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:do_x/app.dart';
 import 'package:do_x/firebase_options.dart';
+import 'package:do_x/services/auth_flow_service.dart';
 import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -47,6 +48,10 @@ void main() {
         initSupabase(),
         notificationService.init(),
       ]);
+      // Has to be listening before the first frame: the app can be launched by
+      // a password-reset link, and the session that link carries is handed over
+      // while the app starts.
+      authFlowService.start();
       if (storageService.getElectricReminderEnabled()) {
         await notificationService.scheduleMonthlyElectricReminder();
       }

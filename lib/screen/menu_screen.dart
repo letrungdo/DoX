@@ -14,7 +14,6 @@ import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -158,22 +157,14 @@ class _MenuScreenState<V extends MenuViewModel>
         () => context.pushRoute(const AppLoginRoute()),
       );
     }
+    // Signing out lives on the account page now, next to the password and the
+    // delete button — one place that owns the account instead of a menu row
+    // whose only trick was logging out.
     return _menuButton(
-      Icons.logout_rounded,
-      "${l10n.logout} (${user.email})",
-      () => _confirmSignOut(l10n),
+      Icons.manage_accounts_rounded,
+      "${l10n.accountTitle} (${user.email})",
+      () => context.pushRoute(const AppAccountRoute()),
     );
-  }
-
-  void _confirmSignOut(AppLocalizations l10n) async {
-    final confirmed = await showAppConfirmDialog(
-      context,
-      title: l10n.confirmLogout,
-      message: l10n.confirmLogoutMessage,
-      confirmText: l10n.logout,
-    );
-    if (!confirmed || !mounted) return;
-    await supabase.auth.signOut();
   }
 
   Widget _buildMenuAction(IconData icon, String label) {

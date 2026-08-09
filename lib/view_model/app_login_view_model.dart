@@ -1,22 +1,39 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/auth_links.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
+import 'package:do_x/utils/auth_error.dart';
+import 'package:do_x/view_model/verify_otp_view_model.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Which half of the form the user is on. One screen serves both, because the
+/// two differ by a single field and swapping in place is faster than pushing
+/// another page.
+enum AuthMode { signIn, signUp }
+
 class AppLoginViewModel extends CoreViewModel {
-  static const _emailConfirmationUrl =
-      'https://app.xn--t-lia.vn/auth/confirmed';
-  static const _passwordRecoveryUrl =
-      'https://app.xn--t-lia.vn/auth/reset-password';
+  AuthMode _mode = AuthMode.signIn;
+  AuthMode get mode => _mode;
 
   String _email = '';
   String get email => _email;
 
   String _password = '';
   String get password => _password;
+
+  String _confirmPassword = '';
+  String get confirmPassword => _confirmPassword;
+
+  /// Set once a sign-up went through without a session: the account exists but
+  /// is waiting on the link in this address's inbox. The screen swaps the form
+  /// for a "check your mail" panel while it is set.
+  String? _pendingConfirmationEmail;
+  String? get pendingConfirmationEmail => _pendingConfirmationEmail;
 
   @override
   void initState() async {
@@ -37,42 +54,98 @@ class AppLoginViewModel extends CoreViewModel {
     _password = value;
   }
 
-  Future<void> onLogin() async {
+  void onConfirmPasswordChanged(String value) {
+    _confirmPassword = value;
+  }
+
+  void setMode(AuthMode value) {
+    if (_mode == value) return;
+    _mode = value;
+    _confirmPassword = '';
+    notifyListenersSafe();
+  }
+
+  /// Back to the form from the "check your mail" panel.
+  void cancelPendingConfirmation() {
+    _pendingConfirmationEmail = null;
+    _mode = AuthMode.signIn;
+    notifyListenersSafe();
+  }
+
+  Future<void> submit() {
+    return _mode == AuthMode.signIn ? _signIn() : _signUp();
+  }
+
+  Future<void> _signIn() async {
     setBusy(true);
     try {
       await supabase.auth.signInWithPassword(
         email: _email.trim(),
         password: _password,
       );
-      _onAuthenticated();
+      // Navigation is `authFlowService`'s job — it has to happen for a session
+      // that arrives from an email link too, not just from this form.
+      await secureStorage.saveSupabaseAccount(
+        email: _email.trim(),
+        password: _password,
+      );
     } on AuthException catch (e) {
-      _showMessage(e.message);
+      // The account exists but was never activated: the useful next step is
+      // another copy of the email, not the error on its own.
+      if (e.code == 'email_not_confirmed') {
+        _pendingConfirmationEmail = _email.trim();
+        notifyListenersSafe();
+      }
+      _showError(e);
     } catch (e) {
-      _showMessage("Lỗi đăng nhập: $e");
+      _showError(e);
     } finally {
       setBusy(false);
     }
   }
 
-  Future<void> onSignUp() async {
+  Future<void> _signUp() async {
     setBusy(true);
     try {
       final result = await supabase.auth.signUp(
         email: _email.trim(),
         password: _password,
-        emailRedirectTo: _emailConfirmationUrl,
+        emailRedirectTo: AuthLinks.emailConfirmation,
       );
-      if (result.session != null) {
-        _onAuthenticated();
-      } else {
-        _showMessage(
-          "Đã đăng ký. Vui lòng kiểm tra email để xác nhận tài khoản.",
-        );
-      }
-    } on AuthException catch (e) {
-      _showMessage(e.message);
+      // Saved even while the account is unconfirmed: confirming on a desktop
+      // browser leaves the phone back on this form, and the credentials it
+      // pre-fills are the ones just typed.
+      await secureStorage.saveSupabaseAccount(
+        email: _email.trim(),
+        password: _password,
+      );
+      // A session here means email confirmation is switched off on the project
+      // and the account is usable right away.
+      if (result.session != null) return;
+
+      _pendingConfirmationEmail = _email.trim();
+      notifyListenersSafe();
     } catch (e) {
-      _showMessage("Lỗi đăng ký: $e");
+      _showError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  Future<void> resendConfirmationEmail() async {
+    final email = _pendingConfirmationEmail ?? _email.trim();
+    if (email.isEmpty) return;
+
+    setBusy(true);
+    try {
+      await supabase.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: AuthLinks.emailConfirmation,
+      );
+      _showMessage(_l10n.confirmationEmailSent);
+    } catch (e) {
+      _showError(e);
     } finally {
       setBusy(false);
     }
@@ -81,7 +154,7 @@ class AppLoginViewModel extends CoreViewModel {
   Future<void> onForgotPassword() async {
     final email = _email.trim();
     if (email.isEmpty) {
-      _showMessage('Vui lòng nhập email để đặt lại mật khẩu.');
+      _showMessage(_l10n.emailRequired, isError: true);
       return;
     }
 
@@ -89,35 +162,38 @@ class AppLoginViewModel extends CoreViewModel {
     try {
       await supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: _passwordRecoveryUrl,
+        redirectTo: AuthLinks.passwordRecovery,
       );
-      _showMessage('Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.');
-    } on AuthException catch (e) {
-      _showMessage(e.message);
+      _showMessage(_l10n.forgotPasswordSent(email));
+      // Straight on to the code screen. Following the link in the email works
+      // and is the faster path, but it only comes back to *this* device — and
+      // the reader has no way of knowing that until it doesn't.
+      if (context.mounted) {
+        context.router.push(
+          VerifyOtpRoute(email: email, purpose: OtpPurpose.recovery),
+        );
+      }
     } catch (e) {
-      _showMessage('Không thể gửi email đặt lại mật khẩu: $e');
+      _showError(e);
     } finally {
       setBusy(false);
     }
   }
 
-  void _onAuthenticated() {
-    secureStorage.saveSupabaseAccount(
-      email: _email.trim(),
-      password: _password,
-    );
-    if (!context.mounted) return;
-    if (context.router.canPop()) {
-      context.router.pop();
-    } else {
-      context.router.replaceAll([const MainRoute()]);
-    }
+  AppLocalizations get _l10n => context.l10n;
+
+  void _showError(Object error) {
+    _showMessage(authErrorMessage(_l10n, error), isError: true);
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = false}) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        isError
+            ? context.errorSnackBar(message)
+            : SnackBar(content: Text(message)),
+      );
   }
 }

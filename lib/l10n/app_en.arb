@@ -973,5 +973,79 @@
   "directorLabel": "Director",
   "actorsLabel": "Cast",
   "countryLabel": "Country",
-  "genreLabel": "Genre"
+  "genreLabel": "Genre",
+  "accountTitle": "Account",
+  "accountSectionSecurity": "Security",
+  "accountSectionDanger": "Danger zone",
+  "accountEmailVerified": "Email verified",
+  "accountEmailUnverified": "Email not verified",
+  "accountMemberSince": "Member since",
+  "accountLastSignIn": "Last sign-in",
+  "resendConfirmationEmail": "Resend confirmation email",
+  "confirmationEmailSent": "Confirmation email sent — check your inbox.",
+  "changePassword": "Change password",
+  "changePasswordSubtitle": "Use a password you don't use anywhere else.",
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "confirmPassword": "Confirm password",
+  "passwordTooShort": "Password must be at least 6 characters.",
+  "passwordMismatch": "The two passwords don't match.",
+  "passwordUpdated": "Your password has been updated.",
+  "passwordSameAsOld": "The new password has to differ from the current one.",
+  "updatePassword": "Update password",
+  "setNewPassword": "Set a new password",
+  "setNewPasswordMessage": "Choose the new password for your Do X account.",
+  "deleteAccount": "Delete account",
+  "deleteAccountSubtitle": "Permanently remove your account and all of its data.",
+  "deleteAccountWarning": "Your account and every batch, sale, expense and watch record tied to it will be deleted for good. This cannot be undone.",
+  "deleteAccountPasswordPrompt": "Enter your password to confirm.",
+  "accountDeleted": "Your account has been deleted.",
+  "signUp": "Sign up",
+  "noAccountSignUp": "No account yet? Sign up",
+  "haveAccountSignIn": "Already have an account? Sign in",
+  "forgotPassword": "Forgot password?",
+  "forgotPasswordSent": "We sent a reset link to {email}.",
+  "@forgotPasswordSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "signUpCheckEmail": "Almost there — open the link we sent to {email} to activate your account.",
+  "@signUpCheckEmail": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "emailRequired": "Please enter your email.",
+  "emailInvalid": "That email address doesn't look right.",
+  "authInvalidCredentials": "Wrong email or password.",
+  "authEmailNotConfirmed": "This email isn't confirmed yet. Open the activation link we sent you.",
+  "authUserAlreadyExists": "That email is already registered — sign in instead.",
+  "authWeakPassword": "That password is too weak. Use at least 6 characters.",
+  "authRateLimited": "Too many attempts. Try again in a few minutes.",
+  "authUnknownError": "Something went wrong. Please try again.",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "verifyCodeTitle": "Enter your code",
+  "verifyCodeMessage": "Type the code we emailed to {email}. It expires in an hour.",
+  "@verifyCodeMessage": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyCodeLabel": "Verification code",
+  "verifyCodeRequired": "Please enter the code from the email.",
+  "verifyCodeAction": "Confirm",
+  "enterCodeInstead": "Enter the code from the email",
+  "resendCode": "Send a new code",
+  "codeSent": "A new code is on its way.",
+  "authOtpExpired": "That code has expired or was already used. Ask for a new one."
 }

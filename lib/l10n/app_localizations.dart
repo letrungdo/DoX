@@ -2695,6 +2695,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Genre'**
   String get genreLabel;
+
+  /// No description provided for @accountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get accountTitle;
+
+  /// No description provided for @accountSectionSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get accountSectionSecurity;
+
+  /// No description provided for @accountSectionDanger.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger zone'**
+  String get accountSectionDanger;
+
+  /// No description provided for @accountEmailVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified'**
+  String get accountEmailVerified;
+
+  /// No description provided for @accountEmailUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email not verified'**
+  String get accountEmailUnverified;
+
+  /// No description provided for @accountMemberSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Member since'**
+  String get accountMemberSince;
+
+  /// No description provided for @accountLastSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sign-in'**
+  String get accountLastSignIn;
+
+  /// No description provided for @resendConfirmationEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend confirmation email'**
+  String get resendConfirmationEmail;
+
+  /// No description provided for @confirmationEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation email sent — check your inbox.'**
+  String get confirmationEmailSent;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get changePassword;
+
+  /// No description provided for @changePasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a password you don\'t use anywhere else.'**
+  String get changePasswordSubtitle;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPassword;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPassword;
+
+  /// No description provided for @passwordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters.'**
+  String get passwordTooShort;
+
+  /// No description provided for @passwordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The two passwords don\'t match.'**
+  String get passwordMismatch;
+
+  /// No description provided for @passwordUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Your password has been updated.'**
+  String get passwordUpdated;
+
+  /// No description provided for @passwordSameAsOld.
+  ///
+  /// In en, this message translates to:
+  /// **'The new password has to differ from the current one.'**
+  String get passwordSameAsOld;
+
+  /// No description provided for @updatePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get updatePassword;
+
+  /// No description provided for @setNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a new password'**
+  String get setNewPassword;
+
+  /// No description provided for @setNewPasswordMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the new password for your Do X account.'**
+  String get setNewPasswordMessage;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently remove your account and all of its data.'**
+  String get deleteAccountSubtitle;
+
+  /// No description provided for @deleteAccountWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account and every batch, sale, expense and watch record tied to it will be deleted for good. This cannot be undone.'**
+  String get deleteAccountWarning;
+
+  /// No description provided for @deleteAccountPasswordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password to confirm.'**
+  String get deleteAccountPasswordPrompt;
+
+  /// No description provided for @accountDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been deleted.'**
+  String get accountDeleted;
+
+  /// No description provided for @signUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up'**
+  String get signUp;
+
+  /// No description provided for @noAccountSignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'No account yet? Sign up'**
+  String get noAccountSignUp;
+
+  /// No description provided for @haveAccountSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Sign in'**
+  String get haveAccountSignIn;
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get forgotPassword;
+
+  /// No description provided for @forgotPasswordSent.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a reset link to {email}.'**
+  String forgotPasswordSent(String email);
+
+  /// No description provided for @signUpCheckEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost there — open the link we sent to {email} to activate your account.'**
+  String signUpCheckEmail(String email);
+
+  /// No description provided for @emailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email.'**
+  String get emailRequired;
+
+  /// No description provided for @emailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That email address doesn\'t look right.'**
+  String get emailInvalid;
+
+  /// No description provided for @authInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong email or password.'**
+  String get authInvalidCredentials;
+
+  /// No description provided for @authEmailNotConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'This email isn\'t confirmed yet. Open the activation link we sent you.'**
+  String get authEmailNotConfirmed;
+
+  /// No description provided for @authUserAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'That email is already registered — sign in instead.'**
+  String get authUserAlreadyExists;
+
+  /// No description provided for @authWeakPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'That password is too weak. Use at least 6 characters.'**
+  String get authWeakPassword;
+
+  /// No description provided for @authRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again in a few minutes.'**
+  String get authRateLimited;
+
+  /// No description provided for @authUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get authUnknownError;
+
+  /// No description provided for @emailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get emailLabel;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
+  /// No description provided for @verifyCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your code'**
+  String get verifyCodeTitle;
+
+  /// No description provided for @verifyCodeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Type the code we emailed to {email}. It expires in an hour.'**
+  String verifyCodeMessage(String email);
+
+  /// No description provided for @verifyCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get verifyCodeLabel;
+
+  /// No description provided for @verifyCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the code from the email.'**
+  String get verifyCodeRequired;
+
+  /// No description provided for @verifyCodeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get verifyCodeAction;
+
+  /// No description provided for @enterCodeInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code from the email'**
+  String get enterCodeInstead;
+
+  /// No description provided for @resendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a new code'**
+  String get resendCode;
+
+  /// No description provided for @codeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'A new code is on its way.'**
+  String get codeSent;
+
+  /// No description provided for @authOtpExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'That code has expired or was already used. Ask for a new one.'**
+  String get authOtpExpired;
 }
 
 class _AppLocalizationsDelegate

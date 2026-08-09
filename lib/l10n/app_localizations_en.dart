@@ -1485,4 +1485,180 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get genreLabel => 'Genre';
+
+  @override
+  String get accountTitle => 'Account';
+
+  @override
+  String get accountSectionSecurity => 'Security';
+
+  @override
+  String get accountSectionDanger => 'Danger zone';
+
+  @override
+  String get accountEmailVerified => 'Email verified';
+
+  @override
+  String get accountEmailUnverified => 'Email not verified';
+
+  @override
+  String get accountMemberSince => 'Member since';
+
+  @override
+  String get accountLastSignIn => 'Last sign-in';
+
+  @override
+  String get resendConfirmationEmail => 'Resend confirmation email';
+
+  @override
+  String get confirmationEmailSent =>
+      'Confirmation email sent — check your inbox.';
+
+  @override
+  String get changePassword => 'Change password';
+
+  @override
+  String get changePasswordSubtitle =>
+      'Use a password you don\'t use anywhere else.';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String get confirmPassword => 'Confirm password';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 6 characters.';
+
+  @override
+  String get passwordMismatch => 'The two passwords don\'t match.';
+
+  @override
+  String get passwordUpdated => 'Your password has been updated.';
+
+  @override
+  String get passwordSameAsOld =>
+      'The new password has to differ from the current one.';
+
+  @override
+  String get updatePassword => 'Update password';
+
+  @override
+  String get setNewPassword => 'Set a new password';
+
+  @override
+  String get setNewPasswordMessage =>
+      'Choose the new password for your Do X account.';
+
+  @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountSubtitle =>
+      'Permanently remove your account and all of its data.';
+
+  @override
+  String get deleteAccountWarning =>
+      'Your account and every batch, sale, expense and watch record tied to it will be deleted for good. This cannot be undone.';
+
+  @override
+  String get deleteAccountPasswordPrompt => 'Enter your password to confirm.';
+
+  @override
+  String get accountDeleted => 'Your account has been deleted.';
+
+  @override
+  String get signUp => 'Sign up';
+
+  @override
+  String get noAccountSignUp => 'No account yet? Sign up';
+
+  @override
+  String get haveAccountSignIn => 'Already have an account? Sign in';
+
+  @override
+  String get forgotPassword => 'Forgot password?';
+
+  @override
+  String forgotPasswordSent(String email) {
+    return 'We sent a reset link to $email.';
+  }
+
+  @override
+  String signUpCheckEmail(String email) {
+    return 'Almost there — open the link we sent to $email to activate your account.';
+  }
+
+  @override
+  String get emailRequired => 'Please enter your email.';
+
+  @override
+  String get emailInvalid => 'That email address doesn\'t look right.';
+
+  @override
+  String get authInvalidCredentials => 'Wrong email or password.';
+
+  @override
+  String get authEmailNotConfirmed =>
+      'This email isn\'t confirmed yet. Open the activation link we sent you.';
+
+  @override
+  String get authUserAlreadyExists =>
+      'That email is already registered — sign in instead.';
+
+  @override
+  String get authWeakPassword =>
+      'That password is too weak. Use at least 6 characters.';
+
+  @override
+  String get authRateLimited =>
+      'Too many attempts. Try again in a few minutes.';
+
+  @override
+  String get authUnknownError => 'Something went wrong. Please try again.';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get verifyCodeTitle => 'Enter your code';
+
+  @override
+  String verifyCodeMessage(String email) {
+    return 'Type the code we emailed to $email. It expires in an hour.';
+  }
+
+  @override
+  String get verifyCodeLabel => 'Verification code';
+
+  @override
+  String get verifyCodeRequired => 'Please enter the code from the email.';
+
+  @override
+  String get verifyCodeAction => 'Confirm';
+
+  @override
+  String get enterCodeInstead => 'Enter the code from the email';
+
+  @override
+  String get resendCode => 'Send a new code';
+
+  @override
+  String get codeSent => 'A new code is on its way.';
+
+  @override
+  String get authOtpExpired =>
+      'That code has expired or was already used. Ask for a new one.';
 }

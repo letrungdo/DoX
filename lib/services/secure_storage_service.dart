@@ -54,6 +54,13 @@ class _SecureStorageService {
     );
   }
 
+  /// Drops the credentials the login form pre-fills itself with. Call it on
+  /// sign-out and on account deletion: an offered password that no longer opens
+  /// anything is worse than an empty field.
+  Future<void> clearSupabaseAccount() {
+    return _secureStorage.delete(key: StorageKey.supabaseAccount);
+  }
+
   Future<List<ElectricAccount>> getCpcAccounts() =>
       _readCpcAccounts(StorageKey.cpcAccounts);
 

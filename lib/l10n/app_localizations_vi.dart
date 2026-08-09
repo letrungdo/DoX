@@ -1482,4 +1482,177 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get genreLabel => 'Thể loại';
+
+  @override
+  String get accountTitle => 'Tài khoản';
+
+  @override
+  String get accountSectionSecurity => 'Bảo mật';
+
+  @override
+  String get accountSectionDanger => 'Vùng nguy hiểm';
+
+  @override
+  String get accountEmailVerified => 'Đã xác thực email';
+
+  @override
+  String get accountEmailUnverified => 'Chưa xác thực email';
+
+  @override
+  String get accountMemberSince => 'Tham gia từ';
+
+  @override
+  String get accountLastSignIn => 'Đăng nhập gần nhất';
+
+  @override
+  String get resendConfirmationEmail => 'Gửi lại email xác thực';
+
+  @override
+  String get confirmationEmailSent =>
+      'Đã gửi email xác thực — vui lòng kiểm tra hộp thư.';
+
+  @override
+  String get changePassword => 'Đổi mật khẩu';
+
+  @override
+  String get changePasswordSubtitle =>
+      'Nên dùng mật khẩu riêng, không trùng với nơi khác.';
+
+  @override
+  String get currentPassword => 'Mật khẩu hiện tại';
+
+  @override
+  String get newPassword => 'Mật khẩu mới';
+
+  @override
+  String get confirmPassword => 'Nhập lại mật khẩu';
+
+  @override
+  String get passwordTooShort => 'Mật khẩu tối thiểu 6 ký tự.';
+
+  @override
+  String get passwordMismatch => 'Hai mật khẩu chưa khớp nhau.';
+
+  @override
+  String get passwordUpdated => 'Đã cập nhật mật khẩu của bạn.';
+
+  @override
+  String get passwordSameAsOld => 'Mật khẩu mới phải khác mật khẩu hiện tại.';
+
+  @override
+  String get updatePassword => 'Cập nhật mật khẩu';
+
+  @override
+  String get setNewPassword => 'Đặt mật khẩu mới';
+
+  @override
+  String get setNewPasswordMessage =>
+      'Nhập mật khẩu mới cho tài khoản Do X của bạn.';
+
+  @override
+  String get deleteAccount => 'Xoá tài khoản';
+
+  @override
+  String get deleteAccountSubtitle =>
+      'Xoá vĩnh viễn tài khoản cùng toàn bộ dữ liệu.';
+
+  @override
+  String get deleteAccountWarning =>
+      'Tài khoản và toàn bộ lứa nuôi, doanh thu, chi phí, lịch sử xem gắn với nó sẽ bị xoá vĩnh viễn. Không thể khôi phục.';
+
+  @override
+  String get deleteAccountPasswordPrompt => 'Nhập mật khẩu để xác nhận.';
+
+  @override
+  String get accountDeleted => 'Tài khoản của bạn đã được xoá.';
+
+  @override
+  String get signUp => 'Đăng ký';
+
+  @override
+  String get noAccountSignUp => 'Chưa có tài khoản? Đăng ký';
+
+  @override
+  String get haveAccountSignIn => 'Đã có tài khoản? Đăng nhập';
+
+  @override
+  String get forgotPassword => 'Quên mật khẩu?';
+
+  @override
+  String forgotPasswordSent(String email) {
+    return 'Đã gửi liên kết đặt lại mật khẩu tới $email.';
+  }
+
+  @override
+  String signUpCheckEmail(String email) {
+    return 'Gần xong rồi — mở liên kết chúng tôi vừa gửi tới $email để kích hoạt tài khoản.';
+  }
+
+  @override
+  String get emailRequired => 'Vui lòng nhập email.';
+
+  @override
+  String get emailInvalid => 'Địa chỉ email chưa hợp lệ.';
+
+  @override
+  String get authInvalidCredentials => 'Email hoặc mật khẩu không đúng.';
+
+  @override
+  String get authEmailNotConfirmed =>
+      'Email này chưa được xác thực. Hãy mở liên kết kích hoạt trong hộp thư.';
+
+  @override
+  String get authUserAlreadyExists =>
+      'Email này đã được đăng ký — hãy đăng nhập.';
+
+  @override
+  String get authWeakPassword => 'Mật khẩu quá yếu. Dùng tối thiểu 6 ký tự.';
+
+  @override
+  String get authRateLimited => 'Bạn thử quá nhiều lần. Vui lòng đợi vài phút.';
+
+  @override
+  String get authUnknownError => 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get passwordLabel => 'Mật khẩu';
+
+  @override
+  String get showPassword => 'Hiện mật khẩu';
+
+  @override
+  String get hidePassword => 'Ẩn mật khẩu';
+
+  @override
+  String get verifyCodeTitle => 'Nhập mã xác nhận';
+
+  @override
+  String verifyCodeMessage(String email) {
+    return 'Nhập mã chúng tôi vừa gửi tới $email. Mã có hiệu lực trong 1 giờ.';
+  }
+
+  @override
+  String get verifyCodeLabel => 'Mã xác nhận';
+
+  @override
+  String get verifyCodeRequired => 'Vui lòng nhập mã trong email.';
+
+  @override
+  String get verifyCodeAction => 'Xác nhận';
+
+  @override
+  String get enterCodeInstead => 'Nhập mã trong email';
+
+  @override
+  String get resendCode => 'Gửi mã mới';
+
+  @override
+  String get codeSent => 'Đã gửi mã mới.';
+
+  @override
+  String get authOtpExpired =>
+      'Mã đã hết hạn hoặc đã dùng rồi. Hãy yêu cầu mã mới.';
 }

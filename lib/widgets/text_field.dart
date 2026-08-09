@@ -48,15 +48,22 @@ class _DoTextFieldState extends State<DoTextField> {
   @override
   void initState() {
     super.initState();
-    _controller = (widget.controller ?? TextEditingController())
-      ..text = widget.value ?? "";
+    _controller = widget.controller ?? TextEditingController();
+    // Only seeded when there is something to seed with: a caller that passes
+    // its own controller and no [value] is holding the text itself, and
+    // blanking it here would throw that away.
+    if (widget.value != null) _controller!.text = widget.value!;
   }
 
   @override
   void didUpdateWidget(covariant DoTextField oldWidget) {
-    if (_controller?.text != widget.value) {
+    // Keyed off the *incoming* value, not off the controller's text. Comparing
+    // against the controller re-ran on every rebuild — including one the field
+    // triggered itself, such as a password field toggling its reveal icon —
+    // and a caller that never passes [value] would have its text wiped for it.
+    if (widget.value != null && widget.value != oldWidget.value) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controller?.text = widget.value ?? "";
+        if (mounted) _controller?.text = widget.value!;
       });
     }
     super.didUpdateWidget(oldWidget);

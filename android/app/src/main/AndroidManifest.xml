@@ -35,6 +35,29 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Link on the auth pages of the website: with Do X installed,
+                 the link in a confirmation / password-reset email opens the app
+                 instead of the browser. Verified against the site's
+                 /.well-known/assetlinks.json. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="app.xn--t-lia.vn"
+                    android:pathPrefix="/auth"/>
+            </intent-filter>
+            <!-- Private scheme, the fallback the website uses to hand the
+                 session over when the browser opened the link first: a redirect
+                 out of Supabase's /auth/v1/verify does not reliably trigger the
+                 App Link above. Keep in sync with AuthLinks.appScheme. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="vn.dox.app"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
