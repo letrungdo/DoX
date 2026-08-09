@@ -117,13 +117,13 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         ),
         actions: [
           Consumer<ChickenViewModel>(
-            builder: (context, vm, child) => IconButton(
-              icon: const Icon(Icons.switch_account_outlined),
-              onPressed: vm.dataSources.length > 1
-                  ? _showDataSourcePicker
-                  : null,
-              tooltip: l10n.viewChickenDataFrom,
-            ),
+            builder: (context, vm, child) => vm.dataSources.length > 1
+                ? IconButton(
+                    icon: const Icon(Icons.switch_account_outlined),
+                    onPressed: _showDataSourcePicker,
+                    tooltip: l10n.viewChickenDataFrom,
+                  )
+                : const SizedBox.shrink(),
           ),
           IconButton(
             icon: const Icon(Icons.group_outlined),
