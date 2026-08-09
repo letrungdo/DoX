@@ -534,6 +534,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareAccessAdded => 'Đã cấp quyền chỉ xem.';
 
   @override
+  String get shareAccessAddedEmailSent =>
+      'Đã cấp quyền chỉ xem và gửi email thông báo.';
+
+  @override
+  String get shareAccessAddedEmailFailed =>
+      'Đã cấp quyền chỉ xem nhưng chưa gửi được email thông báo.';
+
+  @override
   String shareAccessFailed(String error) {
     return 'Không thể chia sẻ: $error';
   }

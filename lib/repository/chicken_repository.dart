@@ -161,8 +161,27 @@ class ChickenRepository {
         .toList();
   }
 
-  Future<void> shareWith(String email) async {
-    await _client.rpc('share_chicken_data', params: {'p_email': email.trim()});
+  /// Grants read-only access, then sends a best-effort email notification.
+  ///
+  /// A mail-provider outage must not undo or misreport the permission that was
+  /// already stored. The return value lets the UI distinguish full success
+  /// from "access granted, notification pending".
+  Future<bool> shareWith(String email) async {
+    final normalizedEmail = email.trim();
+    await _client.rpc(
+      'share_chicken_data',
+      params: {'p_email': normalizedEmail},
+    );
+    try {
+      final response = await _client.functions.invoke(
+        'notify-chicken-share',
+        body: {'email': normalizedEmail},
+      );
+      final data = response.data;
+      return data is Map && data['email_sent'] == true;
+    } on FunctionException {
+      return false;
+    }
   }
 
   Future<void> revokeShare(String viewerId) async {

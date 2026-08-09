@@ -60,6 +60,8 @@ class _FakeRepository extends ChickenRepository {
 
   int getDataCalls = 0;
   final applied = <PendingOp>[];
+  bool shareEmailSent = true;
+  String? sharedWithEmail;
 
   /// Fails every call as if there were no connection.
   void goOffline() {
@@ -120,6 +122,12 @@ class _FakeRepository extends ChickenRepository {
 
   @override
   Future<List<ChickenShareViewer>> getShareViewers() async => const [];
+
+  @override
+  Future<bool> shareWith(String email) async {
+    sharedWithEmail = email;
+    return shareEmailSent;
+  }
 
   @override
   Future<void> apply(PendingOp op) async {
@@ -1012,6 +1020,17 @@ void main() {
   });
 
   group('read-only sharing', () {
+    test('reports whether the share notification email was sent', () async {
+      final repository = _FakeRepository()..shareEmailSent = false;
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+
+      final emailSent = await vm.shareWith('viewer@example.com');
+
+      expect(repository.sharedWithEmail, 'viewer@example.com');
+      expect(emailSent, isFalse);
+      vm.dispose();
+    });
+
     test('loads the selected owner and rejects local writes', () async {
       final repository = _FakeRepository()..batches = [_batch()];
       final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());

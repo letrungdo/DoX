@@ -235,6 +235,8 @@
   "sharedWith": "Người đang có quyền xem",
   "notSharedYet": "Chưa chia sẻ với ai.",
   "shareAccessAdded": "Đã cấp quyền chỉ xem.",
+  "shareAccessAddedEmailSent": "Đã cấp quyền chỉ xem và gửi email thông báo.",
+  "shareAccessAddedEmailFailed": "Đã cấp quyền chỉ xem nhưng chưa gửi được email thông báo.",
   "shareAccessFailed": "Không thể chia sẻ: {error}",
   "@shareAccessFailed": {"placeholders": {"error": {"type": "String"}}},
   "revokeAccess": "Thu hồi quyền",

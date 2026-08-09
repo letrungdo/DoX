@@ -1076,6 +1076,18 @@ abstract class AppLocalizations {
   /// **'Read-only access granted.'**
   String get shareAccessAdded;
 
+  /// No description provided for @shareAccessAddedEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only access granted and notification email sent.'**
+  String get shareAccessAddedEmailSent;
+
+  /// No description provided for @shareAccessAddedEmailFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only access granted, but the notification email could not be sent.'**
+  String get shareAccessAddedEmailFailed;
+
   /// No description provided for @shareAccessFailed.
   ///
   /// In en, this message translates to:

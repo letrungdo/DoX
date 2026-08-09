@@ -885,12 +885,18 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                   errorText = null;
                 });
                 try {
-                  await vm.shareWith(email);
+                  final emailSent = await vm.shareWith(email);
                   emailController.clear();
                   if (!dialogContext.mounted) return;
                   setState(() => loading = false);
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    SnackBar(content: Text(l10n.shareAccessAdded)),
+                    SnackBar(
+                      content: Text(
+                        emailSent
+                            ? l10n.shareAccessAddedEmailSent
+                            : l10n.shareAccessAddedEmailFailed,
+                      ),
+                    ),
                   );
                 } catch (error) {
                   if (!dialogContext.mounted) return;

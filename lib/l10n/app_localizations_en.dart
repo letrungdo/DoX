@@ -534,6 +534,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareAccessAdded => 'Read-only access granted.';
 
   @override
+  String get shareAccessAddedEmailSent =>
+      'Read-only access granted and notification email sent.';
+
+  @override
+  String get shareAccessAddedEmailFailed =>
+      'Read-only access granted, but the notification email could not be sent.';
+
+  @override
   String shareAccessFailed(String error) {
     return 'Could not share: $error';
   }

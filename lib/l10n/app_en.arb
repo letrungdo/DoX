@@ -242,6 +242,8 @@
   "sharedWith": "People with access",
   "notSharedYet": "Not shared with anyone yet.",
   "shareAccessAdded": "Read-only access granted.",
+  "shareAccessAddedEmailSent": "Read-only access granted and notification email sent.",
+  "shareAccessAddedEmailFailed": "Read-only access granted, but the notification email could not be sent.",
   "shareAccessFailed": "Could not share: {error}",
   "@shareAccessFailed": {"placeholders": {"error": {"type": "String"}}},
   "revokeAccess": "Revoke access",

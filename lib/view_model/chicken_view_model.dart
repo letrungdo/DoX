@@ -816,9 +816,10 @@ class ChickenViewModel extends CoreViewModel {
     await loadData(sections: _requestedSections);
   }
 
-  Future<void> shareWith(String email) async {
-    await _repository.shareWith(email);
+  Future<bool> shareWith(String email) async {
+    final emailSent = await _repository.shareWith(email);
     await loadSharing();
+    return emailSent;
   }
 
   Future<void> revokeShare(String viewerId) async {
