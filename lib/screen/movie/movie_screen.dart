@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
@@ -24,6 +25,7 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
+import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:flutter/material.dart';
 
 enum _MovieCollection { browse, watched, favorites }
@@ -879,9 +881,9 @@ class _MovieScreenState extends State<MovieScreen>
         actions: [
           NeuIconButton(
             key: _searchButtonKey,
-            size: appBarActionSize,
+            size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: appBarActionDepth,
+            depth: Dimens.appBarActionDepth,
             tooltip: l10n.searchMoviesPlaceholder,
             color: _isSearchOpen ? Theme.of(context).colorScheme.primary : null,
             icon: _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
@@ -890,9 +892,9 @@ class _MovieScreenState extends State<MovieScreen>
           const SizedBox(width: 8),
           NeuIconButton(
             key: _collectionMenuKey,
-            size: appBarActionSize,
+            size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: appBarActionDepth,
+            depth: Dimens.appBarActionDepth,
             color: _collection != _MovieCollection.browse
                 ? Theme.of(context).colorScheme.primary
                 : null,
@@ -1316,18 +1318,19 @@ class _MovieScreenState extends State<MovieScreen>
     final isSelected = selected != null;
     final foreground = isSelected ? Colors.white : scheme.onSurfaceVariant;
 
-    return GestureDetector(
+    return NeuPress(
       onTap: () => _showFilterSheet(
         title: fallbackLabel,
         options: options,
         isCountry: isCountry,
       ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
+      builder: (context, pressed) => AnimatedContainer(
+        duration: NeuPress.duration,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: context.neu.raised(
           radius: 12,
-          depth: 0.6,
+          // Held down, the lift goes to nothing, as on every other neu surface.
+          depth: pressed ? 0 : 0.6,
           color: isSelected ? scheme.primary : null,
           inset: isSelected,
         ),

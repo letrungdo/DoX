@@ -104,11 +104,8 @@ class _CockSalesScreenState
           selector: (vm) => vm.isFetching,
         ),
         actions: [
-          IconButton(
-            icon: ChickenAddIcon(
-              icon: Assets.images.roosterCute,
-              enabled: !vm.isReadOnly,
-            ),
+          ChickenAddButton(
+            icon: Assets.images.roosterCute,
             onPressed: vm.isReadOnly ? null : () => _showSaleDialog(),
           ),
         ],

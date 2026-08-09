@@ -1,4 +1,5 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 
@@ -27,12 +28,14 @@ class NeuChip extends StatelessWidget {
     final background = NeuSurface.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final chip = AnimatedContainer(
-      duration: const Duration(milliseconds: 140),
+    Widget chip(bool pressed) => AnimatedContainer(
+      duration: NeuPress.duration,
       padding: padding,
       decoration: neu.raised(
         radius: radius,
-        depth: 0.6,
+        // Held down, the lift goes to nothing and the chip settles flat into
+        // the page — the same press every other neu surface shows.
+        depth: pressed ? 0 : 0.6,
         color: isSelected ? scheme.primary : null,
         background: background,
         inset: isSelected,
@@ -50,9 +53,10 @@ class NeuChip extends StatelessWidget {
       ),
     );
 
-    return GestureDetector(
+    return NeuPress(
       onTap: onTap,
-      child: Center(widthFactor: 1, heightFactor: 1, child: chip),
+      builder: (context, pressed) =>
+          Center(widthFactor: 1, heightFactor: 1, child: chip(pressed)),
     );
   }
 }

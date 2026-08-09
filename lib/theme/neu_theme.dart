@@ -93,8 +93,9 @@ class NeuTheme extends ThemeExtension<NeuTheme> {
   /// The shadow pair for a panel filled with [fill], sitting [depth] high — 1 is
   /// a card, ~0.6 a chip, 1.4 a hero panel.
   ///
-  /// [inset] swaps the two rims, which is the pressed/debossed look: it reads as
-  /// the panel having sunk into the page, and is what [NeuCard] shows while held.
+  /// [inset] swaps the two rims — the debossed look, for a surface that stays
+  /// sunken, such as a selected chip. A *press* is not this: it takes [depth]
+  /// to 0 so the panel simply loses its lift.
   List<BoxShadow> raisedShadows({
     required Color fill,
     double depth = 1,
@@ -105,7 +106,7 @@ class NeuTheme extends ThemeExtension<NeuTheme> {
     final highlight = highlightOn(fill);
     if (inset) {
       // Pulled in by a negative spread so the pair hugs the edge instead of
-      // spilling outwards — a pressed panel casts nothing far from itself.
+      // spilling outwards — a sunken panel casts nothing far from itself.
       return [
         BoxShadow(
           color: shade,

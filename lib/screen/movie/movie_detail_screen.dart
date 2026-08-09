@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
@@ -947,9 +948,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   height: titleFit.height,
                   actions: [
                     NeuIconButton(
-                      size: appBarActionSize,
+                      size: Dimens.appBarActionSize,
                       iconSize: 18,
-                      depth: appBarActionDepth,
+                      depth: Dimens.appBarActionDepth,
                       tooltip: _isFavorite
                           ? l10n.removeFromFavorites
                           : l10n.addToFavorites,
@@ -1076,9 +1077,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ),
               const SizedBox(width: 8),
               NeuIconButton(
-                size: appBarActionSize,
+                size: Dimens.appBarActionSize,
                 iconSize: 18,
-                depth: appBarActionDepth,
+                depth: Dimens.appBarActionDepth,
                 tooltip: _isFavorite
                     ? l10n.removeFromFavorites
                     : l10n.addToFavorites,

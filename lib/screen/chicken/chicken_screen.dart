@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
@@ -31,6 +32,7 @@ import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:flutter/services.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +61,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   /// is the one case that needs every year.
   int? get _yearFilter => _selectedYear == 0 ? null : _selectedYear;
   final _scrollController = ScrollController();
+  final _menuButtonKey = GlobalKey();
   @override
   void initState() {
     super.initState();
@@ -140,34 +143,19 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         ),
         actions: [
           Consumer<ChickenViewModel>(
-            builder: (context, vm, child) => IconButton(
-              icon: ChickenAddIcon(
-                icon: Assets.images.chickCute,
-                enabled: !vm.isReadOnly,
-              ),
+            builder: (context, vm, child) => ChickenAddButton(
+              icon: Assets.images.chickCute,
               onPressed: vm.isReadOnly ? null : _showAddBatchDialog,
             ),
           ),
-          PopupMenuButton<_ChickenMenuAction>(
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: _onMenuAction,
-            itemBuilder: (context) => [
-              _menuItem(
-                _ChickenMenuAction.statistics,
-                Icons.bar_chart,
-                l10n.profitStatistics,
-              ),
-              _menuItem(
-                _ChickenMenuAction.sharing,
-                Icons.group_outlined,
-                l10n.chickenSharing,
-              ),
-              _menuItem(
-                _ChickenMenuAction.settings,
-                Icons.settings_outlined,
-                l10n.settings,
-              ),
-            ],
+          const SizedBox(width: 8),
+          NeuIconButton(
+            key: _menuButtonKey,
+            size: Dimens.appBarActionSize,
+            iconSize: 18,
+            depth: Dimens.appBarActionDepth,
+            icon: Icons.more_vert_rounded,
+            onPressed: _showOverflowMenu,
           ),
         ],
       ),
@@ -405,6 +393,47 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         ],
       ),
     );
+  }
+
+  /// Anchored under the button by hand, the way the movie screen does it: a
+  /// `PopupMenuButton` would draw its own plain icon in place of the neu one.
+  Future<void> _showOverflowMenu() async {
+    final l10n = AppLocalizations.of(context);
+    final button =
+        _menuButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+
+    final topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(topLeft, topLeft + button.size.bottomRight(Offset.zero)),
+      Offset.zero & overlay.size,
+    );
+
+    final selected = await showMenu<_ChickenMenuAction>(
+      context: context,
+      position: position,
+      items: [
+        _menuItem(
+          _ChickenMenuAction.statistics,
+          Icons.bar_chart,
+          l10n.profitStatistics,
+        ),
+        _menuItem(
+          _ChickenMenuAction.sharing,
+          Icons.group_outlined,
+          l10n.chickenSharing,
+        ),
+        _menuItem(
+          _ChickenMenuAction.settings,
+          Icons.settings_outlined,
+          l10n.settings,
+        ),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    _onMenuAction(selected);
   }
 
   void _onMenuAction(_ChickenMenuAction action) {

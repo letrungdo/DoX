@@ -1,4 +1,5 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 
@@ -8,7 +9,7 @@ import 'package:flutter/material.dart';
 /// sites read the same, but draws a light/dark shadow pair instead of Material
 /// elevation plus an outline. When [onTap] is given the panel sinks on press,
 /// which is the only affordance neumorphism has left once borders are gone.
-class NeuCard extends StatefulWidget {
+class NeuCard extends StatelessWidget {
   const NeuCard({
     super.key,
     this.child,
@@ -37,36 +38,20 @@ class NeuCard extends StatefulWidget {
   final VoidCallback? onLongPress;
   final Clip clipBehavior;
 
-  @override
-  State<NeuCard> createState() => _NeuCardState();
-}
-
-class _NeuCardState extends State<NeuCard> {
-  bool _pressed = false;
-
-  bool get _tappable => widget.onTap != null || widget.onLongPress != null;
+  bool get _tappable => onTap != null || onLongPress != null;
 
   @override
   Widget build(BuildContext context) {
     final neu = context.neu;
-    final radius = BorderRadius.circular(widget.radius);
+    final borderRadius = BorderRadius.circular(radius);
     // What this card is drawn on: an untinted card takes that colour, so one
     // nested in a tinted card stays in the card's colour rather than the page's.
     final background = NeuSurface.of(context);
-    final fill = widget.color ?? neu.panelOn(background);
+    final fill = color ?? neu.panelOn(background);
 
-    Widget? content = widget.child;
-    if (widget.padding != null) {
-      content = Padding(padding: widget.padding!, child: content);
-    }
-    if (_tappable) {
-      content = InkWell(
-        borderRadius: radius,
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
-        onHighlightChanged: (value) => setState(() => _pressed = value),
-        child: content,
-      );
+    Widget? content = child;
+    if (padding != null) {
+      content = Padding(padding: padding!, child: content);
     }
     // Always a Material, even without a tap handler of our own: children often
     // bring their own InkWell/ListTile, and without one here their ink lands on
@@ -74,27 +59,37 @@ class _NeuCardState extends State<NeuCard> {
     // highlight is invisible and unclipped by the rounded corners.
     content = Material(
       type: MaterialType.transparency,
-      borderRadius: radius,
+      borderRadius: borderRadius,
       clipBehavior: Clip.antiAlias,
       child: content,
     );
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 140),
+    Widget panel(bool pressed) => AnimatedContainer(
+      duration: NeuPress.duration,
       curve: Curves.easeOut,
-      margin: widget.margin,
-      clipBehavior: widget.clipBehavior,
+      margin: margin,
+      clipBehavior: clipBehavior,
       decoration: neu.raised(
-        radius: widget.radius,
-        depth: widget.depth,
-        color: widget.color,
+        radius: radius,
+        // Held down, the lift goes to nothing and the panel settles flat into
+        // the page — the same press `flutter_neumorphic` draws.
+        depth: pressed ? 0 : depth,
+        color: color,
         background: background,
-        // Held down, the two rims swap and the panel reads as pressed into the
-        // page — nothing moves under the finger.
-        inset: _pressed,
       ),
       // Cards nested in this one sit on its fill, not on the scaffold.
-      child: NeuSurface(color: fill, child: content),
+      child: NeuSurface(color: fill, child: content!),
+    );
+
+    if (!_tappable) return panel(false);
+
+    // A card is a wide surface, so it shrinks less than a button would: the
+    // same 3% here reads as the whole panel lurching.
+    return NeuPress(
+      pressedScale: 0.99,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      builder: (context, pressed) => panel(pressed),
     );
   }
 }

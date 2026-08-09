@@ -135,11 +135,14 @@ class _ElectricScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final settingsButton = IconButton(
+    final settingsButton = NeuIconButton(
+      size: Dimens.appBarActionSize,
+      iconSize: 18,
+      depth: Dimens.appBarActionDepth,
       tooltip: l10n.settings,
+      icon: Icons.settings_outlined,
       onPressed: () =>
           context.router.push(ElectricSettingsRoute(electricVm: vm)),
-      icon: const Icon(Icons.settings_outlined, size: 24),
     );
     return AppScaffold(
       appBar: DoAppBar(

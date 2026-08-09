@@ -1,4 +1,5 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 
@@ -43,8 +44,6 @@ class NeuButton extends StatefulWidget {
 }
 
 class _NeuButtonState extends State<NeuButton> {
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
     final neu = context.neu;
@@ -70,25 +69,22 @@ class _NeuButtonState extends State<NeuButton> {
       ),
     );
 
-    final button = GestureDetector(
-      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
-      onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+    final button = NeuPress(
       onTap: widget.onPressed,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 130),
+      builder: (context, pressed) => AnimatedContainer(
+        duration: NeuPress.duration,
         curve: Curves.easeOut,
         decoration: BoxDecoration(
           color: enabled ? fill : neu.sunken,
           borderRadius: borderRadius,
           boxShadow: !enabled
               ? null
+              // Held down, the lift goes to nothing: the button settles flat
+              // into the page, which is how `flutter_neumorphic` presses too.
+              // An inverted rim pair reads as a relit panel, not a pressed one.
               : neu.raisedShadows(
                   fill: fill,
-                  depth: widget.depth,
-                  // Held down, the rims swap: the button reads as pressed into
-                  // the surface instead of losing its shadows altogether.
-                  inset: _pressed,
+                  depth: pressed ? 0 : widget.depth,
                 ),
         ),
         child: content,

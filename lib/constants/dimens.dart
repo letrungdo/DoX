@@ -10,6 +10,11 @@ class Dimens {
 
   static const appBarHeight = kIsWeb ? 60.0 : 44.0;
 
+  /// App bar actions are sized so their neumorphic shadow (offset + blur, about
+  /// 5px at this depth) still fits inside the bar instead of spilling out of it.
+  static const appBarActionSize = 32.0;
+  static const appBarActionDepth = 0.4;
+
   /// Widest a page's content column ever gets, the app bar's title row
   /// included. Landscape hands a phone twice the width it was designed for, and
   /// a browser window even more; past this a card row stops reading as one

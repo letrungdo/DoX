@@ -13,11 +13,6 @@ const minPlayerHeight = 220.0;
 const miniPlayerHeight = 66.0;
 const miniPlayerWidth = 116.0;
 
-/// App bar actions are sized so their neumorphic shadow (offset + blur, about
-/// 5px at this depth) still fits inside the bar instead of spilling out of it.
-const appBarActionSize = 32.0;
-const appBarActionDepth = 0.4;
-
 /// Fixed height of the original-title strip in the overlay header.
 const embeddedSubtitleHeight = 26.0;
 

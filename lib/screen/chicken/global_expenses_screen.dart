@@ -97,11 +97,8 @@ class _GlobalExpensesScreenState
           selector: (vm) => vm.isFetching,
         ),
         actions: [
-          IconButton(
-            icon: ChickenAddIcon(
-              icon: Assets.images.feedCute,
-              enabled: !vm.isReadOnly,
-            ),
+          ChickenAddButton(
+            icon: Assets.images.feedCute,
             onPressed: vm.isReadOnly ? null : () => _showExpenseDialog(),
           ),
         ],
