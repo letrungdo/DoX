@@ -5,7 +5,9 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/modal/crop_image_modal.dart';
 import 'package:do_x/view_model/app_account_view_model.dart';
+import 'package:do_x/widgets/account_avatar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
@@ -13,9 +15,13 @@ import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/password_field.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Ways to change the account picture, in the order the sheet offers them.
+enum _AvatarAction { gallery, camera, remove }
 
 @RoutePage()
 class AppAccountScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -43,8 +49,11 @@ class _AppAccountScreenState
     final l10n = context.l10n;
     return AppScaffold(
       appBar: DoAppBar(title: l10n.accountTitle),
-      body: Selector<AppAccountViewModel, (User?, bool)>(
-        selector: (_, vm) => (vm.user, vm.isBusy),
+      // The avatar URL is selected alongside the user: it lives on the user's
+      // metadata, and a fresh User instance is not reliably unequal to the old
+      // one, so a picture change would otherwise not repaint.
+      body: Selector<AppAccountViewModel, (User?, String?, bool)>(
+        selector: (_, vm) => (vm.user, vm.avatarUrl, vm.isBusy),
         builder: (context, state, _) {
           final user = state.$1;
           // Signing out is what closes this page; for the frame between the
@@ -53,7 +62,7 @@ class _AppAccountScreenState
           return SingleChildScrollView(
             child: Padding(
               padding: Dimens.screenPadding,
-              child: _buildBody(l10n, user, state.$2),
+              child: _buildBody(l10n, user, state.$2, state.$3),
             ).contentConstrainedBox(),
           );
         },
@@ -61,11 +70,16 @@ class _AppAccountScreenState
     );
   }
 
-  Widget _buildBody(AppLocalizations l10n, User user, bool isBusy) {
+  Widget _buildBody(
+    AppLocalizations l10n,
+    User user,
+    String? avatarUrl,
+    bool isBusy,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildIdentityCard(l10n, user),
+        _buildIdentityCard(l10n, user, avatarUrl, isBusy),
         const SizedBox(height: 24),
         _buildSectionLabel(l10n.accountSectionSecurity),
         const SizedBox(height: 10),
@@ -95,8 +109,12 @@ class _AppAccountScreenState
     );
   }
 
-  Widget _buildIdentityCard(AppLocalizations l10n, User user) {
-    final scheme = context.theme.colorScheme;
+  Widget _buildIdentityCard(
+    AppLocalizations l10n,
+    User user,
+    String? avatarUrl,
+    bool isBusy,
+  ) {
     final email = user.email ?? '';
     final confirmed = user.emailConfirmedAt != null;
 
@@ -107,17 +125,10 @@ class _AppAccountScreenState
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: scheme.primaryContainer,
-                child: Text(
-                  email.isEmpty ? '?' : email.characters.first.toUpperCase(),
-                  style: TextStyle(
-                    color: scheme.onPrimaryContainer,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              AccountAvatar(
+                email: email,
+                avatarUrl: avatarUrl,
+                onTap: isBusy ? null : () => _editAvatar(l10n, avatarUrl),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -264,6 +275,47 @@ class _AppAccountScreenState
   String _formatDate(String? isoDate, DateFormat format) {
     final parsed = DateTime.tryParse(isoDate ?? '');
     return parsed == null ? '-' : format.format(parsed.toLocal());
+  }
+
+  /// Offers the ways in, then routes the chosen one through the shared
+  /// cropper. [currentUrl] decides whether removing is even on the menu.
+  Future<void> _editAvatar(AppLocalizations l10n, String? currentUrl) async {
+    final actions = [
+      _AvatarAction.gallery,
+      _AvatarAction.camera,
+      if (currentUrl != null && currentUrl.isNotEmpty) _AvatarAction.remove,
+    ];
+    final action = await showAppOptionSheet<_AvatarAction>(
+      context,
+      title: l10n.changeAvatar,
+      options: actions,
+      selected: null,
+      labelBuilder: (value) => switch (value) {
+        _AvatarAction.gallery => l10n.chooseFromGallery,
+        _AvatarAction.camera => l10n.takePhoto,
+        _AvatarAction.remove => l10n.removeAvatar,
+      },
+    );
+    if (action == null || !mounted) return;
+
+    if (action == _AvatarAction.remove) {
+      await vm.removeAvatar();
+      return;
+    }
+
+    final picked = await vm.pickAvatar(
+      action == _AvatarAction.camera ? ImageSource.camera : ImageSource.gallery,
+    );
+    if (picked == null || !mounted) return;
+
+    // The cropper is locked to 1:1 already, which is the shape every avatar in
+    // the app is drawn in.
+    await showAppBottomSheet<void>(
+      context,
+      enableDrag: false,
+      scrollable: false,
+      builder: (_) => CropImageModal(image: picked, onCropped: vm.uploadAvatar),
+    );
   }
 
   Future<void> _confirmSignOut(AppLocalizations l10n) async {

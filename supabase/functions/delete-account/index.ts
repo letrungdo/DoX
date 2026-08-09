@@ -55,6 +55,26 @@ Deno.serve(async (req) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
+
+  // Storage has no foreign key to cascade along, so the avatar would outlive
+  // the account that owns it. Deliberately before the user is deleted, while
+  // the folder is still attributable to somebody; a failure here is logged and
+  // stepped over rather than blocking the deletion the user asked for.
+  const { data: avatars, error: listError } = await admin.storage
+    .from("avatars")
+    .list(user.id);
+  if (listError) {
+    console.error("could not list avatars", user.id, listError.message);
+  } else if (avatars?.length) {
+    const paths = avatars.map((file) => `${user.id}/${file.name}`);
+    const { error: removeError } = await admin.storage
+      .from("avatars")
+      .remove(paths);
+    if (removeError) {
+      console.error("could not remove avatars", user.id, removeError.message);
+    }
+  }
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
   if (deleteError) {
     console.error("delete-account failed", user.id, deleteError.message);

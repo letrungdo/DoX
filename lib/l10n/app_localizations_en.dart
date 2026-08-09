@@ -1661,4 +1661,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get authOtpExpired =>
       'That code has expired or was already used. Ask for a new one.';
+
+  @override
+  String get changeAvatar => 'Change picture';
+
+  @override
+  String get chooseFromGallery => 'Choose from gallery';
+
+  @override
+  String get takePhoto => 'Take a photo';
+
+  @override
+  String get removeAvatar => 'Remove picture';
+
+  @override
+  String get avatarUpdated => 'Your picture has been updated.';
+
+  @override
+  String get avatarRemoved => 'Your picture has been removed.';
+
+  @override
+  String get avatarUploadFailed =>
+      'Couldn\'t upload that picture. Please try again.';
 }

@@ -3013,6 +3013,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That code has expired or was already used. Ask for a new one.'**
   String get authOtpExpired;
+
+  /// No description provided for @changeAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Change picture'**
+  String get changeAvatar;
+
+  /// No description provided for @chooseFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get chooseFromGallery;
+
+  /// No description provided for @takePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get takePhoto;
+
+  /// No description provided for @removeAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove picture'**
+  String get removeAvatar;
+
+  /// No description provided for @avatarUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Your picture has been updated.'**
+  String get avatarUpdated;
+
+  /// No description provided for @avatarRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your picture has been removed.'**
+  String get avatarRemoved;
+
+  /// No description provided for @avatarUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t upload that picture. Please try again.'**
+  String get avatarUploadFailed;
 }
 
 class _AppLocalizationsDelegate

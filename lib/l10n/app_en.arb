@@ -1047,5 +1047,12 @@
   "enterCodeInstead": "Enter the code from the email",
   "resendCode": "Send a new code",
   "codeSent": "A new code is on its way.",
-  "authOtpExpired": "That code has expired or was already used. Ask for a new one."
+  "authOtpExpired": "That code has expired or was already used. Ask for a new one.",
+  "changeAvatar": "Change picture",
+  "chooseFromGallery": "Choose from gallery",
+  "takePhoto": "Take a photo",
+  "removeAvatar": "Remove picture",
+  "avatarUpdated": "Your picture has been updated.",
+  "avatarRemoved": "Your picture has been removed.",
+  "avatarUploadFailed": "Couldn't upload that picture. Please try again."
 }

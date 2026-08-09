@@ -6,12 +6,14 @@ import 'package:do_x/extensions/app_page_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/repository/avatar_repository.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
+import 'package:do_x/widgets/account_avatar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
@@ -160,10 +162,34 @@ class _MenuScreenState<V extends MenuViewModel>
     // Signing out lives on the account page now, next to the password and the
     // delete button — one place that owns the account instead of a menu row
     // whose only trick was logging out.
-    return _menuButton(
-      Icons.manage_accounts_rounded,
-      "${l10n.accountTitle} (${user.email})",
-      () => context.pushRoute(const AppAccountRoute()),
+    return NeuButton(
+      onPressed: () => context.pushRoute(const AppAccountRoute()),
+      expand: true,
+      radius: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      child: Row(
+        children: [
+          SizedBox.square(
+            dimension: 32,
+            child: Center(
+              child: AccountAvatar(
+                email: user.email ?? '',
+                avatarUrl:
+                    user.userMetadata?[AvatarRepository.metadataKey] as String?,
+                radius: 15,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "${l10n.accountTitle} (${user.email})",
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1005,5 +1005,12 @@
   "enterCodeInstead": "Nhập mã trong email",
   "resendCode": "Gửi mã mới",
   "codeSent": "Đã gửi mã mới.",
-  "authOtpExpired": "Mã đã hết hạn hoặc đã dùng rồi. Hãy yêu cầu mã mới."
+  "authOtpExpired": "Mã đã hết hạn hoặc đã dùng rồi. Hãy yêu cầu mã mới.",
+  "changeAvatar": "Đổi ảnh đại diện",
+  "chooseFromGallery": "Chọn từ thư viện",
+  "takePhoto": "Chụp ảnh",
+  "removeAvatar": "Xoá ảnh đại diện",
+  "avatarUpdated": "Đã cập nhật ảnh đại diện.",
+  "avatarRemoved": "Đã xoá ảnh đại diện.",
+  "avatarUploadFailed": "Không tải được ảnh lên. Vui lòng thử lại."
 }

@@ -1655,4 +1655,25 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get authOtpExpired =>
       'Mã đã hết hạn hoặc đã dùng rồi. Hãy yêu cầu mã mới.';
+
+  @override
+  String get changeAvatar => 'Đổi ảnh đại diện';
+
+  @override
+  String get chooseFromGallery => 'Chọn từ thư viện';
+
+  @override
+  String get takePhoto => 'Chụp ảnh';
+
+  @override
+  String get removeAvatar => 'Xoá ảnh đại diện';
+
+  @override
+  String get avatarUpdated => 'Đã cập nhật ảnh đại diện.';
+
+  @override
+  String get avatarRemoved => 'Đã xoá ảnh đại diện.';
+
+  @override
+  String get avatarUploadFailed => 'Không tải được ảnh lên. Vui lòng thử lại.';
 }
