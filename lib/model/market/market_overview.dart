@@ -1,8 +1,8 @@
 import 'package:do_x/constants/enum/market_code.dart';
 
-/// A market's live snapshot from market's overview endpoints — the numbers the
-/// bars endpoint doesn't carry (day change, session range, 52-week band, market
-/// cap, turnover).
+/// A market's live snapshot from the market API's overview endpoints — the
+/// numbers the bars endpoint doesn't carry (day change, session range, 52-week
+/// band, market cap, turnover).
 ///
 /// One class covers all four endpoints (`commodities`, `cryptos`, `indexes`,
 /// `indices`): they share the price fields and differ only in the extras, which
