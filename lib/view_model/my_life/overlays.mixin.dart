@@ -6,6 +6,7 @@ import 'package:do_x/services/location_service.dart';
 import 'package:do_x/services/weather_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
@@ -144,16 +145,12 @@ mixin MyLifeOverlays on CoreViewModel {
   Future<bool> colorPickerDialog() async {
     Color tempColor = overlayBgColor ?? Colors.pink;
 
-    final result = await showDialog<bool>(
-      context: context,
+    final result = await showAppModal<bool>(
+      context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          titlePadding: const EdgeInsets.all(0),
-          contentPadding: const EdgeInsets.all(0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+        return AppDialog(
+          contentPadding: EdgeInsets.zero,
           content: SingleChildScrollView(
             child: ColorPicker(
               color: tempColor,
@@ -195,41 +192,35 @@ mixin MyLifeOverlays on CoreViewModel {
               customColorSwatchesAndNames: colorsNameMap,
             ),
           ),
+          // Three buttons: an equal share of this dialog's width would squeeze
+          // the labels, so they keep their own width here.
+          expandActions: false,
           actions: <Widget>[
-            // Three buttons: an equal share of this dialog's width would squeeze
-            // the labels, so they keep their own width here.
-            DialogActions(
-              expand: false,
-              children: [
-                DialogActionButton(
-                  text: 'Reset',
-                  kind: DialogActionKind.destructiveOutline,
-                  onPressed: () {
-                    overlayBgColor = null;
-                    overlayTextColor = Colors.white
-                        .withAlpha(200)
-                        .getTextColor()!;
-                    notifyListeners();
-                    Navigator.of(context).pop(true);
-                  },
-                ),
-                DialogActionButton(
-                  text: 'Cancel',
-                  kind: DialogActionKind.cancel,
-                  onPressed: () {
-                    Navigator.of(context).pop(false);
-                  },
-                ),
-                DialogActionButton(
-                  text: 'OK',
-                  onPressed: () {
-                    overlayBgColor = tempColor;
-                    overlayTextColor = tempColor.getTextColor()!;
-                    notifyListeners();
-                    Navigator.of(context).pop(true);
-                  },
-                ),
-              ],
+            DialogActionButton(
+              text: 'Reset',
+              kind: DialogActionKind.destructiveOutline,
+              onPressed: () {
+                overlayBgColor = null;
+                overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
+                notifyListeners();
+                Navigator.of(context).pop(true);
+              },
+            ),
+            DialogActionButton(
+              text: 'Cancel',
+              kind: DialogActionKind.cancel,
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            DialogActionButton(
+              text: 'OK',
+              onPressed: () {
+                overlayBgColor = tempColor;
+                overlayTextColor = tempColor.getTextColor()!;
+                notifyListeners();
+                Navigator.of(context).pop(true);
+              },
             ),
           ],
         );

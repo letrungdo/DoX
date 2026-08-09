@@ -8,6 +8,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
@@ -103,7 +104,7 @@ class _ChickenStatisticsScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.profitStatistics,
         titleSuffix: AppBarSyncIcon<ChickenViewModel>(
@@ -131,7 +132,7 @@ class _ChickenStatisticsScreenState
             ],
           );
         },
-      ).webConstrainedBox(),
+      ).contentConstrainedBox(),
     );
   }
 

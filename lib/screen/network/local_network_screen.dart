@@ -1,4 +1,5 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/local_network_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
@@ -55,7 +56,7 @@ class LocalNetworkView extends StatelessWidget {
               ),
             ],
           ),
-        );
+        ).contentConstrainedBox();
       },
     );
   }

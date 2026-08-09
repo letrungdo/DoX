@@ -17,6 +17,7 @@ import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/myLife/my_life_view_model.dart';
 import 'package:do_x/view_model/myLife/weather.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/do_camera.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/rating_bar.dart';
@@ -49,7 +50,8 @@ class _HomeScreenState<V extends MyLifeViewModel>
     extends ScreenState<MyLifeScreen, V> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
+      bottom: true,
       appBar: DoAppBar(
         height: kIsWeb ? 80 : 60,
         leadingWidth: 120,
@@ -64,26 +66,24 @@ class _HomeScreenState<V extends MyLifeViewModel>
           ],
         ),
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(child: _buildBody().webConstrainedBox()),
-            Positioned(
-              top: 7,
-              left: 0,
-              right: 0,
-              child: Selector<V, bool>(
-                selector: (p0, p1) => p1.isBusy,
-                builder: (context, isLoading, _) {
-                  return Visibility(
-                    visible: isLoading, //
-                    child: LinearProgressIndicator(),
-                  );
-                },
-              ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(child: _buildBody().contentConstrainedBox()),
+          Positioned(
+            top: 7,
+            left: 0,
+            right: 0,
+            child: Selector<V, bool>(
+              selector: (p0, p1) => p1.isBusy,
+              builder: (context, isLoading, _) {
+                return Visibility(
+                  visible: isLoading, //
+                  child: LinearProgressIndicator(),
+                );
+              },
             ),
-          ],
-        ), //
+          ),
+        ],
       ),
     );
   }
@@ -96,7 +96,7 @@ class _HomeScreenState<V extends MyLifeViewModel>
         if (!kIsWeb) SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
-            final height = [constraints.maxWidth, Dimens.webMaxWidth].min;
+            final height = [constraints.maxWidth, Dimens.contentMaxWidth].min;
             return Selector<V, Uint8List?>(
               selector: (p0, p1) => p1.croppedImage,
               builder: (context, data, _) {

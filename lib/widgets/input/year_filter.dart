@@ -1,5 +1,6 @@
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
@@ -24,53 +25,12 @@ class YearFilter extends StatelessWidget {
 
   Future<void> _openSheet(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-    final options = [if (includeAll) 0, ...years];
-
-    final picked = await showModalBottomSheet<int>(
-      context: context,
-      backgroundColor: context.theme.scaffoldBackgroundColor,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: Text(
-                  l10n.selectYear,
-                  textAlign: TextAlign.center,
-                  style: context.theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: options.map((year) {
-                    final selected = year == selectedYear;
-                    return ListTile(
-                      title: Text(_labelFor(l10n, year)),
-                      trailing: selected
-                          ? Icon(
-                              Icons.check,
-                              color: context.theme.colorScheme.primary,
-                            )
-                          : null,
-                      selected: selected,
-                      onTap: () => Navigator.of(sheetContext).pop(year),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    final picked = await showAppOptionSheet<int>(
+      context,
+      title: l10n.selectYear,
+      options: [if (includeAll) 0, ...years],
+      selected: selectedYear,
+      labelBuilder: (year) => _labelFor(l10n, year),
     );
 
     if (picked != null && picked != selectedYear) onChanged(picked);

@@ -13,7 +13,8 @@ import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/dialog/dialog_action_button.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -56,7 +57,7 @@ class _MenuScreenState<V extends MenuViewModel>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.menu,
         actions: [
@@ -80,21 +81,23 @@ class _MenuScreenState<V extends MenuViewModel>
       // the account button still sits at the bottom when it doesn't.
       body: CustomScrollView(
         slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: _buildMainActions(l10n).webConstrainedBox(),
-            ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              child: _buildMainActions(l10n),
+            ).contentConstrainedBox(),
           ),
           SliverFillRemaining(
             hasScrollBody: false,
+            // Align stays inside the cap: the cap centres its child, which
+            // would pull the bottom row back up to the middle of the page.
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: _buildBottomActions(l10n).webConstrainedBox(),
+                child: _buildBottomActions(l10n),
               ),
-            ),
+            ).contentConstrainedBox(),
           ),
         ],
       ),
@@ -163,29 +166,13 @@ class _MenuScreenState<V extends MenuViewModel>
   }
 
   void _confirmSignOut(AppLocalizations l10n) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.confirmLogout),
-        content: Text(l10n.confirmLogoutMessage),
-        actions: [
-          DialogActions(
-            children: [
-              DialogActionButton(
-                text: l10n.cancel,
-                kind: DialogActionKind.cancel,
-                onPressed: () => Navigator.pop(context, false),
-              ),
-              DialogActionButton(
-                text: l10n.logout,
-                onPressed: () => Navigator.pop(context, true),
-              ),
-            ],
-          ),
-        ],
-      ),
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: l10n.confirmLogout,
+      message: l10n.confirmLogoutMessage,
+      confirmText: l10n.logout,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await supabase.auth.signOut();
   }
 

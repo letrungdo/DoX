@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/feng_shui.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -71,15 +73,14 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
+      bottom: true,
       appBar: DoAppBar(title: l10n.fengShuiCompass),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [_buildBody(context, l10n)],
-          ).webConstrainedBox(),
-        ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: Dimens.screenPadding,
+          child: Column(children: [_buildBody(context, l10n)]),
+        ).contentConstrainedBox(),
       ),
     );
   }

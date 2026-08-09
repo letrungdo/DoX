@@ -57,7 +57,7 @@ class _CropImageModalState extends State<CropImageModal> {
       builder: (context, constraints) {
         final heightCheck = [constraints.maxHeight - 180, size.width];
         if (kIsWeb) {
-          heightCheck.add(Dimens.webMaxWidth);
+          heightCheck.add(Dimens.contentMaxWidth);
         }
         final height = kIsWeb ? heightCheck.min : heightCheck.max;
         return Stack(

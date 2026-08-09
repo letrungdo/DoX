@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/network/local_network_screen.dart';
@@ -7,6 +8,7 @@ import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
@@ -51,7 +53,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.wifiManagement,
         bottom: TabBar(
@@ -135,14 +137,14 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           if (kDebugMode && vm.logs.isNotEmpty) _buildLogs(vm),
         ],
       ),
-    );
+    ).contentConstrainedBox();
   }
 
   Widget _buildSpeedTab(AppLocalizations l10n, V vm) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: _buildSpeedTestSection(l10n, vm),
-    );
+    ).contentConstrainedBox();
   }
 
   Widget _buildSpeedTestSection(AppLocalizations l10n, V vm) {

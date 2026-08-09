@@ -1,10 +1,12 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/extensions/app_page_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +20,7 @@ class SettingsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final appVm = context.watch<AppViewModel>();
 
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(title: l10n.settings),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -245,7 +247,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-      ),
+      ).contentConstrainedBox(),
     );
   }
 

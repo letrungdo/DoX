@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
@@ -126,18 +127,20 @@ class _CuteDialogState extends State<CuteDialog> {
             ),
           );
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Dimens.dialogRadius),
+      ),
       clipBehavior: Clip.antiAlias,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      insetPadding: Dimens.dialogInsetPadding,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
+        constraints: const BoxConstraints(maxWidth: Dimens.dialogMaxWidth),
         // Tapping outside a field (but still inside the dialog) dismisses the
         // keyboard without closing the dialog.
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            padding: Dimens.dialogPadding,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,7 +186,8 @@ class _CuteDialogState extends State<CuteDialog> {
                           ),
                         const SizedBox(height: 16),
                         for (var i = 0; i < children.length; i++) ...[
-                          if (i > 0) const SizedBox(height: 12),
+                          if (i > 0)
+                            const SizedBox(height: Dimens.modalItemSpacing),
                           children[i],
                         ],
                       ],

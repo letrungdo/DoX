@@ -20,6 +20,7 @@ import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/news/coin_chart.dart';
 import 'package:do_x/view_model/news/news_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -115,7 +116,7 @@ class _NewsScreenState<V extends NewsViewModel>
     return VisibilityDetector(
       key: const Key('news-screen'),
       onVisibilityChanged: _onVisibilityChanged,
-      child: Scaffold(
+      child: AppScaffold(
         appBar: DoAppBar(
           title: l10n.news, //
           titleSuffix: AppBarSyncIcon<V>(selector: (vm) => vm.isFetching),
@@ -135,12 +136,13 @@ class _NewsScreenState<V extends NewsViewModel>
       slivers: [
         SliverLayoutBuilder(
           builder: (context, constraints) {
-            final screenWidth = constraints.crossAxisExtent;
-            const maxContentWidth = Dimens.webMaxWidth;
-            double horizontalPadding = 15;
-            if (screenWidth > maxContentWidth) {
-              horizontalPadding = (screenWidth - maxContentWidth) / 2;
-            }
+            // The page padding sits inside the shared content cap, exactly as
+            // `contentConstrainedBox()` puts it on the other pages — so a card
+            // here is the same width as a card anywhere else.
+            final overflow =
+                constraints.crossAxisExtent - Dimens.contentMaxWidth;
+            final horizontalPadding =
+                Dimens.pagePadding + (overflow > 0 ? overflow / 2 : 0);
             return SliverPadding(
               // 16, not 15: a card's shadow reaches ~17px, so a tighter page
               // padding lets the viewport clip the first/last card's rim.

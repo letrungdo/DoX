@@ -5,12 +5,15 @@ import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/news/market_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/chart/candle_chart_view.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +53,7 @@ class _MarketDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: widget.code.getName(),
         titleSuffix: AppBarSyncIcon<MarketDetailViewModel>(
@@ -58,31 +61,28 @@ class _MarketDetailScreenState
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: Dimens.webMaxWidth),
-            child: Consumer<MarketDetailViewModel>(
-              builder: (context, vm, _) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(vm),
-                    const SizedBox(height: 16),
-                    _IntervalSelector(
-                      value: vm.interval,
-                      onChanged: vm.changeInterval,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildChart(vm),
-                    const SizedBox(height: 24),
-                    _buildStats(vm),
-                  ],
-                );
-              },
-            ),
+        child: Padding(
+          padding: Dimens.screenPadding,
+          child: Consumer<MarketDetailViewModel>(
+            builder: (context, vm, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(vm),
+                  const SizedBox(height: 16),
+                  _IntervalSelector(
+                    value: vm.interval,
+                    onChanged: vm.changeInterval,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildChart(vm),
+                  const SizedBox(height: 24),
+                  _buildStats(vm),
+                ],
+              );
+            },
           ),
-        ),
+        ).contentConstrainedBox(),
       ),
     );
   }
@@ -171,30 +171,11 @@ class _IntervalSelector extends StatelessWidget {
       ChartInterval.values.skip(_primaryCount).toList();
 
   Future<void> _openSheet(BuildContext context) async {
-    final selected = await showModalBottomSheet<ChartInterval>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        final scheme = Theme.of(context).colorScheme;
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: _extra.map((item) {
-                final isSelected = item == value;
-                return ListTile(
-                  title: Text(item.label),
-                  selected: isSelected,
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: scheme.primary)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(item),
-                );
-              }).toList(),
-            ),
-          ),
-        );
-      },
+    final selected = await showAppOptionSheet<ChartInterval>(
+      context,
+      options: _extra,
+      selected: value,
+      labelBuilder: (item) => item.label,
     );
     if (selected != null) onChanged(selected);
   }

@@ -11,6 +11,7 @@ import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/update_download_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -165,7 +166,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             final tabsRouter = AutoTabsRouter.of(context);
             _requireLoginForInitialTab(context, tabsRouter, tabs);
 
-            return Scaffold(
+            return AppScaffold(
+              // Each tab is a full page with its own app bar, so it applies its
+              // own side insets; consuming them here would inset it twice.
+              bodyHorizontal: false,
               // Flush with the scaffold, no shade: an upward shadow here read as
               // a seam across the whole screen instead of a lifted bar.
               bottomNavigationBar: _hideWhileImmersive(

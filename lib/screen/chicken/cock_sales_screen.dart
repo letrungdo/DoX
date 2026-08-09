@@ -14,7 +14,9 @@ import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
@@ -95,7 +97,7 @@ class _CockSalesScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.sellRoosterMeat,
         titleSuffix: AppBarSyncIcon<ChickenViewModel>(
@@ -351,7 +353,7 @@ class _CockSalesScreenState
                 ),
               ),
             ],
-          ).webConstrainedBox();
+          ).contentConstrainedBox();
         },
       ),
     );
@@ -368,8 +370,8 @@ class _CockSalesScreenState
     SaleCategory category = sale?.category ?? SaleCategory.fighting;
     String? amountError;
 
-    await showDialog<void>(
-      context: context,
+    await showAppModal<void>(
+      context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: category == SaleCategory.meat
@@ -480,8 +482,8 @@ class _CockSalesScreenState
 
   Future<void> _confirmDeleteSale(CockSale sale) async {
     final l10n = AppLocalizations.of(context);
-    final shouldDelete = await showDialog<bool>(
-      context: context,
+    final shouldDelete = await showAppModal<bool>(
+      context,
       builder: (context) => CuteDialog(
         icon: sale.category == SaleCategory.meat
             ? Assets.images.drumstickCute

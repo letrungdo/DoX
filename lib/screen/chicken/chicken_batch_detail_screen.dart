@@ -20,9 +20,11 @@ import 'package:do_x/utils/sale_price_suggestion.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
@@ -102,7 +104,7 @@ class _ChickenBatchDetailScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.batchDetailTitle,
         titleSuffix: AppBarSyncIcon<ChickenViewModel>(
@@ -125,7 +127,7 @@ class _ChickenBatchDetailScreenState
             ],
           );
         },
-      ).webConstrainedBox(),
+      ).contentConstrainedBox(),
     );
   }
 
@@ -913,8 +915,8 @@ class _ChickenBatchDetailScreenState
 
   void _confirmDeleteSale(ChickenBatch batch, BatchSale sale) {
     final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
+    showAppModal(
+      context,
       builder: (context) => CuteDialog(
         icon: Assets.images.coinCute,
         title: l10n.deleteSaleRound,
@@ -940,8 +942,8 @@ class _ChickenBatchDetailScreenState
 
   void _confirmDeleteExpense(ChickenBatch batch, Expense expense) {
     final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
+    showAppModal(
+      context,
       builder: (context) => CuteDialog(
         icon: Assets.images.feedCute,
         title: l10n.deleteExpense,
@@ -1081,8 +1083,8 @@ class _ChickenBatchDetailScreenState
       totalAmountController.text = (unitPrice * qty).toCurrency();
     }
 
-    showDialog(
-      context: context,
+    showAppModal(
+      context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           // Recomputed on every build: the age it prices depends on the sale
@@ -1289,8 +1291,8 @@ class _ChickenBatchDetailScreenState
 
   void _confirmDelete(ChickenBatch batch) {
     final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
+    showAppModal(
+      context,
       builder: (context) => CuteDialog(
         icon: Assets.images.henCute,
         title: l10n.deleteBatch,
@@ -1323,8 +1325,8 @@ class _ChickenBatchDetailScreenState
     String? nameError;
     String? qtyError;
 
-    showDialog(
-      context: context,
+    showAppModal(
+      context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.chickCute,

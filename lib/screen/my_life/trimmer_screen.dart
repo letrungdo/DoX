@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/dialog/dialog_action_button.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:easy_video_editor/easy_video_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -127,29 +127,14 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     final sizeMb = await File(oversizePath).length() / 1024 / 1024;
     if (!mounted) return null;
     final l10n = context.l10n;
-    final downscale = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.videoTooLargeTitle),
-        content: Text(l10n.videoTooLargeMessage(sizeMb.toStringAsFixed(1))),
-        actions: [
-          DialogActions(
-            children: [
-              DialogActionButton(
-                text: l10n.shortenVideo,
-                kind: DialogActionKind.cancel,
-                onPressed: () => Navigator.pop(ctx, false),
-              ),
-              DialogActionButton(
-                text: l10n.reduceTo480p,
-                onPressed: () => Navigator.pop(ctx, true),
-              ),
-            ],
-          ),
-        ],
-      ).dialogConstrainedBox(),
+    final downscale = await showAppConfirmDialog(
+      context,
+      title: l10n.videoTooLargeTitle,
+      message: l10n.videoTooLargeMessage(sizeMb.toStringAsFixed(1)),
+      cancelText: l10n.shortenVideo,
+      confirmText: l10n.reduceTo480p,
     );
-    if (downscale != true) return null; // user will adjust the trim slider
+    if (!downscale) return null; // user will adjust the trim slider
 
     _exportingProgress.value = 0;
     _isExporting.value = true;
@@ -248,7 +233,8 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
           context.pop();
         }
       },
-      child: Scaffold(
+      child: AppScaffold(
+        bottom: true,
         appBar: DoAppBar(
           actions: [
             IconButton(
@@ -275,7 +261,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
             ),
           ],
         ),
-        body: SafeArea(child: _buildBody()),
+        body: _buildBody(),
       ),
     );
   }

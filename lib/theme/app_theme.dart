@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/theme/color_theme.dart';
 import 'package:do_x/theme/neu_theme.dart';
 import 'package:do_x/theme/text_theme.dart';
@@ -116,7 +117,9 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dimens.dialogRadius),
+        ),
         // The action buttons are raised: the top gap has to clear their lit rim
         // so it does not land on the message above.
         actionsPadding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
@@ -124,6 +127,23 @@ class AppTheme {
           fontWeight: FontWeight.w700,
         ),
         contentTextStyle: textTheme.bodyMedium,
+      ),
+      // Sheets are opened through `showAppBottomSheet`, which paints its own
+      // surface; this only covers a stray `showModalBottomSheet` so it lands on
+      // the same colour, radius and width cap instead of a Material default.
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: neu.base,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        modalElevation: 0,
+        // Deliberately not `showDragHandle`: `AppBottomSheet` draws its own, and
+        // turning it on here paints a second handle above the sheet's.
+        constraints: const BoxConstraints(maxWidth: Dimens.sheetMaxWidth),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(Dimens.sheetRadius),
+          ),
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

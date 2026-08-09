@@ -1,7 +1,8 @@
-import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
 
@@ -99,11 +100,9 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
     final theme = Theme.of(context);
     final isInputMode = _isAdding || _editingUrl != null;
 
-    return AlertDialog(
-      // Tighter than the 40px default so the URLs get the width instead.
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    return AppDialog(
       contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      title: Row(
+      titleWidget: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Expanded + ellipsis: a long localized title must not push the
@@ -236,7 +235,9 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
       ),
       actions: [
         if (isInputMode)
-          TextButton(
+          DialogActionButton(
+            text: l10n.cancel,
+            kind: DialogActionKind.cancel,
             onPressed: () {
               setState(() {
                 _isAdding = false;
@@ -244,11 +245,11 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                 _urlController.clear();
               });
             },
-            child: Text(l10n.cancel),
-          ),
-        if (!isInputMode) TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.close)),
-        if (isInputMode) FilledButton(onPressed: _handleSave, child: Text(l10n.save)),
+          )
+        else
+          DialogActionButton(text: l10n.close, kind: DialogActionKind.cancel, onPressed: () => Navigator.pop(context)),
+        if (isInputMode) DialogActionButton(text: l10n.save, onPressed: _handleSave),
       ],
-    ).dialogConstrainedBox();
+    );
   }
 }

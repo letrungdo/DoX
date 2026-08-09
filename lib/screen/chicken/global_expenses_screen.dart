@@ -13,7 +13,9 @@ import 'package:do_x/utils/chicken_date.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
@@ -88,7 +90,7 @@ class _GlobalExpensesScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.commonExpenses,
         titleSuffix: AppBarSyncIcon<ChickenViewModel>(
@@ -247,7 +249,7 @@ class _GlobalExpensesScreenState
                 ),
               ),
             ],
-          ).webConstrainedBox();
+          ).contentConstrainedBox();
         },
       ),
     );
@@ -291,8 +293,8 @@ class _GlobalExpensesScreenState
 
   Future<void> _confirmDeleteExpense(Expense expense) async {
     final l10n = AppLocalizations.of(context);
-    final shouldDelete = await showDialog<bool>(
-      context: context,
+    final shouldDelete = await showAppModal<bool>(
+      context,
       builder: (context) => CuteDialog(
         icon: Assets.images.feedCute,
         title: l10n.deleteCommonExpense,

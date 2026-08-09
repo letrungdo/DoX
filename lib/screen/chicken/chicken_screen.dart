@@ -18,11 +18,13 @@ import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
@@ -111,7 +113,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.chickenManagement,
         titleSuffix: AppBarSyncIcon<ChickenViewModel>(
@@ -316,7 +318,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             ],
           );
         },
-      ).webConstrainedBox(),
+      ).contentConstrainedBox(),
     );
   }
 
@@ -624,8 +626,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
 
   Future<BuildContext> _showImportProgressDialog() {
     final shown = Completer<BuildContext>();
-    showDialog<void>(
-      context: context,
+    showAppModal<void>(
+      context,
       barrierDismissible: false,
       builder: (dialogContext) {
         if (!shown.isCompleted) shown.complete(dialogContext);
@@ -634,8 +636,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           child: Consumer<ChickenViewModel>(
             builder: (context, vm, child) {
               final percent = (vm.importProgress * 100).round();
-              return AlertDialog(
-                title: Text(AppLocalizations.of(context).importingData),
+              return AppDialog(
+                title: AppLocalizations.of(context).importingData,
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -655,8 +657,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
 
   void _showDeleteAllDataDialog() {
     final l10n = AppLocalizations.of(context);
-    showDialog<void>(
-      context: context,
+    showAppModal<void>(
+      context,
       builder: (dialogContext) => CuteDialog(
         title: l10n.confirmDeleteAllChickenData,
         accent: context.colors.danger,
@@ -676,15 +678,15 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   Future<void> _deleteAllData() async {
     final l10n = AppLocalizations.of(context);
     final shown = Completer<BuildContext>();
-    showDialog<void>(
-      context: context,
+    showAppModal<void>(
+      context,
       barrierDismissible: false,
       builder: (dialogContext) {
         if (!shown.isCompleted) shown.complete(dialogContext);
         return PopScope(
           canPop: false,
-          child: AlertDialog(
-            title: Text(l10n.deletingData),
+          child: AppDialog(
+            title: l10n.deletingData,
             content: Row(
               children: [
                 const CircularProgressIndicator(),
@@ -753,8 +755,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
     String? nameError;
     String? qtyError;
 
-    showDialog(
-      context: context,
+    showAppModal(
+      context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => CuteDialog(
           icon: Assets.images.eggCute,

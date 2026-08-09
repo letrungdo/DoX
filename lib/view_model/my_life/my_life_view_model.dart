@@ -14,6 +14,7 @@ import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:do_x/view_model/myLife/overlays.mixin.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/do_camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -98,16 +99,11 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
   }
 
   void _openCropImage(Uint8List image) {
-    showModalBottomSheet<void>(
-      backgroundColor: context.theme.scaffoldBackgroundColor,
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      isScrollControlled: true,
+    showAppBottomSheet<void>(
+      context,
       enableDrag: false,
-      builder: (BuildContext context) {
-        return CropImageModal(onCropped: _onCropped, image: image);
-      },
+      scrollable: false,
+      builder: (_) => CropImageModal(onCropped: _onCropped, image: image),
     );
   }
 
@@ -128,16 +124,11 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
   }
 
   void showOverlaysModal() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: context.theme.scaffoldBackgroundColor,
-      showDragHandle: true,
-      // isScrollControlled: true,
-      enableDrag: true,
+    showAppBottomSheet<void>(
+      context,
       builder: (BuildContext context) {
-        return Container(
+        return Align(
           alignment: Alignment.topCenter,
-          padding: EdgeInsets.only(top: 20),
           child: Wrap(
             runSpacing: 15,
             spacing: 8,

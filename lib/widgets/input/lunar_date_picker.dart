@@ -1,5 +1,7 @@
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -14,8 +16,8 @@ Future<DateTime?> showLunarDatePicker({
   int firstYear = 2000,
   int lastYear = 2100,
 }) {
-  return showDialog<DateTime>(
-    context: context,
+  return showAppModal<DateTime>(
+    context,
     builder: (_) => _LunarCalendarPickerDialog(
       initialSolar: initialDate,
       firstDay: DateTime(firstYear),
@@ -66,27 +68,16 @@ class _LunarCalendarPickerDialogState
   Widget build(BuildContext context) {
     final materialL10n = MaterialLocalizations.of(context);
     final l10n = AppLocalizations.of(context);
-    // Small inset so the dialog uses most of the screen width, letting the
-    // calendar grid render larger. Cap the content so it stays readable on
-    // wide screens (tablet/web).
-    const insetHorizontal = 12.0;
-    final availableWidth =
-        MediaQuery.sizeOf(context).width - insetHorizontal * 2;
-    final contentWidth = availableWidth < 460.0 ? availableWidth : 460.0;
-    return AlertDialog(
-      // Flat text buttons here, so the default action spacing is fine.
-      buttonPadding: const EdgeInsets.symmetric(horizontal: 7),
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: insetHorizontal,
-        vertical: 24,
-      ),
-      titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      title: Text(l10n.lunarDatePickerTitle, textAlign: TextAlign.center),
+    return AppDialog(
+      titleWidget: Text(l10n.lunarDatePickerTitle, textAlign: TextAlign.center),
+      // Tighter than the usual dialog padding so the calendar grid gets the
+      // width; the dialog's own margins stay the shared ones.
       contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
       // Scrolls if the larger grid doesn't fit the dialog's height on short
-      // screens, avoiding a RenderFlex overflow.
+      // screens, avoiding a RenderFlex overflow — landscape especially.
       content: SizedBox(
-        width: contentWidth,
+        // Fills the panel, which `AppDialog` has already capped.
+        width: double.maxFinite,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -99,13 +90,14 @@ class _LunarCalendarPickerDialogState
         ),
       ),
       actions: [
-        TextButton(
+        DialogActionButton(
+          text: materialL10n.cancelButtonLabel,
+          kind: DialogActionKind.cancel,
           onPressed: () => Navigator.pop(context),
-          child: Text(materialL10n.cancelButtonLabel),
         ),
-        TextButton(
+        DialogActionButton(
+          text: materialL10n.okButtonLabel,
           onPressed: () => Navigator.pop(context, _selected),
-          child: Text(materialL10n.okButtonLabel),
         ),
       ],
     );

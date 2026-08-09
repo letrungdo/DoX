@@ -27,10 +27,14 @@ void main() {
       };
       logger.d("init log");
       _catchAllError();
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown, //
-      ]);
+      // No `setPreferredOrientations` call at all: the app rotates freely, and
+      // the set of orientations it allows is declared per platform (iOS's
+      // Info.plist, Android's manifest). Asking for every orientation here
+      // instead would install a preference during launch that iOS only starts
+      // honouring after the first rotation — so the very first turn of the
+      // device did nothing. Pages lay themselves out for landscape via
+      // `AppScaffold`, which insets the body past a side notch.
+      //
       // Draw behind the status bar and the (gesture) navigation bar so the
       // app's own background/bottom nav colour shows through instead of the
       // system's default bar colour.

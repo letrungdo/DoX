@@ -4,7 +4,6 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/num_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
-import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/electric/electric_merged.dart';
@@ -15,7 +14,9 @@ import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/electric_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -99,7 +100,7 @@ class _ElectricScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: l10n.electricityTitle,
         titleSuffix: AppBarSyncIcon<ElectricViewModel>(
@@ -150,63 +151,33 @@ class _ElectricScreenState
 
   Future<void> _confirmRemoveAccount(AppLocalizations l10n) async {
     final name = vm.activeAccount?.displayName ?? "";
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.logout),
-        content: Text(l10n.removeAccountConfirm(name)),
-        actions: [
-          DialogActions(
-            children: [
-              DialogActionButton(
-                text: l10n.cancel,
-                kind: DialogActionKind.cancel,
-                onPressed: () => Navigator.pop(context, false),
-              ),
-              DialogActionButton(
-                text: l10n.logout,
-                onPressed: () => Navigator.pop(context, true),
-              ),
-            ],
-          ),
-        ],
-      ).dialogConstrainedBox(),
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: l10n.logout,
+      message: l10n.removeAccountConfirm(name),
+      confirmText: l10n.logout,
     );
-    if (confirmed == true) await vm.removeActiveAccount();
+    if (confirmed) await vm.removeActiveAccount();
   }
 
   /// Asks before dropping stored credentials; true when they were removed.
   Future<bool> _confirmForgetSavedAccount(ElectricAccount account) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Text(l10n.forgetAccountConfirm(account.displayName)),
-        actions: [
-          DialogActions(
-            children: [
-              DialogActionButton(
-                text: l10n.cancel,
-                kind: DialogActionKind.cancel,
-                onPressed: () => Navigator.pop(context, false),
-              ),
-              DialogActionButton(
-                text: l10n.delete,
-                onPressed: () => Navigator.pop(context, true),
-              ),
-            ],
-          ),
-        ],
-      ).dialogConstrainedBox(),
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: l10n.logout,
+      message: l10n.forgetAccountConfirm(account.displayName),
+      confirmText: l10n.delete,
+      isDestructive: true,
     );
-    if (confirmed != true) return false;
+    if (!confirmed) return false;
     await vm.forgetSavedAccount(account);
     return true;
   }
 
   Future<void> _showAddAccountDialog(AppLocalizations l10n) async {
-    final credentials = await showDialog<({String username, String password})>(
-      context: context,
+    final credentials = await showAppModal<({String username, String password})>(
+      context,
       // The dialog sits above this screen's provider, so the saved accounts are
       // passed in instead of read from the view model.
       builder: (context) => _AddAccountDialog(
@@ -225,12 +196,13 @@ class _ElectricScreenState
       slivers: [
         SliverLayoutBuilder(
           builder: (context, constraints) {
-            final screenWidth = constraints.crossAxisExtent;
-            const maxContentWidth = Dimens.webMaxWidth;
-            double horizontalPadding = 15;
-            if (screenWidth > maxContentWidth) {
-              horizontalPadding = (screenWidth - maxContentWidth) / 2;
-            }
+            // The page padding sits inside the shared content cap, exactly as
+            // `contentConstrainedBox()` puts it on the other pages — so a card
+            // here is the same width as a card anywhere else.
+            final overflow =
+                constraints.crossAxisExtent - Dimens.contentMaxWidth;
+            final horizontalPadding =
+                Dimens.pagePadding + (overflow > 0 ? overflow / 2 : 0);
             return SliverPadding(
               // 16, not 15: a card's shadow reaches ~17px, so a tighter page padding
               // lets the scroll viewport clip the rim of the first and last card.
@@ -1425,16 +1397,15 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+    return AppDialog(
       contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      title: Text(l10n.addAccount),
+      title: l10n.addAccount,
+      scrollable: true,
       // AlertDialog sizes itself to the content's intrinsic width, so without a
-      // width here the dialog stays narrow and insetPadding has no visible
+      // width here the dialog stays narrow and the inset padding has no visible
       // effect. Narrow screens clamp this down to the available width.
       content: SizedBox(
-        width: 440,
+        width: Dimens.dialogMaxWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

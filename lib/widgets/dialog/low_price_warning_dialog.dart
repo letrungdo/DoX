@@ -3,6 +3,7 @@ import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:flutter/material.dart';
 
 /// Anything under this is almost certainly a typo (a missing zero) rather than
@@ -23,8 +24,8 @@ Future<bool> confirmSuspiciousPrice(
   // This waits on the user, so the dialog underneath must not sit there
   // spinning as if it were saving.
   final confirmed = await CuteDialog.pauseLoading(
-    () => showDialog<bool>(
-      context: context,
+    () => showAppModal<bool>(
+      context,
       builder: (context) => CuteDialog(
         icon: icon ?? Assets.images.coinCute,
         title: l10n.lowPriceWarningTitle,

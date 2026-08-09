@@ -5,6 +5,8 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/login_view_model.dart';
+import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
@@ -32,12 +34,17 @@ class _LoginScreenState<V extends LoginViewModel>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(15), //
-          child: _buildBody(),
-        ),
+    return AppScaffold(
+      // A guard redirects here, so this screen is often the only thing on the
+      // stack the user can see. Without a bar there is no back button and no
+      // way out of a feature they decided not to sign in to — so show one
+      // whenever there is somewhere to go back to.
+      appBar: Navigator.of(context).canPop() ? const DoAppBar() : null,
+      top: true,
+      bottom: true,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(15), //
+        child: _buildBody(),
       ),
     );
   }
@@ -132,7 +139,7 @@ class _LoginScreenState<V extends LoginViewModel>
         ),
         SizedBox(height: 50), //
 
-        _buildLoginForms().webConstrainedBox(),
+        _buildLoginForms().contentConstrainedBox(),
       ],
     );
   }

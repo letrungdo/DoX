@@ -15,6 +15,8 @@ import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -135,8 +137,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Duration? _virtualSeekPosition;
   Timer? _virtualSeekTimer;
 
-  bool get _supportsOrientationManager =>
-      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  bool get _supportsOrientationManager => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
   void initState() {
@@ -490,12 +491,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (match != null) {
         final serverIndex = int.tryParse(match.group(1)!);
         if (serverIndex != null) {
-          streamUrl = await movieService.getStreamUrl(
-            widget.movieId,
-            movieUrl: widget.movieUrl,
-            server: serverIndex,
-            cancelToken: _cancelToken,
-          );
+          streamUrl = await movieService.getStreamUrl(widget.movieId, movieUrl: widget.movieUrl, server: serverIndex, cancelToken: _cancelToken);
         }
       }
     }
@@ -728,29 +724,44 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _videoController!.setPlaybackSpeed(_playbackSpeed);
   }
 
-  void _showSettingsBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => MovieSettingsSheet(
+  Future<void> _showSettingsBottomSheet() async {
+    final l10n = AppLocalizations.of(context);
+    final action = await showAppBottomSheet<MovieSettingsAction>(
+      context,
+      padding: EdgeInsets.zero,
+      builder: (_) => MovieSettingsSheet(
         selectedQuality: _selectedQuality,
-        availableQualities: _availableQualities,
         playbackSpeed: _playbackSpeed,
         isRotationLocked: _isRotationLocked,
         supportsOrientationManager: _supportsOrientationManager,
-        onQualityChanged: (q) {
-          _switchQuality(q);
-        },
-        onSpeedChanged: (s) {
-          setState(() => _playbackSpeed = s);
-          _videoController?.setPlaybackSpeed(s);
-        },
-        onRotationLockToggled: () {
-          _toggleRotationLock();
-        },
+        onRotationLockToggled: _toggleRotationLock,
       ),
     );
+    if (!mounted || action == null) return;
+
+    // The follow-up picker is opened from here, not from inside the sheet: by
+    // the time it is needed the sheet's own context is gone.
+    switch (action) {
+      case MovieSettingsAction.quality:
+        final quality = await showAppOptionSheet<String>(
+          context,
+          title: l10n.resolutionQuality,
+          options: ['Auto', ..._availableQualities.map((e) => e.label)],
+          selected: _selectedQuality,
+        );
+        if (quality != null) _switchQuality(quality);
+      case MovieSettingsAction.speed:
+        final speed = await showAppOptionSheet<double>(
+          context,
+          title: l10n.playbackSpeed,
+          options: const [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+          selected: _playbackSpeed,
+          labelBuilder: (v) => v == 1.0 ? '1x' : '${v}x',
+        );
+        if (speed == null || !mounted) return;
+        setState(() => _playbackSpeed = speed);
+        _videoController?.setPlaybackSpeed(speed);
+    }
   }
 
   void _triggerSkipIndicator({required bool isForward}) {
@@ -791,8 +802,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final title = titleParts.title;
     final alternateTitle = titleParts.subtitle;
     final rawOriginalTitle = (_detail?.originalTitle ?? widget.initialMovie?.originalTitle)?.trim();
-    final originalTitle =
-        (rawOriginalTitle == null || rawOriginalTitle.isEmpty || rawOriginalTitle == title || rawOriginalTitle == alternateTitle)
+    final originalTitle = (rawOriginalTitle == null || rawOriginalTitle.isEmpty || rawOriginalTitle == title || rawOriginalTitle == alternateTitle)
         ? null
         : rawOriginalTitle;
     final titleFit = appBarTitleFit(
@@ -821,7 +831,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           ? _buildEmbedded(context, title: title, alternateTitle: alternateTitle, originalTitle: originalTitle, titleFit: titleFit)
           : GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
-              child: Scaffold(
+              child: AppScaffold(
                 appBar: DoAppBar(
                   title: title,
                   titleStyle: titleFit.titleStyle,
@@ -847,17 +857,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (originalTitle != null)
-                            // Landscape keeps the notch on the side: text is
-                            // inset, the video stays full bleed.
-                            SafeArea(
-                              top: false,
-                              bottom: false,
-                              child: _buildOriginalTitleBar(originalTitle, subtitleStripStyle(context, originalTitle)),
-                            ),
+                          if (originalTitle != null) _buildOriginalTitleBar(originalTitle, subtitleStripStyle(context, originalTitle)),
                           // Pinned above the scrollable body so playback stays in view.
-                          SafeArea(top: false, bottom: false, child: _buildVideoPlayerArea(isFullScreen: false)),
-                          Expanded(child: SafeArea(top: false, bottom: false, child: _buildDetailBody())),
+                          _buildVideoPlayerArea(isFullScreen: false),
+                          Expanded(child: _buildDetailBody()),
                         ],
                       ),
               ),
@@ -925,8 +928,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: titleFit.titleStyle, maxLines: titleMaxLines, overflow: TextOverflow.ellipsis),
-                    if (alternateTitle != null)
-                      Text(alternateTitle, style: titleFit.subtitleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (alternateTitle != null) Text(alternateTitle, style: titleFit.subtitleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -1132,11 +1134,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         child: FittedBox(
                           fit: BoxFit.cover,
                           clipBehavior: Clip.hardEdge,
-                          child: SizedBox(
-                            width: controller.value.size.width,
-                            height: controller.value.size.height,
-                            child: VideoPlayer(controller),
-                          ),
+                          child: SizedBox(width: controller.value.size.width, height: controller.value.size.height, child: VideoPlayer(controller)),
                         ),
                       )
                     : Center(
@@ -1253,13 +1251,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                   LayoutBuilder(
                                     builder: (context, constraints) {
                                       const previewWidth = 160.0;
-                                      final maxPreviewLeft = constraints.maxWidth > previewWidth
-                                          ? constraints.maxWidth - previewWidth
-                                          : 0.0;
-                                      final previewLeft = (constraints.maxWidth * _dragFraction - previewWidth / 2).clamp(
-                                        0.0,
-                                        maxPreviewLeft,
-                                      );
+                                      final maxPreviewLeft = constraints.maxWidth > previewWidth ? constraints.maxWidth - previewWidth : 0.0;
+                                      final previewLeft = (constraints.maxWidth * _dragFraction - previewWidth / 2).clamp(0.0, maxPreviewLeft);
 
                                       return Stack(
                                         clipBehavior: Clip.none,
@@ -1351,18 +1344,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                       if (isFullScreen)
                                         IconButton(
                                           tooltip: _isVideoCover ? l10n.zoomToFit : l10n.zoomToFill,
-                                          icon: Icon(
-                                            _isVideoCover ? Icons.zoom_in_map_rounded : Icons.zoom_out_map_rounded,
-                                            color: Colors.white,
-                                          ),
+                                          icon: Icon(_isVideoCover ? Icons.zoom_in_map_rounded : Icons.zoom_out_map_rounded, color: Colors.white),
                                           onPressed: () => _setVideoCover(!_isVideoCover),
                                         ),
                                       // Fullscreen button
                                       IconButton(
-                                        icon: Icon(
-                                          isFullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
-                                          color: Colors.white,
-                                        ),
+                                        icon: Icon(isFullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded, color: Colors.white),
                                         onPressed: _toggleFullScreen,
                                       ),
                                     ],
@@ -1394,11 +1381,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                 targetAnchor: Alignment.topCenter,
                                 followerAnchor: Alignment.bottomCenter,
                                 offset: const Offset(0, -4),
-                                child: PlayerVolumePopup(
-                                  volume: _volume,
-                                  onChanged: _setVolume,
-                                  onChangeStart: () => _controlsTimer?.cancel(),
-                                ),
+                                child: PlayerVolumePopup(volume: _volume, onChanged: _setVolume, onChangeStart: () => _controlsTimer?.cancel()),
                               ),
                             ),
 

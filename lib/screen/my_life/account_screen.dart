@@ -4,6 +4,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/view_model/account_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -28,13 +29,12 @@ class _AccountScreenState<V extends AccountViewModel>
     extends ScreenState<AccountScreen, V> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
+      bottom: true,
       appBar: DoAppBar(title: appData.user?.displayName),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(15), //
-          child: _buildBody(),
-        ),
+      body: Padding(
+        padding: const EdgeInsets.all(15), //
+        child: _buildBody(),
       ),
     );
   }

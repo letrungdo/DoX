@@ -4,7 +4,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/repository/client/api_dialog.dart';
@@ -19,11 +18,11 @@ import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 enum _MovieCollection { browse, watched, favorites }
 
@@ -146,18 +145,12 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
     return (_showFilterButtons ? _filterRowHeight : 0) + (_mainCategories.isNotEmpty ? _categoryRowHeight : 0);
   }
 
-  bool get _supportsDeviceRotation =>
-      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
-
   @override
   void initState() {
     super.initState();
     _serverUrlController = TextEditingController(text: movieService.baseUrl ?? '');
     _overlayController = AnimationController(vsync: this, duration: _overlayAnimationDuration);
     _searchAnimation = AnimationController(vsync: this, duration: _searchAnimationDuration);
-    if (_supportsDeviceRotation) {
-      unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
-    }
     _initData();
     _scrollController.addListener(_onScroll);
   }
@@ -180,9 +173,6 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
   @override
   void dispose() {
     immersiveMode.value = false;
-    if (_supportsDeviceRotation) {
-      unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]));
-    }
     _overlayController.dispose();
     _searchAnimation.dispose();
     _searchController.dispose();
@@ -444,10 +434,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
     if (button == null || overlay == null) return;
 
     final topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(topLeft, topLeft + button.size.bottomRight(Offset.zero)),
-      Offset.zero & overlay.size,
-    );
+    final position = RelativeRect.fromRect(Rect.fromPoints(topLeft, topLeft + button.size.bottomRight(Offset.zero)), Offset.zero & overlay.size);
 
     final scheme = Theme.of(context).colorScheme;
     PopupMenuItem<_MovieCollection> item(_MovieCollection collection, IconData icon, String label) {
@@ -513,19 +500,15 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
     if (_collection != _MovieCollection.watched) return;
 
     final l10n = AppLocalizations.of(context);
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.removeFromHistory),
-        content: Text(l10n.confirmRemoveFromHistory(movie.title)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete)),
-        ],
-      ).dialogConstrainedBox(),
+    final confirm = await showAppConfirmDialog(
+      context,
+      title: l10n.removeFromHistory,
+      message: l10n.confirmRemoveFromHistory(movie.title),
+      confirmText: l10n.delete,
+      isDestructive: true,
     );
 
-    if (confirm == true) {
+    if (confirm) {
       await movieLibraryService.removeFromHistory(movie.id);
       if (mounted) {
         await _loadMovies(refresh: true);
@@ -652,8 +635,8 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
   }
 
   Future<void> _showServerUrlDialog() async {
-    await showDialog<void>(
-      context: context,
+    await showAppModal<void>(
+      context,
       builder: (dialogContext) => MovieServerDialog(
         onServerChanged: () {
           if (mounted) _initData();
@@ -712,7 +695,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
     required String? baseUrl,
     required AppLocalizations l10n,
   }) {
-    return Scaffold(
+    return AppScaffold(
       appBar: DoAppBar(
         title: movieLabel,
         // The title doubles as the server picker, replacing the old link action.
@@ -793,85 +776,81 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
   }
 
   Widget _buildBrowserBody(BuildContext context, {required String emptyMessage, required String? baseUrl, required AppLocalizations l10n}) {
-    return SafeArea(
-      top: false,
-      bottom: false,
-      child: (baseUrl == null || baseUrl.isEmpty)
-          ? _buildServerConfig()
-          : RefreshIndicator(
-              onRefresh: () => _loadMovies(refresh: true, silent: true),
-              // Drops in under the pinned rows instead of on top of them.
-              edgeOffset: _isFilterHeaderPinned(context) ? _filterHeaderHeight : 0,
-              child: CustomScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // No spacer above the header: anything before it would scroll
-                  // away first and make the pinned rows jump up by that much.
-                  ..._buildFilterHeaderSlivers(context, l10n),
-                  // Only once discovery has finished — otherwise it reads as a
-                  // misconfiguration on the very first open.
-                  if (!_isLoading && _searchQuery.isEmpty && _categories.isEmpty && _collection == _MovieCollection.browse)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Center(
-                          child: Text(l10n.noCategoriesConfigured, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ),
-                      ),
-                    ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                  if (_isLoading)
-                    const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
-                  else if (_movies.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
+    return (baseUrl == null || baseUrl.isEmpty)
+        ? _buildServerConfig()
+        : RefreshIndicator(
+            onRefresh: () => _loadMovies(refresh: true, silent: true),
+            // Drops in under the pinned rows instead of on top of them.
+            edgeOffset: _isFilterHeaderPinned(context) ? _filterHeaderHeight : 0,
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // No spacer above the header: anything before it would scroll
+                // away first and make the pinned rows jump up by that much.
+                ..._buildFilterHeaderSlivers(context, l10n),
+                // Only once discovery has finished — otherwise it reads as a
+                // misconfiguration on the very first open.
+                if (!_isLoading && _searchQuery.isEmpty && _categories.isEmpty && _collection == _MovieCollection.browse)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.movie_outlined, size: 64, color: Colors.grey),
-                            const SizedBox(height: 12),
-                            Text(emptyMessage, style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        8,
-                        16,
-                        MediaQuery.paddingOf(context).bottom + 50 + (_playingMovie != null ? miniPlayerHeight + 16 : 0),
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          childAspectRatio: 1.0,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          if (index >= _movies.length) {
-                            return const Card(child: Center(child: CircularProgressIndicator()));
-                          }
-                          final movie = _movies[index];
-                          final libraryState = _libraryStates[movie.id];
-                          return MoviePosterCard(
-                            movie: movie,
-                            isWatched: libraryState?.watchedAt != null,
-                            isFavorite: libraryState?.isFavorite ?? false,
-                            onTap: (cardRect) => _openMovie(movie, cardRect),
-                            onLongPress: () => _handleMovieLongPress(movie),
-                          );
-                        }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),
+                        child: Text(l10n.noCategoriesConfigured, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                       ),
                     ),
-                ],
-              ),
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                if (_isLoading)
+                  const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
+                else if (_movies.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.movie_outlined, size: 64, color: Colors.grey),
+                          const SizedBox(height: 12),
+                          Text(emptyMessage, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      8,
+                      16,
+                      MediaQuery.paddingOf(context).bottom + 50 + (_playingMovie != null ? miniPlayerHeight + 16 : 0),
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 220,
+                        childAspectRatio: 1.0,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index >= _movies.length) {
+                          return const Card(child: Center(child: CircularProgressIndicator()));
+                        }
+                        final movie = _movies[index];
+                        final libraryState = _libraryStates[movie.id];
+                        return MoviePosterCard(
+                          movie: movie,
+                          isWatched: libraryState?.watchedAt != null,
+                          isFavorite: libraryState?.isFavorite ?? false,
+                          onTap: (cardRect) => _openMovie(movie, cardRect),
+                          onLongPress: () => _handleMovieLongPress(movie),
+                        );
+                      }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),
+                    ),
+                  ),
+              ],
             ),
-    );
+          );
   }
 
   /// The search field. A [SizeTransition] driven by [_searchAnimation] is what
@@ -1003,12 +982,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
             _buildFilterButton(icon: Icons.public_rounded, fallbackLabel: l10n.countryLabel, options: _countryCategories, isCountry: true),
           if (_countryCategories.isNotEmpty && _genreCategories.isNotEmpty) const SizedBox(width: 10),
           if (_genreCategories.isNotEmpty)
-            _buildFilterButton(
-              icon: Icons.local_movies_rounded,
-              fallbackLabel: l10n.genreLabel,
-              options: _genreCategories,
-              isCountry: false,
-            ),
+            _buildFilterButton(icon: Icons.local_movies_rounded, fallbackLabel: l10n.genreLabel, options: _genreCategories, isCountry: false),
         ],
       ),
     );
@@ -1042,12 +1016,7 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
 
   /// A neu pill that opens the country / genre sheet and, once something is
   /// picked, shows the active value in place of its own label.
-  Widget _buildFilterButton({
-    required IconData icon,
-    required String fallbackLabel,
-    required List<MovieCategory> options,
-    required bool isCountry,
-  }) {
+  Widget _buildFilterButton({required IconData icon, required String fallbackLabel, required List<MovieCategory> options, required bool isCountry}) {
     final scheme = Theme.of(context).colorScheme;
     final selected = isCountry ? _selectedCountry : _selectedGenre;
     final isSelected = selected != null;

@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -6,6 +7,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
@@ -64,7 +66,8 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
+    return AppScaffold(
+      bottom: true,
       appBar: DoAppBar(
         title: l10n.lunarCalendar,
         actions: [
@@ -75,17 +78,19 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        // Padding inside the cap, never around it: that is what keeps a card
+        // here the same width as a card on any other page.
+        child: Padding(
+          padding: Dimens.screenPadding,
           child: Column(
             children: [
               _buildCalendarCard(context),
               const SizedBox(height: 14),
               _buildDetailCard(context, l10n),
             ],
-          ).webConstrainedBox(),
-        ),
+          ),
+        ).contentConstrainedBox(),
       ),
     );
   }

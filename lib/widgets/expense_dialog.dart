@@ -5,6 +5,7 @@ import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_segmented_button.dart';
@@ -37,8 +38,8 @@ Future<void> showExpenseDialog(
   var expenseDate = expense?.date ?? DateTime.now().dateOnly;
   String? amountError;
 
-  return showDialog<void>(
-    context: context,
+  return showAppModal<void>(
+    context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => CuteDialog(
         icon: _expenseAsset(selectedType),
