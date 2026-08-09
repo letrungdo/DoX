@@ -758,7 +758,10 @@ class _MovieScreenState extends State<MovieScreen> with TickerProviderStateMixin
                       ),
                     ),
                   ),
-                if (_showScrollToTop)
+                // Not shown as a tab: re-tapping the movie tab already rides
+                // the grid back to the top, so the button would be a second
+                // control for something the bottom bar does.
+                if (_showScrollToTop && !isBottomTab)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: NeuIconButton(tooltip: l10n.scrollToTop, icon: Icons.vertical_align_top_rounded, onPressed: _scrollToTop),

@@ -32,6 +32,12 @@ mixin TabReselect<S extends StatefulWidget> on State<S> {
   /// list resting a hair off zero still refreshes.
   static const _atTopTolerance = 1.0;
 
+  /// True while this screen is showing as a bottom tab, false when the same
+  /// page was pushed from the menu instead. Worth checking before offering an
+  /// affordance the tab bar already provides — a scroll-to-top button, say,
+  /// which re-tapping the tab does anyway.
+  bool get isBottomTab => _mainViewModel != null;
+
   /// Route name of the tab this screen backs, e.g. `NewsRoute.name`.
   String get tabRouteName;
 
