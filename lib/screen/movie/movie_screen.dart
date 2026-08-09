@@ -655,6 +655,11 @@ class _MovieScreenState extends State<MovieScreen>
   /// Opens [movie] in the overlay, zooming out of the card at [cardRect]
   /// instead of pushing a route, so playback survives minimising.
   Future<void> _openMovie(Movie movie, Rect cardRect) async {
+    // The detail is an overlay on this page, not a pushed route, so nothing
+    // tears the search field's focus down on the way in and the keyboard would
+    // stay up over the player. The background GestureDetector cannot do it
+    // either — the card swallows the tap before it gets there.
+    _searchFocusNode.unfocus();
     setState(() {
       _playingMovie = movie;
       _entryRect = cardRect;
