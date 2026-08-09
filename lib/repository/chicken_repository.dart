@@ -357,25 +357,19 @@ class ChickenRepository {
             .from(op.target)
             .update(op.payload)
             .eq('id', op.rowId!);
-        if (!op.globalRecord) {
-          await query;
-          return;
-        }
-        final updated = await _scopeToOwnGlobalRecords(
-          query,
-        ).select('id').maybeSingle();
+        final updated =
+            await (op.globalRecord ? _scopeToOwnGlobalRecords(query) : query)
+                .select('id')
+                .maybeSingle();
         if (updated == null) {
           throw StateError('Không tìm thấy bản ghi để cập nhật.');
         }
       case PendingOpAction.delete:
         final query = _client.from(op.target).delete().eq('id', op.rowId!);
-        if (!op.globalRecord) {
-          await query;
-          return;
-        }
-        final deleted = await _scopeToOwnGlobalRecords(
-          query,
-        ).select('id').maybeSingle();
+        final deleted =
+            await (op.globalRecord ? _scopeToOwnGlobalRecords(query) : query)
+                .select('id')
+                .maybeSingle();
         if (deleted == null) throw StateError('Không tìm thấy bản ghi để xóa.');
     }
   }
@@ -447,24 +441,8 @@ class ChickenRepository {
   }
 
   Future<int> deleteAllData() async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) return 0;
-
-    var deletedCount = 0;
-
-    Future<void> deleteRows(String table) async {
-      final deleted = await _client
-          .from(table)
-          .delete()
-          .eq('user_id', userId)
-          .select('id');
-      deletedCount += deleted.length;
-    }
-
-    await deleteRows('cock_sales');
-    await deleteRows('expenses');
-    await deleteRows('chicken_batches');
-    return deletedCount;
+    final deleted = await _client.rpc('delete_all_chicken_data');
+    return (deleted as num).toInt();
   }
 
   /// Replaces all remote data of the current user (used by Google Drive restore).

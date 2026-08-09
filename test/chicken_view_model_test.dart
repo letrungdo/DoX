@@ -41,6 +41,7 @@ class _FakeRepository extends ChickenRepository {
   List<Expense> globalExpenses = [];
   Object? readFailure;
   Object? writeFailure;
+  Completer<void>? readGate;
   List<ChickenDataSource> sources = const [
     ChickenDataSource(
       ownerId: 'user-1',
@@ -59,6 +60,7 @@ class _FakeRepository extends ChickenRepository {
   Duration applyDelay = Duration.zero;
 
   int getDataCalls = 0;
+  int deleteAllCalls = 0;
   final applied = <PendingOp>[];
   bool shareEmailSent = true;
   String? sharedWithEmail;
@@ -103,7 +105,7 @@ class _FakeRepository extends ChickenRepository {
     // Copies, like the real repository: the view model mutates the lists it is
     // handed, and it must not reach back into what the server holds. A section
     // that was not asked for comes back null, not empty.
-    return (
+    final result = (
       batches: wanted.contains(ChickenSection.batches)
           ? batches.where((b) => inWindow(b.incubationDate)).toList()
           : null,
@@ -115,6 +117,8 @@ class _FakeRepository extends ChickenRepository {
           : null,
       years: years,
     );
+    await readGate?.future;
+    return result;
   }
 
   @override
@@ -127,6 +131,18 @@ class _FakeRepository extends ChickenRepository {
   Future<bool> shareWith(String email) async {
     sharedWithEmail = email;
     return shareEmailSent;
+  }
+
+  @override
+  Future<int> deleteAllData() async {
+    deleteAllCalls++;
+    if (writeFailure != null) throw writeFailure!;
+    final deleted =
+        batches.length + globalCockSales.length + globalExpenses.length;
+    batches = [];
+    globalCockSales = [];
+    globalExpenses = [];
+    return deleted;
   }
 
   @override
@@ -681,6 +697,47 @@ void main() {
       vm.dispose();
     });
 
+    test('an older page load cannot hide newly saved global records', () async {
+      final gate = Completer<void>();
+      final sale = _cockSale();
+      final expense = _expense();
+      final repository = _FakeRepository()..readGate = gate;
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      // This captures the empty lists, exactly like the page's initial load.
+      final oldLoad = vm.loadData(
+        sections: {
+          ChickenSection.globalCockSales,
+          ChickenSection.globalExpenses,
+        },
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      await vm.addGlobalCockSale(sale);
+      await vm.addGlobalExpense(expense);
+      repository
+        ..globalCockSales = [sale]
+        ..globalExpenses = [expense]
+        ..readGate = null;
+      gate.complete();
+      await oldLoad;
+
+      expect(vm.globalCockSales.map((item) => item.id), [sale.id]);
+      expect(vm.globalExpenses.map((item) => item.id), [expense.id]);
+
+      // Pull-to-refresh after the save still accepts the current server copy.
+      await vm.loadData(
+        sections: {
+          ChickenSection.globalCockSales,
+          ChickenSection.globalExpenses,
+        },
+      );
+      expect(vm.globalCockSales.map((item) => item.id), [sale.id]);
+      expect(vm.globalExpenses.map((item) => item.id), [expense.id]);
+      vm.dispose();
+    });
+
     test('screens opening together share one fetch', () async {
       final (vm, repository) = await loadedVm();
       repository.applyDelay = const Duration(milliseconds: 20);
@@ -754,6 +811,48 @@ void main() {
       await expectLater(vm.deleteAllData(), throwsA(isA<StateError>()));
       vm.dispose();
     });
+
+    test(
+      'delete all waits for an older load and cannot restore stale data',
+      () async {
+        final gate = Completer<void>();
+        final repository = _FakeRepository()
+          ..batches = [_batch()]
+          ..globalCockSales = [_cockSale()]
+          ..globalExpenses = [_expense()]
+          ..readGate = gate;
+        final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+        vm.initState();
+
+        final oldLoad = vm.loadData();
+        await Future<void>.delayed(Duration.zero);
+        final deletion = vm.deleteAllData();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          repository.deleteAllCalls,
+          0,
+          reason: 'the old read must settle first',
+        );
+        repository.readGate = null;
+        gate.complete();
+        await oldLoad;
+        final deleted = await deletion;
+
+        expect(deleted, 3);
+        expect(repository.deleteAllCalls, 1);
+        expect(
+          repository.getDataCalls,
+          2,
+          reason: 'an empty post-delete read is required',
+        );
+        expect(vm.batches, isEmpty);
+        expect(vm.globalCockSales, isEmpty);
+        expect(vm.globalExpenses, isEmpty);
+        expect(vm.getYearlyStats(), isEmpty);
+        vm.dispose();
+      },
+    );
   });
 
   group('section filtering', () {

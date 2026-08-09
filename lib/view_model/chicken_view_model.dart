@@ -463,6 +463,17 @@ class ChickenViewModel extends CoreViewModel {
   final Map<ChickenSection, DateTime> _syncedAt = {};
   final Set<ChickenSection> _failedSections = {};
 
+  /// Monotonic local-write versions. A server read remembers these before it
+  /// starts and may only replace a section if no local change happened while
+  /// it was in flight. Without this guard, an empty response captured as a
+  /// page opened could arrive after a newly saved sale/expense and hide it
+  /// until the page was opened again.
+  final Map<ChickenSection, int> _sectionRevision = {};
+
+  void _markSectionChanged(ChickenSection section) {
+    _sectionRevision[section] = (_sectionRevision[section] ?? 0) + 1;
+  }
+
   /// Every year the server holds records for, per section. Kept separate from
   /// the loaded data because a year-filtered load only brings back one year and
   /// the year pickers still have to offer the rest.
@@ -696,6 +707,12 @@ class ChickenViewModel extends CoreViewModel {
     // The screens filter on the displayed calendar; the server stores solar
     // dates and knows nothing about the setting.
     final serverYear = _serverYearFor(year);
+    final revisionAtRequest = {
+      for (final section in ChickenSection.values)
+        section: _sectionRevision[section] ?? 0,
+    };
+    bool isCurrent(ChickenSection section) =>
+        (_sectionRevision[section] ?? 0) == revisionAtRequest[section];
     try {
       final data = await _repository.getChickenData(
         sections: sections,
@@ -703,7 +720,7 @@ class ChickenViewModel extends CoreViewModel {
         ownerId: activeOwnerId,
       );
       final batches = data.batches;
-      if (batches != null) {
+      if (batches != null && isCurrent(ChickenSection.batches)) {
         if (_pendingDeletedBatchIds.isNotEmpty) {
           // Once the server no longer returns a deleted batch, stop guarding it.
           final fetchedIds = batches.map((b) => b.id).toSet();
@@ -723,7 +740,8 @@ class ChickenViewModel extends CoreViewModel {
           compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
         );
       }
-      if (data.globalCockSales != null) {
+      if (data.globalCockSales != null &&
+          isCurrent(ChickenSection.globalCockSales)) {
         _globalCockSales = _mergeYearWindow(
           data.globalCockSales!,
           _globalCockSales,
@@ -736,7 +754,8 @@ class ChickenViewModel extends CoreViewModel {
           compare: (a, b) => b.date.compareTo(a.date),
         );
       }
-      if (data.globalExpenses != null) {
+      if (data.globalExpenses != null &&
+          isCurrent(ChickenSection.globalExpenses)) {
         _globalExpenses = _mergeYearWindow(
           data.globalExpenses!,
           _globalExpenses,
@@ -746,10 +765,13 @@ class ChickenViewModel extends CoreViewModel {
         );
         mergeSort(_globalExpenses, compare: (a, b) => b.date.compareTo(a.date));
       }
-      _serverYears.addAll(data.years);
+      for (final entry in data.years.entries) {
+        if (isCurrent(entry.key)) _serverYears[entry.key] = entry.value;
+      }
 
       final now = DateTime.now();
       for (final section in sections) {
+        if (!isCurrent(section)) continue;
         _loadedSections.add(section);
         _loadedYear[section] = year;
         _syncedAt[section] = now;
@@ -899,6 +921,7 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final previous = _batches[index];
     _batches[index] = edit(previous);
+    _markSectionChanged(ChickenSection.batches);
     notifyListenersSafe();
     await _commit(action, ops, rollback: _restoreBatch(previous));
   }
@@ -916,6 +939,7 @@ class ChickenViewModel extends CoreViewModel {
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
     _batches.insert(0, newBatch);
+    _markSectionChanged(ChickenSection.batches);
     _recentChanges.markAdded(newBatch.id);
     // Stable sort so a batch added with the same incubation date as an existing
     // one stays on top (it was just inserted at the front).
@@ -945,6 +969,7 @@ class ChickenViewModel extends CoreViewModel {
         : batch.shiftVaccinationSchedule(incubationDateDelta);
 
     _batches[index] = updatedBatch;
+    _markSectionChanged(ChickenSection.batches);
     _recentChanges.markUpdated(updatedBatch.id);
     notifyListenersSafe();
     await _commit("update chicken batch", [
@@ -959,6 +984,7 @@ class ChickenViewModel extends CoreViewModel {
     final batch = _batches.firstWhereOrNull((e) => e.id == id);
     if (batch == null) return;
     _batches.removeWhere((e) => e.id == id);
+    _markSectionChanged(ChickenSection.batches);
     _recentChanges.forget(id);
     // Guard against an in-flight load re-adding this batch before the server
     // delete has settled. The guard is cleared by a later load once the
@@ -1067,6 +1093,7 @@ class ChickenViewModel extends CoreViewModel {
   Future<void> addGlobalCockSale(CockSale sale) async {
     // Front of the list so a same-date sale shows on top (stable sort keeps it).
     _globalCockSales.insert(0, sale);
+    _markSectionChanged(ChickenSection.globalCockSales);
     _recentChanges.markAdded(sale.id);
     notifyListenersSafe();
     await _commit(
@@ -1081,6 +1108,7 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final previous = _globalCockSales[index];
     _globalCockSales[index] = sale;
+    _markSectionChanged(ChickenSection.globalCockSales);
     _recentChanges.markUpdated(sale.id);
     notifyListenersSafe();
     await _commit(
@@ -1097,6 +1125,7 @@ class ChickenViewModel extends CoreViewModel {
     final index = _globalCockSales.indexWhere((sale) => sale.id == id);
     if (index == -1) return;
     final removed = _globalCockSales.removeAt(index);
+    _markSectionChanged(ChickenSection.globalCockSales);
     _recentChanges.forget(id);
     notifyListenersSafe();
     await _commit(
@@ -1111,6 +1140,7 @@ class ChickenViewModel extends CoreViewModel {
 
   Future<void> addGlobalExpense(Expense expense) async {
     _globalExpenses.insert(0, expense);
+    _markSectionChanged(ChickenSection.globalExpenses);
     _recentChanges.markAdded(expense.id);
     notifyListenersSafe();
     await _commit(
@@ -1125,6 +1155,7 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final previous = _globalExpenses[index];
     _globalExpenses[index] = expense;
+    _markSectionChanged(ChickenSection.globalExpenses);
     _recentChanges.markUpdated(expense.id);
     notifyListenersSafe();
     await _commit(
@@ -1141,6 +1172,7 @@ class ChickenViewModel extends CoreViewModel {
     final index = _globalExpenses.indexWhere((expense) => expense.id == id);
     if (index == -1) return;
     final removed = _globalExpenses.removeAt(index);
+    _markSectionChanged(ChickenSection.globalExpenses);
     _recentChanges.forget(id);
     notifyListenersSafe();
     await _commit(
@@ -1203,9 +1235,16 @@ class ChickenViewModel extends CoreViewModel {
     }
     _requireEverythingSynced('xóa dữ liệu');
 
+    // Do not let a response captured before the delete land afterwards and
+    // repopulate memory/cache with the rows that have just been removed.
+    await _loadTask;
+
     final deletedCount = await _repository.deleteAllData();
     // Nothing is left to badge.
     _recentChanges.clear();
+    _clearLoadedData();
+    await storageService.clearChickenCache();
+    notifyListenersSafe();
     await loadData();
     return deletedCount;
   }
