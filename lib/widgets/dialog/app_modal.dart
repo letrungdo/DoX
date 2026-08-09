@@ -236,9 +236,16 @@ class AppBottomSheet extends StatelessWidget {
     // still runs to the bottom of the screen.
     final bottomInset = viewPadding.bottom;
 
-    final body = Padding(
-      padding: padding.copyWith(bottom: padding.bottom + bottomInset),
-      child: child,
+    // Full width on purpose. The column below centres its children, so a body
+    // that shrink-wraps — a `Wrap` of chips, say — used to sit centred with a
+    // margin of whatever was left over, which made the same sheet look
+    // differently padded depending on how many chips it happened to hold.
+    final body = SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: padding.copyWith(bottom: padding.bottom + bottomInset),
+        child: child,
+      ),
     );
 
     return LayoutBuilder(

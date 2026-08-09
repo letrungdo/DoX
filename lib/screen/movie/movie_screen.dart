@@ -481,6 +481,12 @@ class _MovieScreenState extends State<MovieScreen>
     required List<MovieCategory> options,
     required bool isCountry,
   }) async {
+    // Popping a route hands focus back to whatever held it before the route
+    // was pushed, so closing this sheet would put the caret back in the search
+    // field and bring the keyboard up over a list the user never asked to
+    // search. Dropping focus first leaves nothing to restore.
+    _searchFocusNode.unfocus();
+
     final current = isCountry ? _selectedCountry : _selectedGenre;
     final result = await MovieFilterSheet.show(
       context,
@@ -503,6 +509,10 @@ class _MovieScreenState extends State<MovieScreen>
   }
 
   Future<void> _showCollectionMenu() async {
+    // Same reason as the filter sheet: a popup is a route too, and closing it
+    // would restore the caret to the search field.
+    _searchFocusNode.unfocus();
+
     final l10n = AppLocalizations.of(context);
     final button =
         _collectionMenuKey.currentContext?.findRenderObject() as RenderBox?;
@@ -585,7 +595,8 @@ class _MovieScreenState extends State<MovieScreen>
         _searchQuery = '';
       });
       _searchAnimation.reverse();
-      FocusScope.of(context).unfocus();
+      // The node, not the scope — see the browser's background tap handler.
+      _searchFocusNode.unfocus();
       // Nothing was searched, so the list on screen is already the right one.
       if (hadQuery) _loadMovies(refresh: true);
       return;
@@ -825,7 +836,13 @@ class _MovieScreenState extends State<MovieScreen>
           fit: StackFit.expand,
           children: [
             GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
+              // The field, not the scope. Unfocusing a scope hands focus to
+              // its *parent* and clears the parent's memory, leaving this
+              // screen's scope still pointing at the search field as the child
+              // to restore — so the keyboard came back the next time anything
+              // returned focus here, such as a filter sheet closing.
+              // Unfocusing the node itself is what clears that memory.
+              onTap: _searchFocusNode.unfocus,
               child: _buildBrowser(
                 context,
                 emptyMessage: emptyMessage,
