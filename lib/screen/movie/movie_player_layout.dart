@@ -44,7 +44,13 @@ double inlinePlayerHeight({
 /// Sizes the inline player to [aspectRatio] but never below [minHeight];
 /// when [fill] is set it simply takes all the space its parent offers.
 class PlayerBox extends StatelessWidget {
-  const PlayerBox({super.key, required this.aspectRatio, required this.minHeight, required this.fill, required this.child});
+  const PlayerBox({
+    super.key,
+    required this.aspectRatio,
+    required this.minHeight,
+    required this.fill,
+    required this.child,
+  });
 
   final double aspectRatio;
   final double minHeight;
@@ -56,7 +62,9 @@ class PlayerBox extends StatelessWidget {
     if (fill) return child;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
         final height = inlinePlayerHeight(
           width: width,
           aspectRatio: aspectRatio,
@@ -78,7 +86,11 @@ class TextFit {
 
 /// Styles and toolbar height for the app bar title block.
 class AppBarTitleFit {
-  const AppBarTitleFit({required this.titleStyle, required this.subtitleStyle, required this.height});
+  const AppBarTitleFit({
+    required this.titleStyle,
+    required this.subtitleStyle,
+    required this.height,
+  });
   final TextStyle titleStyle;
 
   /// Style for the alternate name under the title, already shrunk to fit its
@@ -132,10 +144,17 @@ MovieTitleParts splitMovieTitle(String rawTitle) {
   // Anywhere in the title, not just at its end — some servers write
   // `Tên phim (Tên khác) - Phần 2`.
   final bracketPattern = RegExp(r'\(([^()]+)\)');
-  final alternates = bracketPattern.allMatches(title).map((match) => match.group(1)!.trim()).where((value) => value.isNotEmpty).toSet();
+  final alternates = bracketPattern
+      .allMatches(title)
+      .map((match) => match.group(1)!.trim())
+      .where((value) => value.isNotEmpty)
+      .toSet();
   if (alternates.isEmpty) return (title: title, subtitle: null);
 
-  final name = title.replaceAll(bracketPattern, ' ').replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+  final name = title
+      .replaceAll(bracketPattern, ' ')
+      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      .trim();
   // A title that is nothing but brackets keeps what it had.
   if (name.isEmpty) return (title: title, subtitle: null);
 
@@ -143,14 +162,25 @@ MovieTitleParts splitMovieTitle(String rawTitle) {
 }
 
 TextStyle _baseSubtitleStyle(ThemeData theme) =>
-    theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)) ?? const TextStyle(fontSize: 12);
+    theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+    ) ??
+    const TextStyle(fontSize: 12);
 
 /// Fits the title block of the bar, [subtitle] being the alternate name that
 /// sits under the title. Both shrink rather than being cut off, and [height]
 /// covers the pair.
-AppBarTitleFit appBarTitleFit(BuildContext context, String title, {String? subtitle, int subtitleLines = subtitleMaxLines}) {
+AppBarTitleFit appBarTitleFit(
+  BuildContext context,
+  String title, {
+  String? subtitle,
+  int subtitleLines = subtitleMaxLines,
+}) {
   final theme = Theme.of(context);
-  final titleStyle = theme.appBarTheme.titleTextStyle ?? theme.textTheme.titleLarge ?? const TextStyle(fontSize: 20);
+  final titleStyle =
+      theme.appBarTheme.titleTextStyle ??
+      theme.textTheme.titleLarge ??
+      const TextStyle(fontSize: 20);
   final baseSubtitleStyle = _baseSubtitleStyle(theme);
 
   final screenWidth = MediaQuery.sizeOf(context).width;
@@ -191,7 +221,11 @@ AppBarTitleFit appBarTitleFit(BuildContext context, String title, {String? subti
 /// Fitted style for the full-width strip under the bar, which carries the
 /// original name. It reads a step up from the alternate name in the bar, and
 /// shrinks to fit [maxLines] over the whole width.
-TextStyle subtitleStripStyle(BuildContext context, String text, {int maxLines = subtitleMaxLines}) {
+TextStyle subtitleStripStyle(
+  BuildContext context,
+  String text, {
+  int maxLines = subtitleMaxLines,
+}) {
   final theme = Theme.of(context);
   final baseStyle =
       theme.textTheme.bodyMedium?.copyWith(

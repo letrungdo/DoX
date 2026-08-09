@@ -9,7 +9,9 @@ typedef MovieLibraryBatchCallback = void Function(List<MovieLibraryItem> items);
 class MovieLibraryService {
   const MovieLibraryService();
 
-  MovieLibraryScope get _scope => movieService.isPrimaryServer ? MovieLibraryScope.primary : MovieLibraryScope.external;
+  MovieLibraryScope get _scope => movieService.isPrimaryServer
+      ? MovieLibraryScope.primary
+      : MovieLibraryScope.external;
 
   String _toDbId(String movieId) => _scope.toDbId(movieId);
 
@@ -26,12 +28,21 @@ class MovieLibraryService {
         .eq('movie_id', _toDbId(movieId))
         .maybeSingle();
 
-    return (isFavorite: row?['is_favorite'] as bool? ?? false, watchedAt: DateTime.tryParse(row?['watched_at'] as String? ?? ''));
+    return (
+      isFavorite: row?['is_favorite'] as bool? ?? false,
+      watchedAt: DateTime.tryParse(row?['watched_at'] as String? ?? ''),
+    );
   }
 
-  Future<Map<String, MovieLibraryState>> getStates(Iterable<String> movieIds) async {
+  Future<Map<String, MovieLibraryState>> getStates(
+    Iterable<String> movieIds,
+  ) async {
     final user = supabase.auth.currentUser;
-    final ids = movieIds.where((id) => id.isNotEmpty).map(_toDbId).toSet().toList();
+    final ids = movieIds
+        .where((id) => id.isNotEmpty)
+        .map(_toDbId)
+        .toSet()
+        .toList();
     if (user == null || ids.isEmpty) return {};
 
     final rows = await supabase
@@ -50,16 +61,33 @@ class MovieLibraryService {
     };
   }
 
-  Future<List<Movie>> getWatched({String searchQuery = '', MovieLibraryBatchCallback? onBatch}) {
-    return _getMovies(watchedOnly: true, searchQuery: searchQuery, onBatch: onBatch);
+  Future<List<Movie>> getWatched({
+    String searchQuery = '',
+    MovieLibraryBatchCallback? onBatch,
+  }) {
+    return _getMovies(
+      watchedOnly: true,
+      searchQuery: searchQuery,
+      onBatch: onBatch,
+    );
   }
 
-  Future<List<Movie>> getFavorites({String searchQuery = '', MovieLibraryBatchCallback? onBatch}) {
-    return _getMovies(favoritesOnly: true, searchQuery: searchQuery, onBatch: onBatch);
+  Future<List<Movie>> getFavorites({
+    String searchQuery = '',
+    MovieLibraryBatchCallback? onBatch,
+  }) {
+    return _getMovies(
+      favoritesOnly: true,
+      searchQuery: searchQuery,
+      onBatch: onBatch,
+    );
   }
 
   Future<void> markWatched(Movie movie) {
-    return _upsertMovie(movie, extraValues: {'watched_at': DateTime.now().toUtc().toIso8601String()});
+    return _upsertMovie(
+      movie,
+      extraValues: {'watched_at': DateTime.now().toUtc().toIso8601String()},
+    );
   }
 
   Future<void> setFavorite(Movie movie, bool isFavorite) {
@@ -73,9 +101,17 @@ class MovieLibraryService {
     final dbId = _toDbId(movieId);
     final state = await getState(movieId);
     if (state.isFavorite) {
-      await supabase.from('movie_library').update({'watched_at': null}).eq('user_id', user.id).eq('movie_id', dbId);
+      await supabase
+          .from('movie_library')
+          .update({'watched_at': null})
+          .eq('user_id', user.id)
+          .eq('movie_id', dbId);
     } else {
-      await supabase.from('movie_library').delete().eq('user_id', user.id).eq('movie_id', dbId);
+      await supabase
+          .from('movie_library')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('movie_id', dbId);
     }
   }
 
@@ -101,7 +137,10 @@ class MovieLibraryService {
       query = query.eq('is_favorite', true);
     }
 
-    final rows = await query.order(watchedOnly ? 'watched_at' : 'updated_at', ascending: false);
+    final rows = await query.order(
+      watchedOnly ? 'watched_at' : 'updated_at',
+      ascending: false,
+    );
     final normalizedQuery = searchQuery.trim().toLowerCase();
     final items = <MovieLibraryItem>[];
     const hydrationBatchSize = 3;
@@ -112,7 +151,11 @@ class MovieLibraryService {
       final hydrated = await Future.wait(batch.map(_hydrateMovie));
       final visibleItems = hydrated
           .whereType<MovieLibraryItem>()
-          .where((item) => normalizedQuery.isEmpty || item.movie.title.toLowerCase().contains(normalizedQuery))
+          .where(
+            (item) =>
+                normalizedQuery.isEmpty ||
+                item.movie.title.toLowerCase().contains(normalizedQuery),
+          )
           .toList();
       items.addAll(visibleItems);
       if (visibleItems.isNotEmpty) onBatch?.call(visibleItems);
@@ -127,12 +170,27 @@ class MovieLibraryService {
     if (dbId.isEmpty || moviePath.isEmpty) return null;
 
     final movieId = _fromDbId(dbId);
-    final state = (isFavorite: row['is_favorite'] as bool? ?? false, watchedAt: DateTime.tryParse(row['watched_at'] as String? ?? ''));
+    final state = (
+      isFavorite: row['is_favorite'] as bool? ?? false,
+      watchedAt: DateTime.tryParse(row['watched_at'] as String? ?? ''),
+    );
 
     final movieUrl = movieService.resolveServerPath(moviePath);
-    final detail = await movieService.getMovieDetail(movieUrl, movieId, includeStream: false);
+    final detail = await movieService.getMovieDetail(
+      movieUrl,
+      movieId,
+      includeStream: false,
+    );
     if (detail == null) {
-      return (movie: Movie(id: movieId, title: 'Phim #$movieId', url: movieUrl, poster: ''), state: state);
+      return (
+        movie: Movie(
+          id: movieId,
+          title: 'Phim #$movieId',
+          url: movieUrl,
+          poster: '',
+        ),
+        state: state,
+      );
     }
     return (
       movie: Movie(
@@ -150,7 +208,10 @@ class MovieLibraryService {
     );
   }
 
-  Future<void> _upsertMovie(Movie movie, {required Map<String, dynamic> extraValues}) async {
+  Future<void> _upsertMovie(
+    Movie movie, {
+    required Map<String, dynamic> extraValues,
+  }) async {
     final user = supabase.auth.currentUser;
     if (user == null || movie.id.isEmpty || movie.url.isEmpty) return;
 

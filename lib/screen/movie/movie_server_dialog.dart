@@ -109,7 +109,11 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
           // add button out of the dialog.
           Expanded(
             child: Text(
-              isInputMode ? (_isAdding ? l10n.addMovieServerUrl : l10n.editMovieServerUrl) : l10n.movieServerUrl,
+              isInputMode
+                  ? (_isAdding
+                        ? l10n.addMovieServerUrl
+                        : l10n.editMovieServerUrl)
+                  : l10n.movieServerUrl,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -144,7 +148,10 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     hintText: l10n.serverUrlHint,
-                    suffixIcon: IconButton(icon: const Icon(Icons.check_circle_outline_rounded), onPressed: _handleSave),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.check_circle_outline_rounded),
+                      onPressed: _handleSave,
+                    ),
                   ),
                   onSubmitted: (_) => _handleSave(),
                 ),
@@ -152,7 +159,10 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
             Flexible(
               child: _servers.isEmpty
                   ? Center(
-                      child: Padding(padding: const EdgeInsets.all(20.0), child: Text(l10n.noServersFound)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(l10n.noServersFound),
+                      ),
                     )
                   : ListView.separated(
                       shrinkWrap: true,
@@ -166,29 +176,47 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
 
                         return ListTile(
                           enabled: !isInputMode,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
                           horizontalTitleGap: 8,
                           leading: Icon(
-                            isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                            color: isSelected ? theme.colorScheme.primary : null,
+                            isSelected
+                                ? Icons.radio_button_checked_rounded
+                                : Icons.radio_button_off_rounded,
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : null,
                             size: 22,
                           ),
                           title: Text(
                             movieService.getLabelForUrl(url),
                             style: TextStyle(
                               fontSize: 15,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? theme.colorScheme.primary : null,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : null,
                             ),
                           ),
                           subtitle: Text(
                             url,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           trailing: isInputMode
-                              ? (isCurrentlyEditing ? const Icon(Icons.edit_note_rounded, color: Colors.orange) : null)
+                              ? (isCurrentlyEditing
+                                    ? const Icon(
+                                        Icons.edit_note_rounded,
+                                        color: Colors.orange,
+                                      )
+                                    : null)
                               : Row(
                                   mainAxisSize: MainAxisSize.min,
                                   spacing: 8,
@@ -247,8 +275,13 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
             },
           )
         else
-          DialogActionButton(text: l10n.close, kind: DialogActionKind.cancel, onPressed: () => Navigator.pop(context)),
-        if (isInputMode) DialogActionButton(text: l10n.save, onPressed: _handleSave),
+          DialogActionButton(
+            text: l10n.close,
+            kind: DialogActionKind.cancel,
+            onPressed: () => Navigator.pop(context),
+          ),
+        if (isInputMode)
+          DialogActionButton(text: l10n.save, onPressed: _handleSave),
       ],
     );
   }

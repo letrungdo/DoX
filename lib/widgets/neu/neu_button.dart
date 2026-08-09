@@ -55,10 +55,15 @@ class _NeuButtonState extends State<NeuButton> {
     final fill = widget.accent ?? neu.panelOn(background);
     final foreground = !enabled
         ? context.colors.disabled
-        : widget.foreground ?? (widget.accent == null ? scheme.onSurface : scheme.onPrimary);
+        : widget.foreground ??
+              (widget.accent == null ? scheme.onSurface : scheme.onPrimary);
 
     Widget content = DefaultTextStyle.merge(
-      style: TextStyle(color: foreground, fontSize: 15, fontWeight: FontWeight.w700),
+      style: TextStyle(
+        color: foreground,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+      ),
       child: IconTheme.merge(
         data: IconThemeData(color: foreground, size: 20),
         child: Padding(padding: widget.padding, child: widget.child),
@@ -90,7 +95,9 @@ class _NeuButtonState extends State<NeuButton> {
       ),
     );
 
-    return widget.expand ? SizedBox(width: double.infinity, child: button) : button;
+    return widget.expand
+        ? SizedBox(width: double.infinity, child: button)
+        : button;
   }
 }
 
@@ -128,7 +135,11 @@ class NeuIconButton extends StatelessWidget {
       child: SizedBox.square(
         dimension: size,
         child: Center(
-          child: Icon(icon, size: iconSize, color: color ?? context.colors.iconColor),
+          child: Icon(
+            icon,
+            size: iconSize,
+            color: color ?? context.colors.iconColor,
+          ),
         ),
       ),
     );

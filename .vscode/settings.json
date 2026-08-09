@@ -4,11 +4,10 @@
     "source.fixAll": "explicit"
   },
   "editor.formatOnSave": true,
-  "dart.lineLength": 140,
   "[dart]": {
     "editor.formatOnSave": true,
     "editor.rulers": [
-      140
+      80
     ],
     "editor.defaultFormatter": "Dart-Code.dart-code"
   },

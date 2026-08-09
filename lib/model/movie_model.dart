@@ -128,11 +128,22 @@ class MovieEpisode {
   final String? m3u8Url;
   final String? embedUrl;
 
-  const MovieEpisode({required this.name, required this.slug, this.m3u8Url, this.embedUrl});
+  const MovieEpisode({
+    required this.name,
+    required this.slug,
+    this.m3u8Url,
+    this.embedUrl,
+  });
 }
 
 class MovieStreamVariant {
-  const MovieStreamVariant({required this.label, required this.url, required this.width, required this.height, required this.bandwidth});
+  const MovieStreamVariant({
+    required this.label,
+    required this.url,
+    required this.width,
+    required this.height,
+    required this.bandwidth,
+  });
 
   final String label;
   final String url;
@@ -146,10 +157,18 @@ class MovieCategory {
   final String name;
   final String path;
 
-  const MovieCategory({required this.id, required this.name, required this.path});
+  const MovieCategory({
+    required this.id,
+    required this.name,
+    required this.path,
+  });
 
   factory MovieCategory.fromJson(Map<String, dynamic> json) {
-    return MovieCategory(id: json['id'] as String? ?? '', name: json['name'] as String? ?? '', path: json['path'] as String? ?? '');
+    return MovieCategory(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      path: json['path'] as String? ?? '',
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -172,7 +191,9 @@ enum MovieLibraryScope {
 
   static String stripPrefix(String dbId) {
     for (final scope in values) {
-      if (dbId.startsWith(scope.prefix)) return dbId.substring(scope.prefix.length);
+      if (dbId.startsWith(scope.prefix)) {
+        return dbId.substring(scope.prefix.length);
+      }
     }
     return dbId;
   }

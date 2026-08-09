@@ -24,11 +24,7 @@ void main() {
             'actualHatchDate': '2025-07-23',
             'quantity': 10,
             'sales': [
-              {
-                'date': '2025-08-01',
-                'amount': 400000,
-                'quantity': 10,
-              },
+              {'date': '2025-08-01', 'amount': 400000, 'quantity': 10},
             ],
           },
         ],

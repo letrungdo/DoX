@@ -23,7 +23,12 @@ class ThumbnailCue {
 }
 
 class ThumbnailTrack {
-  const ThumbnailTrack({required this.cues, required this.spriteUrl, required this.spriteWidth, required this.spriteHeight});
+  const ThumbnailTrack({
+    required this.cues,
+    required this.spriteUrl,
+    required this.spriteWidth,
+    required this.spriteHeight,
+  });
 
   final List<ThumbnailCue> cues;
   final String spriteUrl;
@@ -54,7 +59,9 @@ class ThumbnailTrack {
       final y = double.parse(match.group(5)!);
       final width = double.parse(match.group(6)!);
       final height = double.parse(match.group(7)!);
-      final imageUrl = Uri.parse(trackUrl).resolve(match.group(3)!.trim()).toString();
+      final imageUrl = Uri.parse(
+        trackUrl,
+      ).resolve(match.group(3)!.trim()).toString();
       cues.add(
         ThumbnailCue(
           start: _parseTimestamp(match.group(1)!),
@@ -71,7 +78,12 @@ class ThumbnailTrack {
     }
 
     if (cues.isEmpty) return null;
-    return ThumbnailTrack(cues: cues, spriteUrl: cues.first.imageUrl, spriteWidth: spriteWidth, spriteHeight: spriteHeight);
+    return ThumbnailTrack(
+      cues: cues,
+      spriteUrl: cues.first.imageUrl,
+      spriteWidth: spriteWidth,
+      spriteHeight: spriteHeight,
+    );
   }
 
   static Duration _parseTimestamp(String timestamp) {
@@ -128,7 +140,9 @@ class ThumbnailPreview extends StatelessWidget {
               filterQuality: FilterQuality.low,
               errorBuilder: (_, _, _) => const ColoredBox(
                 color: Colors.black,
-                child: Center(child: Icon(Icons.image_not_supported, color: Colors.white38)),
+                child: Center(
+                  child: Icon(Icons.image_not_supported, color: Colors.white38),
+                ),
               ),
             ),
           ),

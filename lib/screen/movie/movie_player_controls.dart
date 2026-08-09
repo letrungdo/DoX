@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 
 /// Round translucent button used for play/pause in the middle of the player.
 class PlayerCenterButton extends StatelessWidget {
-  const PlayerCenterButton({super.key, required this.icon, required this.onPressed, this.size = 48});
+  const PlayerCenterButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.size = 48,
+  });
 
   final IconData icon;
   final VoidCallback onPressed;
@@ -35,7 +40,12 @@ class PlayerCenterButton extends StatelessWidget {
 /// Transient feedback that stays visible even while the controls are hidden:
 /// the 2x badge of a long press and the ±10s badges of a double tap.
 class PlayerGestureOverlays extends StatelessWidget {
-  const PlayerGestureOverlays({super.key, required this.isSpeedBoosted, required this.skipForwardValue, required this.skipBackwardValue});
+  const PlayerGestureOverlays({
+    super.key,
+    required this.isSpeedBoosted,
+    required this.skipForwardValue,
+    required this.skipBackwardValue,
+  });
 
   final bool isSpeedBoosted;
   final int skipForwardValue;
@@ -51,25 +61,46 @@ class PlayerGestureOverlays extends StatelessWidget {
               alignment: Alignment.topCenter,
               child: Container(
                 margin: const EdgeInsets.only(top: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.fast_forward_rounded, color: Colors.white, size: 16),
+                    Icon(
+                      Icons.fast_forward_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                     SizedBox(width: 4),
                     Text(
                       '2x',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           if (skipBackwardValue > 0)
-            _SkipBadge(alignment: Alignment.centerLeft, icon: Icons.fast_rewind_rounded, label: '-${skipBackwardValue}s'),
+            _SkipBadge(
+              alignment: Alignment.centerLeft,
+              icon: Icons.fast_rewind_rounded,
+              label: '-${skipBackwardValue}s',
+            ),
           if (skipForwardValue > 0)
-            _SkipBadge(alignment: Alignment.centerRight, icon: Icons.fast_forward_rounded, label: '+${skipForwardValue}s'),
+            _SkipBadge(
+              alignment: Alignment.centerRight,
+              icon: Icons.fast_forward_rounded,
+              label: '+${skipForwardValue}s',
+            ),
         ],
       ),
     );
@@ -77,7 +108,11 @@ class PlayerGestureOverlays extends StatelessWidget {
 }
 
 class _SkipBadge extends StatelessWidget {
-  const _SkipBadge({required this.alignment, required this.icon, required this.label});
+  const _SkipBadge({
+    required this.alignment,
+    required this.icon,
+    required this.label,
+  });
 
   final Alignment alignment;
   final IconData icon;
@@ -88,16 +123,25 @@ class _SkipBadge extends StatelessWidget {
     return Align(
       alignment: alignment,
       child: Container(
-        margin: EdgeInsets.only(left: alignment == Alignment.centerLeft ? 32 : 0, right: alignment == Alignment.centerRight ? 32 : 0),
+        margin: EdgeInsets.only(
+          left: alignment == Alignment.centerLeft ? 32 : 0,
+          right: alignment == Alignment.centerRight ? 32 : 0,
+        ),
         padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.black38,
+          shape: BoxShape.circle,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: Colors.white, size: 32),
             Text(
               label,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -143,7 +187,11 @@ class PlayerVolumeButton extends StatelessWidget {
         onLongPress: onLongPress,
         child: SizedBox.square(
           dimension: size,
-          child: Icon(icon, size: 22, color: muted ? Colors.white70 : Colors.white),
+          child: Icon(
+            icon,
+            size: 22,
+            color: muted ? Colors.white70 : Colors.white,
+          ),
         ),
       ),
     );
@@ -153,7 +201,12 @@ class PlayerVolumeButton extends StatelessWidget {
 /// Vertical volume slider that pops up over the volume button. It carries no
 /// speaker icon of its own — the button it grows out of already is one.
 class PlayerVolumePopup extends StatelessWidget {
-  const PlayerVolumePopup({super.key, required this.volume, required this.onChanged, required this.onChangeStart});
+  const PlayerVolumePopup({
+    super.key,
+    required this.volume,
+    required this.onChanged,
+    required this.onChangeStart,
+  });
 
   final double volume;
   final ValueChanged<double> onChanged;
@@ -183,7 +236,11 @@ class PlayerVolumePopup extends StatelessWidget {
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.visible,
-              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             SizedBox(
               height: 120,
@@ -196,8 +253,12 @@ class PlayerVolumePopup extends StatelessWidget {
                   // which reads as dead space once the slider stands upright.
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 10,
+                    ),
                   ),
                   child: Slider(
                     value: volume,
@@ -218,7 +279,12 @@ class PlayerVolumePopup extends StatelessWidget {
 
 /// Back (full screen only) and settings buttons floating over the video.
 class PlayerTopBar extends StatelessWidget {
-  const PlayerTopBar({super.key, required this.showBack, required this.onBack, required this.onSettings});
+  const PlayerTopBar({
+    super.key,
+    required this.showBack,
+    required this.onBack,
+    required this.onSettings,
+  });
 
   final bool showBack;
   final VoidCallback onBack;
@@ -229,15 +295,30 @@ class PlayerTopBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        if (showBack) _RoundIconButton(icon: Icons.arrow_back_rounded, size: 28, onTap: onBack) else const SizedBox.shrink(),
-        _RoundIconButton(icon: Icons.settings_rounded, size: 24, onTap: onSettings),
+        if (showBack)
+          _RoundIconButton(
+            icon: Icons.arrow_back_rounded,
+            size: 28,
+            onTap: onBack,
+          )
+        else
+          const SizedBox.shrink(),
+        _RoundIconButton(
+          icon: Icons.settings_rounded,
+          size: 24,
+          onTap: onSettings,
+        ),
       ],
     );
   }
 }
 
 class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, required this.size, required this.onTap});
+  const _RoundIconButton({
+    required this.icon,
+    required this.size,
+    required this.onTap,
+  });
 
   final IconData icon;
   final double size;
@@ -252,7 +333,10 @@ class _RoundIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         child: Container(
           padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+          decoration: const BoxDecoration(
+            color: Colors.black26,
+            shape: BoxShape.circle,
+          ),
           child: Icon(icon, color: Colors.white, size: size),
         ),
       ),
@@ -296,13 +380,23 @@ class PlayerScrubPreview extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: ThumbnailPreview(track: track, cue: cue, width: width, referer: referer, fallback: fallback),
+              child: ThumbnailPreview(
+                track: track,
+                cue: cue,
+                width: width,
+                referer: referer,
+                fallback: fallback,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Text(
                 formatDuration(position),
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

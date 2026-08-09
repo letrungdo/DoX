@@ -47,9 +47,15 @@ class MovieSettingsSheet extends StatelessWidget {
         ),
         if (supportsOrientationManager)
           ListTile(
-            leading: Icon(isRotationLocked ? Icons.screen_lock_rotation_rounded : Icons.screen_rotation_rounded),
+            leading: Icon(
+              isRotationLocked
+                  ? Icons.screen_lock_rotation_rounded
+                  : Icons.screen_rotation_rounded,
+            ),
             title: Text(l10n.lockRotation),
-            subtitle: Text(isRotationLocked ? l10n.lockRotation : l10n.unlockRotation),
+            subtitle: Text(
+              isRotationLocked ? l10n.lockRotation : l10n.unlockRotation,
+            ),
             trailing: Switch(
               value: isRotationLocked,
               onChanged: (_) {

@@ -16,10 +16,10 @@ version.
 After the work is done and `fvm flutter analyze` is clean:
 
 1. Run `fvm flutter test`.
-2. Format only the files you touched. The repo is mixed-width: try
-   `fvm dart format <file>` first, and `fvm dart format --line-length 150 <file>`
-   for files that were already written wide (most of `lib/screen/movie/`). Never
-   reformat the whole tree.
+2. Format the files you touched with plain `fvm dart format <file>`. The page
+   width is declared once in `analysis_options.yaml` (`formatter: page_width`),
+   which both the CLI and the VS Code Dart extension read — never pass
+   `--line-length`, and never reformat files you did not otherwise change.
 3. **Suggest a commit message in English** — Conventional Commits style
    (`feat:`, `fix:`, `refactor:`, `chore:`), subject in the imperative, plus a
    short body when the change spans more than one area. Suggest it; do not

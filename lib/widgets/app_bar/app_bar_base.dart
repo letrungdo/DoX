@@ -50,7 +50,8 @@ class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<DoAppBar> createState() => _DoAppBarState();
 
   @override
-  Size get preferredSize => Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
+  Size get preferredSize =>
+      Size.fromHeight(height + (bottom?.preferredSize.height ?? 0));
 }
 
 class _DoAppBarState extends State<DoAppBar> {
@@ -66,7 +67,9 @@ class _DoAppBarState extends State<DoAppBar> {
         title,
         style: widget.titleStyle,
         maxLines: widget.titleMaxLines,
-        overflow: widget.titleMaxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
+        overflow: widget.titleMaxLines == null
+            ? TextOverflow.clip
+            : TextOverflow.ellipsis,
       );
 
       if (titleSuffix != null) {
@@ -89,7 +92,11 @@ class _DoAppBarState extends State<DoAppBar> {
       }
 
       if (widget.onTitleTap != null) {
-        titleWidget = GestureDetector(behavior: HitTestBehavior.opaque, onTap: widget.onTitleTap, child: titleWidget);
+        titleWidget = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTitleTap,
+          child: titleWidget,
+        );
       }
     }
 

@@ -137,7 +137,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Duration? _virtualSeekPosition;
   Timer? _virtualSeekTimer;
 
-  bool get _supportsOrientationManager => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  bool get _supportsOrientationManager =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
   void initState() {
@@ -148,23 +151,25 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _loadLibraryState();
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final shouldAutoEnterFullScreen = kIsWeb || defaultTargetPlatform == TargetPlatform.macOS;
+      final shouldAutoEnterFullScreen =
+          kIsWeb || defaultTargetPlatform == TargetPlatform.macOS;
       if (mounted && shouldAutoEnterFullScreen) _enterFullScreen();
     });
   }
 
   void _initOrientationListener() {
     if (!_supportsOrientationManager) return;
-    _orientationSubscription = FlutterOrientationManager.orientationStream.listen((orientation) {
-      if (!mounted || _isRotationLocked) return;
-      if (orientation == Orientation.landscape && !_isFullScreen) {
-        if (_videoController?.value.isInitialized == true) {
-          _enterFullScreen();
-        }
-      } else if (orientation == Orientation.portrait && _isFullScreen) {
-        _exitFullScreen();
-      }
-    });
+    _orientationSubscription = FlutterOrientationManager.orientationStream
+        .listen((orientation) {
+          if (!mounted || _isRotationLocked) return;
+          if (orientation == Orientation.landscape && !_isFullScreen) {
+            if (_videoController?.value.isInitialized == true) {
+              _enterFullScreen();
+            }
+          } else if (orientation == Orientation.portrait && _isFullScreen) {
+            _exitFullScreen();
+          }
+        });
   }
 
   @override
@@ -176,7 +181,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       }
       widget.controller?._exitFullScreen = _exitFullScreen;
     }
-    if (oldWidget.movieId != widget.movieId || oldWidget.movieUrl != widget.movieUrl) {
+    if (oldWidget.movieId != widget.movieId ||
+        oldWidget.movieUrl != widget.movieUrl) {
       _hasRecordedWatch = false;
       _isFavorite = false;
       unawaited(_detachAndDisposeController());
@@ -220,7 +226,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Future<void> _loadDetail({bool showLoading = true}) async {
     final generation = ++_detailGeneration;
     if (showLoading) setState(() => _isLoading = true);
-    final detail = await movieService.getMovieDetail(widget.movieUrl, widget.movieId, cancelToken: _cancelToken);
+    final detail = await movieService.getMovieDetail(
+      widget.movieUrl,
+      widget.movieId,
+      cancelToken: _cancelToken,
+    );
     if (!mounted || generation != _detailGeneration) return;
     setState(() {
       _detail = detail;
@@ -250,10 +260,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Future<void> _refreshDetail() async {
-    await Future.wait<void>([_loadDetail(showLoading: false), _loadLibraryState()]);
+    await Future.wait<void>([
+      _loadDetail(showLoading: false),
+      _loadLibraryState(),
+    ]);
   }
 
-  Future<void> _loadThumbnailTrack(String trackUrl, int detailGeneration) async {
+  Future<void> _loadThumbnailTrack(
+    String trackUrl,
+    int detailGeneration,
+  ) async {
     final generation = ++_thumbnailGeneration;
     try {
       final response = await Dio().get<String>(
@@ -269,7 +285,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ),
       );
       final track = ThumbnailTrack.parse(trackUrl, response.data ?? '');
-      if (!mounted || generation != _thumbnailGeneration || detailGeneration != _detailGeneration || track == null) {
+      if (!mounted ||
+          generation != _thumbnailGeneration ||
+          detailGeneration != _detailGeneration ||
+          track == null) {
         return;
       }
       setState(() {
@@ -278,9 +297,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           _hoverThumbnailCue = track.cueAt(_dragPosition);
         }
       });
-      unawaited(precacheImage(NetworkImage(track.spriteUrl, headers: {'Referer': '${movieService.baseUrl}/'}), context).catchError((_) {}));
+      unawaited(
+        precacheImage(
+          NetworkImage(
+            track.spriteUrl,
+            headers: {'Referer': '${movieService.baseUrl}/'},
+          ),
+          context,
+        ).catchError((_) {}),
+      );
     } catch (error, stackTrace) {
-      logger.e('MovieDetailScreen: thumbnail track unavailable', error: error, stackTrace: stackTrace);
+      logger.e(
+        'MovieDetailScreen: thumbnail track unavailable',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -293,7 +324,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _isLoadingStream = true;
     });
     final variants = await movieService.getStreamVariants(masterUrl);
-    if (!mounted || generation != _qualityGeneration || masterUrl != _masterStreamUrl) {
+    if (!mounted ||
+        generation != _qualityGeneration ||
+        masterUrl != _masterStreamUrl) {
       return;
     }
     final selectedQuality = variants.isEmpty ? 'Auto' : variants.first.label;
@@ -318,10 +351,22 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Movie get _libraryMovie {
     final detail = _detail;
     final initialMovie = widget.initialMovie;
-    final title = detail?.title.isNotEmpty == true ? detail!.title : initialMovie?.title ?? '';
-    final poster = detail?.poster.isNotEmpty == true ? detail!.poster : initialMovie?.poster ?? '';
-    final description = detail?.description.isNotEmpty == true ? detail!.description : initialMovie?.description;
-    return Movie(id: widget.movieId, title: title, url: widget.movieUrl, poster: poster, description: description);
+    final title = detail?.title.isNotEmpty == true
+        ? detail!.title
+        : initialMovie?.title ?? '';
+    final poster = detail?.poster.isNotEmpty == true
+        ? detail!.poster
+        : initialMovie?.poster ?? '';
+    final description = detail?.description.isNotEmpty == true
+        ? detail!.description
+        : initialMovie?.description;
+    return Movie(
+      id: widget.movieId,
+      title: title,
+      url: widget.movieUrl,
+      poster: poster,
+      description: description,
+    );
   }
 
   Future<void> _loadLibraryState() async {
@@ -333,7 +378,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         _isFavorite = state.isFavorite;
       });
     } catch (error, stackTrace) {
-      logger.e('MovieDetailScreen: load library state failed', error: error, stackTrace: stackTrace);
+      logger.e(
+        'MovieDetailScreen: load library state failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -344,7 +393,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       await movieLibraryService.markWatched(_libraryMovie);
     } catch (error, stackTrace) {
       _hasRecordedWatch = false;
-      logger.e('MovieDetailScreen: mark watched failed', error: error, stackTrace: stackTrace);
+      logger.e(
+        'MovieDetailScreen: mark watched failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -358,9 +411,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (!mounted) return;
       setState(() => _isFavorite = nextValue);
     } catch (error, stackTrace) {
-      logger.e('MovieDetailScreen: update favorite failed', error: error, stackTrace: stackTrace);
+      logger.e(
+        'MovieDetailScreen: update favorite failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.updateFavoriteFailed)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.updateFavoriteFailed)));
       }
     } finally {
       if (mounted) setState(() => _isUpdatingFavorite = false);
@@ -387,7 +446,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
     if (!mounted || generation != _controllerGeneration) return;
 
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url), httpHeaders: {'Referer': '${movieService.baseUrl}/'});
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      httpHeaders: {'Referer': '${movieService.baseUrl}/'},
+    );
 
     try {
       await controller.initialize();
@@ -404,7 +466,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       }
 
       void videoValueListener() {
-        if (!mounted || generation != _controllerGeneration || !identical(_videoController, controller)) {
+        if (!mounted ||
+            generation != _controllerGeneration ||
+            !identical(_videoController, controller)) {
           return;
         }
         final isPlaying = controller.value.isPlaying;
@@ -429,7 +493,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       setState(() {
         _isLoadingStream = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
     }
   }
 
@@ -491,7 +557,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (match != null) {
         final serverIndex = int.tryParse(match.group(1)!);
         if (serverIndex != null) {
-          streamUrl = await movieService.getStreamUrl(widget.movieId, movieUrl: widget.movieUrl, server: serverIndex, cancelToken: _cancelToken);
+          streamUrl = await movieService.getStreamUrl(
+            widget.movieId,
+            movieUrl: widget.movieUrl,
+            server: serverIndex,
+            cancelToken: _cancelToken,
+          );
         }
       }
     }
@@ -505,7 +576,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (mounted) {
         setState(() => _isLoadingStream = false);
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
       }
     }
   }
@@ -629,7 +702,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _startControlsTimer();
   }
 
-  void _updateDragPosition(VideoPlayerController controller, double localX, double width) {
+  void _updateDragPosition(
+    VideoPlayerController controller,
+    double localX,
+    double width,
+  ) {
     final fraction = (localX / width).clamp(0.0, 1.0);
     final target = controller.value.duration * fraction;
     setState(() {
@@ -640,7 +717,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     unawaited(controller.seekTo(target));
   }
 
-  void _updateHoverPreview(double localX, double width, {bool showPreview = true}) {
+  void _updateHoverPreview(
+    double localX,
+    double width, {
+    bool showPreview = true,
+  }) {
     if (width <= 0) return;
     final fraction = (localX / width).clamp(0.0, 1.0);
     final controller = _videoController;
@@ -788,21 +869,32 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       width: double.infinity,
       color: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-      child: Text(originalTitle, maxLines: subtitleMaxLines, overflow: TextOverflow.ellipsis, style: style),
+      child: Text(
+        originalTitle,
+        maxLines: subtitleMaxLines,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final rawTitle = _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
+    final rawTitle =
+        _detail?.title ?? widget.initialMovie?.title ?? movieService.getLabel();
     // The bracketed alternate name rides in the bar under the title; the
     // original name gets its own strip right below the bar.
     final titleParts = splitMovieTitle(rawTitle);
     final title = titleParts.title;
     final alternateTitle = titleParts.subtitle;
-    final rawOriginalTitle = (_detail?.originalTitle ?? widget.initialMovie?.originalTitle)?.trim();
-    final originalTitle = (rawOriginalTitle == null || rawOriginalTitle.isEmpty || rawOriginalTitle == title || rawOriginalTitle == alternateTitle)
+    final rawOriginalTitle =
+        (_detail?.originalTitle ?? widget.initialMovie?.originalTitle)?.trim();
+    final originalTitle =
+        (rawOriginalTitle == null ||
+            rawOriginalTitle.isEmpty ||
+            rawOriginalTitle == title ||
+            rawOriginalTitle == alternateTitle)
         ? null
         : rawOriginalTitle;
     final titleFit = appBarTitleFit(
@@ -825,10 +917,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       child: _isFullScreen
           ? Scaffold(
               backgroundColor: Colors.black,
-              body: SizedBox.expand(child: _buildVideoPlayerArea(isFullScreen: true)),
+              body: SizedBox.expand(
+                child: _buildVideoPlayerArea(isFullScreen: true),
+              ),
             )
           : widget.embedded
-          ? _buildEmbedded(context, title: title, alternateTitle: alternateTitle, originalTitle: originalTitle, titleFit: titleFit)
+          ? _buildEmbedded(
+              context,
+              title: title,
+              alternateTitle: alternateTitle,
+              originalTitle: originalTitle,
+              titleFit: titleFit,
+            )
           : GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               child: AppScaffold(
@@ -837,7 +937,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   titleStyle: titleFit.titleStyle,
                   subtitle: alternateTitle == null
                       ? null
-                      : Text(alternateTitle, style: titleFit.subtitleStyle, maxLines: subtitleMaxLines, overflow: TextOverflow.ellipsis),
+                      : Text(
+                          alternateTitle,
+                          style: titleFit.subtitleStyle,
+                          maxLines: subtitleMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                   titleMaxLines: titleMaxLines,
                   height: titleFit.height,
                   actions: [
@@ -845,9 +950,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       size: appBarActionSize,
                       iconSize: 18,
                       depth: appBarActionDepth,
-                      tooltip: _isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
+                      tooltip: _isFavorite
+                          ? l10n.removeFromFavorites
+                          : l10n.addToFavorites,
                       onPressed: _isUpdatingFavorite ? null : _toggleFavorite,
-                      icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      icon: _isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
                       color: _isFavorite ? Colors.pinkAccent : null,
                     ),
                   ],
@@ -857,7 +966,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (originalTitle != null) _buildOriginalTitleBar(originalTitle, subtitleStripStyle(context, originalTitle)),
+                          if (originalTitle != null)
+                            _buildOriginalTitleBar(
+                              originalTitle,
+                              subtitleStripStyle(context, originalTitle),
+                            ),
                           // Pinned above the scrollable body so playback stays in view.
                           _buildVideoPlayerArea(isFullScreen: false),
                           Expanded(child: _buildDetailBody()),
@@ -880,7 +993,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         if (widget.embedded) {
           widget.onRelatedMovieTap?.call(related);
         } else {
-          context.replaceRoute(MovieDetailRoute(movieUrl: related.url, movieId: related.id, initialMovie: related));
+          context.replaceRoute(
+            MovieDetailRoute(
+              movieUrl: related.url,
+              movieId: related.id,
+              initialMovie: related,
+            ),
+          );
         }
       },
     );
@@ -901,15 +1020,23 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final t = widget.minimizeProgress.clamp(0.0, 1.0);
     final mediaQuery = MediaQuery.of(context);
     final controller = _videoController;
-    final aspectRatio = (controller?.value.isInitialized ?? false) ? controller!.value.aspectRatio : 16 / 9;
+    final aspectRatio = (controller?.value.isInitialized ?? false)
+        ? controller!.value.aspectRatio
+        : 16 / 9;
     final screenWidth = mediaQuery.size.width;
     final playerWidth = miniPlayerWidth + (screenWidth - miniPlayerWidth) * t;
     // Landscape puts the notch and the rounded corners on the sides, where the
     // header controls and the body text would otherwise run underneath them.
     // The video itself stays full bleed.
-    final sideInsets = EdgeInsets.only(left: mediaQuery.padding.left, right: mediaQuery.padding.right);
+    final sideInsets = EdgeInsets.only(
+      left: mediaQuery.padding.left,
+      right: mediaQuery.padding.right,
+    );
     // Fixed so the player can be clamped against the space the header leaves.
-    final headerHeight = mediaQuery.padding.top + titleFit.height + (originalTitle != null ? embeddedSubtitleHeight : 0);
+    final headerHeight =
+        mediaQuery.padding.top +
+        titleFit.height +
+        (originalTitle != null ? embeddedSubtitleHeight : 0);
 
     final header = Column(
       mainAxisSize: MainAxisSize.min,
@@ -920,15 +1047,30 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           height: titleFit.height,
           child: Row(
             children: [
-              IconButton(tooltip: l10n.minimize, icon: const Icon(Icons.keyboard_arrow_down_rounded), onPressed: widget.onMinimize),
+              IconButton(
+                tooltip: l10n.minimize,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                onPressed: widget.onMinimize,
+              ),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: titleFit.titleStyle, maxLines: titleMaxLines, overflow: TextOverflow.ellipsis),
-                    if (alternateTitle != null) Text(alternateTitle, style: titleFit.subtitleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      title,
+                      style: titleFit.titleStyle,
+                      maxLines: titleMaxLines,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (alternateTitle != null)
+                      Text(
+                        alternateTitle,
+                        style: titleFit.subtitleStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                   ],
                 ),
               ),
@@ -937,12 +1079,20 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 size: appBarActionSize,
                 iconSize: 18,
                 depth: appBarActionDepth,
-                tooltip: _isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
+                tooltip: _isFavorite
+                    ? l10n.removeFromFavorites
+                    : l10n.addToFavorites,
                 onPressed: _isUpdatingFavorite ? null : _toggleFavorite,
-                icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                icon: _isFavorite
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
                 color: _isFavorite ? Colors.pinkAccent : null,
               ),
-              IconButton(tooltip: l10n.close, icon: const Icon(Icons.close_rounded), onPressed: widget.onClose),
+              IconButton(
+                tooltip: l10n.close,
+                icon: const Icon(Icons.close_rounded),
+                onPressed: widget.onClose,
+              ),
             ],
           ),
         ),
@@ -980,7 +1130,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           math.max(miniPlayerHeight, constraints.maxHeight - headerHeight * t),
         );
         // The box is still card-sized while the opening zoom runs.
-        final boxedPlayerWidth = math.min(playerWidth, constraints.maxWidth - activeSideInsets.horizontal);
+        final boxedPlayerWidth = math.min(
+          playerWidth,
+          constraints.maxWidth - activeSideInsets.horizontal,
+        );
         return Material(
           color: theme.colorScheme.surface,
           child: Column(
@@ -1022,12 +1175,22 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           onVerticalDragStart: widget.onPlayerDragStart,
                           onVerticalDragUpdate: widget.onPlayerDragUpdate,
                           onVerticalDragEnd: widget.onPlayerDragEnd,
-                          child: _buildVideoPlayerArea(isFullScreen: false, fillParent: true, compact: t < 0.6),
+                          child: _buildVideoPlayerArea(
+                            isFullScreen: false,
+                            fillParent: true,
+                            compact: t < 0.6,
+                          ),
                         ),
                       ),
                       if (t < 1)
                         Expanded(
-                          child: Opacity(opacity: 1 - t, child: _buildMiniChrome(title, alternateTitle ?? originalTitle)),
+                          child: Opacity(
+                            opacity: 1 - t,
+                            child: _buildMiniChrome(
+                              title,
+                              alternateTitle ?? originalTitle,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -1041,7 +1204,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       ignoring: t < 0.99,
                       child: Padding(
                         padding: sideInsets,
-                        child: _isLoading ? const Center(child: CircularProgressIndicator()) : _buildDetailBody(),
+                        child: _isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _buildDetailBody(),
                       ),
                     ),
                   ),
@@ -1072,40 +1237,72 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 if (originalTitle != null)
                   Text(
                     originalTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
+                    ),
                   ),
               ],
             ),
           ),
-          IconButton(icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded), onPressed: _togglePlayback),
-          IconButton(tooltip: l10n.close, icon: const Icon(Icons.close_rounded), onPressed: widget.onClose),
+          IconButton(
+            icon: Icon(
+              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            ),
+            onPressed: _togglePlayback,
+          ),
+          IconButton(
+            tooltip: l10n.close,
+            icon: const Icon(Icons.close_rounded),
+            onPressed: widget.onClose,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildVideoPlayerArea({required bool isFullScreen, bool fillParent = false, bool compact = false}) {
+  Widget _buildVideoPlayerArea({
+    required bool isFullScreen,
+    bool fillParent = false,
+    bool compact = false,
+  }) {
     final controller = _videoController;
     final l10n = AppLocalizations.of(context);
 
-    final aspectRatio = (controller != null && controller.value.isInitialized) ? controller.value.aspectRatio : 16 / 9;
+    final aspectRatio = (controller != null && controller.value.isInitialized)
+        ? controller.value.aspectRatio
+        : 16 / 9;
 
     if (compact) {
       return Container(
         color: Colors.black,
         child: (controller != null && controller.value.isInitialized)
             ? Center(
-                child: AspectRatio(aspectRatio: aspectRatio, child: VideoPlayer(controller)),
+                child: AspectRatio(
+                  aspectRatio: aspectRatio,
+                  child: VideoPlayer(controller),
+                ),
               )
             : const Center(
-                child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pinkAccent)),
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.pinkAccent,
+                  ),
+                ),
               ),
       );
     }
@@ -1134,22 +1331,35 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         child: FittedBox(
                           fit: BoxFit.cover,
                           clipBehavior: Clip.hardEdge,
-                          child: SizedBox(width: controller.value.size.width, height: controller.value.size.height, child: VideoPlayer(controller)),
+                          child: SizedBox(
+                            width: controller.value.size.width,
+                            height: controller.value.size.height,
+                            child: VideoPlayer(controller),
+                          ),
                         ),
                       )
                     : Center(
-                        child: AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller)),
+                        child: AspectRatio(
+                          aspectRatio: controller.value.aspectRatio,
+                          child: VideoPlayer(controller),
+                        ),
                       )
               // `_isLoading` counts too: the detail request runs before the
               // stream one, and without it the retry button flashes up first.
               else if (_isLoadingStream || _isLoading)
-                const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
+                const Center(
+                  child: CircularProgressIndicator(color: Colors.pinkAccent),
+                )
               else
                 Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.play_circle_outline_rounded, size: 56, color: Colors.white54),
+                      const Icon(
+                        Icons.play_circle_outline_rounded,
+                        size: 56,
+                        color: Colors.white54,
+                      ),
                       const SizedBox(height: 12),
                       NeuButton(
                         onPressed: () {
@@ -1234,13 +1444,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             alignment: Alignment.bottomCenter,
                             child: Container(
                               padding: EdgeInsets.only(
-                                bottom: 4 + (isFullScreen ? MediaQuery.paddingOf(context).bottom : 0),
-                                left: isFullScreen ? MediaQuery.paddingOf(context).left : 0,
-                                right: isFullScreen ? MediaQuery.paddingOf(context).right : 0,
+                                bottom:
+                                    4 +
+                                    (isFullScreen
+                                        ? MediaQuery.paddingOf(context).bottom
+                                        : 0),
+                                left: isFullScreen
+                                    ? MediaQuery.paddingOf(context).left
+                                    : 0,
+                                right: isFullScreen
+                                    ? MediaQuery.paddingOf(context).right
+                                    : 0,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.7),
+                                  ],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
@@ -1251,54 +1472,98 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                   LayoutBuilder(
                                     builder: (context, constraints) {
                                       const previewWidth = 160.0;
-                                      final maxPreviewLeft = constraints.maxWidth > previewWidth ? constraints.maxWidth - previewWidth : 0.0;
-                                      final previewLeft = (constraints.maxWidth * _dragFraction - previewWidth / 2).clamp(0.0, maxPreviewLeft);
+                                      final maxPreviewLeft =
+                                          constraints.maxWidth > previewWidth
+                                          ? constraints.maxWidth - previewWidth
+                                          : 0.0;
+                                      final previewLeft =
+                                          (constraints.maxWidth *
+                                                      _dragFraction -
+                                                  previewWidth / 2)
+                                              .clamp(0.0, maxPreviewLeft);
 
                                       return Stack(
                                         clipBehavior: Clip.none,
                                         children: [
                                           MouseRegion(
                                             cursor: SystemMouseCursors.click,
-                                            onEnter: (event) => _updateHoverPreview(event.localPosition.dx, constraints.maxWidth),
-                                            onHover: (event) => _updateHoverPreview(event.localPosition.dx, constraints.maxWidth),
+                                            onEnter: (event) =>
+                                                _updateHoverPreview(
+                                                  event.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                ),
+                                            onHover: (event) =>
+                                                _updateHoverPreview(
+                                                  event.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                ),
                                             onExit: (_) {
                                               if (_isTimelineHovering) {
-                                                setState(() => _isTimelineHovering = false);
+                                                setState(
+                                                  () => _isTimelineHovering =
+                                                      false,
+                                                );
                                               }
                                               _startControlsTimer();
                                             },
                                             child: GestureDetector(
                                               behavior: HitTestBehavior.opaque,
                                               onHorizontalDragStart: (details) {
-                                                _resumeAfterDrag = controller.value.isPlaying;
+                                                _resumeAfterDrag =
+                                                    controller.value.isPlaying;
                                                 unawaited(controller.pause());
                                                 _controlsTimer?.cancel();
-                                                setState(() => _isDragging = true);
-                                                _updateDragPosition(controller, details.localPosition.dx, constraints.maxWidth);
+                                                setState(
+                                                  () => _isDragging = true,
+                                                );
+                                                _updateDragPosition(
+                                                  controller,
+                                                  details.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                );
                                               },
-                                              onHorizontalDragUpdate: (details) {
-                                                _updateDragPosition(controller, details.localPosition.dx, constraints.maxWidth);
-                                              },
-                                              onHorizontalDragEnd: (_) => _finishDragging(controller),
-                                              onHorizontalDragCancel: () => _finishDragging(controller),
+                                              onHorizontalDragUpdate:
+                                                  (details) {
+                                                    _updateDragPosition(
+                                                      controller,
+                                                      details.localPosition.dx,
+                                                      constraints.maxWidth,
+                                                    );
+                                                  },
+                                              onHorizontalDragEnd: (_) =>
+                                                  _finishDragging(controller),
+                                              onHorizontalDragCancel: () =>
+                                                  _finishDragging(controller),
                                               onTapDown: (details) {
-                                                _updateDragPosition(controller, details.localPosition.dx, constraints.maxWidth);
+                                                _updateDragPosition(
+                                                  controller,
+                                                  details.localPosition.dx,
+                                                  constraints.maxWidth,
+                                                );
                                               },
                                               child: Padding(
-                                                padding: const EdgeInsets.only(top: 14, bottom: 2),
+                                                padding: const EdgeInsets.only(
+                                                  top: 14,
+                                                  bottom: 2,
+                                                ),
                                                 child: VideoProgressIndicator(
                                                   controller,
                                                   allowScrubbing: false,
-                                                  colors: const VideoProgressColors(
-                                                    playedColor: Colors.pinkAccent,
-                                                    bufferedColor: Colors.white30,
-                                                    backgroundColor: Colors.white12,
-                                                  ),
+                                                  colors:
+                                                      const VideoProgressColors(
+                                                        playedColor:
+                                                            Colors.pinkAccent,
+                                                        bufferedColor:
+                                                            Colors.white30,
+                                                        backgroundColor:
+                                                            Colors.white12,
+                                                      ),
                                                 ),
                                               ),
                                             ),
                                           ),
-                                          if (_isDragging || _isTimelineHovering)
+                                          if (_isDragging ||
+                                              _isTimelineHovering)
                                             Positioned(
                                               left: previewLeft,
                                               bottom: 42,
@@ -1306,8 +1571,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                                 track: _thumbnailTrack,
                                                 cue: _hoverThumbnailCue,
                                                 width: previewWidth,
-                                                referer: '${movieService.baseUrl}/',
-                                                fallback: VideoPlayer(controller),
+                                                referer:
+                                                    '${movieService.baseUrl}/',
+                                                fallback: VideoPlayer(
+                                                  controller,
+                                                ),
                                                 position: _dragPosition,
                                               ),
                                             ),
@@ -1320,13 +1588,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                       const SizedBox(width: 12),
                                       ValueListenableBuilder(
                                         valueListenable: controller,
-                                        builder: (context, VideoPlayerValue value, child) {
-                                          final currentPos = _isDragging ? _dragPosition : (_virtualSeekPosition ?? value.position);
-                                          return Text(
-                                            '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
-                                            style: const TextStyle(color: Colors.white, fontSize: 11),
-                                          );
-                                        },
+                                        builder:
+                                            (
+                                              context,
+                                              VideoPlayerValue value,
+                                              child,
+                                            ) {
+                                              final currentPos = _isDragging
+                                                  ? _dragPosition
+                                                  : (_virtualSeekPosition ??
+                                                        value.position);
+                                              return Text(
+                                                '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                ),
+                                              );
+                                            },
                                       ),
                                       const Spacer(),
                                       CompositedTransformTarget(
@@ -1334,7 +1613,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                         child: PlayerVolumeButton(
                                           icon: _volumeIcon,
                                           muted: _volume == 0,
-                                          tooltip: _volume == 0 ? l10n.unmute : l10n.volume,
+                                          tooltip: _volume == 0
+                                              ? l10n.unmute
+                                              : l10n.volume,
                                           onTap: _toggleVolumeControl,
                                           onLongPress: _toggleMute,
                                         ),
@@ -1343,13 +1624,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                       // inline there is nothing to crop to.
                                       if (isFullScreen)
                                         IconButton(
-                                          tooltip: _isVideoCover ? l10n.zoomToFit : l10n.zoomToFill,
-                                          icon: Icon(_isVideoCover ? Icons.zoom_in_map_rounded : Icons.zoom_out_map_rounded, color: Colors.white),
-                                          onPressed: () => _setVideoCover(!_isVideoCover),
+                                          tooltip: _isVideoCover
+                                              ? l10n.zoomToFit
+                                              : l10n.zoomToFill,
+                                          icon: Icon(
+                                            _isVideoCover
+                                                ? Icons.zoom_in_map_rounded
+                                                : Icons.zoom_out_map_rounded,
+                                            color: Colors.white,
+                                          ),
+                                          onPressed: () =>
+                                              _setVideoCover(!_isVideoCover),
                                         ),
                                       // Fullscreen button
                                       IconButton(
-                                        icon: Icon(isFullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded, color: Colors.white),
+                                        icon: Icon(
+                                          isFullScreen
+                                              ? Icons.fullscreen_exit_rounded
+                                              : Icons.fullscreen_rounded,
+                                          color: Colors.white,
+                                        ),
                                         onPressed: _toggleFullScreen,
                                       ),
                                     ],
@@ -1363,7 +1657,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           if (!_isDragging)
                             Center(
                               child: PlayerCenterButton(
-                                icon: _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                icon: _isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
                                 size: 64,
                                 onPressed: _togglePlayback,
                               ),
@@ -1381,16 +1677,36 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                 targetAnchor: Alignment.topCenter,
                                 followerAnchor: Alignment.bottomCenter,
                                 offset: const Offset(0, -4),
-                                child: PlayerVolumePopup(volume: _volume, onChanged: _setVolume, onChangeStart: () => _controlsTimer?.cancel()),
+                                child: PlayerVolumePopup(
+                                  volume: _volume,
+                                  onChanged: _setVolume,
+                                  onChangeStart: () => _controlsTimer?.cancel(),
+                                ),
                               ),
                             ),
 
                           // Top bar with back icon and settings
                           Positioned(
-                            top: 12 + (isFullScreen ? MediaQuery.paddingOf(context).top : 0),
-                            left: 12 + (isFullScreen ? MediaQuery.paddingOf(context).left : 0),
-                            right: 12 + (isFullScreen ? MediaQuery.paddingOf(context).right : 0),
-                            child: PlayerTopBar(showBack: isFullScreen, onBack: _toggleFullScreen, onSettings: _showSettingsBottomSheet),
+                            top:
+                                12 +
+                                (isFullScreen
+                                    ? MediaQuery.paddingOf(context).top
+                                    : 0),
+                            left:
+                                12 +
+                                (isFullScreen
+                                    ? MediaQuery.paddingOf(context).left
+                                    : 0),
+                            right:
+                                12 +
+                                (isFullScreen
+                                    ? MediaQuery.paddingOf(context).right
+                                    : 0),
+                            child: PlayerTopBar(
+                              showBack: isFullScreen,
+                              onBack: _toggleFullScreen,
+                              onSettings: _showSettingsBottomSheet,
+                            ),
                           ),
                         ],
                       ),

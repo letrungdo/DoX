@@ -52,11 +52,7 @@ class NeuChip extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Center(
-        widthFactor: 1,
-        heightFactor: 1,
-        child: chip,
-      ),
+      child: Center(widthFactor: 1, heightFactor: 1, child: chip),
     );
   }
 }

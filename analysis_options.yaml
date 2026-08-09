@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# Read by both `dart format` and the VS Code Dart extension (which formats
+# through the analysis server), so saving a file in the editor produces exactly
+# what the command line does. 80 is `dart format`'s own default.
+formatter:
+  page_width: 80
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

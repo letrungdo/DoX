@@ -11,7 +11,11 @@ typedef MovieFilterResult = ({MovieCategory? category});
 /// Country / genre picker opened from the movie browser. Only the primary
 /// (Ophim) server exposes these lists, so it is shown for that server alone.
 class MovieFilterSheet extends StatelessWidget {
-  const MovieFilterSheet({super.key, required this.options, required this.selectedId});
+  const MovieFilterSheet({
+    super.key,
+    required this.options,
+    required this.selectedId,
+  });
 
   final List<MovieCategory> options;
   final String? selectedId;
@@ -25,7 +29,8 @@ class MovieFilterSheet extends StatelessWidget {
     return showAppBottomSheet<MovieFilterResult>(
       context,
       title: title,
-      builder: (context) => MovieFilterSheet(options: options, selectedId: selectedId),
+      builder: (context) =>
+          MovieFilterSheet(options: options, selectedId: selectedId),
     );
   }
 
@@ -37,9 +42,17 @@ class MovieFilterSheet extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        NeuChip(label: l10n.all, isSelected: selectedId == null, onTap: () => Navigator.pop(context, (category: null))),
+        NeuChip(
+          label: l10n.all,
+          isSelected: selectedId == null,
+          onTap: () => Navigator.pop(context, (category: null)),
+        ),
         for (final option in options)
-          NeuChip(label: option.name, isSelected: option.id == selectedId, onTap: () => Navigator.pop(context, (category: option))),
+          NeuChip(
+            label: option.name,
+            isSelected: option.id == selectedId,
+            onTap: () => Navigator.pop(context, (category: option)),
+          ),
       ],
     );
   }
