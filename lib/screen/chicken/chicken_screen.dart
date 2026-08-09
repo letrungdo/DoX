@@ -867,7 +867,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           ),
           actions: [
             DialogActionButton(
-              text: l10n.cancel,
+              text: l10n.close,
               kind: DialogActionKind.cancel,
               onPressed: () => Navigator.pop(dialogContext),
             ),
@@ -875,6 +875,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
               text: l10n.shareAction,
               loading: loading,
               onPressed: () async {
+                FocusManager.instance.primaryFocus?.unfocus();
                 final email = emailController.text.trim();
                 if (!email.contains('@')) {
                   setState(() => errorText = l10n.emailInvalid);
@@ -886,10 +887,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                 });
                 try {
                   final emailSent = await vm.shareWith(email);
-                  emailController.clear();
                   if (!dialogContext.mounted) return;
-                  setState(() => loading = false);
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  Navigator.pop(dialogContext);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
                         emailSent
