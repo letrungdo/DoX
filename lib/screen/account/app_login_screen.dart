@@ -5,6 +5,7 @@ import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/model/supabase_account.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/view_model/app_login_view_model.dart';
@@ -13,6 +14,8 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/input/password_field.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -35,7 +38,12 @@ class AppLoginScreen extends StatefulScreen implements AutoRouteWrapper {
 
 /// What the form is showing right now. Bundled so one [Selector] covers the
 /// whole screen instead of one per flag.
-typedef _FormState = ({AuthMode mode, String? pendingEmail, bool isBusy});
+typedef _FormState = ({
+  AuthMode mode,
+  String? pendingEmail,
+  bool isBusy,
+  List<SupabaseAccount> savedAccounts,
+});
 
 class _AppLoginScreenState
     extends ScreenState<AppLoginScreen, AppLoginViewModel> {
@@ -66,6 +74,7 @@ class _AppLoginScreenState
         mode: vm.mode,
         pendingEmail: vm.pendingConfirmationEmail,
         isBusy: vm.isBusy,
+        savedAccounts: vm.savedAccounts,
       ),
       builder: (context, state, _) {
         final l10n = context.l10n;
@@ -112,6 +121,15 @@ class _AppLoginScreenState
       key: _formKey,
       child: Column(
         children: [
+          if (!isSignUp && state.savedAccounts.isNotEmpty) ...[
+            _SavedAccountPicker(
+              accounts: state.savedAccounts,
+              enabled: !state.isBusy,
+              onSelect: vm.loginSavedAccount,
+              onForget: _forgetSavedAccount,
+            ),
+            const SizedBox(height: 24),
+          ],
           DoTextField(
             value: vm.email,
             labelText: l10n.emailLabel,
@@ -233,5 +251,106 @@ class _AppLoginScreenState
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     vm.submit();
+  }
+
+  Future<void> _forgetSavedAccount(SupabaseAccount account) async {
+    final l10n = context.l10n;
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: l10n.logout,
+      message: l10n.forgetAccountConfirm(account.email),
+      confirmText: l10n.delete,
+      isDestructive: true,
+    );
+    if (confirmed) await vm.forgetSavedAccount(account);
+  }
+}
+
+/// Accounts that authenticated successfully before. Tapping one signs in with
+/// its credentials; the close button removes only that stored login.
+class _SavedAccountPicker extends StatelessWidget {
+  const _SavedAccountPicker({
+    required this.accounts,
+    required this.enabled,
+    required this.onSelect,
+    required this.onForget,
+  });
+
+  final List<SupabaseAccount> accounts;
+  final bool enabled;
+  final ValueChanged<SupabaseAccount> onSelect;
+  final Future<void> Function(SupabaseAccount account) onForget;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = context.theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            l10n.savedAccounts,
+            style: context.textTheme.secondary.size13,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: accounts
+              .map((account) => _accountChip(context, scheme, account))
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _accountChip(
+    BuildContext context,
+    ColorScheme scheme,
+    SupabaseAccount account,
+  ) {
+    return NeuCard(
+      radius: 14,
+      depth: 0.5,
+      onTap: enabled ? () => onSelect(account) : null,
+      padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.account_circle_rounded,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Text(
+              account.email,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          IconButton(
+            key: ValueKey('forget-${account.email}'),
+            tooltip: context.l10n.delete,
+            onPressed: enabled ? () => onForget(account) : null,
+            iconSize: 16,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+            color: scheme.onSurfaceVariant,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ),
+    );
   }
 }

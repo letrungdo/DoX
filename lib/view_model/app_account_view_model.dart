@@ -75,7 +75,6 @@ class AppAccountViewModel extends CoreViewModel {
     setBusy(true);
     try {
       await supabase.auth.signOut();
-      await secureStorage.clearSupabaseAccount();
       _leaveAccountScreen();
     } catch (e) {
       _showError(e);
@@ -121,7 +120,7 @@ class AppAccountViewModel extends CoreViewModel {
       // Everything the account owns goes with it via `on delete cascade`.
       await supabase.functions.invoke('delete-account');
       await supabase.auth.signOut();
-      await secureStorage.clearSupabaseAccount();
+      await secureStorage.removeSupabaseAccount(email);
       _showMessage(deletedMessage);
       _leaveAccountScreen();
       return true;

@@ -3,6 +3,7 @@ import 'package:do_x/constants/auth_links.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/model/supabase_account.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/auth_error.dart';
@@ -29,6 +30,9 @@ class AppLoginViewModel extends CoreViewModel {
   String _confirmPassword = '';
   String get confirmPassword => _confirmPassword;
 
+  List<SupabaseAccount> _savedAccounts = [];
+  List<SupabaseAccount> get savedAccounts => _savedAccounts;
+
   /// Set once a sign-up went through without a session: the account exists but
   /// is waiting on the link in this address's inbox. The screen swaps the form
   /// for a "check your mail" panel while it is set.
@@ -38,12 +42,8 @@ class AppLoginViewModel extends CoreViewModel {
   @override
   void initState() async {
     super.initState();
-    final saved = await secureStorage.getSupabaseAccount();
-    if (saved != null) {
-      _email = saved.email;
-      _password = saved.password;
-      notifyListenersSafe();
-    }
+    _savedAccounts = await secureStorage.getSupabaseAccounts();
+    notifyListenersSafe();
   }
 
   void onEmailChanged(String value) {
@@ -76,6 +76,28 @@ class AppLoginViewModel extends CoreViewModel {
     return _mode == AuthMode.signIn ? _signIn() : _signUp();
   }
 
+  Future<void> loginSavedAccount(SupabaseAccount account) async {
+    if (isBusy) return;
+    _email = account.email;
+    _password = account.password;
+    notifyListenersSafe();
+    await _signIn();
+  }
+
+  Future<void> forgetSavedAccount(SupabaseAccount account) async {
+    await secureStorage.removeSupabaseAccount(account.email);
+    _savedAccounts = _savedAccounts
+        .where(
+          (saved) => saved.email.toLowerCase() != account.email.toLowerCase(),
+        )
+        .toList();
+    if (_email.toLowerCase() == account.email.toLowerCase()) {
+      _email = '';
+      _password = '';
+    }
+    notifyListenersSafe();
+  }
+
   Future<void> _signIn() async {
     setBusy(true);
     try {
@@ -89,6 +111,7 @@ class AppLoginViewModel extends CoreViewModel {
         email: _email.trim(),
         password: _password,
       );
+      _savedAccounts = await secureStorage.getSupabaseAccounts();
     } on AuthException catch (e) {
       // The account exists but was never activated: the useful next step is
       // another copy of the email, not the error on its own.
@@ -112,16 +135,16 @@ class AppLoginViewModel extends CoreViewModel {
         password: _password,
         emailRedirectTo: AuthLinks.emailConfirmation,
       );
-      // Saved even while the account is unconfirmed: confirming on a desktop
-      // browser leaves the phone back on this form, and the credentials it
-      // pre-fills are the ones just typed.
-      await secureStorage.saveSupabaseAccount(
-        email: _email.trim(),
-        password: _password,
-      );
       // A session here means email confirmation is switched off on the project
       // and the account is usable right away.
-      if (result.session != null) return;
+      if (result.session != null) {
+        await secureStorage.saveSupabaseAccount(
+          email: _email.trim(),
+          password: _password,
+        );
+        _savedAccounts = await secureStorage.getSupabaseAccounts();
+        return;
+      }
 
       _pendingConfirmationEmail = _email.trim();
       notifyListenersSafe();

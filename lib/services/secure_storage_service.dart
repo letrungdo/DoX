@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:do_x/constants/storage.dart';
 import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/response/user_model.dart';
+import 'package:do_x/model/supabase_account.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -31,32 +32,66 @@ class _SecureStorageService {
     return _secureStorage.write(key: StorageKey.accountInfo, value: encode);
   }
 
-  Future<({String email, String password})?> getSupabaseAccount() async {
+  /// Every Do X account that has signed in successfully on this device.
+  ///
+  /// Older releases stored one account as a JSON object. Accepting both shapes
+  /// migrates it into the list on the next write without losing credentials.
+  Future<List<SupabaseAccount>> getSupabaseAccounts() async {
     try {
       final raw = await _secureStorage.read(key: StorageKey.supabaseAccount);
-      final json = jsonDecode(raw ?? "");
-      return (
-        email: json['email'] as String,
-        password: json['password'] as String,
-      );
-    } catch (e) {
-      return null;
+      if (raw == null) return [];
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .map(
+              (item) => SupabaseAccount.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
+            .toList();
+      }
+      return [
+        SupabaseAccount.fromJson(Map<String, dynamic>.from(decoded as Map)),
+      ];
+    } catch (_) {
+      return [];
     }
   }
 
+  /// Upserts one successful login, keeping the latest password and ordering it
+  /// last so the most recently used account appears last in the picker.
   Future<void> saveSupabaseAccount({
     required String email,
     required String password,
-  }) {
-    return _secureStorage.write(
-      key: StorageKey.supabaseAccount,
-      value: jsonEncode({'email': email, 'password': password}),
+  }) async {
+    final normalized = email.trim().toLowerCase();
+    final accounts = await getSupabaseAccounts();
+    final updated = [
+      ...accounts.where((account) => account.email.toLowerCase() != normalized),
+      SupabaseAccount(email: email.trim(), password: password),
+    ];
+    await _writeSupabaseAccounts(updated);
+  }
+
+  Future<void> removeSupabaseAccount(String email) async {
+    final normalized = email.trim().toLowerCase();
+    final accounts = await getSupabaseAccounts();
+    await _writeSupabaseAccounts(
+      accounts
+          .where((account) => account.email.toLowerCase() != normalized)
+          .toList(),
     );
   }
 
-  /// Drops the credentials the login form pre-fills itself with. Call it on
-  /// sign-out and on account deletion: an offered password that no longer opens
-  /// anything is worse than an empty field.
+  Future<void> _writeSupabaseAccounts(List<SupabaseAccount> accounts) {
+    return _secureStorage.write(
+      key: StorageKey.supabaseAccount,
+      value: jsonEncode(accounts.map((account) => account.toJson()).toList()),
+    );
+  }
+
+  /// Drops every saved Do X login. Prefer [removeSupabaseAccount] when the
+  /// operation concerns only one account.
   Future<void> clearSupabaseAccount() {
     return _secureStorage.delete(key: StorageKey.supabaseAccount);
   }
