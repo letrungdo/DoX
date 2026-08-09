@@ -9,6 +9,7 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/lunar_calendar_grid.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
@@ -81,8 +82,11 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
       appBar: DoAppBar(
         title: l10n.lunarCalendar,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.today_rounded),
+          NeuIconButton(
+            size: Dimens.appBarActionSize,
+            iconSize: 18,
+            depth: Dimens.appBarActionDepth,
+            icon: Icons.today_rounded,
             tooltip: l10n.lunarToday,
             onPressed: _goToToday,
           ),
@@ -137,9 +141,9 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
 
     return Row(
       children: [
-        IconButton(
+        NeuIconButton(
+          icon: Icons.chevron_left_rounded,
           onPressed: () => _shiftMonth(-1),
-          icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
           child: Column(
@@ -160,9 +164,9 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
             ],
           ),
         ),
-        IconButton(
+        NeuIconButton(
+          icon: Icons.chevron_right_rounded,
           onPressed: () => _shiftMonth(1),
-          icon: const Icon(Icons.chevron_right_rounded),
         ),
       ],
     );

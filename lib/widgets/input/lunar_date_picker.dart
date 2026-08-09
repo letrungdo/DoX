@@ -2,6 +2,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/lunar_calendar_grid.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -116,9 +117,9 @@ class _LunarCalendarPickerDialogState
 
     return Row(
       children: [
-        IconButton(
+        NeuIconButton(
+          icon: Icons.chevron_left_rounded,
           onPressed: () => _shiftMonth(-1),
-          icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
           child: Column(
@@ -139,9 +140,9 @@ class _LunarCalendarPickerDialogState
             ],
           ),
         ),
-        IconButton(
+        NeuIconButton(
+          icon: Icons.chevron_right_rounded,
           onPressed: () => _shiftMonth(1),
-          icon: const Icon(Icons.chevron_right_rounded),
         ),
       ],
     );
