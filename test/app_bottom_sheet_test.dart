@@ -1,4 +1,5 @@
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 Future<void> _openSheet(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
     MaterialApp(
+      // The sheet's close button is a neu control, which reads the app theme's
+      // colour extensions — a bare ThemeData has none of them.
+      theme: AppTheme.lightTheme,
       home: Scaffold(
         body: Builder(
           builder: (context) => TextButton(
@@ -71,6 +75,7 @@ void main() {
     const bottomInset = 34.0;
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.lightTheme,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,

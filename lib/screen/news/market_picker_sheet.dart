@@ -114,7 +114,9 @@ class _MarketPickerBodyState extends State<_MarketPickerBody> {
                     onChanged: (v) => _toggle(code, v ?? false),
                     dense: true,
                     controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    // Indented past the group's own checkbox, so a market reads
+                    // as sitting under its heading.
+                    contentPadding: const EdgeInsets.only(left: 28, right: 12),
                     title: Text(
                       code.name,
                       style: context.textTheme.primary.size15,
@@ -131,22 +133,15 @@ class _MarketPickerBodyState extends State<_MarketPickerBody> {
         const Divider(height: 1),
         Padding(
           padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 12,
-            children: [
-              NeuButton(
-                padding: _actionPadding,
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.close, textAlign: TextAlign.center),
-              ),
-              NeuButton(
-                accent: context.colors.info,
-                padding: _actionPadding,
-                onPressed: _selected.isEmpty ? null : _save,
-                child: Text(l10n.save, textAlign: TextAlign.center),
-              ),
-            ],
+          // Close lives in the sheet's own top-right corner, so the foot of the
+          // list carries only the action that commits the picks.
+          child: Center(
+            child: NeuButton(
+              accent: context.colors.info,
+              padding: _actionPadding,
+              onPressed: _selected.isEmpty ? null : _save,
+              child: Text(l10n.save, textAlign: TextAlign.center),
+            ),
           ),
         ),
       ],
