@@ -39,6 +39,9 @@ mkdir -p envs
 {
   printf 'FLAVOR="%s"\n' "${FLAVOR:-}"
   printf 'ML_API_KEY="%s"\n' "${ML_API_KEY:-}"
+  printf 'ML_API_URL="%s"\n' "${ML_API_URL:-}"
+  printf 'ML_BUNDLE_ID="%s"\n' "${ML_BUNDLE_ID:-}"
+  printf 'ML_STORAGE_URL="%s"\n' "${ML_STORAGE_URL:-}"
   printf 'FIREBASE_API_KEY_IOS="%s"\n' "${FIREBASE_API_KEY_IOS:-}"
   printf 'FIREBASE_API_KEY_ANDROID="%s"\n' "${FIREBASE_API_KEY_ANDROID:-}"
   printf 'FIREBASE_API_KEY_WEB="%s"\n' "${FIREBASE_API_KEY_WEB:-}"
@@ -46,7 +49,6 @@ mkdir -p envs
   printf 'MARKET_WS_URL="%s"\n' "${MARKET_WS_URL:-}"
   printf 'SUPABASE_URL="%s"\n' "${SUPABASE_URL:-}"
   printf 'SUPABASE_KEY="%s"\n' "${SUPABASE_KEY:-}"
-  printf 'ML_API_URL="%s"\n' "${ML_API_URL:-}"
   printf 'ELECTRIC_API_URL="%s"\n' "${ELECTRIC_API_URL:-}"
 } > envs/dart-define.env
 

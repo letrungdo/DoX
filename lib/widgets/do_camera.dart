@@ -74,7 +74,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final tabsRouter = AutoTabsRouter.of(context);
-    if (tabsRouter.currentPath != "/myLife") {
+    if (tabsRouter.currentPath != "/my-life") {
       return;
     }
     // App state changed before we got the chance to initialize.

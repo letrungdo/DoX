@@ -275,7 +275,7 @@ abstract class AppLocalizations {
   /// No description provided for @videoTooLargeMessage.
   ///
   /// In en, this message translates to:
-  /// **'The compressed video is still {size}MB, over MyLife\'s 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?'**
+  /// **'The compressed video is still {size}MB, over My Life\'s 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?'**
   String videoTooLargeMessage(String size);
 
   /// No description provided for @shortenVideo.
@@ -641,7 +641,7 @@ abstract class AppLocalizations {
   /// No description provided for @myLife.
   ///
   /// In en, this message translates to:
-  /// **'MyLife'**
+  /// **'My Life'**
   String get myLife;
 
   /// No description provided for @lunar.

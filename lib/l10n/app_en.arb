@@ -29,7 +29,7 @@
   "meRequestTimeout": "Request timeout!",
   "meNetworkError": "Lost connect internet",
   "videoTooLargeTitle": "Video too large",
-  "videoTooLargeMessage": "The compressed video is still {size}MB, over MyLife's 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?",
+  "videoTooLargeMessage": "The compressed video is still {size}MB, over My Life's 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?",
   "@videoTooLargeMessage": {
     "placeholders": {
       "size": {
@@ -141,7 +141,7 @@
   "mergedEstimateNote": "Estimated with the progressive household tariff (one allowance), calibrated against the same month's real household bill.",
   "news": "News",
   "chicken": "Chicken",
-  "myLife": "MyLife",
+  "myLife": "My Life",
   "lunar": "Lunar",
   "lunarTab": "Calendar",
   "lunarCalendar": "Lunar calendar",

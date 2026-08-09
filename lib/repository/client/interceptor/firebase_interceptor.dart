@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/env.dart';
 import 'package:do_x/repository/client/dio_exception.dart';
 import 'package:do_x/repository/client/interceptor/interceptor.dart';
 import 'package:do_x/store/app_data.dart';
@@ -17,7 +18,7 @@ class FirebaseInterceptor extends BaseInterceptor {
   ) async {
     await FirebaseUtil.refreshTokenIfNeed();
     options.headers.addAll({
-      'X-Ios-Bundle-Identifier': 'com.mylife.MyLife', //
+      'X-Ios-Bundle-Identifier': Envs.myLifeBundleId, //
       HttpHeaders.authorizationHeader: "Firebase ${appData.user?.idToken}",
     });
     super.onRequest(options, handler);

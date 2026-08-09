@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/model/response/user_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
-import 'package:do_x/services/myLife/auth_service.dart';
+import 'package:do_x/services/my_life/auth_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';

@@ -97,7 +97,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String videoTooLargeMessage(String size) {
-    return 'Video sau khi nén vẫn còn ${size}MB, vượt giới hạn 6MB của MyLife.\n\nGiảm chất lượng xuống 480p, hoặc quay lại cắt ngắn video?';
+    return 'Video sau khi nén vẫn còn ${size}MB, vượt giới hạn 6MB của My Life.\n\nGiảm chất lượng xuống 480p, hoặc quay lại cắt ngắn video?';
   }
 
   @override
@@ -303,7 +303,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get chicken => 'Gà';
 
   @override
-  String get myLife => 'MyLife';
+  String get myLife => 'My Life';
 
   @override
   String get lunar => 'Âm lịch';

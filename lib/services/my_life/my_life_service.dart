@@ -14,7 +14,7 @@ import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/store/app_data.dart';
-import 'package:do_x/view_model/myLife/weather.dart';
+import 'package:do_x/view_model/my_life/weather.dart';
 import 'package:flutter/cupertino.dart';
 
 class MyLifeService {

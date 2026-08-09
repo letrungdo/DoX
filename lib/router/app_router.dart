@@ -72,7 +72,7 @@ class _AppRouter extends RootStackRouter {
             ],
           ),
           AutoRoute(
-            path: 'myLife',
+            path: 'my-life',
             initial: initialTab == AppPage.myLife,
             page: myLifeTab.page,
             children: [
@@ -172,17 +172,17 @@ class _AppRouter extends RootStackRouter {
       page: GlobalExpensesRoute.page,
     ),
     AutoRoute(
-      path: '$_pushPrefix/myLife',
+      path: '$_pushPrefix/my-life',
       page: MyLifeRoute.page,
       guards: [_myLifeAuthGuard],
     ),
     CustomRoute(
-      path: '$_pushPrefix/myLife/login',
+      path: '$_pushPrefix/my-life/login',
       page: LoginRoute.page,
       transitionsBuilder: TransitionsBuilders.fadeIn,
     ),
-    AutoRoute(path: '$_pushPrefix/myLife/account', page: AccountRoute.page),
-    AutoRoute(path: '$_pushPrefix/myLife/trimmer', page: TrimmerRoute.page),
+    AutoRoute(path: '$_pushPrefix/my-life/account', page: AccountRoute.page),
+    AutoRoute(path: '$_pushPrefix/my-life/trimmer', page: TrimmerRoute.page),
     AutoRoute(path: '$_pushPrefix/electric', page: ElectricRoute.page),
     AutoRoute(
       path: '$_pushPrefix/electric/settings',

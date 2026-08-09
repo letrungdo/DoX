@@ -12,8 +12,8 @@ utilities. The release version is managed in `pubspec.yaml`.
 - **Chicken management:** batches, vaccination schedules, multiple sales per
   batch, fighting/meat chicken sales, shared expenses, yearly statistics, JSON
   data import, and Supabase synchronization.
-- **MyLife:** sign in, capture or select photos and videos, trim videos, and add
-  weather overlays.
+- **My Life:** sign in, capture or select photos and videos, trim videos, and
+  add weather overlays.
 - **Electricity:** sign in to Central Power Corporation's customer service,
   monitor consumption and usage history, and schedule monthly meter-reading
   reminders.
@@ -34,7 +34,7 @@ is deployed through Netlify.
 
 - Flutter `3.44.8` and Dart `>=3.10.0 <4.0.0`, pinned with FVM
 - Provider and AutoRoute
-- Firebase Core, Crashlytics, and Firebase APIs used by MyLife
+- Firebase Core, Crashlytics, and the Firebase APIs behind My Life
 - Supabase Auth, Postgres, RLS, RPC, Edge Functions, and Cron
 - Dio, `video_player`, camera/image picker, and local notifications
 - `json_serializable`, `build_runner`, Flutter Gen, and Flutter localization
@@ -73,6 +73,9 @@ Example `envs/dev/dart-define.env`:
 ```dotenv
 FLAVOR=dev
 ML_API_KEY=
+ML_API_URL=
+ML_BUNDLE_ID=
+ML_STORAGE_URL=
 FIREBASE_API_KEY_IOS=
 FIREBASE_API_KEY_ANDROID=
 FIREBASE_API_KEY_WEB=
@@ -80,7 +83,6 @@ MARKET_API_URL=
 MARKET_WS_URL=
 SUPABASE_URL=
 SUPABASE_KEY=
-ML_API_URL=
 ELECTRIC_API_URL=
 ```
 
@@ -287,7 +289,7 @@ configuration in commits, issues, logs, or screenshots.
 
 Do X is an independent, community-maintained project provided on an “as is” and
 “as available” basis, without warranties of any kind. It is not affiliated
-with, endorsed by, or sponsored by Supabase, Firebase, MyLife, Central Power
+with, endorsed by, or sponsored by Supabase, Firebase, Central Power
 Corporation, Gemini, movie providers, market-data providers, or any other
 third-party service used by the app.
 

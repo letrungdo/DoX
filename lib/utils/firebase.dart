@@ -11,7 +11,7 @@ class FirebaseUtil {
   const FirebaseUtil._();
 
   static const authHeader = {
-    'X-Ios-Bundle-Identifier': 'com.mylife.MyLife', //
+    'X-Ios-Bundle-Identifier': Envs.myLifeBundleId, //
   };
 
   static Future<Result?> refreshTokenIfNeed() async {

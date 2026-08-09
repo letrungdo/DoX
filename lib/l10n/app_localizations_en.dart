@@ -97,7 +97,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String videoTooLargeMessage(String size) {
-    return 'The compressed video is still ${size}MB, over MyLife\'s 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?';
+    return 'The compressed video is still ${size}MB, over My Life\'s 6MB limit.\n\nReduce quality to 480p, or go back and shorten the video?';
   }
 
   @override
@@ -302,7 +302,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chicken => 'Chicken';
 
   @override
-  String get myLife => 'MyLife';
+  String get myLife => 'My Life';
 
   @override
   String get lunar => 'Lunar';

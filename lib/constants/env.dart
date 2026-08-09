@@ -42,6 +42,16 @@ class Envs {
   /// a per-platform Firebase project of ours.
   static const myLifeApiKey = String.fromEnvironment('ML_API_KEY');
 
+  /// Bundle identifier the My Life requests present themselves with. The
+  /// upstream Firebase project only answers to its own client, so this travels
+  /// in the `X-Ios-Bundle-Identifier` header and in the upload user agents.
+  static const myLifeBundleId = String.fromEnvironment('ML_BUNDLE_ID');
+
+  /// Firebase Storage prefix the My Life moments are uploaded to, up to the
+  /// stem the two buckets share — the upload service appends `-img` / `-video`
+  /// and the path under them.
+  static const myLifeStorageUrl = String.fromEnvironment('ML_STORAGE_URL');
+
   static const firebaseApiKey = PlatformValue(
     iOS: String.fromEnvironment('FIREBASE_API_KEY_IOS'),
     android: String.fromEnvironment('FIREBASE_API_KEY_ANDROID'),

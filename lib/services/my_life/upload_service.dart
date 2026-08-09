@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/env.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/model/response/generated_image_model.dart';
 import 'package:do_x/model/response/user_model.dart';
@@ -13,6 +14,10 @@ import 'package:flutter/cupertino.dart';
 class UploadService {
   final dio = DioClient.createFirebase();
 
+  /// Thumbnails and videos live in two buckets named off the same stem.
+  static const _imageStorage = '${Envs.myLifeStorageUrl}-img';
+  static const _videoStorage = '${Envs.myLifeStorageUrl}-video';
+
   static const uploadHeaders = {
     'content-type': 'application/octet-stream',
     'x-goog-upload-protocol': 'resumable',
@@ -21,7 +26,7 @@ class UploadService {
     'upload-incomplete': '?1',
     'upload-draft-interop-version': '6',
     'user-agent':
-        'com.mylife.MyLife/1.121.1 iPhone/18.3.2 hw/iPhone17_3 (GTMSUF/1)',
+        '${Envs.myLifeBundleId}/1.121.1 iPhone/18.3.2 hw/iPhone17_3 (GTMSUF/1)',
   };
 
   Future<String> _initUploadImage({
@@ -39,7 +44,7 @@ class UploadService {
     };
 
     final response = await dio.post(
-      "https://firebasestorage.googleapis.com/v0/b/mylife-img/o/users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName"
+      "$_imageStorage/o/users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fthumbnails%2F$imgName"
           .withProxy(), //
       data: body,
       options: Options(
@@ -77,7 +82,7 @@ class UploadService {
     };
 
     final response = await dio.post(
-      "https://firebasestorage.googleapis.com/v0/b/mylife-video/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName"
+      "$_videoStorage/o/users%2F$idUser%2Fmoments%2Fvideos%2F$videoName?uploadType=resumable&name=users%2F$idUser%2Fmoments%2Fvideos%2F$videoName"
           .withProxy(), //
       data: body,
       options: Options(
@@ -90,7 +95,7 @@ class UploadService {
           'accept-language': 'vi-VN,vi;q=0.9',
           'x-firebase-storage-version': 'ios/10.13.0',
           'user-agent':
-              'com.mylife.MyLife/1.43.1 iPhone/17.3 hw/iPhone15_3 (GTMSUF/1)',
+              '${Envs.myLifeBundleId}/1.43.1 iPhone/17.3 hw/iPhone15_3 (GTMSUF/1)',
           'x-goog-upload-content-type': 'video/mp4',
           'x-firebase-gmpid': '1:641029076083:ios:cc8eb46290d69b234fa609',
         },
@@ -111,7 +116,7 @@ class UploadService {
     CancelToken? cancelToken,
   }) async {
     final getUrl =
-        "https://firebasestorage.googleapis.com/v0/b/mylife-img/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName"
+        "$_imageStorage/o/users%2F${user.localId}%2Fmoments%2Fthumbnails%2F$imgName"
             .withProxy();
 
     final response = await dio.get(
@@ -128,7 +133,7 @@ class UploadService {
     CancelToken? cancelToken,
   }) async {
     final getUrl =
-        "https://firebasestorage.googleapis.com/v0/b/mylife-video/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName"
+        "$_videoStorage/o/users%2F${user.localId}%2Fmoments%2Fvideos%2F$videoName"
             .withProxy();
 
     final response = await dio.get(

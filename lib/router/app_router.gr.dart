@@ -27,17 +27,17 @@ import 'package:do_x/screen/chicken/global_expenses_screen.dart' as _i12;
 import 'package:do_x/screen/electric_screen.dart' as _i9;
 import 'package:do_x/screen/electric_settings_screen.dart' as _i10;
 import 'package:do_x/screen/feng_shui_compass_screen.dart' as _i11;
-import 'package:do_x/screen/myLife/account_screen.dart' as _i1;
-import 'package:do_x/screen/myLife/my_life_screen.dart' as _i13;
-import 'package:do_x/screen/myLife/login_screen.dart' as _i14;
-import 'package:do_x/screen/myLife/trimmer_screen.dart' as _i23;
-import 'package:do_x/screen/lunar_screen.dart' as _i15;
-import 'package:do_x/screen/main_screen.dart' as _i16;
-import 'package:do_x/screen/menu_screen.dart' as _i18;
-import 'package:do_x/screen/movie/movie_detail_screen.dart' as _i19;
-import 'package:do_x/screen/movie/movie_screen.dart' as _i20;
+import 'package:do_x/screen/lunar_screen.dart' as _i14;
+import 'package:do_x/screen/main_screen.dart' as _i15;
+import 'package:do_x/screen/menu_screen.dart' as _i17;
+import 'package:do_x/screen/movie/movie_detail_screen.dart' as _i18;
+import 'package:do_x/screen/movie/movie_screen.dart' as _i19;
+import 'package:do_x/screen/my_life/account_screen.dart' as _i1;
+import 'package:do_x/screen/my_life/login_screen.dart' as _i13;
+import 'package:do_x/screen/my_life/my_life_screen.dart' as _i20;
+import 'package:do_x/screen/my_life/trimmer_screen.dart' as _i23;
 import 'package:do_x/screen/network/wifi_management_screen.dart' as _i26;
-import 'package:do_x/screen/news/market_detail_screen.dart' as _i17;
+import 'package:do_x/screen/news/market_detail_screen.dart' as _i16;
 import 'package:do_x/screen/news/news_screen.dart' as _i21;
 import 'package:do_x/screen/settings_screen.dart' as _i22;
 import 'package:do_x/view_model/electric_view_model.dart' as _i29;
@@ -312,23 +312,7 @@ class GlobalExpensesRoute extends _i27.PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [_i13.MyLifeScreen]
-class MyLifeRoute extends _i27.PageRouteInfo<void> {
-  const MyLifeRoute({List<_i27.PageRouteInfo>? children})
-    : super(MyLifeRoute.name, initialChildren: children);
-
-  static const String name = 'MyLifeRoute';
-
-  static _i27.PageInfo page = _i27.PageInfo(
-    name,
-    builder: (data) {
-      return _i27.WrappedRoute(child: const _i13.MyLifeScreen());
-    },
-  );
-}
-
-/// generated route for
-/// [_i14.LoginScreen]
+/// [_i13.LoginScreen]
 class LoginRoute extends _i27.PageRouteInfo<void> {
   const LoginRoute({List<_i27.PageRouteInfo>? children})
     : super(LoginRoute.name, initialChildren: children);
@@ -338,13 +322,13 @@ class LoginRoute extends _i27.PageRouteInfo<void> {
   static _i27.PageInfo page = _i27.PageInfo(
     name,
     builder: (data) {
-      return _i27.WrappedRoute(child: const _i14.LoginScreen());
+      return _i27.WrappedRoute(child: const _i13.LoginScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i15.LunarScreen]
+/// [_i14.LunarScreen]
 class LunarRoute extends _i27.PageRouteInfo<void> {
   const LunarRoute({List<_i27.PageRouteInfo>? children})
     : super(LunarRoute.name, initialChildren: children);
@@ -354,13 +338,13 @@ class LunarRoute extends _i27.PageRouteInfo<void> {
   static _i27.PageInfo page = _i27.PageInfo(
     name,
     builder: (data) {
-      return const _i15.LunarScreen();
+      return const _i14.LunarScreen();
     },
   );
 }
 
 /// generated route for
-/// [_i16.MainScreen]
+/// [_i15.MainScreen]
 class MainRoute extends _i27.PageRouteInfo<void> {
   const MainRoute({List<_i27.PageRouteInfo>? children})
     : super(MainRoute.name, initialChildren: children);
@@ -370,13 +354,13 @@ class MainRoute extends _i27.PageRouteInfo<void> {
   static _i27.PageInfo page = _i27.PageInfo(
     name,
     builder: (data) {
-      return _i27.WrappedRoute(child: const _i16.MainScreen());
+      return _i27.WrappedRoute(child: const _i15.MainScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i17.MarketDetailScreen]
+/// [_i16.MarketDetailScreen]
 class MarketDetailRoute extends _i27.PageRouteInfo<MarketDetailRouteArgs> {
   MarketDetailRoute({
     _i28.Key? key,
@@ -395,7 +379,7 @@ class MarketDetailRoute extends _i27.PageRouteInfo<MarketDetailRouteArgs> {
     builder: (data) {
       final args = data.argsAs<MarketDetailRouteArgs>();
       return _i27.WrappedRoute(
-        child: _i17.MarketDetailScreen(key: args.key, code: args.code),
+        child: _i16.MarketDetailScreen(key: args.key, code: args.code),
       );
     },
   );
@@ -425,7 +409,7 @@ class MarketDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i18.MenuScreen]
+/// [_i17.MenuScreen]
 class MenuRoute extends _i27.PageRouteInfo<void> {
   const MenuRoute({List<_i27.PageRouteInfo>? children})
     : super(MenuRoute.name, initialChildren: children);
@@ -435,13 +419,13 @@ class MenuRoute extends _i27.PageRouteInfo<void> {
   static _i27.PageInfo page = _i27.PageInfo(
     name,
     builder: (data) {
-      return _i27.WrappedRoute(child: const _i18.MenuScreen());
+      return _i27.WrappedRoute(child: const _i17.MenuScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i19.MovieDetailScreen]
+/// [_i18.MovieDetailScreen]
 class MovieDetailRoute extends _i27.PageRouteInfo<MovieDetailRouteArgs> {
   MovieDetailRoute({
     _i31.Key? key,
@@ -451,7 +435,7 @@ class MovieDetailRoute extends _i27.PageRouteInfo<MovieDetailRouteArgs> {
     bool embedded = false,
     double minimizeProgress = 1,
     _i31.ValueChanged<bool>? onFullScreenChanged,
-    _i19.MovieDetailController? controller,
+    _i18.MovieDetailController? controller,
     _i31.ValueChanged<_i32.Movie>? onRelatedMovieTap,
     _i31.VoidCallback? onClose,
     _i31.VoidCallback? onMinimize,
@@ -486,7 +470,7 @@ class MovieDetailRoute extends _i27.PageRouteInfo<MovieDetailRouteArgs> {
     name,
     builder: (data) {
       final args = data.argsAs<MovieDetailRouteArgs>();
-      return _i19.MovieDetailScreen(
+      return _i18.MovieDetailScreen(
         key: args.key,
         movieUrl: args.movieUrl,
         movieId: args.movieId,
@@ -538,7 +522,7 @@ class MovieDetailRouteArgs {
 
   final _i31.ValueChanged<bool>? onFullScreenChanged;
 
-  final _i19.MovieDetailController? controller;
+  final _i18.MovieDetailController? controller;
 
   final _i31.ValueChanged<_i32.Movie>? onRelatedMovieTap;
 
@@ -596,7 +580,7 @@ class MovieDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i20.MovieScreen]
+/// [_i19.MovieScreen]
 class MovieRoute extends _i27.PageRouteInfo<void> {
   const MovieRoute({List<_i27.PageRouteInfo>? children})
     : super(MovieRoute.name, initialChildren: children);
@@ -606,7 +590,23 @@ class MovieRoute extends _i27.PageRouteInfo<void> {
   static _i27.PageInfo page = _i27.PageInfo(
     name,
     builder: (data) {
-      return const _i20.MovieScreen();
+      return const _i19.MovieScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [_i20.MyLifeScreen]
+class MyLifeRoute extends _i27.PageRouteInfo<void> {
+  const MyLifeRoute({List<_i27.PageRouteInfo>? children})
+    : super(MyLifeRoute.name, initialChildren: children);
+
+  static const String name = 'MyLifeRoute';
+
+  static _i27.PageInfo page = _i27.PageInfo(
+    name,
+    builder: (data) {
+      return _i27.WrappedRoute(child: const _i20.MyLifeScreen());
     },
   );
 }
