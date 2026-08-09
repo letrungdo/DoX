@@ -64,4 +64,42 @@ void main() {
 
     expect(_bodyInset(tester), Dimens.sheetPadding.left);
   });
+
+  testWidgets('an option list scrolls through the bottom safe area', (
+    tester,
+  ) async {
+    const bottomInset = 34.0;
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(padding: const EdgeInsets.only(bottom: bottomInset)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showAppOptionSheet<int>(
+                context,
+                title: 'Speed',
+                options: List.generate(20, (index) => index),
+                selected: 1,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.padding, const EdgeInsets.only(bottom: 8 + bottomInset));
+    expect(
+      tester.getBottomLeft(find.byType(ListView)).dy,
+      tester.getBottomLeft(find.byType(AppBottomSheet)).dy,
+    );
+  });
 }

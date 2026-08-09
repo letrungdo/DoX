@@ -173,6 +173,7 @@ Future<T?> showAppBottomSheet<T>(
   bool isDismissible = true,
   bool enableDrag = true,
   bool scrollable = true,
+  bool useBottomSafeArea = true,
   double maxHeightFactor = Dimens.sheetMaxHeightFactor,
   EdgeInsets padding = Dimens.sheetPadding,
 }) {
@@ -196,6 +197,7 @@ Future<T?> showAppBottomSheet<T>(
       title: title,
       showDragHandle: showDragHandle,
       scrollable: scrollable,
+      useBottomSafeArea: useBottomSafeArea,
       maxHeightFactor: maxHeightFactor,
       padding: padding,
       child: builder(sheetContext),
@@ -211,6 +213,7 @@ class AppBottomSheet extends StatelessWidget {
     this.title,
     this.showDragHandle = true,
     this.scrollable = true,
+    this.useBottomSafeArea = true,
     this.maxHeightFactor = Dimens.sheetMaxHeightFactor,
     this.padding = Dimens.sheetPadding,
   });
@@ -222,6 +225,10 @@ class AppBottomSheet extends StatelessWidget {
   /// Wraps [child] in a scroll view. Turn it off when the body already scrolls
   /// (a `ListView`) or is a fixed-height block.
   final bool scrollable;
+
+  /// Adds the device's bottom safe-area inset outside [child]. Turn it off
+  /// when a scrolling child includes the inset in its own content padding.
+  final bool useBottomSafeArea;
 
   final double maxHeightFactor;
   final EdgeInsets padding;
@@ -243,7 +250,9 @@ class AppBottomSheet extends StatelessWidget {
     final body = SizedBox(
       width: double.infinity,
       child: Padding(
-        padding: padding.copyWith(bottom: padding.bottom + bottomInset),
+        padding: padding.copyWith(
+          bottom: padding.bottom + (useBottomSafeArea ? bottomInset : 0),
+        ),
         child: child,
       ),
     );
@@ -342,31 +351,38 @@ Future<T?> showAppOptionSheet<T>(
     context,
     title: title,
     scrollable: false,
-    padding: const EdgeInsets.only(bottom: 8),
+    useBottomSafeArea: false,
+    // The list must own the bottom inset so its viewport can extend behind the
+    // home indicator instead of being permanently shortened by outer padding.
+    padding: EdgeInsets.zero,
     builder: (sheetContext) {
       final scheme = Theme.of(sheetContext).colorScheme;
-      return ListView.builder(
-        shrinkWrap: true,
-        padding: EdgeInsets.zero,
-        itemCount: options.length,
-        itemBuilder: (context, index) {
-          final option = options[index];
-          final isSelected = option == selected;
-          return ListTile(
-            title: Text(
-              labelBuilder?.call(option) ?? '$option',
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : null,
-                color: isSelected ? scheme.primary : null,
+      final bottomInset = MediaQuery.paddingOf(sheetContext).bottom;
+      return Material(
+        type: MaterialType.transparency,
+        child: ListView.builder(
+          shrinkWrap: true,
+          padding: EdgeInsets.only(bottom: 8 + bottomInset),
+          itemCount: options.length,
+          itemBuilder: (context, index) {
+            final option = options[index];
+            final isSelected = option == selected;
+            return ListTile(
+              title: Text(
+                labelBuilder?.call(option) ?? '$option',
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : null,
+                  color: isSelected ? scheme.primary : null,
+                ),
               ),
-            ),
-            selected: isSelected,
-            trailing: isSelected
-                ? Icon(Icons.check, color: scheme.primary)
-                : null,
-            onTap: () => Navigator.pop(sheetContext, option),
-          );
-        },
+              selected: isSelected,
+              trailing: isSelected
+                  ? Icon(Icons.check, color: scheme.primary)
+                  : null,
+              onTap: () => Navigator.pop(sheetContext, option),
+            );
+          },
+        ),
       );
     },
   );
