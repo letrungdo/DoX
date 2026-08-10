@@ -2,14 +2,12 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dio/dio.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
-import 'package:do_x/repository/client/api_dialog.dart';
-import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/screen/movie/movie_detail_screen.dart';
 import 'package:do_x/screen/movie/movie_filter_sheet.dart';
@@ -19,23 +17,28 @@ import 'package:do_x/screen/movie/movie_server_dialog.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
-import 'package:do_x/utils/logger.dart';
+import 'package:do_x/view_model/movie/movie_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:flutter/material.dart';
-
-enum _MovieCollection { browse, watched, favorites }
+import 'package:provider/provider.dart';
 
 @RoutePage()
-class MovieScreen extends StatefulWidget {
+class MovieScreen extends StatefulScreen implements AutoRouteWrapper {
   const MovieScreen({super.key});
 
   @override
   State<MovieScreen> createState() => _MovieScreenState();
+
+  @override
+  Widget wrappedRoute(BuildContext context) {
+    return ChangeNotifierProvider(create: (_) => MovieViewModel(), child: this);
+  }
 }
 
 /// How long the card→player zoom and the minimise/expand snap take.
@@ -54,21 +57,12 @@ const _searchPrefixCenter = Offset(40, 32);
 const _filterRowHeight = 48.0;
 const _categoryRowHeight = 46.0;
 
-class _MovieScreenState extends State<MovieScreen>
+class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     with TickerProviderStateMixin, TabReselect {
   final _searchController = TextEditingController();
   late final TextEditingController _serverUrlController;
   final _scrollController = ScrollController();
   Timer? _debounceTimer;
-
-  final _cancelToken = CancelToken();
-
-  List<MovieCategory> _categories = [];
-  MovieCategory? _selectedCategory;
-
-  /// Extra Ophim filters, applied on top of [_selectedCategory] and each other.
-  MovieCategory? _selectedGenre;
-  MovieCategory? _selectedCountry;
 
   /// The search field sits above the list and is only laid out while toggled on.
   bool _isSearchOpen = false;
@@ -85,19 +79,7 @@ class _MovieScreenState extends State<MovieScreen>
   /// the animation starts so the flying icon knows where to take off from.
   Offset? _searchIconOrigin;
 
-  final _movieIds = <String>{};
-  final _libraryStates = <String, MovieLibraryState>{};
-  List<Movie> _movies = [];
-  bool _isLoading = true;
-  bool _isLoadingMore = false;
-  int _currentPage = 1;
-  int _totalMovies = 0;
-  bool _hasMore = true;
-  bool _isSyncingServer = false;
   bool _showScrollToTop = false;
-  int _loadGeneration = 0;
-  String _searchQuery = '';
-  _MovieCollection _collection = _MovieCollection.browse;
 
   /// 1 = detail page fills the screen, 0 = collapsed to the mini player bar.
   late final AnimationController _overlayController;
@@ -118,32 +100,13 @@ class _MovieScreenState extends State<MovieScreen>
   bool _isSelectionMode = false;
   final Set<String> _selectedMovieIds = {};
 
-  static const _genrePrefix = 'genre_';
-  static const _countryPrefix = 'country_';
-
   /// Categories shown as the always-visible chip row (everything that is not a
   /// genre or a country, which get their own picker buttons instead).
-  List<MovieCategory> get _mainCategories => _categories
-      .where(
-        (cat) =>
-            !cat.id.startsWith(_genrePrefix) &&
-            !cat.id.startsWith(_countryPrefix),
-      )
-      .toList();
+  List<MovieCategory> get _mainCategories => vm.mainCategories;
 
-  List<MovieCategory> get _genreCategories =>
-      _categories.where((cat) => cat.id.startsWith(_genrePrefix)).toList();
+  List<MovieCategory> get _genreCategories => vm.genreCategories;
 
-  List<MovieCategory> get _countryCategories =>
-      _categories.where((cat) => cat.id.startsWith(_countryPrefix)).toList();
-
-  /// `genre_hanh-dong` → `hanh-dong`, the slug the API filters expect.
-  String? _filterSlug(MovieCategory? category, String prefix) {
-    if (category == null) return null;
-    return category.id.startsWith(prefix)
-        ? category.id.substring(prefix.length)
-        : category.id;
-  }
+  List<MovieCategory> get _countryCategories => vm.countryCategories;
 
   /// Only the primary (Ophim) server exposes genre / country listings.
   bool get _showFilterButtons =>
@@ -161,7 +124,7 @@ class _MovieScreenState extends State<MovieScreen>
   /// Height of the filter / category header, 0 when it is not shown. The pull
   /// to refresh indicator uses it to drop below the pinned rows.
   double get _filterHeaderHeight {
-    if (_searchQuery.isNotEmpty) return 0;
+    if (vm.searchQuery.isNotEmpty) return 0;
     return (_showFilterButtons ? _filterRowHeight : 0) +
         (_mainCategories.isNotEmpty ? _categoryRowHeight : 0);
   }
@@ -180,24 +143,7 @@ class _MovieScreenState extends State<MovieScreen>
       vsync: this,
       duration: _searchAnimationDuration,
     );
-    _initData();
     _scrollController.addListener(_onScroll);
-  }
-
-  Future<void> _initData() async {
-    try {
-      setState(() => _isLoading = true);
-      await movieService.discoverConfig();
-      _categories = movieService.getCategories();
-      _selectedCategory =
-          _mainCategories.firstOrNull ?? _categories.firstOrNull;
-      _selectedGenre = null;
-      _selectedCountry = null;
-      await _loadMovies(refresh: true);
-    } catch (e, st) {
-      logger.e('MovieScreen _initData failed', error: e, stackTrace: st);
-      setState(() => _isLoading = false);
-    }
   }
 
   @override
@@ -210,8 +156,13 @@ class _MovieScreenState extends State<MovieScreen>
     _serverUrlController.dispose();
     _scrollController.dispose();
     _debounceTimer?.cancel();
-    _cancelToken.cancel();
     super.dispose();
+  }
+
+  @override
+  void onResume() {
+    super.onResume();
+    vm.loadMovies(refresh: true, silent: true);
   }
 
   void _onScroll() {
@@ -222,10 +173,10 @@ class _MovieScreenState extends State<MovieScreen>
     }
 
     if (position.pixels >= position.maxScrollExtent - 300 &&
-        !_isLoadingMore &&
-        !_isLoading &&
-        _hasMore) {
-      _loadMoreMovies();
+        !vm.isLoadingMore &&
+        !vm.isLoading &&
+        vm.hasMore) {
+      vm.loadMoreMovies();
     }
   }
 
@@ -236,7 +187,7 @@ class _MovieScreenState extends State<MovieScreen>
   ScrollController get tabScrollController => _scrollController;
 
   @override
-  Future<void> onTabRefresh() => _loadMovies(refresh: true);
+  Future<void> onTabRefresh() => vm.loadMovies(refresh: true, silent: true);
 
   Future<void> _scrollToTop() async {
     if (!_scrollController.hasClients) return;
@@ -247,289 +198,21 @@ class _MovieScreenState extends State<MovieScreen>
     );
   }
 
-  /// [silent] keeps the centre spinner away for a pull to refresh, where the
-  /// refresh indicator is already saying the same thing.
-  Future<void> _loadMovies({bool refresh = false, bool silent = false}) async {
-    final generation = ++_loadGeneration;
-    final isLibraryCollection = _collection != _MovieCollection.browse;
-    var receivedLibraryBatch = false;
-
-    if (refresh) {
-      setState(() {
-        _isLoading = !silent;
-        _isLoadingMore = false;
-        _currentPage = 1;
-        _hasMore = true;
-      });
-    }
-
-    void publishLibraryBatch(List<MovieLibraryItem> items) {
-      if (!mounted || generation != _loadGeneration || items.isEmpty) return;
-      setState(() {
-        if (!receivedLibraryBatch) {
-          _movies = [];
-          _movieIds.clear();
-          _libraryStates.clear();
-          receivedLibraryBatch = true;
-        }
-        for (final item in items) {
-          if (_movieIds.add(item.movie.id)) _movies.add(item.movie);
-          _libraryStates[item.movie.id] = item.state;
-        }
-        _isLoading = false;
-        _isLoadingMore = true;
-      });
-    }
-
-    final result = await Result.guardFuture<MovieResponse>(() async {
-      if (_collection == _MovieCollection.watched) {
-        return await movieLibraryService.getWatched(
-          searchQuery: _searchQuery,
-          page: _currentPage,
-          onBatch: publishLibraryBatch,
-        );
-      }
-      if (_collection == _MovieCollection.favorites) {
-        return await movieLibraryService.getFavorites(
-          searchQuery: _searchQuery,
-          page: _currentPage,
-          onBatch: publishLibraryBatch,
-        );
-      }
-      if (_searchQuery.isNotEmpty) {
-        return movieService.searchMovies(
-          _searchQuery,
-          page: _currentPage,
-          cancelToken: _cancelToken,
-        );
-      }
-      if (_selectedCategory != null) {
-        return movieService.getMoviesByCategory(
-          _selectedCategory!.path,
-          page: _currentPage,
-          genreSlug: _filterSlug(_selectedGenre, _genrePrefix),
-          countrySlug: _filterSlug(_selectedCountry, _countryPrefix),
-          cancelToken: _cancelToken,
-        );
-      }
-      return const MovieResponse(movies: [], total: 0);
-    });
-
-    if (!mounted || generation != _loadGeneration) return;
-
-    final error = result.error;
-    if (error != null) {
-      if (result.isCancelByUser) return;
-      setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-        _hasMore = false;
-        if (refresh) {
-          _movies = [];
-          _movieIds.clear();
-          _libraryStates.clear();
-        }
-      });
-      // Tells the user it is the connection, not an empty catalogue.
-      unawaited(
-        ApiDialog.showAppError(
-          context,
-          error,
-          onRetry: () => _loadMovies(refresh: true),
-        ),
-      );
-      return;
-    }
-
-    final response = result.data ?? const MovieResponse(movies: [], total: 0);
-    if (isLibraryCollection) {
-      setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-        _hasMore = response.movies.isNotEmpty;
-        _totalMovies = response.total;
-        if (refresh) {
-          if (!receivedLibraryBatch) {
-            _movies = response.movies;
-            _movieIds.clear();
-            _movieIds.addAll(response.movies.map((m) => m.id));
-            _libraryStates.clear();
-          }
-        } else {
-          final newMovies = response.movies
-              .where((m) => _movieIds.add(m.id))
-              .toList();
-          _movies.addAll(newMovies);
-        }
-      });
-      return;
-    }
-
-    final fetched = response.movies;
-    final states = await _loadLibraryStates(fetched.map((movie) => movie.id));
-    if (!mounted || generation != _loadGeneration) return;
-    setState(() {
-      _isLoading = false;
-      if (response.total > 0) {
-        _totalMovies = response.total;
-      } else if (refresh) {
-        _totalMovies = fetched.length;
-      }
-
-      if (refresh) {
-        _movies = fetched;
-        _movieIds.clear();
-        _movieIds.addAll(fetched.map((m) => m.id));
-        _libraryStates
-          ..clear()
-          ..addAll(states);
-      } else {
-        final newMovies = fetched.where((m) => _movieIds.add(m.id)).toList();
-        _movies.addAll(newMovies);
-        _libraryStates.addAll(states);
-      }
-      _hasMore = _collection == _MovieCollection.browse && fetched.isNotEmpty;
-    });
-  }
-
-  Future<void> _loadMoreMovies() async {
-    if (_isLoadingMore || !_hasMore) {
-      return;
-    }
-    final generation = _loadGeneration;
-    setState(() => _isLoadingMore = true);
-
-    _currentPage++;
-
-    final isLibraryCollection = _collection != _MovieCollection.browse;
-    var receivedLibraryBatch = false;
-
-    void publishLibraryBatch(List<MovieLibraryItem> items) {
-      if (!mounted || generation != _loadGeneration || items.isEmpty) return;
-      setState(() {
-        for (final item in items) {
-          if (_movieIds.add(item.movie.id)) _movies.add(item.movie);
-          _libraryStates[item.movie.id] = item.state;
-        }
-        receivedLibraryBatch = true;
-      });
-    }
-
-    final result = await Result.guardFuture<MovieResponse>(() async {
-      if (_collection == _MovieCollection.watched) {
-        return await movieLibraryService.getWatched(
-          searchQuery: _searchQuery,
-          page: _currentPage,
-          onBatch: publishLibraryBatch,
-        );
-      }
-      if (_collection == _MovieCollection.favorites) {
-        return await movieLibraryService.getFavorites(
-          searchQuery: _searchQuery,
-          page: _currentPage,
-          onBatch: publishLibraryBatch,
-        );
-      }
-      if (_searchQuery.isNotEmpty) {
-        return movieService.searchMovies(
-          _searchQuery,
-          page: _currentPage,
-          cancelToken: _cancelToken,
-        );
-      }
-      if (_selectedCategory != null) {
-        return movieService.getMoviesByCategory(
-          _selectedCategory!.path,
-          page: _currentPage,
-          genreSlug: _filterSlug(_selectedGenre, _genrePrefix),
-          countrySlug: _filterSlug(_selectedCountry, _countryPrefix),
-          cancelToken: _cancelToken,
-        );
-      }
-      return const MovieResponse(movies: [], total: 0);
-    });
-
-    if (!mounted || generation != _loadGeneration) return;
-    // A failed page just stops the infinite scroll; the list already on screen
-    // stays usable, so there is nothing worth interrupting the user for.
-    if (result.isError) {
-      setState(() {
-        _isLoadingMore = false;
-        _hasMore = false;
-      });
-      return;
-    }
-
-    final response = result.data ?? const MovieResponse(movies: [], total: 0);
-
-    if (isLibraryCollection) {
-      setState(() {
-        _isLoadingMore = false;
-        _hasMore = response.movies.isNotEmpty;
-        if (!receivedLibraryBatch) {
-          final newMovies = response.movies
-              .where((m) => _movieIds.add(m.id))
-              .toList();
-          _movies.addAll(newMovies);
-        }
-      });
-      return;
-    }
-
-    final fetched = response.movies;
-    final states = await _loadLibraryStates(fetched.map((movie) => movie.id));
-    if (!mounted || generation != _loadGeneration) return;
-    setState(() {
-      _isLoadingMore = false;
-      if (response.total > 0) {
-        _totalMovies = response.total;
-      }
-
-      if (fetched.isEmpty) {
-        _hasMore = false;
-      } else {
-        final newMovies = fetched.where((m) => _movieIds.add(m.id)).toList();
-        _movies.addAll(newMovies);
-        _libraryStates.addAll(states);
-        if (newMovies.isEmpty) {
-          _hasMore = false;
-        }
-      }
-    });
-  }
-
   void _onSearchChanged(String query) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      setState(() {
-        _searchQuery = query.trim();
-      });
-      _loadMovies(refresh: true);
+      vm.setSearchQuery(query);
     });
   }
 
-  void _selectCollection(_MovieCollection collection) {
+  void _selectCollection(MovieCollection collection) {
     if (_isSelectionMode) _exitSelectionMode();
-    setState(() {
-      _collection = _collection == collection
-          ? _MovieCollection.browse
-          : collection;
-    });
-    _loadMovies(refresh: true);
+    vm.setCollection(collection);
   }
 
   void _selectCategory(MovieCategory? category) {
     if (_isSelectionMode) _exitSelectionMode();
-    final target = category ?? _mainCategories.firstOrNull;
-    if (_collection == _MovieCollection.browse &&
-        target?.id == _selectedCategory?.id) {
-      return;
-    }
-    setState(() {
-      _collection = _MovieCollection.browse;
-      _selectedCategory = target;
-    });
-    _loadMovies(refresh: true);
+    vm.setCategory(category);
   }
 
   /// Opens the country or genre sheet; the other filter is left untouched so
@@ -545,7 +228,7 @@ class _MovieScreenState extends State<MovieScreen>
     // search. Dropping focus first leaves nothing to restore.
     _searchFocusNode.unfocus();
 
-    final current = isCountry ? _selectedCountry : _selectedGenre;
+    final current = isCountry ? vm.selectedCountry : vm.selectedGenre;
     final result = await MovieFilterSheet.show(
       context,
       title: title,
@@ -555,15 +238,7 @@ class _MovieScreenState extends State<MovieScreen>
     if (result == null || !mounted) return;
     if (result.category?.id == current?.id) return;
 
-    setState(() {
-      _collection = _MovieCollection.browse;
-      if (isCountry) {
-        _selectedCountry = result.category;
-      } else {
-        _selectedGenre = result.category;
-      }
-    });
-    _loadMovies(refresh: true);
+    vm.setFilter(category: result.category, isCountry: isCountry);
   }
 
   Future<void> _showCollectionMenu() async {
@@ -585,12 +260,12 @@ class _MovieScreenState extends State<MovieScreen>
     );
 
     final scheme = Theme.of(context).colorScheme;
-    PopupMenuItem<_MovieCollection> item(
-      _MovieCollection collection,
+    PopupMenuItem<MovieCollection> item(
+      MovieCollection collection,
       IconData icon,
       String label,
     ) {
-      final isActive = _collection == collection;
+      final isActive = vm.collection == collection;
       return PopupMenuItem(
         value: collection,
         child: Row(
@@ -610,17 +285,17 @@ class _MovieScreenState extends State<MovieScreen>
       );
     }
 
-    final selected = await showMenu<_MovieCollection>(
+    final selected = await showMenu<MovieCollection>(
       context: context,
       position: position,
       items: [
         item(
-          _MovieCollection.watched,
+          MovieCollection.watched,
           Icons.history_rounded,
           l10n.watchedMovies,
         ),
         item(
-          _MovieCollection.favorites,
+          MovieCollection.favorites,
           Icons.favorite_rounded,
           l10n.favoriteMovies,
         ),
@@ -648,16 +323,16 @@ class _MovieScreenState extends State<MovieScreen>
     if (_isSearchOpen) {
       _debounceTimer?.cancel();
       _searchController.clear();
-      final hadQuery = _searchQuery.isNotEmpty;
+      final hadQuery = vm.searchQuery.isNotEmpty;
       setState(() {
         _isSearchOpen = false;
-        _searchQuery = '';
       });
+      vm.setSearchQuery('');
       _searchAnimation.reverse();
       // The node, not the scope — see the browser's background tap handler.
       _searchFocusNode.unfocus();
       // Nothing was searched, so the list on screen is already the right one.
-      if (hadQuery) _loadMovies(refresh: true);
+      if (hadQuery) vm.loadMovies(refresh: true);
       return;
     }
     setState(() => _isSearchOpen = true);
@@ -710,49 +385,18 @@ class _MovieScreenState extends State<MovieScreen>
       _exitSelectionMode();
       await movieLibraryService.removeMultipleFromHistory(ids);
       if (mounted) {
-        await _loadMovies(refresh: true);
+        await vm.loadMovies(refresh: true);
       }
     }
   }
 
   Future<void> _handleMovieLongPress(Movie movie) async {
-    if (_collection != _MovieCollection.watched) return;
+    if (vm.collection != MovieCollection.watched) return;
     _enterSelectionMode(movie.id);
   }
 
-  Future<Map<String, MovieLibraryState>> _loadLibraryStates(
-    Iterable<String> movieIds,
-  ) async {
-    try {
-      return await movieLibraryService.getStates(movieIds);
-    } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: load library states failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return {};
-    }
-  }
-
   Future<void> _refreshLibraryStates() async {
-    try {
-      final states = await movieLibraryService.getStates(
-        _movies.map((movie) => movie.id),
-      );
-      if (!mounted) return;
-      setState(() {
-        _libraryStates
-          ..clear()
-          ..addAll(states);
-      });
-    } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: refresh library states failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
+    await vm.refreshLibraryStates();
   }
 
   /// Opens [movie] in the overlay, zooming out of the card at [cardRect]
@@ -803,10 +447,10 @@ class _MovieScreenState extends State<MovieScreen>
     });
     _overlayController.value = 0;
     // The library may have gained a watch/favourite entry while it was open.
-    if (_collection == _MovieCollection.browse) {
+    if (vm.collection == MovieCollection.browse) {
       await _refreshLibraryStates();
     } else {
-      await _loadMovies(refresh: true);
+      await vm.loadMovies(refresh: true, silent: true);
     }
   }
 
@@ -834,7 +478,7 @@ class _MovieScreenState extends State<MovieScreen>
 
   Future<bool> _updateMovieServer(String rawUrl) async {
     final l10n = AppLocalizations.of(context);
-    if (_isSyncingServer) return false;
+    if (vm.isFetching) return false;
     // `https://` is optional in the field; the service fills it in.
     final url = movieService.normalizeServerUrl(rawUrl);
     final uri = Uri.tryParse(url);
@@ -847,41 +491,21 @@ class _MovieScreenState extends State<MovieScreen>
       return false;
     }
 
-    setState(() => _isSyncingServer = true);
-    try {
-      await movieService.updateBaseUrl(url);
-      if (!mounted) return false;
+    final success = await vm.updateMovieServer(url);
+    if (!mounted) return false;
+    if (success) {
       _serverUrlController.text = movieService.baseUrl ?? url;
-      _categories = movieService.getCategories();
-      _selectedCategory =
-          _mainCategories.firstOrNull ?? _categories.firstOrNull;
-      _collection = _MovieCollection.browse;
-      _selectedGenre = null;
-      _selectedCountry = null;
       _searchController.clear();
-      _searchQuery = '';
       _isSearchOpen = false;
-      await _loadMovies(refresh: true);
-      if (!mounted) return false;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.movieServerUrlUpdated)));
-      return true;
-    } catch (error, stackTrace) {
-      logger.e(
-        'MovieScreen: update server failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.updateMovieServerFailed)));
-      }
-      return false;
-    } finally {
-      if (mounted) setState(() => _isSyncingServer = false);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.updateMovieServerFailed)));
     }
+    return success;
   }
 
   Future<void> _showServerUrlDialog() async {
@@ -889,7 +513,7 @@ class _MovieScreenState extends State<MovieScreen>
       context,
       builder: (dialogContext) => MovieServerDialog(
         onServerChanged: () {
-          if (mounted) _initData();
+          if (mounted) vm.initData();
         },
       ),
     );
@@ -898,13 +522,6 @@ class _MovieScreenState extends State<MovieScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final movieLabel = movieService.getLabel();
-    final baseUrl = movieService.baseUrl;
-    final emptyMessage = switch (_collection) {
-      _MovieCollection.watched => l10n.noWatchedMovies,
-      _MovieCollection.favorites => l10n.noFavoriteMovies,
-      _MovieCollection.browse => l10n.noMoviesFound,
-    };
 
     return PopScope(
       canPop: _playingMovie == null,
@@ -920,39 +537,48 @@ class _MovieScreenState extends State<MovieScreen>
           unawaited(_closeOverlay());
         }
       },
-      // The overlay is laid out against the space this screen actually got,
-      // not the window: as a bottom tab that space stops above the tab bar, so
-      // measuring the window would drop the mini bar behind it.
-      child: LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              // The field, not the scope. Unfocusing a scope hands focus to
-              // its *parent* and clears the parent's memory, leaving this
-              // screen's scope still pointing at the search field as the child
-              // to restore — so the keyboard came back the next time anything
-              // returned focus here, such as a filter sheet closing.
-              // Unfocusing the node itself is what clears that memory.
-              onTap: _searchFocusNode.unfocus,
-              child: _buildBrowser(
-                context,
-                emptyMessage: emptyMessage,
-                movieLabel: movieLabel,
-                baseUrl: baseUrl,
-                l10n: l10n,
-              ),
+      child: Consumer<MovieViewModel>(
+        builder: (context, vm, _) {
+          final movieLabel = movieService.getLabel();
+          final baseUrl = movieService.baseUrl;
+          final emptyMessage = switch (vm.collection) {
+            MovieCollection.watched => l10n.noWatchedMovies,
+            MovieCollection.favorites => l10n.noFavoriteMovies,
+            MovieCollection.browse => l10n.noMoviesFound,
+          };
+
+          return LayoutBuilder(
+            builder: (context, constraints) => Stack(
+              fit: StackFit.expand,
+              children: [
+                GestureDetector(
+                  onTap: _searchFocusNode.unfocus,
+                  child: _buildBrowser(
+                    context,
+                    vm: vm,
+                    emptyMessage: emptyMessage,
+                    movieLabel: movieLabel,
+                    baseUrl: baseUrl,
+                    l10n: l10n,
+                  ),
+                ),
+                if (_playingMovie != null)
+                  _buildPlayerOverlay(
+                    context,
+                    _playingMovie!,
+                    constraints.biggest,
+                  ),
+              ],
             ),
-            if (_playingMovie != null)
-              _buildPlayerOverlay(context, _playingMovie!, constraints.biggest),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildBrowser(
     BuildContext context, {
+    required MovieViewModel vm,
     required String emptyMessage,
     required String movieLabel,
     required String? baseUrl,
@@ -977,6 +603,7 @@ class _MovieScreenState extends State<MovieScreen>
         ),
         body: _buildBrowserBody(
           context,
+          vm: vm,
           emptyMessage: emptyMessage,
           baseUrl: baseUrl,
           l10n: l10n,
@@ -989,10 +616,17 @@ class _MovieScreenState extends State<MovieScreen>
         title: movieLabel,
         // The title doubles as the server picker, replacing the old link action.
         onTitleTap: _showServerUrlDialog,
-        titleSuffix: Icon(
-          Icons.expand_more_rounded,
-          size: 20,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        titleSuffix: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.expand_more_rounded,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 4),
+            AppBarSyncIcon<MovieViewModel>(selector: (vm) => vm.isFetching),
+          ],
         ),
         actions: [
           NeuIconButton(
@@ -1011,7 +645,7 @@ class _MovieScreenState extends State<MovieScreen>
             size: Dimens.appBarActionSize,
             iconSize: 18,
             depth: Dimens.appBarActionDepth,
-            color: _collection != _MovieCollection.browse
+            color: vm.collection != MovieCollection.browse
                 ? Theme.of(context).colorScheme.primary
                 : null,
             icon: Icons.more_vert_rounded,
@@ -1027,7 +661,7 @@ class _MovieScreenState extends State<MovieScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (!_isLoading && _movies.isNotEmpty)
+                if (!vm.isLoading && vm.movies.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Container(
@@ -1051,8 +685,10 @@ class _MovieScreenState extends State<MovieScreen>
                       ),
                       child: Text(
                         l10n.movieCountStatus(
-                          _movies.length,
-                          _totalMovies > 0 ? _totalMovies.toString() : '...',
+                          vm.movies.length,
+                          vm.totalMovies > 0
+                              ? vm.totalMovies.toString()
+                              : '...',
                         ),
                         style: TextStyle(
                           fontSize: 10,
@@ -1085,10 +721,11 @@ class _MovieScreenState extends State<MovieScreen>
             children: [
               // Grows and shrinks in place, so the list below slides down
               // instead of jumping when the field appears.
-              _buildSearchField(l10n),
+              _buildSearchField(vm, l10n),
               Expanded(
                 child: _buildBrowserBody(
                   context,
+                  vm: vm,
                   emptyMessage: emptyMessage,
                   baseUrl: baseUrl,
                   l10n: l10n,
@@ -1104,6 +741,7 @@ class _MovieScreenState extends State<MovieScreen>
 
   Widget _buildBrowserBody(
     BuildContext context, {
+    required MovieViewModel vm,
     required String emptyMessage,
     required String? baseUrl,
     required AppLocalizations l10n,
@@ -1111,7 +749,7 @@ class _MovieScreenState extends State<MovieScreen>
     return (baseUrl == null || baseUrl.isEmpty)
         ? _buildServerConfig()
         : RefreshIndicator(
-            onRefresh: () => _loadMovies(refresh: true, silent: true),
+            onRefresh: () => vm.loadMovies(refresh: true, silent: true),
             // Drops in under the pinned rows instead of on top of them.
             edgeOffset: _isFilterHeaderPinned(context)
                 ? _filterHeaderHeight
@@ -1122,13 +760,13 @@ class _MovieScreenState extends State<MovieScreen>
               slivers: [
                 // No spacer above the header: anything before it would scroll
                 // away first and make the pinned rows jump up by that much.
-                ..._buildFilterHeaderSlivers(context, l10n),
+                ..._buildFilterHeaderSlivers(context, vm, l10n),
                 // Only once discovery has finished — otherwise it reads as a
                 // misconfiguration on the very first open.
-                if (!_isLoading &&
-                    _searchQuery.isEmpty &&
-                    _categories.isEmpty &&
-                    _collection == _MovieCollection.browse)
+                if (!vm.isLoading &&
+                    vm.searchQuery.isEmpty &&
+                    vm.categories.isEmpty &&
+                    vm.collection == MovieCollection.browse)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1144,12 +782,12 @@ class _MovieScreenState extends State<MovieScreen>
                     ),
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                if (_isLoading)
+                if (vm.isLoading && vm.movies.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(child: CircularProgressIndicator()),
                   )
-                else if (_movies.isEmpty)
+                else if (vm.movies.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
@@ -1191,32 +829,38 @@ class _MovieScreenState extends State<MovieScreen>
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        if (index >= _movies.length) {
-                          return const Card(
-                            child: Center(child: CircularProgressIndicator()),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index >= vm.movies.length) {
+                            return const Card(
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final movie = vm.movies[index];
+                          final libraryState = vm.libraryStates[movie.id];
+                          final isSelected = _selectedMovieIds.contains(
+                            movie.id,
                           );
-                        }
-                        final movie = _movies[index];
-                        final libraryState = _libraryStates[movie.id];
-                        final isSelected = _selectedMovieIds.contains(movie.id);
 
-                        return MoviePosterCard(
-                          movie: movie,
-                          isWatched: libraryState?.watchedAt != null,
-                          isFavorite: libraryState?.isFavorite ?? false,
-                          libraryState: libraryState,
-                          isSelected: isSelected,
-                          onTap: (cardRect) {
-                            if (_isSelectionMode) {
-                              _toggleSelection(movie.id);
-                            } else {
-                              _openMovie(movie, cardRect);
-                            }
-                          },
-                          onLongPress: () => _handleMovieLongPress(movie),
-                        );
-                      }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),
+                          return MoviePosterCard(
+                            movie: movie,
+                            isWatched: libraryState?.watchedAt != null,
+                            isFavorite: libraryState?.isFavorite ?? false,
+                            libraryState: libraryState,
+                            isSelected: isSelected,
+                            onTap: (cardRect) {
+                              if (_isSelectionMode) {
+                                _toggleSelection(movie.id);
+                              } else {
+                                _openMovie(movie, cardRect);
+                              }
+                            },
+                            onLongPress: () => _handleMovieLongPress(movie),
+                          );
+                        },
+                        childCount:
+                            vm.movies.length + (vm.isLoadingMore ? 2 : 0),
+                      ),
                     ),
                   ),
               ],
@@ -1227,7 +871,7 @@ class _MovieScreenState extends State<MovieScreen>
   /// The search field. A [SizeTransition] driven by [_searchAnimation] is what
   /// makes the list glide down instead of snapping — and unlike `AnimatedSize`,
   /// it animates on the very first open too.
-  Widget _buildSearchField(AppLocalizations l10n) {
+  Widget _buildSearchField(MovieViewModel vm, AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final curved = CurvedAnimation(
       parent: _searchAnimation,
@@ -1334,22 +978,26 @@ class _MovieScreenState extends State<MovieScreen>
   /// header would eat the list, so there they scroll away with the cards.
   List<Widget> _buildFilterHeaderSlivers(
     BuildContext context,
+    MovieViewModel vm,
     AppLocalizations l10n,
   ) {
     final height = _filterHeaderHeight;
     if (height == 0) return const [];
 
     final showFilters = _showFilterButtons;
-    final showCategories = _mainCategories.isNotEmpty;
+    final showCategories = vm.mainCategories.isNotEmpty;
     final header = Column(
       mainAxisSize: MainAxisSize.min,
       // Stretch, otherwise each row shrinks to its content and gets centred.
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showFilters)
-          SizedBox(height: _filterRowHeight, child: _buildFilterRow(l10n)),
+          SizedBox(height: _filterRowHeight, child: _buildFilterRow(vm, l10n)),
         if (showCategories)
-          SizedBox(height: _categoryRowHeight, child: _buildCategoryRow(l10n)),
+          SizedBox(
+            height: _categoryRowHeight,
+            child: _buildCategoryRow(vm, l10n),
+          ),
       ],
     );
 
@@ -1368,7 +1016,7 @@ class _MovieScreenState extends State<MovieScreen>
     ];
   }
 
-  Widget _buildFilterRow(AppLocalizations l10n) {
+  Widget _buildFilterRow(MovieViewModel vm, AppLocalizations l10n) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       // Vertical padding leaves the neu shadow room inside the pinned header,
@@ -1378,20 +1026,22 @@ class _MovieScreenState extends State<MovieScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_countryCategories.isNotEmpty)
+          if (vm.countryCategories.isNotEmpty)
             _buildFilterButton(
+              vm: vm,
               icon: Icons.public_rounded,
               fallbackLabel: l10n.countryLabel,
-              options: _countryCategories,
+              options: vm.countryCategories,
               isCountry: true,
             ),
-          if (_countryCategories.isNotEmpty && _genreCategories.isNotEmpty)
+          if (vm.countryCategories.isNotEmpty && vm.genreCategories.isNotEmpty)
             const SizedBox(width: 10),
-          if (_genreCategories.isNotEmpty)
+          if (vm.genreCategories.isNotEmpty)
             _buildFilterButton(
+              vm: vm,
               icon: Icons.local_movies_rounded,
               fallbackLabel: l10n.genreLabel,
-              options: _genreCategories,
+              options: vm.genreCategories,
               isCountry: false,
             ),
         ],
@@ -1399,8 +1049,8 @@ class _MovieScreenState extends State<MovieScreen>
     );
   }
 
-  Widget _buildCategoryRow(AppLocalizations l10n) {
-    final cats = _mainCategories;
+  Widget _buildCategoryRow(MovieViewModel vm, AppLocalizations l10n) {
+    final cats = vm.mainCategories;
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       clipBehavior: Clip.none,
@@ -1410,8 +1060,8 @@ class _MovieScreenState extends State<MovieScreen>
       itemBuilder: (context, index) {
         final cat = cats[index];
         final isSelected =
-            _collection == _MovieCollection.browse &&
-            cat.id == _selectedCategory?.id;
+            vm.collection == MovieCollection.browse &&
+            cat.id == vm.selectedCategory?.id;
 
         final label = switch (cat.id) {
           'new' => l10n.categoryNew,
@@ -1434,13 +1084,14 @@ class _MovieScreenState extends State<MovieScreen>
   /// A neu pill that opens the country / genre sheet and, once something is
   /// picked, shows the active value in place of its own label.
   Widget _buildFilterButton({
+    required MovieViewModel vm,
     required IconData icon,
     required String fallbackLabel,
     required List<MovieCategory> options,
     required bool isCountry,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    final selected = isCountry ? _selectedCountry : _selectedGenre;
+    final selected = isCountry ? vm.selectedCountry : vm.selectedGenre;
     final isSelected = selected != null;
     final foreground = isSelected ? Colors.white : scheme.onSurfaceVariant;
 
@@ -1604,7 +1255,7 @@ class _MovieScreenState extends State<MovieScreen>
               constraints: const BoxConstraints(maxWidth: 520),
               child: TextField(
                 controller: _serverUrlController,
-                enabled: !_isSyncingServer,
+                enabled: !vm.isFetching,
                 keyboardType: TextInputType.url,
                 decoration: InputDecoration(
                   hintText: l10n.serverUrlHint,
@@ -1617,14 +1268,14 @@ class _MovieScreenState extends State<MovieScreen>
             ),
             const SizedBox(height: 14),
             NeuButton(
-              onPressed: _isSyncingServer
+              onPressed: vm.isFetching
                   ? null
                   : () => _updateMovieServer(_serverUrlController.text),
               accent: Theme.of(context).colorScheme.primary,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isSyncingServer)
+                  if (vm.isFetching)
                     const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(
@@ -1635,7 +1286,7 @@ class _MovieScreenState extends State<MovieScreen>
                   else
                     const Icon(Icons.sync_rounded),
                   const SizedBox(width: 8),
-                  Text(_isSyncingServer ? l10n.syncing : l10n.saveAndSync),
+                  Text(vm.isFetching ? l10n.syncing : l10n.saveAndSync),
                 ],
               ),
             ),
