@@ -1822,4 +1822,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get avatarUploadFailed =>
       'Couldn\'t upload that picture. Please try again.';
+
+  @override
+  String resumePlayback(String time) {
+    return 'Resume from $time';
+  }
 }

@@ -115,6 +115,9 @@ class _MovieScreenState extends State<MovieScreen>
   bool _isDraggingMiniBar = false;
   final _detailController = MovieDetailController();
 
+  bool _isSelectionMode = false;
+  final Set<String> _selectedMovieIds = {};
+
   static const _genrePrefix = 'genre_';
   static const _countryPrefix = 'country_';
 
@@ -280,18 +283,18 @@ class _MovieScreenState extends State<MovieScreen>
 
     final result = await Result.guardFuture<MovieResponse>(() async {
       if (_collection == _MovieCollection.watched) {
-        final fetched = await movieLibraryService.getWatched(
+        return await movieLibraryService.getWatched(
           searchQuery: _searchQuery,
+          page: _currentPage,
           onBatch: publishLibraryBatch,
         );
-        return MovieResponse(movies: fetched, total: fetched.length);
       }
       if (_collection == _MovieCollection.favorites) {
-        final fetched = await movieLibraryService.getFavorites(
+        return await movieLibraryService.getFavorites(
           searchQuery: _searchQuery,
+          page: _currentPage,
           onBatch: publishLibraryBatch,
         );
-        return MovieResponse(movies: fetched, total: fetched.length);
       }
       if (_searchQuery.isNotEmpty) {
         return movieService.searchMovies(
@@ -343,13 +346,20 @@ class _MovieScreenState extends State<MovieScreen>
       setState(() {
         _isLoading = false;
         _isLoadingMore = false;
-        _hasMore = false;
+        _hasMore = response.movies.isNotEmpty;
         _totalMovies = response.total;
-        if (!receivedLibraryBatch) {
-          _movies = response.movies;
-          _movieIds.clear();
-          _movieIds.addAll(response.movies.map((m) => m.id));
-          _libraryStates.clear();
+        if (refresh) {
+          if (!receivedLibraryBatch) {
+            _movies = response.movies;
+            _movieIds.clear();
+            _movieIds.addAll(response.movies.map((m) => m.id));
+            _libraryStates.clear();
+          }
+        } else {
+          final newMovies = response.movies
+              .where((m) => _movieIds.add(m.id))
+              .toList();
+          _movies.addAll(newMovies);
         }
       });
       return;
@@ -383,14 +393,43 @@ class _MovieScreenState extends State<MovieScreen>
   }
 
   Future<void> _loadMoreMovies() async {
-    if (_collection != _MovieCollection.browse || _isLoadingMore || !_hasMore) {
+    if (_isLoadingMore || !_hasMore) {
       return;
     }
     final generation = _loadGeneration;
     setState(() => _isLoadingMore = true);
 
     _currentPage++;
+
+    final isLibraryCollection = _collection != _MovieCollection.browse;
+    var receivedLibraryBatch = false;
+
+    void publishLibraryBatch(List<MovieLibraryItem> items) {
+      if (!mounted || generation != _loadGeneration || items.isEmpty) return;
+      setState(() {
+        for (final item in items) {
+          if (_movieIds.add(item.movie.id)) _movies.add(item.movie);
+          _libraryStates[item.movie.id] = item.state;
+        }
+        receivedLibraryBatch = true;
+      });
+    }
+
     final result = await Result.guardFuture<MovieResponse>(() async {
+      if (_collection == _MovieCollection.watched) {
+        return await movieLibraryService.getWatched(
+          searchQuery: _searchQuery,
+          page: _currentPage,
+          onBatch: publishLibraryBatch,
+        );
+      }
+      if (_collection == _MovieCollection.favorites) {
+        return await movieLibraryService.getFavorites(
+          searchQuery: _searchQuery,
+          page: _currentPage,
+          onBatch: publishLibraryBatch,
+        );
+      }
       if (_searchQuery.isNotEmpty) {
         return movieService.searchMovies(
           _searchQuery,
@@ -422,6 +461,21 @@ class _MovieScreenState extends State<MovieScreen>
     }
 
     final response = result.data ?? const MovieResponse(movies: [], total: 0);
+
+    if (isLibraryCollection) {
+      setState(() {
+        _isLoadingMore = false;
+        _hasMore = response.movies.isNotEmpty;
+        if (!receivedLibraryBatch) {
+          final newMovies = response.movies
+              .where((m) => _movieIds.add(m.id))
+              .toList();
+          _movies.addAll(newMovies);
+        }
+      });
+      return;
+    }
+
     final fetched = response.movies;
     final states = await _loadLibraryStates(fetched.map((movie) => movie.id));
     if (!mounted || generation != _loadGeneration) return;
@@ -455,6 +509,7 @@ class _MovieScreenState extends State<MovieScreen>
   }
 
   void _selectCollection(_MovieCollection collection) {
+    if (_isSelectionMode) _exitSelectionMode();
     setState(() {
       _collection = _collection == collection
           ? _MovieCollection.browse
@@ -464,6 +519,7 @@ class _MovieScreenState extends State<MovieScreen>
   }
 
   void _selectCategory(MovieCategory? category) {
+    if (_isSelectionMode) _exitSelectionMode();
     final target = category ?? _mainCategories.firstOrNull;
     if (_collection == _MovieCollection.browse &&
         target?.id == _selectedCategory?.id) {
@@ -587,6 +643,7 @@ class _MovieScreenState extends State<MovieScreen>
   }
 
   void _toggleSearch() {
+    if (_isSelectionMode) _exitSelectionMode();
     _captureSearchIconOrigin();
     if (_isSearchOpen) {
       _debounceTimer?.cancel();
@@ -610,24 +667,57 @@ class _MovieScreenState extends State<MovieScreen>
     );
   }
 
-  Future<void> _handleMovieLongPress(Movie movie) async {
-    if (_collection != _MovieCollection.watched) return;
+  void _toggleSelection(String movieId) {
+    setState(() {
+      if (_selectedMovieIds.contains(movieId)) {
+        _selectedMovieIds.remove(movieId);
+        if (_selectedMovieIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedMovieIds.add(movieId);
+      }
+    });
+  }
+
+  void _enterSelectionMode(String movieId) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedMovieIds.add(movieId);
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedMovieIds.clear();
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    if (_selectedMovieIds.isEmpty) return;
 
     final l10n = AppLocalizations.of(context);
+    final count = _selectedMovieIds.length;
     final confirm = await showAppConfirmDialog(
       context,
       title: l10n.removeFromHistory,
-      message: l10n.confirmRemoveFromHistory(movie.title),
+      message: 'Xoá $count phim đã chọn khỏi lịch sử đã xem?',
       confirmText: l10n.delete,
       isDestructive: true,
     );
 
     if (confirm) {
-      await movieLibraryService.removeFromHistory(movie.id);
+      final ids = _selectedMovieIds.toList();
+      _exitSelectionMode();
+      await movieLibraryService.removeMultipleFromHistory(ids);
       if (mounted) {
         await _loadMovies(refresh: true);
       }
     }
+  }
+
+  Future<void> _handleMovieLongPress(Movie movie) async {
+    if (_collection != _MovieCollection.watched) return;
+    _enterSelectionMode(movie.id);
   }
 
   Future<Map<String, MovieLibraryState>> _loadLibraryStates(
@@ -868,6 +958,32 @@ class _MovieScreenState extends State<MovieScreen>
     required String? baseUrl,
     required AppLocalizations l10n,
   }) {
+    if (_isSelectionMode) {
+      return AppScaffold(
+        appBar: DoAppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close_rounded),
+            onPressed: _exitSelectionMode,
+          ),
+          title: '${_selectedMovieIds.length} đã chọn',
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded),
+              tooltip: l10n.delete,
+              onPressed: _deleteSelected,
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: _buildBrowserBody(
+          context,
+          emptyMessage: emptyMessage,
+          baseUrl: baseUrl,
+          l10n: l10n,
+        ),
+      );
+    }
+
     return AppScaffold(
       appBar: DoAppBar(
         title: movieLabel,
@@ -1083,11 +1199,21 @@ class _MovieScreenState extends State<MovieScreen>
                         }
                         final movie = _movies[index];
                         final libraryState = _libraryStates[movie.id];
+                        final isSelected = _selectedMovieIds.contains(movie.id);
+
                         return MoviePosterCard(
                           movie: movie,
                           isWatched: libraryState?.watchedAt != null,
                           isFavorite: libraryState?.isFavorite ?? false,
-                          onTap: (cardRect) => _openMovie(movie, cardRect),
+                          libraryState: libraryState,
+                          isSelected: isSelected,
+                          onTap: (cardRect) {
+                            if (_isSelectionMode) {
+                              _toggleSelection(movie.id);
+                            } else {
+                              _openMovie(movie, cardRect);
+                            }
+                          },
                           onLongPress: () => _handleMovieLongPress(movie),
                         );
                       }, childCount: _movies.length + (_isLoadingMore ? 2 : 0)),

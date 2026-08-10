@@ -15,6 +15,9 @@ gen-app-icon:
 l10n:
 	fvm flutter gen-l10n
 
+format:
+	fvm dart format .
+
 env:
 	./scripts/restore-env-configs.sh dev
 

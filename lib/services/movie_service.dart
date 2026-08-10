@@ -18,6 +18,8 @@ class MovieService {
   late MovieSiteType _siteType;
   late Dio _dio;
 
+  final Map<String, MovieDetail> _detailCache = {};
+
   void _initDio() {
     baseUrl = storageService.getMovieBaseUrl();
     final typeStr = storageService.getMovieSiteType();
@@ -615,6 +617,12 @@ class MovieService {
   }) async {
     if (baseUrl == null || baseUrl!.isEmpty) return null;
 
+    // Return from cache if available and we don't strictly need a new stream URL
+    // (though usually getMovieDetail is called once per session per movie).
+    if (_detailCache.containsKey(movieId)) {
+      return _detailCache[movieId];
+    }
+
     final isOphim = _siteType == MovieSiteType.ophim;
 
     if (isOphim) {
@@ -709,7 +717,7 @@ class MovieService {
       ).firstMatch(htmlStr);
       final thumbnailTrackUrl = _fixUrl(thumbnailTrackMatch?.group(1));
 
-      return MovieDetail(
+      final detail = MovieDetail(
         id: movieId,
         title: title,
         url: movieUrl,
@@ -724,6 +732,9 @@ class MovieService {
         relatedMovies: relatedMovies,
         servers: servers,
       );
+
+      _detailCache[movieId] = detail;
+      return detail;
     } catch (e) {
       if (e is! DioException || e.type != DioExceptionType.cancel) {
         logger.e('MovieService getMovieDetail failed', error: e);
@@ -1046,7 +1057,7 @@ class MovieService {
         }
       }
 
-      return MovieDetail(
+      final detail = MovieDetail(
         id: movieData['_id'] ?? slug,
         title: movieData['name'] ?? '',
         originalTitle: movieData['origin_name']?.toString(),
@@ -1075,6 +1086,9 @@ class MovieService {
             .toList(),
         servers: servers,
       );
+
+      _detailCache[movieId] = detail;
+      return detail;
     } catch (e) {
       if (e is! DioException || e.type != DioExceptionType.cancel) {
         logger.e('MovieService _getOphimDetail failed', error: e);

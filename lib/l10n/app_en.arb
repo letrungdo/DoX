@@ -1112,5 +1112,14 @@
   "removeAvatar": "Remove picture",
   "avatarUpdated": "Your picture has been updated.",
   "avatarRemoved": "Your picture has been removed.",
-  "avatarUploadFailed": "Couldn't upload that picture. Please try again."
+  "avatarUploadFailed": "Couldn't upload that picture. Please try again.",
+  "resumePlayback": "Resume from {time}",
+  "@resumePlayback": {
+    "description": "Resume video playback from a saved position",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

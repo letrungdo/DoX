@@ -1070,5 +1070,14 @@
   "removeAvatar": "Xoá ảnh đại diện",
   "avatarUpdated": "Đã cập nhật ảnh đại diện.",
   "avatarRemoved": "Đã xoá ảnh đại diện.",
-  "avatarUploadFailed": "Không tải được ảnh lên. Vui lòng thử lại."
+  "avatarUploadFailed": "Không tải được ảnh lên. Vui lòng thử lại.",
+  "resumePlayback": "Tiếp tục xem từ {time}",
+  "@resumePlayback": {
+    "description": "Tiếp tục phát video từ vị trí đã lưu",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

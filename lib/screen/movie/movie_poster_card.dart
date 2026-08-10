@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
+import 'package:do_x/services/movie_library_service.dart';
+import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
@@ -16,6 +18,8 @@ class MoviePosterCard extends StatelessWidget {
     this.onLongPress,
     this.isWatched = false,
     this.isFavorite = false,
+    this.libraryState,
+    this.isSelected = false,
     this.showOverlays = true,
     this.titleMaxLines = 1,
     this.titleFontSize = 12,
@@ -29,6 +33,8 @@ class MoviePosterCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool isWatched;
   final bool isFavorite;
+  final MovieLibraryState? libraryState;
+  final bool isSelected;
   final bool showOverlays;
   final int titleMaxLines;
   final double titleFontSize;
@@ -42,10 +48,14 @@ class MoviePosterCard extends StatelessWidget {
         (movie.likes?.isNotEmpty ?? false);
     final originalTitle = movie.originalTitle;
 
+    final progressSeconds = libraryState?.lastPositionSeconds;
+    final progressEpisode = libraryState?.lastEpisodeName;
+
     return NeuCard(
       margin: EdgeInsets.zero,
       padding: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
+      depth: isSelected ? 0 : 0.6,
       onTap: () {
         final box = context.findRenderObject() as RenderBox?;
         if (box == null || !box.hasSize) return;
@@ -134,6 +144,28 @@ class MoviePosterCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                if (isSelected)
+                  Positioned.fill(
+                    child: Container(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.2),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (showOverlays && hasCounters)
                   Positioned(
                     bottom: 6,
@@ -183,6 +215,45 @@ class MoviePosterCard extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                    ),
+                  ),
+                if (showOverlays &&
+                    progressSeconds != null &&
+                    progressSeconds > 0)
+                  Positioned(
+                    bottom: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.play_arrow_rounded,
+                            size: 12,
+                            color: Colors.white70,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            progressEpisode != null
+                                ? '$progressEpisode · ${formatDuration(Duration(seconds: progressSeconds))}'
+                                : formatDuration(
+                                    Duration(seconds: progressSeconds),
+                                  ),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -3301,6 +3301,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t upload that picture. Please try again.'**
   String get avatarUploadFailed;
+
+  /// Resume video playback from a saved position
+  ///
+  /// In en, this message translates to:
+  /// **'Resume from {time}'**
+  String resumePlayback(String time);
 }
 
 class _AppLocalizationsDelegate

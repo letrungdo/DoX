@@ -95,6 +95,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _showVolumeControl = false;
   bool _showControls = true;
   Timer? _controlsTimer;
+  Timer? _progressTimer;
   StreamSubscription<Orientation>? _orientationSubscription;
   final FocusNode _videoFocusNode = FocusNode(debugLabel: 'movie-video');
 
@@ -127,6 +128,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   List<MovieStreamVariant> _availableQualities = const [];
   String? _masterStreamUrl;
   bool _isFavorite = false;
+  MovieLibraryState? _libraryState;
   bool _isUpdatingFavorite = false;
   bool _hasRecordedWatch = false;
   bool _isRotationLocked = false;
@@ -148,14 +150,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     super.initState();
     logger.d('MovieDetailScreen: initState');
     widget.controller?._exitFullScreen = _exitFullScreen;
-    _loadDetail();
-    _loadLibraryState();
+    _init();
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final shouldAutoEnterFullScreen =
           kIsWeb || defaultTargetPlatform == TargetPlatform.macOS;
       if (mounted && shouldAutoEnterFullScreen) _enterFullScreen();
     });
+  }
+
+  Future<void> _init() async {
+    // Run these in parallel but wait for them before starting the player
+    await Future.wait([_loadDetail(showLoading: true), _loadLibraryState()]);
   }
 
   void _initOrientationListener() {
@@ -207,6 +213,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _videoController = null;
     _videoValueListener = null;
     if (controller != null) {
+      if (controller.value.isInitialized) {
+        final position = controller.value.position.inSeconds;
+        logger.d('MovieDetailScreen: Saving final position $position');
+        unawaited(_recordWatched(positionSeconds: position));
+      }
       if (listener != null) controller.removeListener(listener);
       unawaited(controller.dispose());
     }
@@ -214,6 +225,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _orientationSubscription?.cancel();
     _videoFocusNode.dispose();
     _cancelToken.cancel();
+    _progressTimer?.cancel();
 
     // Reset everything to normal
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -225,6 +237,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Future<void> _loadDetail({bool showLoading = true}) async {
+    // If detail is already loaded for this movieId, skip fetching again.
+    if (_detail != null && _detail!.id == widget.movieId) return;
+
     final generation = ++_detailGeneration;
     if (showLoading) setState(() => _isLoading = true);
     final detail = await movieService.getMovieDetail(
@@ -242,12 +257,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _isLoadingStream = (detail?.streamUrl ?? '').isNotEmpty;
       _thumbnailTrack = null;
       _hoverThumbnailCue = null;
-      if (detail != null && detail.servers.isNotEmpty) {
-        _selectedServer = detail.servers.first;
-        if (_selectedServer!.episodes.isNotEmpty) {
-          _selectedEpisode = _selectedServer!.episodes.first;
-        }
-      }
+
+      _applyLibraryStateToSelection();
     });
 
     final thumbnailTrackUrl = detail?.thumbnailTrackUrl;
@@ -255,9 +266,52 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       unawaited(_loadThumbnailTrack(thumbnailTrackUrl, generation));
     }
 
-    if (_masterStreamUrl != null && _masterStreamUrl!.isNotEmpty) {
+    if (_masterStreamUrl != null &&
+        _masterStreamUrl!.isNotEmpty &&
+        _selectedServer == detail?.servers.firstOrNull &&
+        _selectedEpisode == _selectedServer?.episodes.firstOrNull) {
       unawaited(_useMasterStream(_masterStreamUrl!));
+    } else if (_selectedEpisode != null) {
+      // If we have a saved episode/server that isn't the default, or no master
+      // stream, play that specific episode.
+      unawaited(_playEpisode(_selectedEpisode!));
     }
+  }
+
+  void _applyLibraryStateToSelection() {
+    final detail = _detail;
+    if (detail == null || detail.servers.isEmpty) return;
+
+    final lastServerName = _libraryState?.lastServerName;
+    final lastEpisodeName = _libraryState?.lastEpisodeName;
+
+    logger.d(
+      'MovieDetailScreen: Apply library state (server=$lastServerName, ep=$lastEpisodeName)',
+    );
+
+    if (lastServerName != null) {
+      _selectedServer = detail.servers.firstWhere(
+        (s) => s.name == lastServerName,
+        orElse: () => detail.servers.first,
+      );
+    } else {
+      _selectedServer = detail.servers.first;
+    }
+
+    if (_selectedServer!.episodes.isNotEmpty) {
+      if (lastEpisodeName != null) {
+        _selectedEpisode = _selectedServer!.episodes.firstWhere(
+          (e) => e.name == lastEpisodeName,
+          orElse: () => _selectedServer!.episodes.first,
+        );
+      } else {
+        _selectedEpisode = _selectedServer!.episodes.first;
+      }
+    }
+
+    logger.d(
+      'MovieDetailScreen: Selected (server=${_selectedServer?.name}, ep=${_selectedEpisode?.name})',
+    );
   }
 
   Future<void> _refreshDetail() async {
@@ -377,6 +431,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (!mounted || movieId != widget.movieId) return;
       setState(() {
         _isFavorite = state.isFavorite;
+        _libraryState = state;
+
+        // If detail is already loaded but no episode selected (or we want to
+        // override with saved progress), apply it now.
+        if (_detail != null && _videoController == null) {
+          _applyLibraryStateToSelection();
+        }
       });
     } catch (error, stackTrace) {
       logger.e(
@@ -387,11 +448,34 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
   }
 
-  Future<void> _recordWatched() async {
-    if (_hasRecordedWatch) return;
+  Future<void> _recordWatched({int? positionSeconds}) async {
+    // Only record as watched if the user has watched at least 20 seconds.
+    // If we're just updating the position of a movie that's already in history,
+    // we allow it.
+    final currentHistory = _libraryState?.watchedAt;
+    final isNewWatch = currentHistory == null;
+    final pos =
+        positionSeconds ?? _videoController?.value.position.inSeconds ?? 0;
+
+    if (isNewWatch && pos < 20) {
+      logger.d('MovieDetailScreen: Skip recording (new watch, pos=$pos < 20s)');
+      return;
+    }
+
+    if (_hasRecordedWatch && positionSeconds == null) return;
+    logger.d('MovieDetailScreen: _recordWatched(pos=$pos)');
     _hasRecordedWatch = true;
+
+    final episode = _selectedEpisode;
+    final server = _selectedServer;
+
     try {
-      await movieLibraryService.markWatched(_libraryMovie);
+      await movieLibraryService.markWatched(
+        _libraryMovie,
+        episodeName: episode?.name,
+        serverName: server?.name,
+        positionSeconds: pos,
+      );
     } catch (error, stackTrace) {
       _hasRecordedWatch = false;
       logger.e(
@@ -400,6 +484,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  void _startProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (_isPlaying) {
+        final position = _videoController?.value.position.inSeconds;
+        if (position != null) {
+          unawaited(_recordWatched(positionSeconds: position));
+        }
+      }
+    });
   }
 
   Future<void> _toggleFavorite() async {
@@ -432,6 +528,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final oldController = _videoController;
     final oldListener = _videoValueListener;
     final l10n = AppLocalizations.of(context);
+
+    // Cancel progress timer before switching controllers
+    _progressTimer?.cancel();
+
     setState(() {
       _isLoadingStream = true;
       _showControls = true;
@@ -456,8 +556,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       await controller.initialize();
       await controller.setPlaybackSpeed(_playbackSpeed);
       await controller.setVolume(_volume);
-      if (seekTo != null) {
-        await controller.seekTo(seekTo);
+
+      Duration? initialSeek = seekTo;
+      if (initialSeek == null && _libraryState != null) {
+        if (_selectedEpisode?.name == _libraryState!.lastEpisodeName &&
+            _selectedServer?.name == _libraryState!.lastServerName) {
+          final seconds = _libraryState!.lastPositionSeconds ?? 0;
+          if (seconds > 5) {
+            initialSeek = Duration(seconds: seconds);
+          }
+        }
+      }
+
+      if (initialSeek != null) {
+        await controller.seekTo(initialSeek);
+        if (mounted && seekTo == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.resumePlayback(formatDuration(initialSeek))),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
       await controller.play();
 
@@ -475,7 +595,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         final isPlaying = controller.value.isPlaying;
         if (isPlaying != _isPlaying) {
           setState(() => _isPlaying = isPlaying);
-          if (isPlaying) _startControlsTimer();
+          if (isPlaying) {
+            _startControlsTimer();
+            _startProgressTimer();
+          } else {
+            _progressTimer?.cancel();
+            // Save progress immediately on pause
+            final position = controller.value.position.inSeconds;
+            unawaited(_recordWatched(positionSeconds: position));
+          }
         }
       }
 
@@ -487,6 +615,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       });
       controller.addListener(videoValueListener);
       _startControlsTimer();
+      _startProgressTimer();
       unawaited(_recordWatched());
     } catch (e) {
       await controller.dispose();

@@ -1815,4 +1815,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get avatarUploadFailed => 'Không tải được ảnh lên. Vui lòng thử lại.';
+
+  @override
+  String resumePlayback(String time) {
+    return 'Tiếp tục xem từ $time';
+  }
 }
