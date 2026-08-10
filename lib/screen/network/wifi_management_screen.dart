@@ -7,6 +7,7 @@ import 'package:do_x/screen/network/local_network_screen.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
@@ -233,7 +234,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                 if (isTesting)
                   const SizedBox.square(
                     dimension: 32,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    child: Loading(size: 32, strokeWidth: 2),
                   ),
               ],
             ),
@@ -500,7 +501,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
         SizedBox.square(
           dimension: 18,
           child: isRunning
-              ? const CircularProgressIndicator.adaptive(strokeWidth: 2)
+              ? const Loading(size: 18, strokeWidth: 2)
               : SFIcon(
                   isFailed
                       ? SFIcons.sf_xmark_circle_fill

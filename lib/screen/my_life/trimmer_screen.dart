@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
@@ -371,7 +372,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
               ],
             ),
           )
-        : const Center(child: CircularProgressIndicator());
+        : const Center(child: Loading());
   }
 
   String formatter(Duration duration) => [

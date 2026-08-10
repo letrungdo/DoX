@@ -12,6 +12,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/setting_card.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -82,7 +83,7 @@ class _ChickenSettingsScreenState
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: Loading(size: 20, strokeWidth: 2),
                         )
                       : const Icon(Icons.chevron_right_rounded),
                   onTap: _exporting ? null : _exportToJsonFile,
@@ -277,7 +278,7 @@ class _ChickenSettingsScreenState
             title: l10n.deletingData,
             content: Row(
               children: [
-                const CircularProgressIndicator(),
+                const Loading(),
                 const SizedBox(width: 20),
                 Expanded(child: Text(l10n.pleaseWait)),
               ],

@@ -17,6 +17,7 @@ import 'package:do_x/screen/movie/movie_server_dialog.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/view_model/movie/movie_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -785,7 +786,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                 if (vm.isLoading && vm.movies.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: Loading()),
                   )
                 else if (vm.movies.isEmpty)
                   SliverFillRemaining(
@@ -832,9 +833,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           if (index >= vm.movies.length) {
-                            return const Card(
-                              child: Center(child: CircularProgressIndicator()),
-                            );
+                            return const Card(child: Center(child: Loading()));
                           }
                           final movie = vm.movies[index];
                           final libraryState = vm.libraryStates[movie.id];
@@ -1278,10 +1277,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                   if (vm.isFetching)
                     const SizedBox.square(
                       dimension: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: Loading(size: 18, strokeWidth: 2),
                     )
                   else
                     const Icon(Icons.sync_rounded),

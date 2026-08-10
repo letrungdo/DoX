@@ -13,6 +13,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/electric_view_model.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
@@ -156,9 +157,7 @@ class _ElectricScreenState
         selector: (_, vm) => vm.status,
         builder: (context, status, _) {
           return switch (status) {
-            ElectricStatus.loading => const Center(
-              child: CircularProgressIndicator.adaptive(),
-            ),
+            ElectricStatus.loading => const Center(child: Loading()),
             ElectricStatus.loggedOut => _LoginForm(
               onSubmit: _login,
               onForgetSavedAccount: (account) =>

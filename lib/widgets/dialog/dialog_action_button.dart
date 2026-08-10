@@ -1,4 +1,4 @@
-import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
 
@@ -94,14 +94,11 @@ class DialogActionButton extends StatelessWidget {
       radius: 14,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
       child: loading
-          ? Center(
+          ? const Center(
               child: SizedBox(
                 height: 18,
                 width: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: context.colors.disabled,
-                ),
+                child: Loading(size: 18, strokeWidth: 2),
               ),
             )
           : _label(),

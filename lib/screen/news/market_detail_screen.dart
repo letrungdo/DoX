@@ -10,6 +10,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/view_model/news/market_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -120,7 +121,7 @@ class _MarketDetailScreenState
     return SizedBox(
       height: 280,
       child: vm.candles.isEmpty
-          ? const Center(child: CircularProgressIndicator.adaptive())
+          ? const Center(child: Loading())
           : CandleChartView(candles: vm.candles, precision: 3),
     );
   }

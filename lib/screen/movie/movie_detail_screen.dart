@@ -15,6 +15,7 @@ import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
@@ -1092,7 +1093,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   ],
                 ),
                 body: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: Loading())
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1335,7 +1336,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       child: Padding(
                         padding: sideInsets,
                         child: _isLoading
-                            ? const Center(child: CircularProgressIndicator())
+                            ? const Center(child: Loading())
                             : _buildDetailBody(),
                       ),
                     ),
@@ -1428,10 +1429,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             : const Center(
                 child: SizedBox.square(
                   dimension: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.pinkAccent,
-                  ),
+                  child: Loading(size: 20, strokeWidth: 2),
                 ),
               ),
       );
@@ -1477,9 +1475,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               // `_isLoading` counts too: the detail request runs before the
               // stream one, and without it the retry button flashes up first.
               else if (_isLoadingStream || _isLoading)
-                const Center(
-                  child: CircularProgressIndicator(color: Colors.pinkAccent),
-                )
+                const Center(child: Loading())
               else
                 Center(
                   child: Column(

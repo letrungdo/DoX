@@ -7,6 +7,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/feng_shui.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
@@ -112,7 +113,7 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
         if (heading == null) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 80),
-            child: CircularProgressIndicator(),
+            child: Loading(),
           );
         }
         return child!;
