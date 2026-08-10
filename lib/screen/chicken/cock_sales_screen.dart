@@ -423,9 +423,10 @@ class _CockSalesScreenState
               }
               if (context.mounted) Navigator.pop(context);
             } catch (error) {
-              if (mounted) {
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(content: Text(l10n.saveFailed(error.toString()))),
+              if (context.mounted) {
+                context.showToast(
+                  l10n.saveFailed(error.toString()),
+                  isError: true,
                 );
               }
             }
@@ -513,9 +514,7 @@ class _CockSalesScreenState
       await vm.deleteGlobalCockSale(sale.id);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.deleteFailed(error.toString()))),
-        );
+        context.showToast(l10n.deleteFailed(error.toString()), isError: true);
       }
     }
   }

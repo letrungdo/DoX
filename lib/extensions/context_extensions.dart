@@ -15,6 +15,14 @@ extension ContextExtensions on BuildContext {
 
   String get loadingId => "${AppConst.loadingIdPrefix}$hashCode";
 
+  void showToast(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(this)
+      ..clearSnackBars()
+      ..showSnackBar(
+        isError ? errorSnackBar(message) : SnackBar(content: Text(message)),
+      );
+  }
+
   /// Error snack bar tinted from the color scheme. A raw `Colors.red` bar keeps
   /// the theme's light-on-dark content color, which is unreadable in light mode.
   SnackBar errorSnackBar(String message) {

@@ -69,9 +69,7 @@ class _ChickenBatchDetailScreenState
       return true;
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.saveFailed(error.toString()))),
-        );
+        context.showToast(l10n.saveFailed(error.toString()), isError: true);
       }
       return false;
     }

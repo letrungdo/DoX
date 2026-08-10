@@ -93,9 +93,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   }
 
   void _showErrorSnackBar(String message) =>
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
-      );
+      context.showToast(message, isError: true);
 
   Future<void> _exportVideo() async {
     _exportingProgress.value = 0;

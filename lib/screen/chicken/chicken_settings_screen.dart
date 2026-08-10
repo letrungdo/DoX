@@ -126,9 +126,7 @@ class _ChickenSettingsScreenState
     vm.setCurrentContext(context);
     final changed = await vm.setVaccinationNotificationsEnabled(value);
     if (value && !changed && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.notificationPermissionDenied)),
-      );
+      context.showToast(l10n.notificationPermissionDenied, isError: true);
     }
   }
 
@@ -168,14 +166,10 @@ class _ChickenSettingsScreenState
       // Only when the file actually went somewhere — a dismissed sheet is the
       // user changing their mind, not something to congratulate them on.
       if (!mounted || result.status != ShareResultStatus.success) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.exportDataSuccess)));
+      context.showToast(l10n.exportDataSuccess);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        context.errorSnackBar(l10n.exportFileFailed(e.toString())),
-      );
+      context.showToast(l10n.exportFileFailed(e.toString()), isError: true);
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -204,18 +198,14 @@ class _ChickenSettingsScreenState
       final count = await vm.importFromJson(jsonString);
       if (progressDialogContext.mounted) Navigator.pop(progressDialogContext);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.importedRecords(count, file.name))),
-      );
+      context.showToast(l10n.importedRecords(count, file.name));
     } catch (e) {
       final dialogContext = progressDialogContext;
       if (dialogContext != null && dialogContext.mounted) {
         Navigator.pop(dialogContext);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        context.errorSnackBar(l10n.importFileFailed(e.toString())),
-      );
+      context.showToast(l10n.importFileFailed(e.toString()), isError: true);
     }
   }
 
@@ -296,15 +286,11 @@ class _ChickenSettingsScreenState
       final message = count == 0
           ? l10n.noDataToDelete
           : l10n.deletedAllData(count);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      context.showToast(message);
     } catch (e) {
       if (dialogContext.mounted) Navigator.pop(dialogContext);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        context.errorSnackBar(l10n.deleteDataFailed(e.toString())),
-      );
+      context.showToast(l10n.deleteDataFailed(e.toString()), isError: true);
     }
   }
 }

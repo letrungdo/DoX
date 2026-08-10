@@ -7,7 +7,6 @@ import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/auth_error.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UpdatePasswordViewModel extends CoreViewModel {
@@ -81,12 +80,6 @@ class UpdatePasswordViewModel extends CoreViewModel {
 
   void _showMessage(String message, {bool isError = false}) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        isError
-            ? context.errorSnackBar(message)
-            : SnackBar(content: Text(message)),
-      );
+    context.showToast(message, isError: isError);
   }
 }

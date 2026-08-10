@@ -1,5 +1,6 @@
 import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/extensions/app_page_extensions.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:flutter/material.dart';
@@ -148,9 +149,7 @@ class PageLayoutEditor extends StatelessWidget {
       if (wasTab) {
         appVm.reorderTabPages(appVm.tabPages.indexOf(page), indexInGroup);
       } else if (!appVm.movePageToTabs(page, index: indexInGroup)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.maxTabsReached(AppPage.maxTabs))),
-        );
+        context.showToast(l10n.maxTabsReached(AppPage.maxTabs), isError: true);
       }
     } else {
       if (wasTab) {

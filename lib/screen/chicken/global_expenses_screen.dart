@@ -282,10 +282,9 @@ class _GlobalExpensesScreenState
           return true;
         } catch (error) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              context.errorSnackBar(
-                l10n.saveCommonExpenseFailed(error.toString()),
-              ),
+            context.showToast(
+              l10n.saveCommonExpenseFailed(error.toString()),
+              isError: true,
             );
           }
           return false;
@@ -322,10 +321,9 @@ class _GlobalExpensesScreenState
       await vm.deleteGlobalExpense(expense.id);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          context.errorSnackBar(
-            l10n.deleteCommonExpenseFailed(error.toString()),
-          ),
+        context.showToast(
+          l10n.deleteCommonExpenseFailed(error.toString()),
+          isError: true,
         );
       }
     }

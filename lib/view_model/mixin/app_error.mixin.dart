@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/repository/client/api_dialog.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:flutter/material.dart';
@@ -61,10 +62,6 @@ mixin AppErrorMixin {
   }
 
   void showErrorMessage(BuildContext context, {required String message}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message), //
-      ),
-    );
+    context.showToast(message);
   }
 }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:auto_route/auto_route.dart';
 import 'package:camera/camera.dart';
 import 'package:collection/collection.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -198,9 +199,7 @@ class DoCameraState extends State<DoCamera> with WidgetsBindingObserver {
   }
 
   void showInSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    context.showToast(message);
   }
 
   @override

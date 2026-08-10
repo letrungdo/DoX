@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:auto_route/auto_route.dart';
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
@@ -243,7 +244,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _loadDetail({bool showLoading = true, bool force = false}) async {
+  Future<void> _loadDetail({
+    bool showLoading = true,
+    bool force = false,
+  }) async {
     // If detail is already loaded for this movieId, skip fetching again.
     if (!force && _detail != null && _detail!.id == widget.movieId) {
       if (showLoading) setState(() => _isLoading = false);
@@ -298,14 +302,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
     // If we already have a manual selection, try to maintain it in the new detail.
     if (_selectedServer != null) {
-      final matchingServer = detail.servers.cast<MovieEpisodeServer?>().firstWhere(
+      final matchingServer = detail.servers
+          .cast<MovieEpisodeServer?>()
+          .firstWhere(
             (s) => s?.name == _selectedServer!.name,
             orElse: () => null,
           );
       if (matchingServer != null) {
         _selectedServer = matchingServer;
         if (_selectedEpisode != null) {
-          _selectedEpisode = matchingServer.episodes.cast<MovieEpisode?>().firstWhere(
+          _selectedEpisode = matchingServer.episodes
+              .cast<MovieEpisode?>()
+              .firstWhere(
                 (e) => e?.name == _selectedEpisode!.name,
                 orElse: () => matchingServer.episodes.firstOrNull,
               );
@@ -549,9 +557,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         stackTrace: stackTrace,
       );
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.updateFavoriteFailed)));
+        context.showToast(l10n.updateFavoriteFailed, isError: true);
       }
     } finally {
       if (mounted) setState(() => _isUpdatingFavorite = false);
@@ -606,12 +612,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (initialSeek != null) {
         await controller.seekTo(initialSeek);
         if (mounted && seekTo == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.resumePlayback(formatDuration(initialSeek))),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          context.showToast(l10n.resumePlayback(formatDuration(initialSeek)));
         }
       }
       await controller.play();
@@ -658,9 +659,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       setState(() {
         _isLoadingStream = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
+      context.showToast(l10n.videoStreamError, isError: true);
     }
   }
 
@@ -712,7 +711,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
     if (_selectedEpisode != null) {
       final shouldSeek = _selectedEpisode?.name == currentEpisodeName;
-      await _playEpisode(_selectedEpisode!, seekTo: shouldSeek ? currentPos : null);
+      await _playEpisode(
+        _selectedEpisode!,
+        seekTo: shouldSeek ? currentPos : null,
+      );
     }
   }
 
@@ -749,9 +751,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (mounted) {
         setState(() => _isLoadingStream = false);
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.videoStreamError)));
+        context.showToast(l10n.videoStreamError, isError: true);
       }
     }
   }

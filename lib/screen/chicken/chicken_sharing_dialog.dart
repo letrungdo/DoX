@@ -23,7 +23,7 @@ Future<void> showChickenSharingDialog(BuildContext context) async {
     builder: (_) => const _ChickenSharingDialog(),
   );
   if (message == null || !context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  context.showToast(message);
 }
 
 /// A widget rather than a `StatefulBuilder` over a locally held controller: the

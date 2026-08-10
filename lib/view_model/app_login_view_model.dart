@@ -1,15 +1,14 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/auth_links.dart';
-import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/supabase_account.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/auth_error.dart';
-import 'package:do_x/view_model/verify_otp_view_model.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:flutter/material.dart';
+import 'package:do_x/view_model/verify_otp_view_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Which half of the form the user is on. One screen serves both, because the
@@ -211,12 +210,6 @@ class AppLoginViewModel extends CoreViewModel {
 
   void _showMessage(String message, {bool isError = false}) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        isError
-            ? context.errorSnackBar(message)
-            : SnackBar(content: Text(message)),
-      );
+    context.showToast(message, isError: isError);
   }
 }

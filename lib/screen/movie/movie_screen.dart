@@ -486,9 +486,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     if (uri == null ||
         !uri.hasAuthority ||
         (uri.scheme != 'http' && uri.scheme != 'https')) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.invalidMovieServerUrl)));
+      context.showToast(l10n.invalidMovieServerUrl, isError: true);
       return false;
     }
 
@@ -498,13 +496,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       _serverUrlController.text = movieService.baseUrl ?? url;
       _searchController.clear();
       _isSearchOpen = false;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.movieServerUrlUpdated)));
+      context.showToast(l10n.movieServerUrlUpdated);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.updateMovieServerFailed)));
+      context.showToast(l10n.updateMovieServerFailed, isError: true);
     }
     return success;
   }

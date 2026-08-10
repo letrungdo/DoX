@@ -97,16 +97,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       return;
     }
     _tabController.animateTo(_speedTabIndex);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).rebootSuccessStartSpeedTest,
-          ),
-          backgroundColor: Colors.green.shade700,
-        ),
-      );
+    context.showToast(AppLocalizations.of(context).rebootSuccessStartSpeedTest);
     vm.runSpeedTests();
   }
 

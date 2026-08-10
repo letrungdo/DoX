@@ -110,9 +110,7 @@ class ElectricSettingsScreen extends StatelessWidget
   ) async {
     final changed = await appVm.setElectricReminderEnabled(value);
     if (value && !changed && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.notificationPermissionDenied)),
-      );
+      context.showToast(l10n.notificationPermissionDenied, isError: true);
     }
   }
 

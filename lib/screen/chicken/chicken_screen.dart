@@ -726,9 +726,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.saveFailed(error.toString()))),
-      );
+      context.showToast(l10n.saveFailed(error.toString()), isError: true);
     }
   }
 
@@ -762,9 +760,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                   await vm.selectDataSource(source);
                 } catch (error) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(error.toString())));
+                  context.showToast(error.toString(), isError: true);
                 }
               },
             ),
