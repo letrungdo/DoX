@@ -204,17 +204,20 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       vm.setSearchQuery(query);
+      if (_scrollController.hasClients) _scrollController.jumpTo(0);
     });
   }
 
   void _selectCollection(MovieCollection collection) {
     if (_isSelectionMode) _exitSelectionMode();
     vm.setCollection(collection);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
   void _selectCategory(MovieCategory? category) {
     if (_isSelectionMode) _exitSelectionMode();
     vm.setCategory(category);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
   /// Opens the country or genre sheet; the other filter is left untouched so
@@ -241,6 +244,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     if (result.category?.id == current?.id) return;
 
     vm.setFilter(category: result.category, isCountry: isCountry);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
   Future<void> _showCollectionMenu() async {
@@ -334,7 +338,10 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       // The node, not the scope — see the browser's background tap handler.
       _searchFocusNode.unfocus();
       // Nothing was searched, so the list on screen is already the right one.
-      if (hadQuery) vm.loadMovies(refresh: true);
+      if (hadQuery) {
+        vm.loadMovies(refresh: true);
+        if (_scrollController.hasClients) _scrollController.jumpTo(0);
+      }
       return;
     }
     setState(() => _isSearchOpen = true);
