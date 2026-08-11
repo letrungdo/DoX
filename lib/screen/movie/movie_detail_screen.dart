@@ -2,31 +2,29 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:dio/dio.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/movie/movie_detail_body.dart';
 import 'package:do_x/screen/movie/movie_player_controls.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_settings_sheet.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
-import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/logger.dart';
-import 'package:do_x/widgets/loading.dart';
+import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_orientation_manager/flutter_orientation_manager.dart';
-import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
@@ -93,7 +91,9 @@ class MovieDetailController {
   void exitFullScreen() => _exitFullScreen?.call();
 }
 
-class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetailViewModel> {
+class _MovieDetailScreenState
+    extends ScreenState<MovieDetailScreen, MovieDetailViewModel> {
+  late MovieDetailViewModel _vm;
   VideoPlayerController? _videoController;
   bool _isPlaying = false;
   bool _isFullScreen = false;
@@ -144,6 +144,12 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
           defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vm = context.read<MovieDetailViewModel>();
+  }
+
+  @override
   void initState() {
     super.initState();
     logger.d('MovieDetailScreen: initState');
@@ -157,12 +163,16 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
   }
 
   @override
-  void initData() {
-    vm.init(
+  void initData() async {
+    await _vm.init(
       widget.movieUrl,
       widget.movieId,
       initialMovie: widget.initialMovie,
     );
+    if (!mounted) return;
+    if (_vm.selectedEpisode != null && _videoController == null) {
+      _playEpisode(_vm.selectedEpisode!);
+    }
     super.initData();
   }
 
@@ -193,11 +203,17 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
     if (oldWidget.movieId != widget.movieId ||
         oldWidget.movieUrl != widget.movieUrl) {
       unawaited(_detachAndDisposeController());
-      vm.init(
-        widget.movieUrl,
-        widget.movieId,
-        initialMovie: widget.initialMovie,
-      );
+      () async {
+        await _vm.init(
+          widget.movieUrl,
+          widget.movieId,
+          initialMovie: widget.initialMovie,
+        );
+        if (!mounted) return;
+        if (_vm.selectedEpisode != null && _videoController == null) {
+          _playEpisode(_vm.selectedEpisode!);
+        }
+      }();
     }
   }
 
@@ -237,21 +253,20 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
   }
 
   Future<void> _refreshDetail() async {
-    await vm.init(
+    await _vm.init(
       widget.movieUrl,
       widget.movieId,
       initialMovie: widget.initialMovie,
     );
   }
 
-
   Future<void> _recordWatched({int? positionSeconds}) async {
-    final movie = vm.getLibraryMovie(
+    final movie = _vm.getLibraryMovie(
       widget.movieId,
       widget.movieUrl,
       widget.initialMovie,
     );
-    await vm.recordWatched(movie, positionSeconds: positionSeconds);
+    await _vm.recordWatched(movie, positionSeconds: positionSeconds);
   }
 
   void _startProgressTimer() {
@@ -268,13 +283,13 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
 
   Future<void> _toggleFavorite() async {
     final l10n = AppLocalizations.of(context);
-    final movie = vm.getLibraryMovie(
+    final movie = _vm.getLibraryMovie(
       widget.movieId,
       widget.movieUrl,
       widget.initialMovie,
     );
     try {
-      await vm.toggleFavorite(movie);
+      await _vm.toggleFavorite(movie);
     } catch (error) {
       if (mounted) {
         context.showToast(l10n.updateFavoriteFailed, isError: true);
@@ -284,27 +299,16 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
 
   Future<void> _initVideoPlayer(String url, {Duration? seekTo}) async {
     final generation = ++_controllerGeneration;
-    final oldController = _videoController;
-    final oldListener = _videoValueListener;
     final l10n = AppLocalizations.of(context);
 
     // Cancel progress timer before switching controllers
     _progressTimer?.cancel();
 
-    vm.setStreamLoading(true);
+    _vm.setStreamLoading(true);
     setState(() {
       _showControls = true;
-      _videoController = null;
-      _videoValueListener = null;
       _isTimelineHovering = false;
     });
-
-    if (oldController != null) {
-      if (oldListener != null) oldController.removeListener(oldListener);
-      await WidgetsBinding.instance.endOfFrame;
-      await oldController.dispose();
-    }
-    if (!mounted || generation != _controllerGeneration) return;
 
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
@@ -312,15 +316,22 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
     );
 
     try {
+      // Initialize the NEW controller before disposing the OLD one for a smoother transition
       await controller.initialize();
+
+      if (!mounted || generation != _controllerGeneration) {
+        await controller.dispose();
+        return;
+      }
+
       await controller.setPlaybackSpeed(_playbackSpeed);
       await controller.setVolume(_volume);
 
       Duration? initialSeek = seekTo;
-      final libraryState = vm.libraryState;
+      final libraryState = _vm.libraryState;
       if (initialSeek == null && libraryState != null) {
-        if (vm.selectedEpisode?.name == libraryState.lastEpisodeName &&
-            vm.selectedServer?.name == libraryState.lastServerName) {
+        if (_vm.selectedEpisode?.name == libraryState.lastEpisodeName &&
+            _vm.selectedServer?.name == libraryState.lastServerName) {
           final seconds = libraryState.lastPositionSeconds ?? 0;
           if (seconds > 5) {
             initialSeek = Duration(seconds: seconds);
@@ -329,16 +340,28 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
       }
 
       if (initialSeek != null) {
+        // We start playing before seeking to allow the player to start buffering
+        // segments more aggressively on some platforms.
         await controller.seekTo(initialSeek);
         if (mounted && seekTo == null) {
           context.showToast(l10n.resumePlayback(formatDuration(initialSeek)));
         }
       }
+
       await controller.play();
 
       if (!mounted || generation != _controllerGeneration) {
         await controller.dispose();
         return;
+      }
+
+      // Now dispose the old controller
+      final oldController = _videoController;
+      final oldListener = _videoValueListener;
+      if (oldController != null) {
+        if (oldListener != null) oldController.removeListener(oldListener);
+        // We don't await disposal to avoid blocking the UI thread
+        unawaited(oldController.dispose());
       }
 
       void videoValueListener() {
@@ -354,7 +377,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
         if (duration > Duration.zero &&
             position >= duration &&
             !controller.value.isPlaying &&
-            !vm.isTransitioningEpisode) {
+            !_vm.isTransitioningEpisode) {
           _playNextEpisode();
           return;
         }
@@ -379,7 +402,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
         _videoValueListener = videoValueListener;
         _isPlaying = true;
       });
-      vm.setStreamLoading(false);
+      _vm.setStreamLoading(false);
       controller.addListener(videoValueListener);
       _startControlsTimer();
       _startProgressTimer();
@@ -387,7 +410,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
     } catch (e) {
       await controller.dispose();
       if (!mounted || generation != _controllerGeneration) return;
-      vm.setStreamLoading(false);
+      _vm.setStreamLoading(false);
       context.showToast(l10n.videoStreamError, isError: true);
     }
   }
@@ -414,63 +437,63 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
   }
 
   Future<void> _switchQuality(String quality) async {
-    if (quality == vm.selectedQuality || vm.masterStreamUrl == null) return;
-    final targetUrl = vm.qualityUrlFor(quality);
+    if (quality == _vm.selectedQuality || _vm.masterStreamUrl == null) return;
+    final targetUrl = _vm.qualityUrlFor(quality);
     if (targetUrl == null) return;
     final currentPos = _videoController?.value.position;
-    vm.setSelectedQuality(quality);
+    _vm.setSelectedQuality(quality);
     await _initVideoPlayer(targetUrl, seekTo: currentPos);
   }
 
   Future<void> _switchServer(MovieEpisodeServer server) async {
     final currentPos = _videoController?.value.position;
-    final currentEpisodeName = vm.selectedEpisode?.name;
+    final currentEpisodeName = _vm.selectedEpisode?.name;
 
-    vm.switchServer(server);
+    _vm.switchServer(server);
 
-    if (vm.selectedEpisode != null) {
-      final shouldSeek = vm.selectedEpisode?.name == currentEpisodeName;
+    if (_vm.selectedEpisode != null) {
+      final shouldSeek = _vm.selectedEpisode?.name == currentEpisodeName;
       await _playEpisode(
-        vm.selectedEpisode!,
+        _vm.selectedEpisode!,
         seekTo: shouldSeek ? currentPos : null,
       );
     }
   }
 
-  bool get _hasNextEpisode => vm.hasNextEpisode;
+  bool get _hasNextEpisode => _vm.hasNextEpisode;
 
-  bool get _hasPreviousEpisode => vm.hasPreviousEpisode;
+  bool get _hasPreviousEpisode => _vm.hasPreviousEpisode;
 
   void _playNextEpisode() {
-    final next = vm.nextEpisode;
+    final next = _vm.nextEpisode;
     if (next != null) {
       _playEpisode(next);
     }
   }
 
   void _playPreviousEpisode() {
-    final prev = vm.previousEpisode;
+    final prev = _vm.previousEpisode;
     if (prev != null) {
       _playEpisode(prev);
     }
   }
 
   Future<void> _playEpisode(MovieEpisode episode, {Duration? seekTo}) async {
-    final streamUrl = await vm.prepareEpisode(
+    final streamUrl = await _vm.prepareEpisode(
       episode,
       widget.movieId,
       widget.movieUrl,
     );
     if (streamUrl != null && streamUrl.isNotEmpty) {
-      final url = await vm.getStreamUrlForMaster(streamUrl);
+      final url = await _vm.getStreamUrlForMaster(streamUrl);
       if (url != null) {
         await _initVideoPlayer(url, seekTo: seekTo);
       }
     } else if (episode.embedUrl != null) {
-      vm.setStreamLoading(false);
+      _vm.setStreamLoading(false);
     } else {
       if (mounted) {
-        vm.setStreamLoading(false);
+        _vm.setStreamLoading(false);
         final l10n = AppLocalizations.of(context);
         context.showToast(l10n.videoStreamError, isError: true);
       }
@@ -646,7 +669,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
     setState(() {
       _dragFraction = fraction;
       _dragPosition = target;
-      _hoverThumbnailCue = vm.thumbnailTrack?.cueAt(target);
+      _hoverThumbnailCue = _vm.thumbnailTrack?.cueAt(target);
     });
     unawaited(controller.seekTo(target));
   }
@@ -667,7 +690,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
       _showControls = true;
       _dragFraction = fraction;
       _dragPosition = target;
-      _hoverThumbnailCue = vm.thumbnailTrack?.cueAt(target);
+      _hoverThumbnailCue = _vm.thumbnailTrack?.cueAt(target);
     });
   }
 
@@ -746,7 +769,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
       title: l10n.settings,
       padding: EdgeInsets.zero,
       builder: (_) => MovieSettingsSheet(
-        selectedQuality: vm.selectedQuality,
+        selectedQuality: _vm.selectedQuality,
         playbackSpeed: _playbackSpeed,
         isRotationLocked: _isRotationLocked,
         supportsOrientationManager: _supportsOrientationManager,
@@ -762,8 +785,8 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
         final quality = await showAppOptionSheet<String>(
           context,
           title: l10n.resolutionQuality,
-          options: ['Auto', ...vm.availableQualities.map((e) => e.label)],
-          selected: vm.selectedQuality,
+          options: ['Auto', ..._vm.availableQualities.map((e) => e.label)],
+          selected: _vm.selectedQuality,
         );
         if (quality != null) _switchQuality(quality);
       case MovieSettingsAction.speed:
@@ -830,11 +853,11 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
                 ?.trim();
         final originalTitle =
             (rawOriginalTitle == null ||
-                    rawOriginalTitle.isEmpty ||
-                    rawOriginalTitle == title ||
-                    rawOriginalTitle == alternateTitle)
-                ? null
-                : rawOriginalTitle;
+                rawOriginalTitle.isEmpty ||
+                rawOriginalTitle == title ||
+                rawOriginalTitle == alternateTitle)
+            ? null
+            : rawOriginalTitle;
         final titleFit = appBarTitleFit(
           context,
           title,
@@ -921,9 +944,9 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
 
   Widget _buildDetailBody() {
     return MovieDetailBody(
-      detail: vm.detail,
-      selectedServer: vm.selectedServer,
-      selectedEpisode: vm.selectedEpisode,
+      detail: _vm.detail,
+      selectedServer: _vm.selectedServer,
+      selectedEpisode: _vm.selectedEpisode,
       onRefresh: _refreshDetail,
       onServerSelected: _switchServer,
       onEpisodeSelected: _playEpisode,
@@ -1017,14 +1040,14 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
                 size: Dimens.appBarActionSize,
                 iconSize: 18,
                 depth: Dimens.appBarActionDepth,
-                tooltip: vm.isFavorite
+                tooltip: _vm.isFavorite
                     ? l10n.removeFromFavorites
                     : l10n.addToFavorites,
-                onPressed: vm.isUpdatingFavorite ? null : _toggleFavorite,
-                icon: vm.isFavorite
+                onPressed: _vm.isUpdatingFavorite ? null : _toggleFavorite,
+                icon: _vm.isFavorite
                     ? Icons.favorite_rounded
                     : Icons.favorite_border_rounded,
-                color: vm.isFavorite ? Colors.pinkAccent : null,
+                color: _vm.isFavorite ? Colors.pinkAccent : null,
               ),
               IconButton(
                 tooltip: l10n.close,
@@ -1142,7 +1165,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
                       ignoring: t < 0.99,
                       child: Padding(
                         padding: sideInsets,
-                        child: vm.isLoading
+                        child: _vm.isLoading
                             ? const Center(child: Loading())
                             : _buildDetailBody(),
                       ),
@@ -1313,7 +1336,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
                         )
                 // `_isLoading` counts too: the detail request runs before the
                 // stream one, and without it the retry button flashes up first.
-                else if (vm.isLoadingStream || vm.isLoading)
+                else if (_vm.isLoadingStream || _vm.isLoading)
                   const Center(child: Loading())
                 else
                   Center(
@@ -1328,10 +1351,10 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
                         const SizedBox(height: 12),
                         NeuButton(
                           onPressed: () {
-                            if (vm.selectedEpisode != null) {
-                              _playEpisode(vm.selectedEpisode!);
+                            if (_vm.selectedEpisode != null) {
+                              _playEpisode(_vm.selectedEpisode!);
                             } else {
-                              vm.loadDetail(
+                              _vm.loadDetail(
                                 widget.movieUrl,
                                 widget.movieId,
                                 force: true,
@@ -1574,7 +1597,7 @@ class _MovieDetailScreenState extends ScreenState<MovieDetailScreen, MovieDetail
                                                 left: previewLeft,
                                                 bottom: 42,
                                                 child: PlayerScrubPreview(
-                                                  track: vm.thumbnailTrack,
+                                                  track: _vm.thumbnailTrack,
                                                   cue: _hoverThumbnailCue,
                                                   width: previewWidth,
                                                   referer:

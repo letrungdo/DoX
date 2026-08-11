@@ -74,7 +74,12 @@ class MovieDetailViewModel extends CoreViewModel {
     _isLoading = true;
     notifyListenersSafe();
     await Future.wait([
-      loadDetail(movieUrl, movieId, initialMovie: initialMovie, showLoading: false),
+      loadDetail(
+        movieUrl,
+        movieId,
+        initialMovie: initialMovie,
+        showLoading: false,
+      ),
       loadLibraryState(movieId),
     ]);
     _isLoading = false;
@@ -252,22 +257,22 @@ class MovieDetailViewModel extends CoreViewModel {
     _masterStreamUrl = masterUrl;
     _selectedQuality = 'Auto';
     _availableQualities = const [];
-    _isLoadingStream = true;
-    notifyListenersSafe();
 
-    final variants = await movieService.getStreamVariants(masterUrl);
-    if (isDispose || generation != _qualityGeneration || masterUrl != _masterStreamUrl) {
-      return null;
-    }
+    // Fetch variants in the background.
+    unawaited(() async {
+      try {
+        final variants = await movieService.getStreamVariants(masterUrl);
+        if (isDispose ||
+            generation != _qualityGeneration ||
+            masterUrl != _masterStreamUrl) {
+          return;
+        }
+        _availableQualities = variants;
+        notifyListenersSafe();
+      } catch (_) {}
+    }());
 
-    _availableQualities = variants;
-    _selectedQuality = variants.isEmpty ? 'Auto' : variants.first.label;
-    final selectedUrl = variants.isEmpty ? masterUrl : variants.first.url;
-    
-    _isLoadingStream = false;
-    notifyListenersSafe();
-    
-    return selectedUrl;
+    return masterUrl;
   }
 
   String? qualityUrlFor(String quality) {
@@ -286,7 +291,6 @@ class MovieDetailViewModel extends CoreViewModel {
   }
 
   Movie get libraryMovie {
-    final initialMovie = _detail != null ? null : null; // We need original inputs
     // This is a bit tricky, maybe pass them to init
     return Movie(
       id: _detail?.id ?? '',
@@ -296,7 +300,7 @@ class MovieDetailViewModel extends CoreViewModel {
       description: _detail?.description,
     );
   }
-  
+
   Movie getLibraryMovie(String movieId, String movieUrl, Movie? initialMovie) {
     final detail = _detail;
     final title = detail?.title.isNotEmpty == true
@@ -373,7 +377,11 @@ class MovieDetailViewModel extends CoreViewModel {
     }
   }
 
-  Future<String?> prepareEpisode(MovieEpisode episode, String movieId, String movieUrl) async {
+  Future<String?> prepareEpisode(
+    MovieEpisode episode,
+    String movieId,
+    String movieUrl,
+  ) async {
     _isTransitioningEpisode = true;
     _selectedEpisode = episode;
     _isLoadingStream = true;
@@ -452,12 +460,12 @@ class MovieDetailViewModel extends CoreViewModel {
     }
     return null;
   }
-  
+
   void setStreamLoading(bool value) {
     _isLoadingStream = value;
     notifyListenersSafe();
   }
-  
+
   void setTransitioningEpisode(bool value) {
     _isTransitioningEpisode = value;
     notifyListenersSafe();
