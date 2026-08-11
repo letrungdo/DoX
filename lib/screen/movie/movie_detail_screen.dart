@@ -1284,8 +1284,9 @@ class _MovieDetailScreenState
         minHeight: (isFullScreen || fillParent) ? 0 : minPlayerHeight,
         fill: isFullScreen || fillParent,
         child: MouseRegion(
-          cursor:
-              _showControls ? SystemMouseCursors.click : SystemMouseCursors.none,
+          cursor: _showControls
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.none,
           onEnter: (_) {
             if (!_showControls) {
               setState(() => _showControls = true);
@@ -1770,16 +1771,22 @@ class _MovieDetailScreenState
                                 }
                                 return Center(
                                   child: Row(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (_hasPreviousEpisode) ...[
-                                        PlayerCenterButton(
-                                          icon: Icons.skip_previous_rounded,
-                                          size: 44,
-                                          onPressed: _playPreviousEpisode,
+                                      Expanded(
+                                        child: Align(
+                                          alignment: Alignment.centerRight,
+                                          child: _hasPreviousEpisode
+                                              ? PlayerCenterButton(
+                                                  icon: Icons
+                                                      .skip_previous_rounded,
+                                                  size: 44,
+                                                  onPressed:
+                                                      _playPreviousEpisode,
+                                                )
+                                              : const SizedBox.shrink(),
                                         ),
-                                        const SizedBox(width: 32),
-                                      ],
+                                      ),
+                                      const SizedBox(width: 32),
                                       PlayerCenterButton(
                                         icon: _isPlaying
                                             ? Icons.pause_rounded
@@ -1787,14 +1794,19 @@ class _MovieDetailScreenState
                                         size: 64,
                                         onPressed: _togglePlayback,
                                       ),
-                                      if (_hasNextEpisode) ...[
-                                        const SizedBox(width: 32),
-                                        PlayerCenterButton(
-                                          icon: Icons.skip_next_rounded,
-                                          size: 44,
-                                          onPressed: _playNextEpisode,
+                                      const SizedBox(width: 32),
+                                      Expanded(
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: _hasNextEpisode
+                                              ? PlayerCenterButton(
+                                                  icon: Icons.skip_next_rounded,
+                                                  size: 44,
+                                                  onPressed: _playNextEpisode,
+                                                )
+                                              : const SizedBox.shrink(),
                                         ),
-                                      ],
+                                      ),
                                     ],
                                   ),
                                 );
@@ -1855,17 +1867,20 @@ class _MovieDetailScreenState
                                 onBack: _toggleFullScreen,
                                 onSettings: _showSettingsBottomSheet,
                                 title: isFullScreen
-                                    ? splitMovieTitle(_vm.detail?.title ?? '').title
+                                    ? splitMovieTitle(
+                                        _vm.detail?.title ?? '',
+                                      ).title
                                     : null,
                                 subtitle: isFullScreen
                                     ? [
-                                        splitMovieTitle(_vm.detail?.title ?? '')
-                                            .subtitle,
-                                        _vm.selectedEpisode?.name,
-                                      ]
-                                        .whereType<String>()
-                                        .where((s) => s.isNotEmpty)
-                                        .join(' • ')
+                                            splitMovieTitle(
+                                              _vm.detail?.title ?? '',
+                                            ).subtitle,
+                                            _vm.selectedEpisode?.name,
+                                          ]
+                                          .whereType<String>()
+                                          .where((s) => s.isNotEmpty)
+                                          .join(' • ')
                                     : null,
                               ),
                             ),

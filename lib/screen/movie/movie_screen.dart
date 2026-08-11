@@ -563,6 +563,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                     movieLabel: movieLabel,
                     baseUrl: baseUrl,
                     l10n: l10n,
+                    constraints: constraints,
                   ),
                 ),
                 if (_playingMovie != null)
@@ -586,6 +587,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     required String movieLabel,
     required String? baseUrl,
     required AppLocalizations l10n,
+    required BoxConstraints constraints,
   }) {
     if (_isSelectionMode) {
       return AppScaffold(
@@ -643,16 +645,72 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             onPressed: _toggleSearch,
           ),
           const SizedBox(width: 8),
-          NeuIconButton(
-            key: _collectionMenuKey,
-            size: Dimens.appBarActionSize,
-            iconSize: 18,
-            depth: Dimens.appBarActionDepth,
-            color: vm.collection != MovieCollection.browse
-                ? Theme.of(context).colorScheme.primary
-                : null,
-            icon: Icons.more_vert_rounded,
-            onPressed: _showCollectionMenu,
+          Builder(
+            builder: (context) {
+              final appBarTheme = Theme.of(context).appBarTheme;
+              final titleStyle =
+                  appBarTheme.titleTextStyle ??
+                  Theme.of(context).textTheme.titleLarge ??
+                  const TextStyle(fontSize: 20);
+              final textPainter = TextPainter(
+                text: TextSpan(text: movieLabel, style: titleStyle),
+                maxLines: 1,
+                textDirection: TextDirection.ltr,
+              )..layout();
+
+              // Estimated title block: Label + Suffix (expand icon, sync icon) + gaps.
+              final titleBlockWidth = textPainter.width + 48 + 16;
+              // Actions: Search (40) + History (40) + Favorite (40) + End padding (10).
+              final actionsWidth = (3 * Dimens.appBarActionSize) + (2 * 8) + 10;
+              // If the sum plus safe margins fits the bar width.
+              final showAll =
+                  constraints.maxWidth > (titleBlockWidth + actionsWidth + 32);
+
+              if (showAll) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    NeuIconButton(
+                      size: Dimens.appBarActionSize,
+                      iconSize: 18,
+                      depth: Dimens.appBarActionDepth,
+                      tooltip: l10n.watchedMovies,
+                      color: vm.collection == MovieCollection.watched
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                      icon: Icons.history_rounded,
+                      onPressed: () =>
+                          _selectCollection(MovieCollection.watched),
+                    ),
+                    const SizedBox(width: 8),
+                    NeuIconButton(
+                      size: Dimens.appBarActionSize,
+                      iconSize: 18,
+                      depth: Dimens.appBarActionDepth,
+                      tooltip: l10n.favoriteMovies,
+                      color: vm.collection == MovieCollection.favorites
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                      icon: Icons.favorite_rounded,
+                      onPressed: () =>
+                          _selectCollection(MovieCollection.favorites),
+                    ),
+                  ],
+                );
+              }
+
+              return NeuIconButton(
+                key: _collectionMenuKey,
+                size: Dimens.appBarActionSize,
+                iconSize: 18,
+                depth: Dimens.appBarActionDepth,
+                color: vm.collection != MovieCollection.browse
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                icon: Icons.more_vert_rounded,
+                onPressed: _showCollectionMenu,
+              );
+            },
           ),
         ],
       ),
