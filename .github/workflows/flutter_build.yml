@@ -191,6 +191,14 @@ jobs:
 
       - name: Build macOS app
         run: |
+          # Create a temporary xcconfig to disable signing
+          echo "CODE_SIGNING_ALLOWED=NO" > temp.xcconfig
+          echo "CODE_SIGNING_REQUIRED=NO" >> temp.xcconfig
+          echo "CODE_SIGN_IDENTITY=" >> temp.xcconfig
+          echo "PROVISIONING_PROFILE_SPECIFIER=" >> temp.xcconfig
+          
+          export XCODE_XCCONFIG_FILE=$(pwd)/temp.xcconfig
+          
           flutter build macos --release \
             --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
             --obfuscate --split-debug-info=build/obfuscate

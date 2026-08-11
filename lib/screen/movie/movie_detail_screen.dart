@@ -1284,18 +1284,19 @@ class _MovieDetailScreenState
         minHeight: (isFullScreen || fillParent) ? 0 : minPlayerHeight,
         fill: isFullScreen || fillParent,
         child: MouseRegion(
-          cursor: SystemMouseCursors.click,
+          cursor:
+              _showControls ? SystemMouseCursors.click : SystemMouseCursors.none,
           onEnter: (_) {
             if (!_showControls) {
               setState(() => _showControls = true);
             }
-            _controlsTimer?.cancel();
+            _startControlsTimer();
           },
           onHover: (_) {
             if (!_showControls) {
               setState(() => _showControls = true);
             }
-            _controlsTimer?.cancel();
+            _startControlsTimer();
           },
           onExit: (_) {
             if (mounted) {
