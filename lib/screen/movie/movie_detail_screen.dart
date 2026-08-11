@@ -1854,6 +1854,19 @@ class _MovieDetailScreenState
                                 showBack: isFullScreen,
                                 onBack: _toggleFullScreen,
                                 onSettings: _showSettingsBottomSheet,
+                                title: isFullScreen
+                                    ? splitMovieTitle(_vm.detail?.title ?? '').title
+                                    : null,
+                                subtitle: isFullScreen
+                                    ? [
+                                        splitMovieTitle(_vm.detail?.title ?? '')
+                                            .subtitle,
+                                        _vm.selectedEpisode?.name,
+                                      ]
+                                        .whereType<String>()
+                                        .where((s) => s.isNotEmpty)
+                                        .join(' • ')
+                                    : null,
                               ),
                             ),
                           ],

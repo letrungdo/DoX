@@ -291,16 +291,19 @@ class PlayerTopBar extends StatelessWidget {
     required this.showBack,
     required this.onBack,
     required this.onSettings,
+    this.title,
+    this.subtitle,
   });
 
   final bool showBack;
   final VoidCallback onBack;
   final VoidCallback onSettings;
+  final String? title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (showBack)
           _RoundIconButton(
@@ -310,6 +313,40 @@ class PlayerTopBar extends StatelessWidget {
           )
         else
           const SizedBox.shrink(),
+        if (title != null) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Text(
+                    subtitle!,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+        ] else
+          const Spacer(),
         _RoundIconButton(
           icon: Icons.settings_rounded,
           size: 24,
