@@ -18,6 +18,7 @@ import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
 import 'package:do_x/widgets/loading.dart';
+import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:do_x/view_model/movie/movie_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -1184,27 +1185,30 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  MovieDetailScreen(
-                    movieUrl: movie.url,
-                    movieId: movie.id,
-                    initialMovie: movie,
-                    embedded: true,
-                    minimizeProgress: t,
-                    controller: _detailController,
-                    onFullScreenChanged: (isFullScreen) {
-                      if (!mounted) return;
-                      // Full-screen video has to cover the bottom tab bar too
-                      // when this page is one of the tabs.
-                      immersiveMode.value = isFullScreen;
-                      setState(() => _isDetailFullScreen = isFullScreen);
-                    },
-                    onRelatedMovieTap: (related) =>
-                        setState(() => _playingMovie = related),
-                    onClose: () => unawaited(_closeOverlay()),
-                    onMinimize: _minimizeOverlay,
-                    onPlayerDragUpdate: (details) =>
-                        _onOverlayDragUpdate(details, travel),
-                    onPlayerDragEnd: _onOverlayDragEnd,
+                  ChangeNotifierProvider(
+                    create: (_) => MovieDetailViewModel(),
+                    child: MovieDetailScreen(
+                      movieUrl: movie.url,
+                      movieId: movie.id,
+                      initialMovie: movie,
+                      embedded: true,
+                      minimizeProgress: t,
+                      controller: _detailController,
+                      onFullScreenChanged: (isFullScreen) {
+                        if (!mounted) return;
+                        // Full-screen video has to cover the bottom tab bar too
+                        // when this page is one of the tabs.
+                        immersiveMode.value = isFullScreen;
+                        setState(() => _isDetailFullScreen = isFullScreen);
+                      },
+                      onRelatedMovieTap: (related) =>
+                          setState(() => _playingMovie = related),
+                      onClose: () => unawaited(_closeOverlay()),
+                      onMinimize: _minimizeOverlay,
+                      onPlayerDragUpdate: (details) =>
+                          _onOverlayDragUpdate(details, travel),
+                      onPlayerDragEnd: _onOverlayDragEnd,
+                    ),
                   ),
                   // The tapped poster, fading out over the page it grew from.
                   if (_entryRect != null && t < 1)
