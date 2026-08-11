@@ -16,6 +16,7 @@ import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:toastification/toastification.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -103,11 +104,15 @@ class _MyAppState extends State<MyApp> {
             builder: (context, child) {
               final style = Theme.of(context).appBarTheme.systemOverlayStyle;
               if (child == null || style == null) {
-                return child ?? const SizedBox.shrink();
+                return ToastificationWrapper(
+                  child: child ?? const SizedBox.shrink(),
+                );
               }
-              return AnnotatedRegion<SystemUiOverlayStyle>(
-                value: style,
-                child: child,
+              return ToastificationWrapper(
+                child: AnnotatedRegion<SystemUiOverlayStyle>(
+                  value: style,
+                  child: child,
+                ),
               );
             },
           );

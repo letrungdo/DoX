@@ -135,6 +135,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _isUpdatingFavorite = false;
   bool _hasRecordedWatch = false;
   bool _isRotationLocked = false;
+  bool _isTransitioningEpisode = false;
+  bool _isSpacePressed = false;
+  Timer? _spaceLongPressTimer;
+  Timer? _volumeHideTimer;
 
   /// Full screen only: `true` crops the video to cover the whole screen,
   /// `false` keeps the whole frame visible. Toggled by the button or a pinch.
@@ -230,6 +234,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       unawaited(controller.dispose());
     }
     _controlsTimer?.cancel();
+    _volumeHideTimer?.cancel();
     _orientationSubscription?.cancel();
     _videoFocusNode.dispose();
     _cancelToken.cancel();
@@ -628,6 +633,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             !identical(_videoController, controller)) {
           return;
         }
+
+        // Auto play next episode when current one ends
+        final duration = controller.value.duration;
+        final position = controller.value.position;
+        if (duration > Duration.zero &&
+            position >= duration &&
+            !controller.value.isPlaying &&
+            !_isTransitioningEpisode) {
+          _playNextEpisode();
+          return;
+        }
+
         final isPlaying = controller.value.isPlaying;
         if (isPlaying != _isPlaying) {
           setState(() => _isPlaying = isPlaying);
@@ -718,40 +735,88 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
   }
 
+  bool get _hasNextEpisode {
+    final server = _selectedServer;
+    final episode = _selectedEpisode;
+    if (server == null || episode == null) return false;
+    final index = server.episodes.indexOf(episode);
+    return index >= 0 && index < server.episodes.length - 1;
+  }
+
+  bool get _hasPreviousEpisode {
+    final server = _selectedServer;
+    final episode = _selectedEpisode;
+    if (server == null || episode == null) return false;
+    final index = server.episodes.indexOf(episode);
+    return index > 0;
+  }
+
+  void _playNextEpisode() {
+    if (_isTransitioningEpisode) return;
+    final server = _selectedServer;
+    final episode = _selectedEpisode;
+    if (server == null || episode == null) return;
+
+    final index = server.episodes.indexOf(episode);
+    if (index >= 0 && index < server.episodes.length - 1) {
+      _playEpisode(server.episodes[index + 1]);
+    }
+  }
+
+  void _playPreviousEpisode() {
+    if (_isTransitioningEpisode) return;
+    final server = _selectedServer;
+    final episode = _selectedEpisode;
+    if (server == null || episode == null) return;
+
+    final index = server.episodes.indexOf(episode);
+    if (index > 0) {
+      _playEpisode(server.episodes[index - 1]);
+    }
+  }
+
   Future<void> _playEpisode(MovieEpisode episode, {Duration? seekTo}) async {
+    if (_isTransitioningEpisode && seekTo == null) return;
     setState(() {
+      _isTransitioningEpisode = true;
       _selectedEpisode = episode;
       _isLoadingStream = true;
     });
 
-    String? streamUrl = episode.m3u8Url;
+    try {
+      String? streamUrl = episode.m3u8Url;
 
-    // If streamUrl is null, it might be an alternative server
-    if (streamUrl == null && _selectedServer != null) {
-      final match = RegExp(r'Server (\d+)').firstMatch(_selectedServer!.name);
-      if (match != null) {
-        final serverIndex = int.tryParse(match.group(1)!);
-        if (serverIndex != null) {
-          streamUrl = await movieService.getStreamUrl(
-            widget.movieId,
-            movieUrl: widget.movieUrl,
-            server: serverIndex,
-            cancelToken: _cancelToken,
-          );
+      // If streamUrl is null, it might be an alternative server
+      if (streamUrl == null && _selectedServer != null) {
+        final match = RegExp(r'Server (\d+)').firstMatch(_selectedServer!.name);
+        if (match != null) {
+          final serverIndex = int.tryParse(match.group(1)!);
+          if (serverIndex != null) {
+            streamUrl = await movieService.getStreamUrl(
+              widget.movieId,
+              movieUrl: widget.movieUrl,
+              server: serverIndex,
+              cancelToken: _cancelToken,
+            );
+          }
         }
       }
-    }
 
-    if (streamUrl != null && streamUrl.isNotEmpty) {
-      await _useMasterStream(streamUrl, seekTo: seekTo);
-    } else if (episode.embedUrl != null) {
-      // WebView embed support could be added here
-      setState(() => _isLoadingStream = false);
-    } else {
-      if (mounted) {
+      if (streamUrl != null && streamUrl.isNotEmpty) {
+        await _useMasterStream(streamUrl, seekTo: seekTo);
+      } else if (episode.embedUrl != null) {
+        // WebView embed support could be added here
         setState(() => _isLoadingStream = false);
-        final l10n = AppLocalizations.of(context);
-        context.showToast(l10n.videoStreamError, isError: true);
+      } else {
+        if (mounted) {
+          setState(() => _isLoadingStream = false);
+          final l10n = AppLocalizations.of(context);
+          context.showToast(l10n.videoStreamError, isError: true);
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTransitioningEpisode = false);
       }
     }
   }
@@ -806,8 +871,20 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   void _toggleVolumeControl() {
     _controlsTimer?.cancel();
+    _volumeHideTimer?.cancel();
     setState(() => _showVolumeControl = !_showVolumeControl);
     if (!_showVolumeControl) _startControlsTimer();
+  }
+
+  void _handleVolumeTap() {
+    final isMobile =
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+    if (isMobile) {
+      _toggleVolumeControl();
+    } else {
+      _toggleMute();
+    }
   }
 
   IconData get _volumeIcon {
@@ -829,20 +906,48 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.escape && _isFullScreen) {
-      _exitFullScreen();
-      return KeyEventResult.handled;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _seekBy(const Duration(seconds: -10));
-      return KeyEventResult.handled;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      _seekBy(const Duration(seconds: 10));
-      return KeyEventResult.handled;
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.space) {
+        if (!_isSpacePressed) {
+          _isSpacePressed = true;
+          _spaceLongPressTimer?.cancel();
+          _spaceLongPressTimer = Timer(const Duration(milliseconds: 500), () {
+            if (_isSpacePressed && mounted) {
+              _start2xSpeed();
+            }
+          });
+        }
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.escape && _isFullScreen) {
+        _exitFullScreen();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        _seekBy(const Duration(seconds: -10));
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        _seekBy(const Duration(seconds: 10));
+        return KeyEventResult.handled;
+      }
+    } else if (event is KeyRepeatEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.space) {
+        return KeyEventResult.handled;
+      }
+    } else if (event is KeyUpEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.space) {
+        _spaceLongPressTimer?.cancel();
+        if (_isSpacePressed) {
+          if (_isSpeedBoosted) {
+            _stop2xSpeed();
+          } else {
+            _togglePlayback();
+          }
+          _isSpacePressed = false;
+        }
+        return KeyEventResult.handled;
+      }
     }
     return KeyEventResult.ignored;
   }
@@ -982,6 +1087,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final l10n = AppLocalizations.of(context);
     final action = await showAppBottomSheet<MovieSettingsAction>(
       context,
+      title: l10n.settings,
       padding: EdgeInsets.zero,
       builder: (_) => MovieSettingsSheet(
         selectedQuality: _selectedQuality,
@@ -1398,50 +1504,58 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (originalTitle != null)
-                  Text(
-                    originalTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.7,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (originalTitle != null && constraints.maxWidth > 180)
+                      Text(
+                        originalTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (constraints.maxWidth > 90)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                   ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            ),
-            onPressed: _togglePlayback,
-          ),
-          IconButton(
-            tooltip: l10n.close,
-            icon: const Icon(Icons.close_rounded),
-            onPressed: widget.onClose,
-          ),
-        ],
+                  onPressed: _togglePlayback,
+                ),
+              if (constraints.maxWidth > 130)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: l10n.close,
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: widget.onClose,
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1487,400 +1601,581 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         // button covers the progress bar.
         minHeight: (isFullScreen || fillParent) ? 0 : minPlayerHeight,
         fill: isFullScreen || fillParent,
-        child: Container(
-          color: Colors.black,
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              if (controller != null && controller.value.isInitialized)
-                // Zoomed full screen covers the screen, notch area included, so
-                // the sides are cropped rather than letterboxed. Everything else
-                // keeps the whole frame visible.
-                (isFullScreen && _isVideoCover)
-                    ? SizedBox.expand(
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          clipBehavior: Clip.hardEdge,
-                          child: SizedBox(
-                            width: controller.value.size.width,
-                            height: controller.value.size.height,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) {
+            if (!_showControls) {
+              setState(() => _showControls = true);
+            }
+            _controlsTimer?.cancel();
+          },
+          onHover: (_) {
+            if (!_showControls) {
+              setState(() => _showControls = true);
+            }
+            _controlsTimer?.cancel();
+          },
+          onExit: (_) {
+            if (mounted) {
+              setState(() {
+                _showControls = false;
+                _showVolumeControl = false;
+              });
+              _controlsTimer?.cancel();
+              _volumeHideTimer?.cancel();
+            }
+          },
+          child: Container(
+            color: Colors.black,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                if (controller != null && controller.value.isInitialized)
+                  // Zoomed full screen covers the screen, notch area included, so
+                  // the sides are cropped rather than letterboxed. Everything else
+                  // keeps the whole frame visible.
+                  (isFullScreen && _isVideoCover)
+                      ? SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            clipBehavior: Clip.hardEdge,
+                            child: SizedBox(
+                              width: controller.value.size.width,
+                              height: controller.value.size.height,
+                              child: VideoPlayer(controller),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: AspectRatio(
+                            aspectRatio: controller.value.aspectRatio,
                             child: VideoPlayer(controller),
                           ),
+                        )
+                // `_isLoading` counts too: the detail request runs before the
+                // stream one, and without it the retry button flashes up first.
+                else if (_isLoadingStream || _isLoading)
+                  const Center(child: Loading())
+                else
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.play_circle_outline_rounded,
+                          size: 56,
+                          color: Colors.white54,
                         ),
-                      )
-                    : Center(
-                        child: AspectRatio(
-                          aspectRatio: controller.value.aspectRatio,
-                          child: VideoPlayer(controller),
+                        const SizedBox(height: 12),
+                        NeuButton(
+                          onPressed: () {
+                            if (_selectedEpisode != null) {
+                              _playEpisode(_selectedEpisode!);
+                            } else {
+                              _loadDetail(force: true);
+                            }
+                          },
+                          accent: Theme.of(context).colorScheme.primary,
+                          child: Text(l10n.loadStream),
                         ),
-                      )
-              // `_isLoading` counts too: the detail request runs before the
-              // stream one, and without it the retry button flashes up first.
-              else if (_isLoadingStream || _isLoading)
-                const Center(child: Loading())
-              else
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.play_circle_outline_rounded,
-                        size: 56,
-                        color: Colors.white54,
-                      ),
-                      const SizedBox(height: 12),
-                      NeuButton(
-                        onPressed: () {
-                          if (_selectedEpisode != null) {
-                            _playEpisode(_selectedEpisode!);
-                          } else {
-                            _loadDetail(force: true);
-                          }
-                        },
-                        accent: Theme.of(context).colorScheme.primary,
-                        child: Text(l10n.loadStream),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-              if (controller != null && controller.value.isInitialized)
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      _videoFocusNode.requestFocus();
-                      _toggleControls();
-                    },
-                    onDoubleTapDown: (details) {
-                      _doubleTapPosition = details.localPosition;
-                    },
-                    onDoubleTap: () {
-                      if (_doubleTapPosition != null) {
-                        final width = context.size?.width ?? 0;
-                        if (width > 0) {
-                          if (_doubleTapPosition!.dx < width / 2) {
-                            _seekBy(const Duration(seconds: -10));
-                            _triggerSkipIndicator(isForward: false);
-                          } else {
-                            _seekBy(const Duration(seconds: 10));
-                            _triggerSkipIndicator(isForward: true);
-                          }
-                        }
-                      }
-                    },
-                    onLongPressStart: (_) => _start2xSpeed(),
-                    onLongPressEnd: (_) => _stop2xSpeed(),
-                    // Pinch out fills the screen, pinch in goes back to the
-                    // whole frame — the way a video player is expected to zoom.
-                    onScaleUpdate: isFullScreen
-                        ? (details) {
-                            if (details.pointerCount < 2) return;
-                            if (details.scale > 1.15) {
-                              _setVideoCover(true);
-                            } else if (details.scale < 0.85) {
-                              _setVideoCover(false);
+                if (controller != null && controller.value.isInitialized)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        _videoFocusNode.requestFocus();
+                        _toggleControls();
+                      },
+                      onDoubleTapDown: (details) {
+                        _doubleTapPosition = details.localPosition;
+                      },
+                      onDoubleTap: () {
+                        if (_doubleTapPosition != null) {
+                          final width = context.size?.width ?? 0;
+                          if (width > 0) {
+                            if (_doubleTapPosition!.dx < width / 2) {
+                              _seekBy(const Duration(seconds: -10));
+                              _triggerSkipIndicator(isForward: false);
+                            } else {
+                              _seekBy(const Duration(seconds: 10));
+                              _triggerSkipIndicator(isForward: true);
                             }
                           }
-                        : null,
+                        }
+                      },
+                      onLongPressStart: (_) => _start2xSpeed(),
+                      onLongPressEnd: (_) => _stop2xSpeed(),
+                      // Pinch out fills the screen, pinch in goes back to the
+                      // whole frame — the way a video player is expected to zoom.
+                      onScaleUpdate: isFullScreen
+                          ? (details) {
+                              if (details.pointerCount < 2) return;
+                              if (details.scale > 1.15) {
+                                _setVideoCover(true);
+                              } else if (details.scale < 0.85) {
+                                _setVideoCover(false);
+                              }
+                            }
+                          : null,
+                    ),
                   ),
-                ),
 
-              // Always-on Overlays (2x, Skip indicators)
-              if (controller != null && controller.value.isInitialized)
-                Positioned.fill(
-                  child: PlayerGestureOverlays(
-                    isSpeedBoosted: _isSpeedBoosted,
-                    skipForwardValue: _skipForwardValue,
-                    skipBackwardValue: _skipBackwardValue,
+                // Always-on Overlays (2x, Skip indicators)
+                if (controller != null && controller.value.isInitialized)
+                  Positioned.fill(
+                    child: PlayerGestureOverlays(
+                      isSpeedBoosted: _isSpeedBoosted,
+                      skipForwardValue: _skipForwardValue,
+                      skipBackwardValue: _skipBackwardValue,
+                    ),
                   ),
-                ),
 
-              // Video Controls Overlay
-              if (controller != null && controller.value.isInitialized)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: !_showControls,
-                    child: AnimatedOpacity(
-                      opacity: _showControls ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Stack(
-                        children: [
-                          // Bottom Gradient and Controls
-                          Align(
-                            alignment: Alignment.bottomCenter,
-                            child: Container(
-                              padding: EdgeInsets.only(
-                                bottom:
-                                    4 +
-                                    (isFullScreen
-                                        ? MediaQuery.paddingOf(context).bottom
-                                        : 0),
-                                left: isFullScreen
-                                    ? MediaQuery.paddingOf(context).left
-                                    : 0,
-                                right: isFullScreen
-                                    ? MediaQuery.paddingOf(context).right
-                                    : 0,
+                // Video Controls Overlay
+                if (controller != null && controller.value.isInitialized)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !_showControls,
+                      child: AnimatedOpacity(
+                        opacity: _showControls ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: _togglePlayback,
+                                onDoubleTapDown: (details) {
+                                  _doubleTapPosition = details.localPosition;
+                                },
+                                onDoubleTap: () {
+                                  if (_doubleTapPosition != null) {
+                                    final width = context.size?.width ?? 0;
+                                    if (width > 0) {
+                                      if (_doubleTapPosition!.dx < width / 2) {
+                                        _seekBy(const Duration(seconds: -10));
+                                        _triggerSkipIndicator(isForward: false);
+                                      } else {
+                                        _seekBy(const Duration(seconds: 10));
+                                        _triggerSkipIndicator(isForward: true);
+                                      }
+                                    }
+                                  }
+                                },
+                                onLongPressStart: (_) => _start2xSpeed(),
+                                onLongPressEnd: (_) => _stop2xSpeed(),
                               ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.7),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
+                            ),
+                            // Bottom Gradient and Controls
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Container(
+                                padding: EdgeInsets.only(
+                                  bottom:
+                                      4 +
+                                      (isFullScreen
+                                          ? MediaQuery.paddingOf(context).bottom
+                                          : 0),
+                                  left: isFullScreen
+                                      ? MediaQuery.paddingOf(context).left
+                                      : 0,
+                                  right: isFullScreen
+                                      ? MediaQuery.paddingOf(context).right
+                                      : 0,
                                 ),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      const previewWidth = 160.0;
-                                      final maxPreviewLeft =
-                                          constraints.maxWidth > previewWidth
-                                          ? constraints.maxWidth - previewWidth
-                                          : 0.0;
-                                      final previewLeft =
-                                          (constraints.maxWidth *
-                                                      _dragFraction -
-                                                  previewWidth / 2)
-                                              .clamp(0.0, maxPreviewLeft);
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withValues(alpha: 0.7),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        const previewWidth = 160.0;
+                                        final maxPreviewLeft =
+                                            constraints.maxWidth > previewWidth
+                                            ? constraints.maxWidth -
+                                                  previewWidth
+                                            : 0.0;
+                                        final previewLeft =
+                                            (constraints.maxWidth *
+                                                        _dragFraction -
+                                                    previewWidth / 2)
+                                                .clamp(0.0, maxPreviewLeft);
 
-                                      return Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          MouseRegion(
-                                            cursor: SystemMouseCursors.click,
-                                            onEnter: (event) =>
-                                                _updateHoverPreview(
-                                                  event.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                ),
-                                            onHover: (event) =>
-                                                _updateHoverPreview(
-                                                  event.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                ),
-                                            onExit: (_) {
-                                              if (_isTimelineHovering) {
-                                                setState(
-                                                  () => _isTimelineHovering =
-                                                      false,
-                                                );
-                                              }
-                                              _startControlsTimer();
-                                            },
-                                            child: GestureDetector(
-                                              behavior: HitTestBehavior.opaque,
-                                              onHorizontalDragStart: (details) {
-                                                _resumeAfterDrag =
-                                                    controller.value.isPlaying;
-                                                unawaited(controller.pause());
-                                                _controlsTimer?.cancel();
-                                                setState(
-                                                  () => _isDragging = true,
-                                                );
-                                                _updateDragPosition(
-                                                  controller,
-                                                  details.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                );
+                                        return Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              onEnter: (event) =>
+                                                  _updateHoverPreview(
+                                                    event.localPosition.dx,
+                                                    constraints.maxWidth,
+                                                  ),
+                                              onHover: (event) =>
+                                                  _updateHoverPreview(
+                                                    event.localPosition.dx,
+                                                    constraints.maxWidth,
+                                                  ),
+                                              onExit: (_) {
+                                                if (_isTimelineHovering) {
+                                                  setState(
+                                                    () => _isTimelineHovering =
+                                                        false,
+                                                  );
+                                                }
+                                                _startControlsTimer();
                                               },
-                                              onHorizontalDragUpdate:
-                                                  (details) {
-                                                    _updateDragPosition(
-                                                      controller,
-                                                      details.localPosition.dx,
-                                                      constraints.maxWidth,
+                                              child: GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.opaque,
+                                                onHorizontalDragStart:
+                                                    (details) {
+                                                      _resumeAfterDrag =
+                                                          controller
+                                                              .value
+                                                              .isPlaying;
+                                                      unawaited(
+                                                        controller.pause(),
+                                                      );
+                                                      _controlsTimer?.cancel();
+                                                      setState(
+                                                        () =>
+                                                            _isDragging = true,
+                                                      );
+                                                      _updateDragPosition(
+                                                        controller,
+                                                        details
+                                                            .localPosition
+                                                            .dx,
+                                                        constraints.maxWidth,
+                                                      );
+                                                    },
+                                                onHorizontalDragUpdate:
+                                                    (details) {
+                                                      _updateDragPosition(
+                                                        controller,
+                                                        details
+                                                            .localPosition
+                                                            .dx,
+                                                        constraints.maxWidth,
+                                                      );
+                                                    },
+                                                onHorizontalDragEnd: (_) =>
+                                                    _finishDragging(controller),
+                                                onHorizontalDragCancel: () =>
+                                                    _finishDragging(controller),
+                                                onTapDown: (details) {
+                                                  _updateDragPosition(
+                                                    controller,
+                                                    details.localPosition.dx,
+                                                    constraints.maxWidth,
+                                                  );
+                                                },
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 14,
+                                                        bottom: 2,
+                                                      ),
+                                                  child: VideoProgressIndicator(
+                                                    controller,
+                                                    allowScrubbing: false,
+                                                    colors:
+                                                        const VideoProgressColors(
+                                                          playedColor:
+                                                              Colors.pinkAccent,
+                                                          bufferedColor:
+                                                              Colors.white30,
+                                                          backgroundColor:
+                                                              Colors.white12,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            if (_isDragging ||
+                                                _isTimelineHovering)
+                                              Positioned(
+                                                left: previewLeft,
+                                                bottom: 42,
+                                                child: PlayerScrubPreview(
+                                                  track: _thumbnailTrack,
+                                                  cue: _hoverThumbnailCue,
+                                                  width: previewWidth,
+                                                  referer:
+                                                      '${movieService.baseUrl}/',
+                                                  fallback: VideoPlayer(
+                                                    controller,
+                                                  ),
+                                                  position: _dragPosition,
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final isNarrow =
+                                            constraints.maxWidth <
+                                            Dimens.playerNarrowThreshold;
+                                        return Row(
+                                          children: [
+                                            const SizedBox(width: 8),
+                                            if (!isNarrow &&
+                                                _hasPreviousEpisode)
+                                              IconButton(
+                                                tooltip: l10n.previousEpisode,
+                                                icon: const Icon(
+                                                  Icons.skip_previous_rounded,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                                onPressed: _playPreviousEpisode,
+                                              ),
+                                            if (!isNarrow)
+                                              IconButton(
+                                                icon: Icon(
+                                                  _isPlaying
+                                                      ? Icons.pause_rounded
+                                                      : Icons
+                                                            .play_arrow_rounded,
+                                                  color: Colors.white,
+                                                  size: 28,
+                                                ),
+                                                onPressed: _togglePlayback,
+                                              ),
+                                            if (!isNarrow && _hasNextEpisode)
+                                              IconButton(
+                                                tooltip: l10n.nextEpisode,
+                                                icon: const Icon(
+                                                  Icons.skip_next_rounded,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                                onPressed: _playNextEpisode,
+                                              ),
+                                            const SizedBox(width: 4),
+                                            ValueListenableBuilder(
+                                              valueListenable: controller,
+                                              builder:
+                                                  (
+                                                    context,
+                                                    VideoPlayerValue value,
+                                                    child,
+                                                  ) {
+                                                    final currentPos =
+                                                        _isDragging
+                                                        ? _dragPosition
+                                                        : (_virtualSeekPosition ??
+                                                              value.position);
+                                                    return Text(
+                                                      '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 11,
+                                                      ),
                                                     );
                                                   },
-                                              onHorizontalDragEnd: (_) =>
-                                                  _finishDragging(controller),
-                                              onHorizontalDragCancel: () =>
-                                                  _finishDragging(controller),
-                                              onTapDown: (details) {
-                                                _updateDragPosition(
-                                                  controller,
-                                                  details.localPosition.dx,
-                                                  constraints.maxWidth,
-                                                );
-                                              },
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                  top: 14,
-                                                  bottom: 2,
-                                                ),
-                                                child: VideoProgressIndicator(
-                                                  controller,
-                                                  allowScrubbing: false,
-                                                  colors:
-                                                      const VideoProgressColors(
-                                                        playedColor:
-                                                            Colors.pinkAccent,
-                                                        bufferedColor:
-                                                            Colors.white30,
-                                                        backgroundColor:
-                                                            Colors.white12,
+                                            ),
+                                            const Spacer(),
+                                            CompositedTransformTarget(
+                                              link: _volumeButtonLink,
+                                              child: PlayerVolumeButton(
+                                                icon: _volumeIcon,
+                                                muted: _volume == 0,
+                                                tooltip: _volume == 0
+                                                    ? l10n.unmute
+                                                    : l10n.volume,
+                                                onTap: _handleVolumeTap,
+                                                onLongPress: _toggleMute,
+                                                onHover: (hovering) {
+                                                  if (hovering) {
+                                                    if (!_showVolumeControl) {
+                                                      setState(
+                                                        () =>
+                                                            _showVolumeControl =
+                                                                true,
+                                                      );
+                                                      _controlsTimer?.cancel();
+                                                      _volumeHideTimer
+                                                          ?.cancel();
+                                                    }
+                                                  } else {
+                                                    _volumeHideTimer?.cancel();
+                                                    _volumeHideTimer = Timer(
+                                                      const Duration(
+                                                        milliseconds: 200,
                                                       ),
-                                                ),
+                                                      () {
+                                                        if (mounted) {
+                                                          setState(
+                                                            () =>
+                                                                _showVolumeControl =
+                                                                    false,
+                                                          );
+                                                        }
+                                                      },
+                                                    );
+                                                  }
+                                                },
                                               ),
                                             ),
-                                          ),
-                                          if (_isDragging ||
-                                              _isTimelineHovering)
-                                            Positioned(
-                                              left: previewLeft,
-                                              bottom: 42,
-                                              child: PlayerScrubPreview(
-                                                track: _thumbnailTrack,
-                                                cue: _hoverThumbnailCue,
-                                                width: previewWidth,
-                                                referer:
-                                                    '${movieService.baseUrl}/',
-                                                fallback: VideoPlayer(
-                                                  controller,
-                                                ),
-                                                position: _dragPosition,
-                                              ),
-                                            ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                  Row(
-                                    children: [
-                                      const SizedBox(width: 12),
-                                      ValueListenableBuilder(
-                                        valueListenable: controller,
-                                        builder:
-                                            (
-                                              context,
-                                              VideoPlayerValue value,
-                                              child,
-                                            ) {
-                                              final currentPos = _isDragging
-                                                  ? _dragPosition
-                                                  : (_virtualSeekPosition ??
-                                                        value.position);
-                                              return Text(
-                                                '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
-                                                style: const TextStyle(
+                                            // Fit / fill toggle, full screen only —
+                                            // inline there is nothing to crop to.
+                                            if (isFullScreen)
+                                              IconButton(
+                                                tooltip: _isVideoCover
+                                                    ? l10n.zoomToFit
+                                                    : l10n.zoomToFill,
+                                                icon: Icon(
+                                                  _isVideoCover
+                                                      ? Icons
+                                                            .zoom_in_map_rounded
+                                                      : Icons
+                                                            .zoom_out_map_rounded,
                                                   color: Colors.white,
-                                                  fontSize: 11,
                                                 ),
-                                              );
-                                            },
-                                      ),
-                                      const Spacer(),
-                                      CompositedTransformTarget(
-                                        link: _volumeButtonLink,
-                                        child: PlayerVolumeButton(
-                                          icon: _volumeIcon,
-                                          muted: _volume == 0,
-                                          tooltip: _volume == 0
-                                              ? l10n.unmute
-                                              : l10n.volume,
-                                          onTap: _toggleVolumeControl,
-                                          onLongPress: _toggleMute,
-                                        ),
-                                      ),
-                                      // Fit / fill toggle, full screen only —
-                                      // inline there is nothing to crop to.
-                                      if (isFullScreen)
-                                        IconButton(
-                                          tooltip: _isVideoCover
-                                              ? l10n.zoomToFit
-                                              : l10n.zoomToFill,
-                                          icon: Icon(
-                                            _isVideoCover
-                                                ? Icons.zoom_in_map_rounded
-                                                : Icons.zoom_out_map_rounded,
-                                            color: Colors.white,
-                                          ),
-                                          onPressed: () =>
-                                              _setVideoCover(!_isVideoCover),
-                                        ),
-                                      // Fullscreen button
-                                      IconButton(
-                                        icon: Icon(
-                                          isFullScreen
-                                              ? Icons.fullscreen_exit_rounded
-                                              : Icons.fullscreen_rounded,
-                                          color: Colors.white,
-                                        ),
-                                        onPressed: _toggleFullScreen,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // Center Controls (Play/Pause)
-                          if (!_isDragging)
-                            Center(
-                              child: PlayerCenterButton(
-                                icon: _isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                size: 64,
-                                onPressed: _togglePlayback,
-                              ),
-                            ),
-
-                          if (_showVolumeControl)
-                            Positioned(
-                              left: 0,
-                              top: 0,
-                              // Follows the button itself, so it stays centred
-                              // on it no matter how the bar is laid out.
-                              child: CompositedTransformFollower(
-                                link: _volumeButtonLink,
-                                showWhenUnlinked: false,
-                                targetAnchor: Alignment.topCenter,
-                                followerAnchor: Alignment.bottomCenter,
-                                offset: const Offset(0, -4),
-                                child: PlayerVolumePopup(
-                                  volume: _volume,
-                                  onChanged: _setVolume,
-                                  onChangeStart: () => _controlsTimer?.cancel(),
+                                                onPressed: () => _setVideoCover(
+                                                  !_isVideoCover,
+                                                ),
+                                              ),
+                                            // Fullscreen button
+                                            IconButton(
+                                              icon: Icon(
+                                                isFullScreen
+                                                    ? Icons
+                                                          .fullscreen_exit_rounded
+                                                    : Icons.fullscreen_rounded,
+                                                color: Colors.white,
+                                              ),
+                                              onPressed: _toggleFullScreen,
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
 
-                          // Top bar with back icon and settings
-                          Positioned(
-                            top:
-                                12 +
-                                (isFullScreen
-                                    ? MediaQuery.paddingOf(context).top
-                                    : 0),
-                            left:
-                                12 +
-                                (isFullScreen
-                                    ? MediaQuery.paddingOf(context).left
-                                    : 0),
-                            right:
-                                12 +
-                                (isFullScreen
-                                    ? MediaQuery.paddingOf(context).right
-                                    : 0),
-                            child: PlayerTopBar(
-                              showBack: isFullScreen,
-                              onBack: _toggleFullScreen,
-                              onSettings: _showSettingsBottomSheet,
+                            // Center Controls (Play/Pause, Next/Prev)
+                            // Only shown if the bottom bar is too narrow to hold them
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                if (constraints.maxWidth >=
+                                        Dimens.playerNarrowThreshold ||
+                                    _isDragging) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (_hasPreviousEpisode) ...[
+                                        PlayerCenterButton(
+                                          icon: Icons.skip_previous_rounded,
+                                          size: 44,
+                                          onPressed: _playPreviousEpisode,
+                                        ),
+                                        const SizedBox(width: 32),
+                                      ],
+                                      PlayerCenterButton(
+                                        icon: _isPlaying
+                                            ? Icons.pause_rounded
+                                            : Icons.play_arrow_rounded,
+                                        size: 64,
+                                        onPressed: _togglePlayback,
+                                      ),
+                                      if (_hasNextEpisode) ...[
+                                        const SizedBox(width: 32),
+                                        PlayerCenterButton(
+                                          icon: Icons.skip_next_rounded,
+                                          size: 44,
+                                          onPressed: _playNextEpisode,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
-                          ),
-                        ],
+
+                            if (_showVolumeControl)
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                // Follows the button itself, so it stays centred
+                                // on it no matter how the bar is laid out.
+                                child: CompositedTransformFollower(
+                                  link: _volumeButtonLink,
+                                  showWhenUnlinked: false,
+                                  targetAnchor: Alignment.topCenter,
+                                  followerAnchor: Alignment.bottomCenter,
+                                  offset: const Offset(0, -4),
+                                  child: MouseRegion(
+                                    onEnter: (_) {
+                                      _controlsTimer?.cancel();
+                                      _volumeHideTimer?.cancel();
+                                    },
+                                    onExit: (_) {
+                                      setState(
+                                        () => _showVolumeControl = false,
+                                      );
+                                    },
+                                    child: PlayerVolumePopup(
+                                      volume: _volume,
+                                      onChanged: _setVolume,
+                                      onChangeStart: () =>
+                                          _controlsTimer?.cancel(),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Top bar with back icon and settings
+                            Positioned(
+                              top:
+                                  12 +
+                                  (isFullScreen
+                                      ? MediaQuery.paddingOf(context).top
+                                      : 0),
+                              left:
+                                  12 +
+                                  (isFullScreen
+                                      ? MediaQuery.paddingOf(context).left
+                                      : 0),
+                              right:
+                                  12 +
+                                  (isFullScreen
+                                      ? MediaQuery.paddingOf(context).right
+                                      : 0),
+                              child: PlayerTopBar(
+                                showBack: isFullScreen,
+                                onBack: _toggleFullScreen,
+                                onSettings: _showSettingsBottomSheet,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

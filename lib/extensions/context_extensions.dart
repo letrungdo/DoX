@@ -4,6 +4,7 @@ import 'package:do_x/theme/color_theme.dart';
 import 'package:do_x/theme/neu_theme.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:toastification/toastification.dart';
 
 extension ContextExtensions on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
@@ -16,11 +17,15 @@ extension ContextExtensions on BuildContext {
   String get loadingId => "${AppConst.loadingIdPrefix}$hashCode";
 
   void showToast(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(this)
-      ..clearSnackBars()
-      ..showSnackBar(
-        isError ? errorSnackBar(message) : SnackBar(content: Text(message)),
-      );
+    toastification.show(
+      context: this,
+      type: isError ? ToastificationType.error : ToastificationType.success,
+      style: ToastificationStyle.flat,
+      autoCloseDuration: const Duration(seconds: 4),
+      title: Text(message),
+      alignment: Alignment.topCenter,
+      showProgressBar: false,
+    );
   }
 
   /// Error snack bar tinted from the color scheme. A raw `Colors.red` bar keeps

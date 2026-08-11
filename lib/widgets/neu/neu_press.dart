@@ -71,17 +71,20 @@ class _NeuPressState extends State<NeuPress> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: _enabled ? (_) => _sink() : null,
-      onTapUp: _enabled ? (_) => _release() : null,
-      onTapCancel: _enabled ? _release : null,
-      onTap: widget.onTap,
-      onLongPress: widget.onLongPress,
-      child: AnimatedScale(
-        scale: _pressed ? widget.pressedScale : 1,
-        duration: NeuPress.duration,
-        curve: Curves.easeOut,
-        child: widget.builder(context, _pressed),
+    return MouseRegion(
+      cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTapDown: _enabled ? (_) => _sink() : null,
+        onTapUp: _enabled ? (_) => _release() : null,
+        onTapCancel: _enabled ? _release : null,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: AnimatedScale(
+          scale: _pressed ? widget.pressedScale : 1,
+          duration: NeuPress.duration,
+          curve: Curves.easeOut,
+          child: widget.builder(context, _pressed),
+        ),
       ),
     );
   }

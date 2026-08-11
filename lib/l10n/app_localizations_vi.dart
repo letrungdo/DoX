@@ -1603,6 +1603,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get mute => 'Tắt tiếng';
 
   @override
+  String get previousEpisode => 'Tập trước';
+
+  @override
+  String get nextEpisode => 'Tập tiếp theo';
+
+  @override
   String get removeFromHistory => 'Xóa khỏi lịch sử';
 
   @override

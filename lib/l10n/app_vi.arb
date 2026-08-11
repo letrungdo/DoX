@@ -998,6 +998,8 @@
   "episodeDefaultName": "Tập",
   "unmute": "Bật tiếng",
   "mute": "Tắt tiếng",
+  "previousEpisode": "Tập trước",
+  "nextEpisode": "Tập tiếp theo",
   "removeFromHistory": "Xóa khỏi lịch sử",
   "confirmRemoveFromHistory": "Xóa '{title}' khỏi lịch sử đã xem?",
   "@confirmRemoveFromHistory": {

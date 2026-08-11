@@ -63,4 +63,7 @@ class Dimens {
 
   /// Vertical gap between two stacked fields inside a dialog or sheet.
   static const modalItemSpacing = 12.0;
+
+  /// Narrow threshold for the movie player layout.
+  static const playerNarrowThreshold = 330.0;
 }

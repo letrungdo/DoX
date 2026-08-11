@@ -1606,6 +1606,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mute => 'Mute';
 
   @override
+  String get previousEpisode => 'Previous episode';
+
+  @override
+  String get nextEpisode => 'Next episode';
+
+  @override
   String get removeFromHistory => 'Remove from history';
 
   @override

@@ -163,6 +163,7 @@ class PlayerVolumeButton extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     required this.onLongPress,
+    this.onHover,
     this.muted = false,
   });
 
@@ -171,6 +172,7 @@ class PlayerVolumeButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final ValueChanged<bool>? onHover;
   final VoidCallback onLongPress;
   final bool muted;
 
@@ -181,16 +183,21 @@ class PlayerVolumeButton extends StatelessWidget {
       // A tooltip defaults to long press on touch, which would pop its bubble
       // over the button every time the user holds to mute. Hover still works.
       triggerMode: TooltipTriggerMode.manual,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: SizedBox.square(
-          dimension: size,
-          child: Icon(
-            icon,
-            size: 22,
-            color: muted ? Colors.white70 : Colors.white,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => onHover?.call(true),
+        onExit: (_) => onHover?.call(false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: SizedBox.square(
+            dimension: size,
+            child: Icon(
+              icon,
+              size: 22,
+              color: muted ? Colors.white70 : Colors.white,
+            ),
           ),
         ),
       ),

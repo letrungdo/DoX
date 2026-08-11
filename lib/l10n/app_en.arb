@@ -1019,6 +1019,8 @@
   "episodeDefaultName": "Episode",
   "unmute": "Unmute",
   "mute": "Mute",
+  "previousEpisode": "Previous episode",
+  "nextEpisode": "Next episode",
   "removeFromHistory": "Remove from history",
   "confirmRemoveFromHistory": "Remove '{title}' from your watched history?",
   "@confirmRemoveFromHistory": {

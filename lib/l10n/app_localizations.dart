@@ -2906,6 +2906,18 @@ abstract class AppLocalizations {
   /// **'Mute'**
   String get mute;
 
+  /// No description provided for @previousEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous episode'**
+  String get previousEpisode;
+
+  /// No description provided for @nextEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'Next episode'**
+  String get nextEpisode;
+
   /// No description provided for @removeFromHistory.
   ///
   /// In en, this message translates to:

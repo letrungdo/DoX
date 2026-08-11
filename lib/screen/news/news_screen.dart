@@ -301,17 +301,35 @@ class _NewsScreenState<V extends NewsViewModel>
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Row(
                 children: [
-                  Text(l10n.index, style: headerStyle).expaned(colsRatio[0]), //
-                  Text(
-                    l10n.buy,
-                    style: headerStyle,
-                    textAlign: TextAlign.right,
-                  ).expaned(colsRatio[1]),
-                  Text(
-                    l10n.sell,
-                    style: headerStyle,
-                    textAlign: TextAlign.right,
-                  ).expaned(colsRatio[2]),
+                  Expanded(
+                    flex: colsRatio[0],
+                    child: AutoSizeText(
+                      l10n.index,
+                      style: headerStyle,
+                      maxLines: 1,
+                      minFontSize: 11,
+                    ),
+                  ),
+                  Expanded(
+                    flex: colsRatio[1],
+                    child: AutoSizeText(
+                      l10n.buy,
+                      style: headerStyle,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      minFontSize: 11,
+                    ),
+                  ),
+                  Expanded(
+                    flex: colsRatio[2],
+                    child: AutoSizeText(
+                      l10n.sell,
+                      style: headerStyle,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      minFontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -791,25 +809,37 @@ class _NewsScreenState<V extends NewsViewModel>
       height: 54,
       child: Row(
         children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name.toDashIfNull,
-                style: context.textTheme.primary.size15.bold,
-              ), //
-              Text(
-                item.desc.toDashIfNull,
-                style: context.textTheme.title.size13,
-                overflow: TextOverflow.fade,
-                maxLines: 1,
-                softWrap: false,
-              ), //
-            ],
-          ).expaned(colsRatio[0]),
-          _buildGoldValue(item.bid, item.bidDayChange).expaned(colsRatio[1]),
-          _buildGoldValue(item.ask, item.askDayChange).expaned(colsRatio[2]),
+          Expanded(
+            flex: colsRatio[0],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AutoSizeText(
+                  item.name.toDashIfNull,
+                  maxLines: 1,
+                  minFontSize: 12,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.primary.size15.bold,
+                ), //
+                AutoSizeText(
+                  item.desc.toDashIfNull,
+                  maxLines: 1,
+                  minFontSize: 10,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.title.size13,
+                ), //
+              ],
+            ),
+          ),
+          Expanded(
+            flex: colsRatio[1],
+            child: _buildGoldValue(item.bid, item.bidDayChange),
+          ),
+          Expanded(
+            flex: colsRatio[2],
+            child: _buildGoldValue(item.ask, item.askDayChange),
+          ),
         ],
       ),
     );
@@ -821,12 +851,16 @@ class _NewsScreenState<V extends NewsViewModel>
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
+        AutoSizeText(
           price.formatUnit(),
-          style: context.textTheme.primary.size15.medium, //
+          maxLines: 1,
+          minFontSize: 11,
+          textAlign: TextAlign.right,
+          style: context.textTheme.primary.size15.medium,
         ),
         Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
             if (changeColor != null)
               Icon(
@@ -836,10 +870,15 @@ class _NewsScreenState<V extends NewsViewModel>
                 size: 16,
                 color: changeColor,
               ),
-            Text(
-              change.formatUnit(hasPlus: true), //
-              style: context.textTheme.secondary.size13.medium.copyWith(
-                color: changeColor ?? context.textTheme.title.color,
+            Flexible(
+              child: AutoSizeText(
+                change.formatUnit(hasPlus: true),
+                maxLines: 1,
+                minFontSize: 9,
+                textAlign: TextAlign.right,
+                style: context.textTheme.secondary.size13.medium.copyWith(
+                  color: changeColor ?? context.textTheme.title.color,
+                ),
               ),
             ),
           ],

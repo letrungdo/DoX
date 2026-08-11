@@ -201,14 +201,16 @@ class _AppAccountScreenState
   Widget _buildInfoRow(String label, String value) {
     final textTheme = context.theme.textTheme;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: textTheme.bodyMedium?.copyWith(
-            color: context.theme.colorScheme.onSurfaceVariant,
+        Expanded(
+          child: Text(
+            label,
+            style: textTheme.bodyMedium?.copyWith(
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),

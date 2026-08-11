@@ -590,7 +590,7 @@ class MovieRoute extends _i27.PageRouteInfo<void> {
   static _i27.PageInfo page = _i27.PageInfo(
     name,
     builder: (data) {
-      return const _i19.MovieScreen();
+      return _i27.WrappedRoute(child: const _i19.MovieScreen());
     },
   );
 }
