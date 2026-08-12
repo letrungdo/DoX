@@ -227,7 +227,7 @@ abstract class AppLocalizations {
   /// No description provided for @writeReview.
   ///
   /// In en, this message translates to:
-  /// **'Write a review...'**
+  /// **'Write a review…'**
   String get writeReview;
 
   /// No description provided for @pleaseLoginAgain.
@@ -971,7 +971,7 @@ abstract class AppLocalizations {
   /// No description provided for @testing.
   ///
   /// In en, this message translates to:
-  /// **'Testing...'**
+  /// **'Testing…'**
   String get testing;
 
   /// No description provided for @speedMbps.
@@ -1475,19 +1475,19 @@ abstract class AppLocalizations {
   /// No description provided for @downloadingUpdate.
   ///
   /// In en, this message translates to:
-  /// **'Downloading update...'**
+  /// **'Downloading update…'**
   String get downloadingUpdate;
 
   /// No description provided for @downloadComplete.
   ///
   /// In en, this message translates to:
-  /// **'Download complete, opening installer...'**
+  /// **'Download complete, opening installer…'**
   String get downloadComplete;
 
   /// No description provided for @preparing.
   ///
   /// In en, this message translates to:
-  /// **'Preparing...'**
+  /// **'Preparing…'**
   String get preparing;
 
   /// No description provided for @resumeDownload.
@@ -1547,7 +1547,7 @@ abstract class AppLocalizations {
   /// No description provided for @pleaseWait.
   ///
   /// In en, this message translates to:
-  /// **'Please wait...'**
+  /// **'Please wait…'**
   String get pleaseWait;
 
   /// No description provided for @deleteAllChickenData.
@@ -2003,7 +2003,7 @@ abstract class AppLocalizations {
   /// No description provided for @saleNoteHint.
   ///
   /// In en, this message translates to:
-  /// **'Note (sold to whom...)'**
+  /// **'Note (sold to whom…)'**
   String get saleNoteHint;
 
   /// No description provided for @saleDate.
@@ -2111,7 +2111,7 @@ abstract class AppLocalizations {
   /// No description provided for @cockSaleNoteHint.
   ///
   /// In en, this message translates to:
-  /// **'Note (which chicken, condition...)'**
+  /// **'Note (which chicken, condition…)'**
   String get cockSaleNoteHint;
 
   /// No description provided for @deleteSaleRecord.
@@ -2327,7 +2327,7 @@ abstract class AppLocalizations {
   /// No description provided for @processing.
   ///
   /// In en, this message translates to:
-  /// **'Processing...'**
+  /// **'Processing…'**
   String get processing;
 
   /// No description provided for @rebootSuccessStartSpeedTest.
@@ -2393,13 +2393,13 @@ abstract class AppLocalizations {
   /// No description provided for @routerNoResponse.
   ///
   /// In en, this message translates to:
-  /// **'Still no response from the router ({seconds}s)...'**
+  /// **'Still no response from the router ({seconds}s)…'**
   String routerNoResponse(int seconds);
 
   /// No description provided for @reconnectingEstimate.
   ///
   /// In en, this message translates to:
-  /// **'Reconnecting... (Estimated ~90 seconds)'**
+  /// **'Reconnecting… (Estimated ~90 seconds)'**
   String get reconnectingEstimate;
 
   /// No description provided for @skipWaiting.
@@ -2549,7 +2549,7 @@ abstract class AppLocalizations {
   /// No description provided for @syncingChanges.
   ///
   /// In en, this message translates to:
-  /// **'Syncing {count} changes...'**
+  /// **'Syncing {count} changes…'**
   String syncingChanges(int count);
 
   /// No description provided for @changesDiscarded.
@@ -2621,7 +2621,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchMoviesPlaceholder.
   ///
   /// In en, this message translates to:
-  /// **'Search movies, actors...'**
+  /// **'Search movies, actors…'**
   String get searchMoviesPlaceholder;
 
   /// No description provided for @noMoviesFound.
@@ -2747,7 +2747,7 @@ abstract class AppLocalizations {
   /// No description provided for @syncing.
   ///
   /// In en, this message translates to:
-  /// **'Syncing...'**
+  /// **'Syncing…'**
   String get syncing;
 
   /// No description provided for @vietsub.

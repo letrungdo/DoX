@@ -21,7 +21,7 @@
   "error": "Error",
   "crop": "Crop",
   "addMessage": "Add a message",
-  "writeReview": "Write a review...",
+  "writeReview": "Write a review…",
   "pleaseLoginAgain": "Please log in again!",
   "sessionExpired": "Session expired",
   "anErrorOccurred": "An error occurred.",
@@ -210,7 +210,7 @@
   "adminPassword": "Admin Password",
   "rebootRouterXiaomi": "Reboot Router Xiaomi",
   "startSpeedTest": "Start Speed Test",
-  "testing": "Testing...",
+  "testing": "Testing…",
   "speedMbps": "{speed} Mbps",
   "@speedMbps": {
     "placeholders": {
@@ -377,9 +377,9 @@
   },
   "later": "Later",
   "appUpdate": "App Update",
-  "downloadingUpdate": "Downloading update...",
-  "downloadComplete": "Download complete, opening installer...",
-  "preparing": "Preparing...",
+  "downloadingUpdate": "Downloading update…",
+  "downloadComplete": "Download complete, opening installer…",
+  "preparing": "Preparing…",
   "resumeDownload": "Resume download",
   "downloadErrorGeneric": "Could not download update. Please check your internet connection.",
   "downloadErrorTimeout": "Connection timeout. Please try again.",
@@ -403,7 +403,7 @@
   "install": "Install",
   "add": "Add",
   "confirm": "Confirm",
-  "pleaseWait": "Please wait...",
+  "pleaseWait": "Please wait…",
   "deleteAllChickenData": "Delete all chicken data",
   "statusWaitingHatch": "Hatching - {date}",
   "@statusWaitingHatch": {
@@ -684,7 +684,7 @@
       }
     }
   },
-  "saleNoteHint": "Note (sold to whom...)",
+  "saleNoteHint": "Note (sold to whom…)",
   "saleDate": "Sale date",
   "deleteBatch": "Delete batch",
   "confirmDeleteBatch": "Are you sure you want to delete batch '{name}'? This action cannot be undone.",
@@ -723,7 +723,7 @@
   },
   "fightingChickenFull": "Fighting rooster",
   "salePrice": "Sale price",
-  "cockSaleNoteHint": "Note (which chicken, condition...)",
+  "cockSaleNoteHint": "Note (which chicken, condition…)",
   "deleteSaleRecord": "Delete sale",
   "confirmDeleteSaleRecord": "Delete the sale on {date} ({amount})?",
   "@confirmDeleteSaleRecord": {
@@ -811,7 +811,7 @@
   "tabReboot": "Reboot",
   "tabDevices": "Devices",
   "tabSpeed": "Speed",
-  "processing": "Processing...",
+  "processing": "Processing…",
   "rebootSuccessStartSpeedTest": "Reboot successful, starting speed test",
   "connectionSpeedTest": "Check connection speed",
   "selectInternetServer": "Select internet test server",
@@ -829,7 +829,7 @@
   "deviceConfig": "Device configuration",
   "adminPasswordHelper": "Login password for the router admin page (MiWiFi)",
   "progressTitle": "Progress:",
-  "routerNoResponse": "Still no response from the router ({seconds}s)...",
+  "routerNoResponse": "Still no response from the router ({seconds}s)…",
   "@routerNoResponse": {
     "placeholders": {
       "seconds": {
@@ -837,7 +837,7 @@
       }
     }
   },
-  "reconnectingEstimate": "Reconnecting... (Estimated ~90 seconds)",
+  "reconnectingEstimate": "Reconnecting… (Estimated ~90 seconds)",
   "skipWaiting": "Skip waiting",
   "skipWaitingNote": "Note: If the router changed IP or the light turned green, you can skip this step.",
   "errorLabel": "Error!",
@@ -914,7 +914,7 @@
       }
     }
   },
-  "syncingChanges": "Syncing {count} changes...",
+  "syncingChanges": "Syncing {count} changes…",
   "@syncingChanges": {
     "placeholders": {
       "count": {
@@ -957,7 +957,7 @@
       }
     }
   },
-  "searchMoviesPlaceholder": "Search movies, actors...",
+  "searchMoviesPlaceholder": "Search movies, actors…",
   "noMoviesFound": "No movies found",
   "loadMoviesFailed": "Could not load movie library.",
   "invalidMovieServerUrl": "Invalid Movie Server URL.",
@@ -978,7 +978,7 @@
   "scrollToTop": "Scroll to top",
   "noCategoriesConfigured": "No categories configured.",
   "enterMovieServerUrl": "Enter Movie Server URL to load categories.",
-  "syncing": "Syncing...",
+  "syncing": "Syncing…",
   "vietsub": "Vietsub",
   "updateFavoriteFailed": "Could not update favorite.",
   "videoStreamError": "Video stream connection error.",

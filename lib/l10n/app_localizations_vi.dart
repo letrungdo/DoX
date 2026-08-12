@@ -72,7 +72,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addMessage => 'Thêm tin nhắn';
 
   @override
-  String get writeReview => 'Viết nhận xét...';
+  String get writeReview => 'Viết nhận xét…';
 
   @override
   String get pleaseLoginAgain => 'Vui lòng đăng nhập lại!';
@@ -475,7 +475,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get startSpeedTest => 'Đo tốc độ';
 
   @override
-  String get testing => 'Đang đo...';
+  String get testing => 'Đang đo…';
 
   @override
   String speedMbps(String speed) {
@@ -760,13 +760,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get appUpdate => 'Cập nhật ứng dụng';
 
   @override
-  String get downloadingUpdate => 'Đang tải bản cập nhật...';
+  String get downloadingUpdate => 'Đang tải bản cập nhật…';
 
   @override
-  String get downloadComplete => 'Tải hoàn tất, đang mở trình cài đặt...';
+  String get downloadComplete => 'Tải hoàn tất, đang mở trình cài đặt…';
 
   @override
-  String get preparing => 'Đang chuẩn bị...';
+  String get preparing => 'Đang chuẩn bị…';
 
   @override
   String get resumeDownload => 'Tiếp tục tải';
@@ -802,7 +802,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get confirm => 'Xác nhận';
 
   @override
-  String get pleaseWait => 'Vui lòng chờ...';
+  String get pleaseWait => 'Vui lòng chờ…';
 
   @override
   String get deleteAllChickenData => 'Xóa toàn bộ dữ liệu gà';
@@ -1082,7 +1082,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get saleNoteHint => 'Ghi chú (bán cho ai...)';
+  String get saleNoteHint => 'Ghi chú (bán cho ai…)';
 
   @override
   String get saleDate => 'Ngày bán';
@@ -1142,7 +1142,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get salePrice => 'Giá bán';
 
   @override
-  String get cockSaleNoteHint => 'Ghi chú (con gà số mấy, trạng gà...)';
+  String get cockSaleNoteHint => 'Ghi chú (con gà số mấy, trạng gà…)';
 
   @override
   String get deleteSaleRecord => 'Xóa lượt bán';
@@ -1274,7 +1274,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get tabSpeed => 'Tốc độ';
 
   @override
-  String get processing => 'Đang xử lý...';
+  String get processing => 'Đang xử lý…';
 
   @override
   String get rebootSuccessStartSpeedTest =>
@@ -1312,11 +1312,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String routerNoResponse(int seconds) {
-    return 'Vẫn chưa thấy router phản hồi (${seconds}s)...';
+    return 'Vẫn chưa thấy router phản hồi (${seconds}s)…';
   }
 
   @override
-  String get reconnectingEstimate => 'Đang kết nối lại... (Ước tính ~90 giây)';
+  String get reconnectingEstimate => 'Đang kết nối lại… (Ước tính ~90 giây)';
 
   @override
   String get skipWaiting => 'Bỏ qua chờ';
@@ -1411,7 +1411,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String syncingChanges(int count) {
-    return 'Đang đồng bộ $count thay đổi...';
+    return 'Đang đồng bộ $count thay đổi…';
   }
 
   @override
@@ -1454,7 +1454,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get searchMoviesPlaceholder => 'Tìm tên phim, diễn viên...';
+  String get searchMoviesPlaceholder => 'Tìm tên phim, diễn viên…';
 
   @override
   String get noMoviesFound => 'Không tìm thấy phim nào';
@@ -1518,7 +1518,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Nhập Movie Server URL để tải danh mục phim.';
 
   @override
-  String get syncing => 'Đang đồng bộ...';
+  String get syncing => 'Đang đồng bộ…';
 
   @override
   String get vietsub => 'Vietsub';

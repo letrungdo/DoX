@@ -21,7 +21,7 @@
   "error": "Lỗi",
   "crop": "Cắt",
   "addMessage": "Thêm tin nhắn",
-  "writeReview": "Viết nhận xét...",
+  "writeReview": "Viết nhận xét…",
   "pleaseLoginAgain": "Vui lòng đăng nhập lại!",
   "sessionExpired": "Hết phiên làm việc",
   "anErrorOccurred": "Đã có lỗi xảy ra.",
@@ -203,7 +203,7 @@
   "adminPassword": "Mật khẩu Admin",
   "rebootRouterXiaomi": "Khởi động lại Router Xiaomi",
   "startSpeedTest": "Đo tốc độ",
-  "testing": "Đang đo...",
+  "testing": "Đang đo…",
   "speedMbps": "{speed} Mbps",
   "@speedMbps": {
     "placeholders": {
@@ -370,9 +370,9 @@
   },
   "later": "Để sau",
   "appUpdate": "Cập nhật ứng dụng",
-  "downloadingUpdate": "Đang tải bản cập nhật...",
-  "downloadComplete": "Tải hoàn tất, đang mở trình cài đặt...",
-  "preparing": "Đang chuẩn bị...",
+  "downloadingUpdate": "Đang tải bản cập nhật…",
+  "downloadComplete": "Tải hoàn tất, đang mở trình cài đặt…",
+  "preparing": "Đang chuẩn bị…",
   "resumeDownload": "Tiếp tục tải",
   "downloadErrorGeneric": "Không thể tải bản cập nhật. Vui lòng kiểm tra kết nối mạng.",
   "downloadErrorTimeout": "Kết nối quá hạn. Vui lòng thử lại.",
@@ -382,7 +382,7 @@
   "install": "Cài đặt",
   "add": "Thêm",
   "confirm": "Xác nhận",
-  "pleaseWait": "Vui lòng chờ...",
+  "pleaseWait": "Vui lòng chờ…",
   "deleteAllChickenData": "Xóa toàn bộ dữ liệu gà",
   "statusWaitingHatch": "Chờ nở - {date}",
   "@statusWaitingHatch": {
@@ -663,7 +663,7 @@
       }
     }
   },
-  "saleNoteHint": "Ghi chú (bán cho ai...)",
+  "saleNoteHint": "Ghi chú (bán cho ai…)",
   "saleDate": "Ngày bán",
   "deleteBatch": "Xóa lứa gà",
   "confirmDeleteBatch": "Bạn có chắc chắn muốn xóa lứa '{name}'? Hành động này không thể hoàn tác.",
@@ -702,7 +702,7 @@
   },
   "fightingChickenFull": "Gà đá / gà nòi",
   "salePrice": "Giá bán",
-  "cockSaleNoteHint": "Ghi chú (con gà số mấy, trạng gà...)",
+  "cockSaleNoteHint": "Ghi chú (con gà số mấy, trạng gà…)",
   "deleteSaleRecord": "Xóa lượt bán",
   "confirmDeleteSaleRecord": "Xóa lượt bán ngày {date} ({amount})?",
   "@confirmDeleteSaleRecord": {
@@ -790,7 +790,7 @@
   "tabReboot": "Khởi động lại",
   "tabDevices": "Thiết bị",
   "tabSpeed": "Tốc độ",
-  "processing": "Đang xử lý...",
+  "processing": "Đang xử lý…",
   "rebootSuccessStartSpeedTest": "Khởi động lại thành công, bắt đầu kiểm tra tốc độ",
   "connectionSpeedTest": "Kiểm tra tốc độ kết nối",
   "selectInternetServer": "Chọn máy chủ đo internet",
@@ -808,7 +808,7 @@
   "deviceConfig": "Cấu hình thiết bị",
   "adminPasswordHelper": "Mật khẩu đăng nhập trang quản trị router (MiWiFi)",
   "progressTitle": "Tiến trình thực hiện:",
-  "routerNoResponse": "Vẫn chưa thấy router phản hồi ({seconds}s)...",
+  "routerNoResponse": "Vẫn chưa thấy router phản hồi ({seconds}s)…",
   "@routerNoResponse": {
     "placeholders": {
       "seconds": {
@@ -816,7 +816,7 @@
       }
     }
   },
-  "reconnectingEstimate": "Đang kết nối lại... (Ước tính ~90 giây)",
+  "reconnectingEstimate": "Đang kết nối lại… (Ước tính ~90 giây)",
   "skipWaiting": "Bỏ qua chờ",
   "skipWaitingNote": "Lưu ý: Nếu router đã đổi IP hoặc đèn đã báo xanh, bạn có thể bỏ qua bước này.",
   "errorLabel": "Lỗi!",
@@ -893,7 +893,7 @@
       }
     }
   },
-  "syncingChanges": "Đang đồng bộ {count} thay đổi...",
+  "syncingChanges": "Đang đồng bộ {count} thay đổi…",
   "@syncingChanges": {
     "placeholders": {
       "count": {
@@ -936,7 +936,7 @@
       }
     }
   },
-  "searchMoviesPlaceholder": "Tìm tên phim, diễn viên...",
+  "searchMoviesPlaceholder": "Tìm tên phim, diễn viên…",
   "noMoviesFound": "Không tìm thấy phim nào",
   "loadMoviesFailed": "Không thể tải thư viện phim.",
   "invalidMovieServerUrl": "Movie Server URL không hợp lệ.",
@@ -957,7 +957,7 @@
   "scrollToTop": "Lên đầu trang",
   "noCategoriesConfigured": "Chưa cấu hình chuyên mục.",
   "enterMovieServerUrl": "Nhập Movie Server URL để tải danh mục phim.",
-  "syncing": "Đang đồng bộ...",
+  "syncing": "Đang đồng bộ…",
   "vietsub": "Vietsub",
   "updateFavoriteFailed": "Không thể cập nhật yêu thích.",
   "videoStreamError": "Lỗi kết nối luồng phát video.",

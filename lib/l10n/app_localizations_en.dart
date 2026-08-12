@@ -72,7 +72,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addMessage => 'Add a message';
 
   @override
-  String get writeReview => 'Write a review...';
+  String get writeReview => 'Write a review…';
 
   @override
   String get pleaseLoginAgain => 'Please log in again!';
@@ -475,7 +475,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startSpeedTest => 'Start Speed Test';
 
   @override
-  String get testing => 'Testing...';
+  String get testing => 'Testing…';
 
   @override
   String speedMbps(String speed) {
@@ -760,13 +760,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appUpdate => 'App Update';
 
   @override
-  String get downloadingUpdate => 'Downloading update...';
+  String get downloadingUpdate => 'Downloading update…';
 
   @override
-  String get downloadComplete => 'Download complete, opening installer...';
+  String get downloadComplete => 'Download complete, opening installer…';
 
   @override
-  String get preparing => 'Preparing...';
+  String get preparing => 'Preparing…';
 
   @override
   String get resumeDownload => 'Resume download';
@@ -801,7 +801,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirm => 'Confirm';
 
   @override
-  String get pleaseWait => 'Please wait...';
+  String get pleaseWait => 'Please wait…';
 
   @override
   String get deleteAllChickenData => 'Delete all chicken data';
@@ -1082,7 +1082,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get saleNoteHint => 'Note (sold to whom...)';
+  String get saleNoteHint => 'Note (sold to whom…)';
 
   @override
   String get saleDate => 'Sale date';
@@ -1142,7 +1142,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salePrice => 'Sale price';
 
   @override
-  String get cockSaleNoteHint => 'Note (which chicken, condition...)';
+  String get cockSaleNoteHint => 'Note (which chicken, condition…)';
 
   @override
   String get deleteSaleRecord => 'Delete sale';
@@ -1276,7 +1276,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabSpeed => 'Speed';
 
   @override
-  String get processing => 'Processing...';
+  String get processing => 'Processing…';
 
   @override
   String get rebootSuccessStartSpeedTest =>
@@ -1314,11 +1314,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String routerNoResponse(int seconds) {
-    return 'Still no response from the router (${seconds}s)...';
+    return 'Still no response from the router (${seconds}s)…';
   }
 
   @override
-  String get reconnectingEstimate => 'Reconnecting... (Estimated ~90 seconds)';
+  String get reconnectingEstimate => 'Reconnecting… (Estimated ~90 seconds)';
 
   @override
   String get skipWaiting => 'Skip waiting';
@@ -1413,7 +1413,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String syncingChanges(int count) {
-    return 'Syncing $count changes...';
+    return 'Syncing $count changes…';
   }
 
   @override
@@ -1456,7 +1456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchMoviesPlaceholder => 'Search movies, actors...';
+  String get searchMoviesPlaceholder => 'Search movies, actors…';
 
   @override
   String get noMoviesFound => 'No movies found';
@@ -1521,7 +1521,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter Movie Server URL to load categories.';
 
   @override
-  String get syncing => 'Syncing...';
+  String get syncing => 'Syncing…';
 
   @override
   String get vietsub => 'Vietsub';
