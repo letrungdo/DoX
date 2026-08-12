@@ -355,7 +355,7 @@ class _ElectricScreenState
               subtitle,
               style: TextStyle(
                 color: foreground.withValues(alpha: 0.75),
-                fontSize: 10.5,
+                fontSize: 12,
               ),
             ),
         ],
@@ -839,7 +839,7 @@ class _ElectricScreenState
                 Text(title, style: context.textTheme.primary.size13),
                 Text(
                   "${customer?.customerCode.toDashIfNull} · ${l10n.meterId} ${customer?.meterId.toDashIfNull}",
-                  style: context.textTheme.secondary.copyWith(fontSize: 11.5),
+                  style: context.textTheme.secondary.copyWith(fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -927,7 +927,7 @@ class _ElectricScreenState
           const SizedBox(height: 12),
           Text(
             l10n.mergedEstimateNote,
-            style: context.textTheme.secondary.copyWith(fontSize: 11.5),
+            style: context.textTheme.secondary.copyWith(fontSize: 12),
           ),
         ],
       ),
@@ -1511,10 +1511,7 @@ class _SavedAccountPicker extends StatelessWidget {
               ),
               Text(
                 account.username,
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontSize: 10.5,
-                ),
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
               ),
             ],
           ),

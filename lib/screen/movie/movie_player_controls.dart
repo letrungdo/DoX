@@ -246,7 +246,7 @@ class PlayerVolumePopup extends StatelessWidget {
               overflow: TextOverflow.visible,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -439,7 +439,7 @@ class PlayerScrubPreview extends StatelessWidget {
                 formatDuration(position),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -579,7 +579,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                 child: Text(
                   statusText,
                   style: DoTextTheme.pill.copyWith(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: statusColor,
                   ),
                 ),

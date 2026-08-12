@@ -1211,7 +1211,7 @@ class _MovieDetailScreenState
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant.withValues(
                             alpha: 0.7,
                           ),
@@ -1673,7 +1673,7 @@ class _MovieDetailScreenState
                                                       '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
                                                       style: const TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 11,
+                                                        fontSize: 12,
                                                       ),
                                                     );
                                                   },

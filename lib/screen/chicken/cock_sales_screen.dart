@@ -322,7 +322,7 @@ class _CockSalesScreenState
                                             ? l10n.meatChicken
                                             : l10n.fightingChicken,
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           height: 1.2,
                                           fontWeight: FontWeight.w700,
                                           color: accent,

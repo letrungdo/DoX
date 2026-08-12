@@ -754,7 +754,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                               : '...',
                         ),
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary,
                         ),

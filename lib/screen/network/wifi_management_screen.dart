@@ -247,7 +247,6 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                   Text(
                     subtitle,
                     style: context.theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
                       color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -273,7 +272,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                 Text(
                   l10n.ttfbMs(latency),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -464,7 +463,6 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
               child: Text(
                 l10n.skipWaitingNote,
                 style: context.theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
                   fontStyle: FontStyle.italic,
                 ),
               ),

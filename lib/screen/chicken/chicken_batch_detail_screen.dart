@@ -251,7 +251,7 @@ class _ChickenBatchDetailScreenState
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -1284,7 +1284,7 @@ class _ChickenBatchDetailScreenState
                   Text(
                     basis,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),

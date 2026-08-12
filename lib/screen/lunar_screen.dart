@@ -293,7 +293,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
             ),
           ),
           const SizedBox(width: 6),
-          Text(star, style: TextStyle(color: color, fontSize: 11)),
+          Text(star, style: TextStyle(color: color, fontSize: 12)),
         ],
       ),
     );

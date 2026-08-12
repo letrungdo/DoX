@@ -51,7 +51,6 @@ class LocalNetworkView extends StatelessWidget {
               Text(
                 l10n.deviceScanHint,
                 style: context.theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
                   color: context.theme.colorScheme.onSurfaceVariant,
                 ),
               ),

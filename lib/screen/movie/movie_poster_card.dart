@@ -106,7 +106,7 @@ class MoviePosterCard extends StatelessWidget {
                         displayBadge,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -194,7 +194,7 @@ class MoviePosterCard extends StatelessWidget {
                               movie.views!,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -212,7 +212,7 @@ class MoviePosterCard extends StatelessWidget {
                               movie.likes!,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -252,7 +252,7 @@ class MoviePosterCard extends StatelessWidget {
                                   ),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 12,
                             ),
                           ),
                         ],

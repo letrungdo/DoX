@@ -240,7 +240,7 @@ class MovieDetailBody extends StatelessWidget {
                                   return NeuChip(
                                     label: ep.name,
                                     isSelected: isSelected,
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     onTap: () {
                                       onEpisodeSelected(ep);
                                     },
