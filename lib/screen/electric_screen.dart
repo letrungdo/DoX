@@ -255,7 +255,7 @@ class _ElectricScreenState
         width: width,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
         ),
       );
     }
@@ -377,7 +377,9 @@ class _ElectricScreenState
                 height: 44,
                 decoration: BoxDecoration(
                   color: _ChartColors.current(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(
+                    Dimens.radiusControlSmall,
+                  ),
                 ),
                 child: Icon(
                   Icons.electric_meter_rounded,
@@ -665,7 +667,9 @@ class _ElectricScreenState
               ),
             )
           : const BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderRadius: BorderRadius.all(
+                Radius.circular(Dimens.radiusControlSmall),
+              ),
             ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -854,7 +858,7 @@ class _ElectricScreenState
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.neu.sunken,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Text(message, style: context.textTheme.secondary.size13),
     );

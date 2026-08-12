@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
@@ -120,7 +121,7 @@ class LunarCalendarGrid extends StatelessWidget {
             : isToday
             ? context.neuTint(scheme.primary, amount: 0.14)
             : null,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

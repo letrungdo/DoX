@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/settings/page_layout_editor.dart';
@@ -32,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
               child: DropdownButton<Locale>(
                 value: appVm.locale ?? AppLocalizations.supportedLocales.first,
                 isDense: true,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(Dimens.radiusControl),
                 onChanged: (newLocale) {
                   if (newLocale != null) appVm.setLocale(newLocale);
                 },
@@ -58,7 +59,7 @@ class SettingsScreen extends StatelessWidget {
               child: DropdownButton<ThemeMode>(
                 value: appVm.themeMode,
                 isDense: true,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(Dimens.radiusControl),
                 onChanged: (newMode) {
                   if (newMode != null) appVm.setThemeMode(newMode);
                 },
@@ -110,7 +111,9 @@ class SettingsScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: Colors.teal.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(
+                      Dimens.radiusControlSmall,
+                    ),
                   ),
                   child: const Icon(
                     Icons.swap_vert_rounded,

@@ -1,7 +1,7 @@
 import 'dart:async';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
@@ -28,8 +28,8 @@ import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
@@ -274,7 +274,7 @@ class _ChickenBatchDetailScreenState
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: context.neuTint(color),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -419,7 +419,7 @@ class _ChickenBatchDetailScreenState
                   if (hasSales && batch.quantity > 0) ...[
                     const SizedBox(height: 12),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(Dimens.radiusTiny),
                       child: LinearProgressIndicator(
                         value: (batch.soldQuantity / batch.quantity).clamp(
                           0.0,
@@ -493,7 +493,7 @@ class _ChickenBatchDetailScreenState
         ? context.colors.danger
         : context.theme.colorScheme.onSurfaceVariant;
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       onTap: vm.isReadOnly
           ? null
           : () {
@@ -579,7 +579,7 @@ class _ChickenBatchDetailScreenState
           ),
         ...batch.expenses.map(
           (e) => InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
             onTap: vm.isReadOnly
                 ? null
                 : () => _showExpenseDialog(batch, expense: e),
@@ -1256,7 +1256,7 @@ class _ChickenBatchDetailScreenState
           );
     return InkWell(
       onTap: onApply,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         child: Row(

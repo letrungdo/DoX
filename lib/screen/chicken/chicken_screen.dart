@@ -471,7 +471,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: accentSoft,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
             ),
             child: icon,
           ),
@@ -572,7 +572,9 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                   // Tinted fill instead of an outline: the pill carries its
                   // colour the same way every other chip in the app does.
                   color: context.neuTint(statusColor),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(
+                    Dimens.radiusControlSmall,
+                  ),
                 ),
                 child: Text(
                   statusText,
@@ -705,7 +707,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         // Opaque tint of the badge's own colour, blended onto whatever card it
         // sits on — a translucent fill turns muddy on the tinted rows.
         color: context.neuTint(color),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Text(
         "$label ${amount.toCurrency()}đ",

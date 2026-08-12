@@ -57,6 +57,42 @@ class Dimens {
   static const dialogRadius = 24.0;
   static const sheetRadius = 24.0;
 
+  /// The radius scale, named by the role a corner plays rather than by size.
+  ///
+  /// Neumorphism leans on the shadow pair rather than an outline, so a corner is
+  /// the only other thing telling two stacked panels apart — a radius that
+  /// drifts by a pixel or two per screen reads as sloppiness rather than as
+  /// hierarchy. Pick the step whose *role* matches; do not add a value in
+  /// between.
+  ///
+  /// When nesting, the inner radius is the outer one minus the gap between them,
+  /// so a card at [radiusCard] holding a control inset by 4 wants
+  /// [radiusControlSmall], not another [radiusCard].
+  ///
+  /// Chart bars, badges, inline markers.
+  static const radiusTiny = 4.0;
+
+  /// Tags and small pills that sit inside a row.
+  static const radiusSmall = 8.0;
+
+  /// Text and icon buttons, chips — a control small enough that the workhorse
+  /// radius would swallow its label.
+  static const radiusControlSmall = 12.0;
+
+  /// The workhorse: filled and outlined buttons, inputs, list tiles, snack bars.
+  static const radiusControl = 14.0;
+
+  /// Cards and the panels that group a set of controls.
+  static const radiusCard = 16.0;
+
+  /// A panel large enough that [radiusCard] reads as square on it — a toast, a
+  /// full-width summary block.
+  static const radiusPanel = 20.0;
+
+  /// Fully rounded: avatars, circular badges, capsule buttons. Large enough that
+  /// `BorderRadius.circular` clamps to a half-height capsule at any size.
+  static const radiusPill = 999.0;
+
   /// A sheet never grows past this share of the screen height, so the page
   /// behind it stays visible — landscape especially, where the screen is short.
   static const sheetMaxHeightFactor = 0.85;

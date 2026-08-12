@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
@@ -42,7 +43,7 @@ class SettingCard extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
           ),
           child: Icon(icon, color: color),
         ),

@@ -1,6 +1,7 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/widgets/input/lunar_date_picker.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
+import 'package:do_x/widgets/input/lunar_date_picker.dart';
 import 'package:flutter/material.dart';
 
 /// Date field for chicken dates. [value] and the value passed to [onChanged]
@@ -33,7 +34,7 @@ class LunarDateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(Dimens.radiusControl),
       onTap: () => _pick(context),
       child: InputDecorator(
         isEmpty: value == null,

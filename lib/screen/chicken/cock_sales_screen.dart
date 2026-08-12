@@ -1,6 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
@@ -10,24 +12,23 @@ import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
-import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
+import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
-import 'package:do_x/widgets/input/cute_segmented_button.dart';
-import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
+import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
+import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -312,7 +313,9 @@ class _CockSalesScreenState
                                       ),
                                       decoration: BoxDecoration(
                                         color: accentSoft,
-                                        borderRadius: BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(
+                                          Dimens.radiusSmall,
+                                        ),
                                       ),
                                       child: Text(
                                         isMeat

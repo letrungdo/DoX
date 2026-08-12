@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -103,7 +104,7 @@ class _DoTextFieldState extends State<DoTextField> {
             // single line Material gives it by default.
             errorMaxLines: 4,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20), //
+              borderRadius: BorderRadius.circular(Dimens.radiusPanel), //
             ), //
           ),
       obscureText: widget.obscureText,

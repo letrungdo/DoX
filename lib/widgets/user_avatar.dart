@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/store/app_data.dart';
@@ -16,7 +17,7 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profilePicture = appData.user?.profilePicture;
-    final radius = BorderRadius.circular(30);
+    final radius = BorderRadius.circular(Dimens.radiusPill);
 
     return SizedBox(
       width: size.width,

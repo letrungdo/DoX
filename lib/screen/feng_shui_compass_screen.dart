@@ -288,7 +288,7 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
         // A hint is not a panel: the flat sunken fill is how this design says
         // "sits in the page" rather than "lifted off it".
         color: context.neu.sunken,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

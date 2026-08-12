@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
-
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
 
@@ -35,7 +35,7 @@ class LineAreaChart extends StatelessWidget {
           // Empty-state well, not an outlined box: the flat sunken fill is how
           // this design marks a placeholder.
           color: context.neu.sunken,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(Dimens.radiusTiny),
         ),
         child: const Center(
           child: Text(

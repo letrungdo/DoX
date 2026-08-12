@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/screen/movie/movie_poster_card.dart';
@@ -87,7 +88,7 @@ class MovieDetailBody extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

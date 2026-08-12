@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 
 /// Single-choice option group rendered as wrapping tags, highlighted with the
@@ -37,11 +38,11 @@ class CuteSegmentedButton<T> extends StatelessWidget {
     return Material(
       color: selected ? scheme.tertiary : scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Dimens.radiusControl),
         side: BorderSide.none,
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Dimens.radiusControl),
         onTap: () => onChanged(segment.value),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),

@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
-import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
+import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
@@ -99,7 +100,7 @@ class MoviePosterCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.pinkAccent.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
                       ),
                       child: Text(
                         displayBadge,
@@ -122,7 +123,7 @@ class MoviePosterCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.68),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -177,7 +178,7 @@ class MoviePosterCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -232,7 +233,7 @@ class MoviePosterCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

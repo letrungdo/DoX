@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-
+import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 
 class CuteBarChartItem {
@@ -224,7 +224,7 @@ class _BarChartPainter extends CustomPainter {
         groupWidth - 2,
         plotHeight,
       ),
-      const Radius.circular(6),
+      const Radius.circular(Dimens.radiusSmall),
     );
     canvas.drawRRect(selectionRect, Paint()..color = selectionColor);
 
@@ -290,8 +290,8 @@ class _BarChartPainter extends CustomPainter {
     if (height <= 0) return;
     final rect = RRect.fromRectAndCorners(
       Rect.fromLTWH(x, plotHeight - height, width, height),
-      topLeft: const Radius.circular(4),
-      topRight: const Radius.circular(4),
+      topLeft: const Radius.circular(Dimens.radiusTiny),
+      topRight: const Radius.circular(Dimens.radiusTiny),
     );
     canvas.drawRRect(rect, Paint()..color = color);
   }
@@ -331,8 +331,8 @@ class _BarChartPainter extends CustomPainter {
         canvas.drawRRect(
           RRect.fromRectAndCorners(
             rect,
-            topLeft: const Radius.circular(4),
-            topRight: const Radius.circular(4),
+            topLeft: const Radius.circular(Dimens.radiusTiny),
+            topRight: const Radius.circular(Dimens.radiusTiny),
           ),
           paint,
         );

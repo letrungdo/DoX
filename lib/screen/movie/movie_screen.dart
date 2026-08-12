@@ -735,7 +735,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                             .colorScheme
                             .surfaceContainerHighest
                             .withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(
+                          Dimens.radiusControlSmall,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.1),
@@ -975,11 +977,11 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
               filled: true,
               fillColor: scheme.surface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(Dimens.radiusControl),
                 borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(Dimens.radiusControl),
                 borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
               ),
             ),

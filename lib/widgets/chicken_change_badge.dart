@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/chicken_recent_changes.dart';
@@ -44,7 +45,7 @@ class ChickenChangeBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: tint,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
       ),
       child: Text(
         isNew ? l10n.badgeNew : l10n.badgeUpdated,

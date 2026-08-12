@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -74,7 +75,7 @@ class LocalNetworkView extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Dimens.radiusCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,7 +125,7 @@ class LocalNetworkView extends StatelessWidget {
           ),
           if (vm.isScanning)
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(Dimens.radiusTiny),
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 5,
@@ -238,7 +239,7 @@ class LocalNetworkView extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.neuTint(color, amount: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
         spacing: 10,

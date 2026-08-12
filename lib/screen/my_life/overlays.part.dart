@@ -46,7 +46,7 @@ Widget _buildOverlays<V extends MyLifeViewModel>(
                       ),
                       decoration: BoxDecoration(
                         color: bgColor ?? Colors.white.withAlpha(200), //
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
                       ),
                       child: switch (type) {
                         OverlayType.standard => _buildCaptionOverlay(textColor),

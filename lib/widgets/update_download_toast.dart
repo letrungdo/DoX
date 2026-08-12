@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/update_controller.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
@@ -89,7 +90,7 @@ class _ToastCard extends StatelessWidget {
                   if (!isDone && !isError) ...[
                     const SizedBox(height: 6),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(Dimens.radiusTiny),
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,

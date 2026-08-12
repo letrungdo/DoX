@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 
 /// Rounded, soft-filled decoration shared by TextFields/Dropdowns in dialogs.
@@ -14,7 +15,7 @@ InputDecoration cuteInputDecoration(
   // Sunken fill, no resting outline: the recess is what marks the field as an
   // input, and only focus is worth a visible line.
   OutlineInputBorder border([BorderSide? side]) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(14),
+    borderRadius: BorderRadius.circular(Dimens.radiusControl),
     borderSide: side ?? BorderSide.none,
   );
   return InputDecoration(

@@ -73,10 +73,10 @@ class AppTheme {
     );
     final textTheme = _textTheme(scheme);
     final rounded14 = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(Dimens.radiusControl),
     );
     final rounded16 = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(Dimens.radiusCard),
     );
 
     return ThemeData(
@@ -191,7 +191,7 @@ class AppTheme {
           minimumSize: const Size(48, 44),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
           ),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
@@ -201,7 +201,7 @@ class AppTheme {
           foregroundColor: scheme.onSurfaceVariant,
           minimumSize: const Size.square(44),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
           ),
         ),
       ),
@@ -224,23 +224,23 @@ class AppTheme {
         prefixIconColor: scheme.onSurfaceVariant,
         suffixIconColor: scheme.onSurfaceVariant,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
           borderSide: BorderSide(color: scheme.primary, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
           borderSide: BorderSide(color: scheme.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
           borderSide: BorderSide(color: scheme.error, width: 1.8),
         ),
       ),
@@ -249,7 +249,7 @@ class AppTheme {
           filled: true,
           fillColor: neu.sunken,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(Dimens.radiusControl),
             borderSide: BorderSide.none,
           ),
         ),
@@ -281,7 +281,9 @@ class AppTheme {
         backgroundColor: neu.sunken,
         selectedColor: scheme.primaryContainer,
         side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         labelStyle: textTheme.labelLarge!,
       ),
@@ -306,7 +308,9 @@ class AppTheme {
         ),
         checkColor: WidgetStatePropertyAll(scheme.onPrimary),
         side: BorderSide(color: scheme.outline, width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dimens.radiusTiny),
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: background,
@@ -315,7 +319,7 @@ class AppTheme {
         height: 68,
         indicatorColor: scheme.primary.withValues(alpha: 0.12),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
@@ -351,7 +355,9 @@ class AppTheme {
         elevation: 6,
         focusElevation: 6,
         hoverElevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dimens.radiusCard),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

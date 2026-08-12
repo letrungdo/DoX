@@ -1,18 +1,19 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
-import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
@@ -586,7 +587,7 @@ class _ChickenStatisticsScreenState
                   ),
                   decoration: BoxDecoration(
                     color: _scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(Dimens.radiusSmall),
                   ),
                   child: Text(
                     period.shortLabel,
@@ -676,7 +677,7 @@ class _ChickenStatisticsScreenState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: context.neuTint(accent),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -7,13 +8,13 @@ import 'package:do_x/screen/network/local_network_screen.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';
-import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
-import 'package:do_x/widgets/text_field.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_sficon/flutter_sficon.dart';
@@ -306,7 +307,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: context.neu.sunken,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Dimens.radiusSmall),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -343,7 +344,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.neuTint(color, amount: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
         spacing: 8,
@@ -384,7 +385,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             labelText: l10n.adminPassword,
             helperText: l10n.adminPasswordHelper,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20), //
+              borderRadius: BorderRadius.circular(Dimens.radiusPanel), //
             ),
             suffixIcon: IconButton(
               onPressed: vm.togglePasswordVisible,
@@ -412,7 +413,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
         if (vm.isWaitingForOnline) ...[
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(Dimens.radiusTiny),
             child: LinearProgressIndicator(
               // Estimate 90s for a full reboot cycle
               value: (vm.elapsedSeconds / 90).clamp(0.0, 0.99),
@@ -526,7 +527,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.neuTint(color, amount: 0.14),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,7 +577,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
               // Console keeps its own near-black; the outline goes, since the
               // colour step off the page is already the boundary.
               color: const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
             ),
             child: SingleChildScrollView(
               child: Column(

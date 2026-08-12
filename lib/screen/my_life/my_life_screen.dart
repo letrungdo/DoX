@@ -105,7 +105,9 @@ class _HomeScreenState<V extends MyLifeViewModel>
                     Container(
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(60), //
+                        borderRadius: BorderRadius.circular(
+                          Dimens.radiusPill,
+                        ), //
                         color: context.theme.scaffoldBackgroundColor,
                       ),
                       height: height, //
@@ -250,7 +252,7 @@ class _HomeScreenState<V extends MyLifeViewModel>
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: context.theme.colorScheme.primaryContainer, //
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(Dimens.radiusPill),
               ),
               child: isCameraMode
                   ? Container(
@@ -258,7 +260,7 @@ class _HomeScreenState<V extends MyLifeViewModel>
                       height: 50,
                       decoration: BoxDecoration(
                         color: context.colors.iconColor.withAlpha(250), //
-                        borderRadius: BorderRadius.circular(40),
+                        borderRadius: BorderRadius.circular(Dimens.radiusPill),
                       ),
                     )
                   : SFIcon(SFIcons.sf_paperplane, fontSize: 35),

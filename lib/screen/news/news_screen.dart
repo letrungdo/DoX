@@ -439,7 +439,7 @@ class _NewsScreenState<V extends NewsViewModel>
     final color = context.colors.info;
     return InkWell(
       onTap: () => setState(() => _isNewsExpanded = !expanded),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       child: Padding(
         padding: const EdgeInsets.only(top: 8, bottom: 2),
         child: Row(
@@ -499,7 +499,7 @@ class _NewsScreenState<V extends NewsViewModel>
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: context.neuTint(color, amount: 0.14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -534,7 +534,7 @@ class _NewsScreenState<V extends NewsViewModel>
     };
     return InkWell(
       onTap: source == null ? null : () => _openSource(source),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
@@ -546,7 +546,7 @@ class _NewsScreenState<V extends NewsViewModel>
               height: 22,
               decoration: BoxDecoration(
                 color: context.neuTint(color, amount: 0.14),
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(Dimens.radiusSmall),
               ),
               child: Icon(icon, size: 18, color: color),
             ),
@@ -656,7 +656,7 @@ class _NewsScreenState<V extends NewsViewModel>
         final lineColor = trend ?? context.colors.info;
         return InkWell(
           onTap: () => context.router.push(MarketDetailRoute(code: code)),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: SizedBox(
@@ -799,7 +799,7 @@ class _NewsScreenState<V extends NewsViewModel>
       height: 32,
       decoration: BoxDecoration(
         color: context.neuTint(iconColor, amount: 0.14),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Icon(iconData, size: 20, color: iconColor),
     );
@@ -920,7 +920,7 @@ class _SectionHeader extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(
             color: context.neuTint(color, amount: 0.14),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(Dimens.radiusSmall),
           ),
           child: Icon(icon, size: 17, color: color),
         ),
@@ -935,7 +935,7 @@ class _SectionHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: context.neuTint(color, amount: 0.14),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(Dimens.radiusPanel),
             ),
             child: Text(
               badge,

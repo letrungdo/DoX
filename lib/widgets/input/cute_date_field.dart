@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,7 @@ class CuteDateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(Dimens.radiusControl),
       onTap: () async {
         final picked = await showDatePicker(
           context: context,

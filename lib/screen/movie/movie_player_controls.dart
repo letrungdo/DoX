@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:flutter/material.dart';
@@ -67,7 +68,7 @@ class PlayerGestureOverlays extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(Dimens.radiusCard),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -232,7 +233,7 @@ class PlayerVolumePopup extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(2, 6, 2, 2),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
           border: Border.all(color: Colors.white24),
         ),
         child: Column(
@@ -374,7 +375,7 @@ class _RoundIconButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(Dimens.radiusPill),
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: const BoxDecoration(
@@ -414,7 +415,7 @@ class PlayerScrubPreview extends StatelessWidget {
         width: width,
         decoration: BoxDecoration(
           color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Dimens.radiusSmall),
           border: Border.all(color: Colors.white70),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8)],
         ),

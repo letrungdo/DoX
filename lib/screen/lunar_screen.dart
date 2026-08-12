@@ -279,7 +279,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: context.neuTint(color, amount: 0.14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -305,7 +305,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: context.neuTint(scheme.primary, amount: 0.14),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
       ),
       child: Text(
         label,
