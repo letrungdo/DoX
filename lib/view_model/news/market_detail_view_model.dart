@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'dart:io';
+
 import 'package:do_x/constants/enum/chart_interval.dart';
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/model/candle.dart';
@@ -100,7 +102,9 @@ class MarketDetailViewModel extends CoreViewModel {
   @override
   void dispose() {
     _rateSubscription?.cancel();
-    _socketService.disconnect();
+    if (!Platform.isMacOS) {
+      _socketService.disconnect();
+    }
     super.dispose();
   }
 

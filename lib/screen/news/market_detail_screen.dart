@@ -9,14 +9,13 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/fx_rate_service.dart';
-import 'package:do_x/services/web_socket/web_socket_service.dart';
-import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/view_model/news/market_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
-import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/chart/candle_chart_view.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/chart/candle_chart_view.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -34,7 +33,6 @@ class MarketDetailScreen extends StatefulScreen implements AutoRouteWrapper {
     return MultiProvider(
       providers: [
         Provider(create: (_) => FxRateService()),
-        Provider<WebSocketService>(create: (_) => WebSocketService()),
         ChangeNotifierProvider(
           create: (_) => MarketDetailViewModel(code: code),
         ),

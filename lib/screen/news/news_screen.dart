@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/constants/dimens.dart';
@@ -47,7 +49,6 @@ class NewsScreen extends StatefulScreen implements AutoRouteWrapper {
       providers: [
         ChangeNotifierProvider(create: (_) => NewsViewModel()),
         Provider(create: (_) => FxRateService()), //
-        Provider<WebSocketService>(create: (_) => WebSocketService()),
       ],
       child: this,
     );
@@ -96,7 +97,7 @@ class _NewsScreenState<V extends NewsViewModel>
     if (state == AppLifecycleState.resumed) {
       if (_isVisible) _socketService.connect(context);
     } else if (state == AppLifecycleState.paused) {
-      _socketService.disconnect();
+      if (!Platform.isMacOS) _socketService.disconnect();
     }
   }
 
@@ -107,7 +108,7 @@ class _NewsScreenState<V extends NewsViewModel>
     if (visible) {
       _socketService.connect(context);
     } else {
-      _socketService.disconnect();
+      if (!Platform.isMacOS) _socketService.disconnect();
     }
   }
 

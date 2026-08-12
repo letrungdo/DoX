@@ -10,6 +10,8 @@ import 'package:do_x/services/my_life/auth_service.dart';
 import 'package:do_x/services/my_life/my_life_service.dart';
 import 'package:do_x/services/my_life/upload_service.dart';
 import 'package:do_x/services/weather_service.dart';
+import 'package:do_x/services/macos_status_bar_service.dart';
+import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
@@ -41,6 +43,9 @@ class _MyAppState extends State<MyApp> {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _openElectricNotification();
+      webSocketService
+          .connect(); // Ensure socket connects immediately on app launch
+      macOSStatusBarService.init(webSocketService);
     });
   }
 
@@ -81,6 +86,7 @@ class _MyAppState extends State<MyApp> {
         Provider<UploadService>(create: (_) => UploadService()),
         Provider<WeatherService>(create: (_) => WeatherService()),
         Provider<LocationService>(create: (_) => LocationService()),
+        Provider<WebSocketService>.value(value: webSocketService),
         ChangeNotifierProvider(create: (_) => appVm),
         ChangeNotifierProvider(create: (_) => chickenVm),
       ],

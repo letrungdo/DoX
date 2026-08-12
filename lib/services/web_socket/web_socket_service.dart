@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:do_x/constants/env.dart';
 import 'package:do_x/model/rate_push_model.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,6 @@ import 'package:flutter_sficon/flutter_sficon.dart';
 import 'package:toastification/toastification.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:do_x/constants/env.dart';
 
 class WebSocketService {
   static const _maxRetries = 3;
@@ -27,12 +27,12 @@ class WebSocketService {
   int _retryCount = 0;
   Timer? _retryTimer;
 
-  void connect(BuildContext context) {
+  void connect([BuildContext? context]) {
     _retryCount = 0;
     _connect(context);
   }
 
-  void _connect(BuildContext context) async {
+  void _connect([BuildContext? context]) async {
     final wssUrl = Uri.parse(Envs.marketWsUrl);
     await disconnect();
     _manuallyClosed = false;
@@ -46,78 +46,37 @@ class WebSocketService {
 
       _streamSubscription = _channel!.stream.listen(
         (message) {
-          if (!context.mounted) return;
+          if (context != null && !context.mounted) return;
           onReceiveData(context, message);
         },
         onError: (error) {
           debugPrint('[PUSH][onError] connection is disconnected');
-          if (!context.mounted) return;
+          if (context != null && !context.mounted) return;
           _handleDisconnected(context);
         },
         onDone: () {
-          if (!context.mounted) return;
+          if (context != null && !context.mounted) return;
           _handleDisconnected(context);
         },
       );
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {"event": "on_interval_model_overviewIndex", "timeFrame": "3s"},
-      // });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {"event": "on_interval_model_roomStock"},
-      // });
       sendMessage({
         "type": "sub",
         "payload": {"event": "on_model_overviewCrypto"},
       });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {
-      //     "event": "on_model_overviewIndex_V2",
-      //     "codes": ["VNIndex", "VN30", "HNXIndex", "HNX30", "HNXUpcomIndex"],
-      //   },
-      // });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {"event": "on_model_overviewIndice"},
-      // });
       sendMessage({
         "type": "sub",
         "payload": {"event": "on_model_overviewCommodity"},
       });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {
-      //     "event": "on_model_overviewIndex_V2",
-      //     "codes": ["VNIndex", "VN30", "HNXIndex", "HNX30", "HNXUpcomIndex"],
-      //   },
-      // });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {"event": "on_model_overviewSector_V2"},
-      // });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {"event": "on_interval_model_overviewStock", "timeFrame": "3s"},
-      // });
-      // sendMessage({
-      //   "type": "sub",
-      //   "payload": {
-      //     "event": "on_model_indexBar",
-      //     "codes": ["HNXUpcomIndex", "HNXIndex", "VN30", "HNX30", "VNIndex"],
-      //   },
-      // });
     } catch (e) {
       debugPrint('Web Socket: connect exception $e');
-      if (!context.mounted) return;
+      if (context != null && !context.mounted) return;
       _handleDisconnected(context);
     }
   }
 
   /// Silently retries up to [_maxRetries] times before surfacing the error.
-  void _handleDisconnected(BuildContext context) {
-    if (_manuallyClosed || !context.mounted) return;
+  void _handleDisconnected([BuildContext? context]) {
+    if (_manuallyClosed || (context != null && !context.mounted)) return;
     if (_retryCount < _maxRetries) {
       _retryCount++;
       debugPrint(
@@ -125,11 +84,12 @@ class WebSocketService {
       );
       _retryTimer?.cancel();
       _retryTimer = Timer(Duration(seconds: 2 * _retryCount), () {
-        if (!context.mounted) return;
         _connect(context);
       });
     } else {
-      onPushDisconnected(context);
+      if (context != null) {
+        onPushDisconnected(context);
+      }
     }
   }
 
@@ -173,7 +133,7 @@ class WebSocketService {
 
   void onRetry() {}
 
-  void onReceiveData(BuildContext context, dynamic message) {
+  void onReceiveData(BuildContext? context, dynamic message) {
     final rawData = jsonDecode(message) as Map<String, dynamic>;
     switch (rawData["event"]) {
       case "ping":
@@ -195,3 +155,5 @@ class WebSocketService {
     // debugPrint("onReceiveData $message");
   }
 }
+
+final webSocketService = WebSocketService();

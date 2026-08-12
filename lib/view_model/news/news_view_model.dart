@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/news/gold_news.dart';
@@ -41,7 +43,10 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
 
   @override
   void dispose() {
-    socketService.disconnect();
+    // On macOS, we keep the socket alive for the status bar
+    if (!Platform.isMacOS) {
+      socketService.disconnect();
+    }
     super.dispose();
   }
 
