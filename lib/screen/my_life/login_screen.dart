@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
@@ -43,8 +44,10 @@ class _LoginScreenState<V extends LoginViewModel>
       top: true,
       bottom: true,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(15), //
-        child: _buildBody(),
+        child: Padding(
+          padding: Dimens.screenPadding,
+          child: _buildBody(),
+        ).contentConstrainedBox(),
       ),
     );
   }
@@ -53,7 +56,7 @@ class _LoginScreenState<V extends LoginViewModel>
     return Form(
       key: _formKey,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25),
+        padding: const EdgeInsets.symmetric(horizontal: Dimens.pagePadding),
         child: Column(
           children: [
             Selector<V, String>(
@@ -139,7 +142,7 @@ class _LoginScreenState<V extends LoginViewModel>
         ),
         SizedBox(height: 50), //
 
-        _buildLoginForms().contentConstrainedBox(),
+        _buildLoginForms(),
       ],
     );
   }
