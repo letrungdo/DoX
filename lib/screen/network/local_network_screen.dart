@@ -157,9 +157,9 @@ class LocalNetworkView extends StatelessWidget {
         l10n.portsLabel(device.openPorts.join(', ')),
     ];
     final color = device.isRouter
-        ? Colors.blue
+        ? context.colors.info
         : device.isCurrentDevice
-        ? Colors.green
+        ? context.colors.success
         : context.theme.colorScheme.primary;
 
     return NeuCard(
@@ -197,8 +197,8 @@ class LocalNetworkView extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.green,
+            decoration: BoxDecoration(
+              color: context.colors.success,
               shape: BoxShape.circle,
             ),
           ),

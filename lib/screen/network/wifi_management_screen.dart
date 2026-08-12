@@ -165,7 +165,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           latency: vm.lanLatency,
           isTesting: vm.isTestingLan,
           icon: SFIcons.sf_network,
-          color: Colors.blue,
+          color: context.colors.info,
           l10n: l10n,
         ),
         _buildSpeedResultRow(
@@ -175,7 +175,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
           latency: vm.internetLatency,
           isTesting: vm.isTestingInternet,
           icon: SFIcons.sf_globe,
-          color: Colors.green,
+          color: context.colors.success,
           l10n: l10n,
         ),
         if (vm.lanSpeed != null &&
@@ -297,7 +297,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             spacing: 8,
             children: [
               if (vm.selectedServer == server)
-                const Icon(Icons.check, size: 16, color: Colors.green),
+                Icon(Icons.check, size: 16, color: context.colors.success),
               Text(server.name, style: const TextStyle(fontSize: 13)),
             ],
           ),
@@ -328,16 +328,16 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     Color color;
     if (lan < 10) {
       analysis = l10n.speedAnalysisLanWeak;
-      color = Colors.red;
+      color = context.colors.danger;
     } else if (lan > 50 && internet < 10) {
       analysis = l10n.speedAnalysisInternetSlow;
-      color = Colors.orange;
+      color = context.colors.warning;
     } else if (lan > 50 && internet > 50) {
       analysis = l10n.speedAnalysisPerfect;
-      color = Colors.green;
+      color = context.colors.success;
     } else {
       analysis = l10n.speedAnalysisStable;
-      color = Colors.blue;
+      color = context.colors.info;
     }
 
     return Container(
@@ -422,7 +422,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                   context.theme.colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
                 vm.isTakingTooLong
-                    ? Colors.orange
+                    ? context.colors.warning
                     : context.theme.colorScheme.primary,
               ),
             ),
@@ -439,7 +439,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                         : l10n.reconnectingEstimate,
                     style: context.theme.textTheme.labelSmall?.copyWith(
                       color: vm.isTakingTooLong
-                          ? Colors.orange
+                          ? context.colors.warning
                           : context.theme.colorScheme.primary,
                     ),
                   ),
@@ -482,7 +482,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     final color = isFailed
         ? context.theme.colorScheme.error
         : isDone
-        ? Colors.green
+        ? context.colors.success
         : context.theme.colorScheme.onSurface.withValues(
             alpha: isRunning ? 1 : 0.4,
           );
@@ -522,7 +522,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
 
   Widget _buildAlert(String message, {required bool isError}) {
     final l10n = AppLocalizations.of(context);
-    final color = isError ? context.theme.colorScheme.error : Colors.green;
+    final color = isError
+        ? context.theme.colorScheme.error
+        : context.colors.success;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

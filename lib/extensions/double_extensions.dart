@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:decimal/intl.dart';
 import 'package:do_x/constants/app_const.dart';
+import 'package:do_x/theme/color_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -37,13 +38,20 @@ extension DoubleNullableExtensions on double? {
     return formatUnit();
   }
 
-  Color? getColor() {
+  /// Trend colour for a signed figure: up is [ColorTheme.success], down is
+  /// [ColorTheme.danger], flat has no colour of its own.
+  ///
+  /// Takes the palette rather than reading a raw `Colors.green`/`Colors.red`,
+  /// which wash out on a light surface and glare on a dark one — the theme's
+  /// accents are tuned per brightness. Call it as
+  /// `value.getColor(context.colors)`.
+  Color? getColor(ColorTheme colors) {
     final valueNumber = this;
 
     if (valueNumber == null || valueNumber == 0) return null;
 
-    if (valueNumber > 0) return Colors.green;
-    return Colors.red;
+    if (valueNumber > 0) return colors.success;
+    return colors.danger;
   }
 }
 

@@ -11,7 +11,6 @@ import 'package:do_x/model/rate_push_model.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class MarketDetailViewModel extends CoreViewModel {
@@ -37,8 +36,13 @@ class MarketDetailViewModel extends CoreViewModel {
   double? _price;
   double? get price => _price;
 
-  Color? _color;
-  Color? get color => _color;
+  double? _trendDiff;
+
+  /// How far the visible window moved, signed. A view model has no `context`
+  /// and so no palette; handing the widget the number instead of a colour keeps
+  /// the accent a theme decision. Colour it with
+  /// `vm.trendDiff.getColor(context.colors)`.
+  double? get trendDiff => _trendDiff;
 
   /// The REST snapshot. Everything the socket pushes wins over it, but only
   /// crypto and commodities are pushed at all — for an index or a US stock this
@@ -173,7 +177,7 @@ class MarketDetailViewModel extends CoreViewModel {
     _candles = byTime.values.toList()..sort((a, b) => a.time.compareTo(b.time));
 
     _price = _candles.lastOrNull?.close;
-    _color = _trendColor(_candles);
+    _trendDiff = _trend(_candles);
     _isLoading = false;
     notifyListenersSafe();
   }
@@ -207,15 +211,12 @@ class MarketDetailViewModel extends CoreViewModel {
       }
     }
 
-    _color = _trendColor(_candles);
+    _trendDiff = _trend(_candles);
     notifyListenersSafe();
   }
 
-  Color? _trendColor(List<Candle> candles) {
+  double? _trend(List<Candle> candles) {
     if (candles.length < 2) return null;
-    final diff = candles.last.close - candles.first.close;
-    if (diff > 0) return Colors.green;
-    if (diff < 0) return Colors.red;
-    return null;
+    return candles.last.close - candles.first.close;
   }
 }

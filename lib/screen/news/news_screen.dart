@@ -755,9 +755,9 @@ class _NewsScreenState<V extends NewsViewModel>
     );
   }
 
-  /// Semantic trend color. The view model tags charts with raw
-  /// `Colors.green`/`Colors.red`, which wash out on light surfaces, so the
-  /// sign is re-mapped onto the theme's accents here.
+  /// Semantic trend color. The view model reports the window's points and
+  /// nothing about their colour, so the sign is mapped onto the theme's accents
+  /// here — where there is a `context` to read the palette from.
   Color? _trendColor(ChartData? data) {
     final points = data?.chartData ?? const <double>[];
     if (points.length < 2) return null;

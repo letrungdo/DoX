@@ -87,14 +87,14 @@ class _MarketDetailScreenState
   }
 
   Widget _buildHeader(MarketDetailViewModel vm) {
-    final changeColor = (vm.dayChange ?? 0).getColor();
+    final changeColor = (vm.dayChange ?? 0).getColor(context.colors);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           (vm.price).formatUnit(digit: 3),
           style: context.textTheme.primary.size24.bold.copyWith(
-            color: vm.color,
+            color: vm.trendDiff.getColor(context.colors),
           ),
         ),
         const SizedBox(height: 4),
@@ -161,7 +161,9 @@ class _MarketDetailScreenState
                     _ => value.formatUnit(digit: 3),
                   },
                   style: context.textTheme.primary.bold.copyWith(
-                    color: format == '%' ? value.getColor() : null,
+                    color: format == '%'
+                        ? value.getColor(context.colors)
+                        : null,
                   ),
                 ),
               ],

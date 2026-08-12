@@ -1,3 +1,4 @@
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -212,9 +213,9 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                           ),
                           trailing: isInputMode
                               ? (isCurrentlyEditing
-                                    ? const Icon(
+                                    ? Icon(
                                         Icons.edit_note_rounded,
-                                        color: Colors.orange,
+                                        color: context.colors.warning,
                                       )
                                     : null)
                               : Row(

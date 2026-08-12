@@ -9,12 +9,10 @@ import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class ChartData {
   double? price;
-  Color? color;
   final List<double> chartData;
 
   /// Timestamps aligned 1:1 with [chartData]. Used to plot the x-axis
@@ -25,7 +23,6 @@ class ChartData {
     required this.price, //
     required this.chartData,
     this.times = const [],
-    this.color,
   });
 }
 
@@ -96,19 +93,8 @@ mixin CoinChartMixin on CoreViewModel {
       chartData: points,
       times: times,
       price: price,
-      color: _trendColor(points),
     );
     notifyListenersSafe();
-  }
-
-  /// Color reflects the trend of the visible window (matches what the line
-  /// shows): green when it ends higher than it started, red when lower.
-  Color? _trendColor(List<double> points) {
-    if (points.length < 2) return null;
-    final diff = points.last - points.first;
-    if (diff > 0) return Colors.green;
-    if (diff < 0) return Colors.red;
-    return null;
   }
 
   Map<MarketCode, ChartData> coinChartMap = {};
@@ -193,7 +179,6 @@ mixin CoinChartMixin on CoreViewModel {
         chartData: chartData,
         times: times,
         price: window.lastOrNull?.close,
-        color: _trendColor(chartData),
       );
     }
     coinChartMap = map;
