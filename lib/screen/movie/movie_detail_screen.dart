@@ -1586,12 +1586,24 @@ class _MovieDetailScreenState
 
                 // Refilling the buffer, or rebuilding the player after a stall,
                 // holds the last frame — say so, or it reads as a freeze.
-                if (controller != null &&
-                    controller.value.isInitialized &&
-                    (_isBuffering || _vm.isLoadingStream))
-                  const Positioned.fill(
-                    child: IgnorePointer(child: Center(child: Loading())),
+                //
+                // This slot is occupied whether or not the spinner shows.
+                // Dropping it out of the list shifts every child below it, and
+                // the reconciliation that follows tears down the timeline's
+                // drag recogniser mid-scrub — buffering starts on the very seek
+                // the scrub asks for, so the drag would die as it began.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child:
+                          controller != null &&
+                              controller.value.isInitialized &&
+                              (_isBuffering || _vm.isLoadingStream)
+                          ? const Loading()
+                          : const SizedBox.shrink(),
+                    ),
                   ),
+                ),
 
                 // Always-on Overlays (2x, Skip indicators)
                 if (controller != null && controller.value.isInitialized)
@@ -1616,7 +1628,14 @@ class _MovieDetailScreenState
                             Positioned.fill(
                               child: GestureDetector(
                                 behavior: HitTestBehavior.opaque,
-                                onTap: _togglePlayback,
+                                // Tapping the video only shows and hides the
+                                // controls, never plays or pauses. Play/pause
+                                // is the centre button's job, so a tap meant to
+                                // dismiss the controls cannot stop the film.
+                                onTap: () {
+                                  _videoFocusNode.requestFocus();
+                                  _toggleControls();
+                                },
                                 onDoubleTapDown: (details) {
                                   _doubleTapPosition = details.localPosition;
                                 },
