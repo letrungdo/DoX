@@ -28,6 +28,17 @@ import 'package:flutter_orientation_manager/flutter_orientation_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
+/// How long playback may report itself as playing without the position moving
+/// before the player is treated as wedged and rebuilt.
+const _stallLimit = Duration(seconds: 12);
+
+/// How long playback must run cleanly before the stall budget is handed back,
+/// so a film that hiccups once an hour never runs out of retries.
+const _healthyRunToForgiveStalls = Duration(seconds: 30);
+
+/// Rebuild attempts for one wedged stream before the user is asked to retry.
+const _maxRecoveryAttempts = 3;
+
 @RoutePage()
 class MovieDetailScreen extends StatefulScreen implements AutoRouteWrapper {
   final String movieUrl;
@@ -138,6 +149,25 @@ class _MovieDetailScreenState
   Duration? _virtualSeekPosition;
   Timer? _virtualSeekTimer;
 
+  /// True while the platform player is refilling its buffer. Without this the
+  /// frame simply freezes and a normal stall is indistinguishable from a dead
+  /// player.
+  bool _isBuffering = false;
+
+  /// The stream the current controller was built from, so a stall can be
+  /// recovered by rebuilding it at the position playback died at.
+  String? _currentStreamUrl;
+
+  /// Playback watchdog. An HLS stream that errors or stalls mid-play leaves the
+  /// platform player wedged: the frame stops, `isPlaying` stays true and
+  /// nothing ever recovers, which is why the app had to be killed.
+  Timer? _watchdogTimer;
+  Duration _watchdogPosition = Duration.zero;
+  int _stalledSeconds = 0;
+  int _healthySeconds = 0;
+  int _recoveryAttempts = 0;
+  bool _isRecovering = false;
+
   bool get _supportsOrientationManager =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
@@ -242,6 +272,7 @@ class _MovieDetailScreenState
     _orientationSubscription?.cancel();
     _videoFocusNode.dispose();
     _progressTimer?.cancel();
+    _watchdogTimer?.cancel();
 
     // Reset everything to normal
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -297,12 +328,22 @@ class _MovieDetailScreenState
     }
   }
 
-  Future<void> _initVideoPlayer(String url, {Duration? seekTo}) async {
+  /// Builds a controller for [url] and hands the screen over to it. Returns
+  /// whether it came up; [isRecovery] keeps the retry budget of the stream that
+  /// wedged instead of starting a fresh one.
+  Future<bool> _initVideoPlayer(
+    String url, {
+    Duration? seekTo,
+    bool isRecovery = false,
+  }) async {
     final generation = ++_controllerGeneration;
     final l10n = AppLocalizations.of(context);
 
     // Cancel progress timer before switching controllers
     _progressTimer?.cancel();
+    _watchdogTimer?.cancel();
+    _currentStreamUrl = url;
+    if (!isRecovery) _recoveryAttempts = 0;
 
     _vm.setStreamLoading(true);
     setState(() {
@@ -321,7 +362,7 @@ class _MovieDetailScreenState
 
       if (!mounted || generation != _controllerGeneration) {
         await controller.dispose();
-        return;
+        return false;
       }
 
       await controller.setPlaybackSpeed(_playbackSpeed);
@@ -339,20 +380,19 @@ class _MovieDetailScreenState
         }
       }
 
-      if (initialSeek != null) {
-        // We start playing before seeking to allow the player to start buffering
-        // segments more aggressively on some platforms.
-        await controller.seekTo(initialSeek);
-        if (mounted && seekTo == null) {
-          context.showToast(l10n.resumePlayback(formatDuration(initialSeek)));
-        }
+      // Seek and play go out together. Awaiting the seek first made the
+      // platform player fill its buffer at the target and only then start,
+      // which is what made resuming a saved position sit still for seconds.
+      final seek = initialSeek == null ? null : controller.seekTo(initialSeek);
+      final play = controller.play();
+      if (initialSeek != null && !isRecovery && seekTo == null && mounted) {
+        context.showToast(l10n.resumePlayback(formatDuration(initialSeek)));
       }
-
-      await controller.play();
+      await Future.wait([?seek, play]);
 
       if (!mounted || generation != _controllerGeneration) {
         await controller.dispose();
-        return;
+        return false;
       }
 
       // Now dispose the old controller
@@ -369,6 +409,22 @@ class _MovieDetailScreenState
             generation != _controllerGeneration ||
             !identical(_videoController, controller)) {
           return;
+        }
+
+        // A stream that drops mid-play surfaces here and nowhere else; left
+        // alone the frame just freezes for good.
+        if (controller.value.hasError) {
+          logger.e(
+            'MovieDetailScreen: playback error '
+            '${controller.value.errorDescription}',
+          );
+          unawaited(_recoverPlayback());
+          return;
+        }
+
+        final isBuffering = controller.value.isBuffering;
+        if (isBuffering != _isBuffering) {
+          setState(() => _isBuffering = isBuffering);
         }
 
         // Auto play next episode when current one ends
@@ -401,22 +457,113 @@ class _MovieDetailScreenState
         _videoController = controller;
         _videoValueListener = videoValueListener;
         _isPlaying = true;
+        _isBuffering = controller.value.isBuffering;
       });
       _vm.setStreamLoading(false);
       controller.addListener(videoValueListener);
       _startControlsTimer();
       _startProgressTimer();
+      _startWatchdog();
       unawaited(_recordWatched());
+      // Off the critical path: playback is already running, the quality menu
+      // just fills in behind it.
+      unawaited(_vm.loadNativeVideoTracks(controller));
+      return true;
     } catch (e) {
       await controller.dispose();
-      if (!mounted || generation != _controllerGeneration) return;
+      if (!mounted || generation != _controllerGeneration) return false;
       _vm.setStreamLoading(false);
+      // A failed recovery attempt is reported by the retry that gives up, not
+      // by every round of it.
+      if (!isRecovery) {
+        context.showToast(l10n.videoStreamError, isError: true);
+      }
+      return false;
+    }
+  }
+
+  /// Watches the position while playback claims to be running. A wedged HLS
+  /// stream keeps `isPlaying` true forever without advancing, so the position
+  /// standing still is the only signal there is.
+  void _startWatchdog() {
+    _watchdogTimer?.cancel();
+    _watchdogPosition = _videoController?.value.position ?? Duration.zero;
+    _stalledSeconds = 0;
+    _healthySeconds = 0;
+    _watchdogTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _tickWatchdog(),
+    );
+  }
+
+  void _tickWatchdog() {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (_isRecovering || _isDragging) return;
+
+    final value = controller.value;
+    // A pause, a manual seek or the end of the episode are not stalls.
+    if (!value.isPlaying || value.position != _watchdogPosition) {
+      if (value.isPlaying && value.position > _watchdogPosition) {
+        _healthySeconds++;
+        if (_healthySeconds >= _healthyRunToForgiveStalls.inSeconds) {
+          _recoveryAttempts = 0;
+          _healthySeconds = 0;
+        }
+      }
+      _stalledSeconds = 0;
+      _watchdogPosition = value.position;
+      return;
+    }
+
+    _healthySeconds = 0;
+    _stalledSeconds++;
+    if (_stalledSeconds >= _stallLimit.inSeconds) {
+      logger.d('MovieDetailScreen: playback stalled at ${value.position}');
+      unawaited(_recoverPlayback());
+    }
+  }
+
+  /// Rebuilds the player on the same stream at the position it died at, which
+  /// is what the user used to have to kill the app to get. After
+  /// [_maxRecoveryAttempts] it hands the stream back to the retry button.
+  Future<void> _recoverPlayback() async {
+    final url = _currentStreamUrl;
+    final controller = _videoController;
+    if (_isRecovering || url == null || controller == null || !mounted) return;
+
+    final l10n = AppLocalizations.of(context);
+    _watchdogTimer?.cancel();
+    _progressTimer?.cancel();
+    final resumeFrom = controller.value.position;
+
+    _isRecovering = true;
+    try {
+      while (mounted && _recoveryAttempts < _maxRecoveryAttempts) {
+        // Backing off matters: a stream that dropped because the host is
+        // rate-limiting comes back only if we stop hammering it.
+        if (_recoveryAttempts > 0) {
+          await Future.delayed(Duration(seconds: _recoveryAttempts));
+          if (!mounted) return;
+        }
+        _recoveryAttempts++;
+        if (await _initVideoPlayer(url, seekTo: resumeFrom, isRecovery: true)) {
+          return;
+        }
+      }
+      if (!mounted) return;
+      await _detachAndDisposeController();
+      if (!mounted) return;
       context.showToast(l10n.videoStreamError, isError: true);
+    } finally {
+      _isRecovering = false;
     }
   }
 
   Future<void> _detachAndDisposeController() async {
     _controllerGeneration++;
+    _watchdogTimer?.cancel();
+    _progressTimer?.cancel();
     final controller = _videoController;
     final listener = _videoValueListener;
     if (controller == null) return;
@@ -426,6 +573,7 @@ class _MovieDetailScreenState
         _videoController = null;
         _videoValueListener = null;
         _isPlaying = false;
+        _isBuffering = false;
         _isTimelineHovering = false;
       });
       if (listener != null) {
@@ -438,6 +586,30 @@ class _MovieDetailScreenState
 
   Future<void> _switchQuality(String quality) async {
     if (quality == _vm.selectedQuality || _vm.masterStreamUrl == null) return;
+    final controller = _videoController;
+
+    // video_player 2.14.0 can override the track on the running player, so the
+    // picture changes where it is instead of tearing the controller down and
+    // buffering the whole stream again from the current position.
+    if (controller != null &&
+        controller.value.isInitialized &&
+        _vm.canSwitchQualityInPlace) {
+      final l10n = AppLocalizations.of(context);
+      try {
+        await controller.selectVideoTrack(_vm.nativeTrackFor(quality));
+        _vm.setSelectedQuality(quality);
+        return;
+      } catch (error, stackTrace) {
+        logger.e(
+          'MovieDetailScreen: in-place quality switch failed',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        if (mounted) context.showToast(l10n.videoStreamError, isError: true);
+        return;
+      }
+    }
+
     final targetUrl = _vm.qualityUrlFor(quality);
     if (targetUrl == null) return;
     final currentPos = _videoController?.value.position;
@@ -1410,6 +1582,15 @@ class _MovieDetailScreenState
                             }
                           : null,
                     ),
+                  ),
+
+                // Refilling the buffer, or rebuilding the player after a stall,
+                // holds the last frame — say so, or it reads as a freeze.
+                if (controller != null &&
+                    controller.value.isInitialized &&
+                    (_isBuffering || _vm.isLoadingStream))
+                  const Positioned.fill(
+                    child: IgnorePointer(child: Center(child: Loading())),
                   ),
 
                 // Always-on Overlays (2x, Skip indicators)

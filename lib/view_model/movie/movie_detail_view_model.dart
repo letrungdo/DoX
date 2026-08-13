@@ -9,6 +9,7 @@ import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 class MovieDetailViewModel extends CoreViewModel {
   MovieDetailViewModel();
@@ -30,6 +31,13 @@ class MovieDetailViewModel extends CoreViewModel {
 
   List<MovieStreamVariant> _availableQualities = const [];
   List<MovieStreamVariant> get availableQualities => _availableQualities;
+
+  /// Quality variants the platform player itself reports, available since
+  /// video_player 2.14.0. When it has them, switching quality is a track
+  /// override on the live player rather than a whole new controller.
+  List<VideoTrack> _nativeVideoTracks = const [];
+
+  bool get canSwitchQualityInPlace => _nativeVideoTracks.isNotEmpty;
 
   String _selectedQuality = 'Auto';
   String get selectedQuality => _selectedQuality;
@@ -257,6 +265,7 @@ class MovieDetailViewModel extends CoreViewModel {
     _masterStreamUrl = masterUrl;
     _selectedQuality = 'Auto';
     _availableQualities = const [];
+    _nativeVideoTracks = const [];
 
     // Fetch variants in the background.
     unawaited(() async {
@@ -267,12 +276,63 @@ class MovieDetailViewModel extends CoreViewModel {
             masterUrl != _masterStreamUrl) {
           return;
         }
+        // The player's own track list is the better source and may already
+        // have landed; this request is only the fallback for platforms without
+        // one.
+        if (_nativeVideoTracks.isNotEmpty) return;
         _availableQualities = variants;
         notifyListenersSafe();
       } catch (_) {}
     }());
 
     return masterUrl;
+  }
+
+  /// Reads the quality variants straight off [controller]. Only the platforms
+  /// that support track selection answer — iOS below 15 returns nothing and web
+  /// throws — so an empty result simply leaves the m3u8-parsed list in charge.
+  Future<void> loadNativeVideoTracks(VideoPlayerController controller) async {
+    _nativeVideoTracks = const [];
+    if (!controller.isVideoTrackSupportAvailable()) return;
+    try {
+      final tracks = await controller.getVideoTracks();
+      if (isDispose) return;
+      _nativeVideoTracks = tracks.where((t) => (t.height ?? 0) > 0).toList()
+        ..sort((a, b) => (b.height ?? 0).compareTo(a.height ?? 0));
+      if (_nativeVideoTracks.isEmpty) return;
+
+      // The player knows the real variants, so they replace the ones scraped
+      // out of the master playlist.
+      _availableQualities = _nativeVideoTracks
+          .map(
+            (track) => MovieStreamVariant(
+              label: '${track.height}p',
+              url: _masterStreamUrl ?? '',
+              width: track.width ?? 0,
+              height: track.height ?? 0,
+              bandwidth: track.bitrate ?? 0,
+            ),
+          )
+          .toList();
+      notifyListenersSafe();
+    } catch (error, stackTrace) {
+      _nativeVideoTracks = const [];
+      logger.e(
+        'MovieDetailViewModel: native video tracks unavailable',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// The track behind [quality], or `null` for `Auto`, which is also what
+  /// `selectVideoTrack` takes to hand the choice back to the player.
+  VideoTrack? nativeTrackFor(String quality) {
+    if (quality == 'Auto') return null;
+    for (final track in _nativeVideoTracks) {
+      if ('${track.height}p' == quality) return track;
+    }
+    return null;
   }
 
   String? qualityUrlFor(String quality) {
