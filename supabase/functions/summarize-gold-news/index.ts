@@ -84,6 +84,54 @@ interface NewsItem {
   publishedAt: string | null;
 }
 
+interface RetryOptions {
+  /** Total number of attempts, including the first one. */
+  attempts: number;
+  /** Delay before the second attempt; doubled for each one after that. */
+  backoffMs: number;
+  timeoutMs: number;
+  label: string;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/// Both upstreams we depend on hand out 503s under load — Google News when it
+/// throttles the runtime's IP, Gemini when the model is busy. Neither is a real
+/// failure, so retry a few times with a growing delay before giving up.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  options: RetryOptions,
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= options.attempts; attempt++) {
+    if (attempt > 1) {
+      await sleep(options.backoffMs * 2 ** (attempt - 2));
+    }
+    try {
+      const res = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(options.timeoutMs),
+      });
+      // 4xx other than 429 will not change on a retry.
+      if (res.ok || (res.status < 500 && res.status !== 429)) return res;
+      lastError = new Error(`HTTP ${res.status}`);
+      if (attempt === options.attempts) return res;
+      console.warn(
+        `${options.label} -> HTTP ${res.status}, retrying (${attempt}/${options.attempts})`,
+      );
+    } catch (error) {
+      lastError = error;
+      if (attempt === options.attempts) break;
+      console.warn(
+        `${options.label} failed, retrying (${attempt}/${options.attempts}):`,
+        error,
+      );
+    }
+  }
+  throw lastError;
+}
+
 function decodeEntities(input: string): string {
   return input
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
@@ -132,10 +180,16 @@ function parseRss(xml: string, feed: Feed): NewsItem[] {
 
 async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
   try {
-    const res = await fetch(feed.url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal: AbortSignal.timeout(15_000),
-    });
+    const res = await fetchWithRetry(
+      feed.url,
+      { headers: { "User-Agent": USER_AGENT } },
+      {
+        attempts: 3,
+        backoffMs: 1_000,
+        timeoutMs: 15_000,
+        label: `feed ${feed.url}`,
+      },
+    );
     if (!res.ok) {
       console.warn(`feed ${feed.url} -> HTTP ${res.status}`);
       return [];
@@ -352,7 +406,7 @@ async function summarize(items: NewsItem[], date: string): Promise<Digest> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
       method: "POST",
@@ -365,8 +419,9 @@ async function summarize(items: NewsItem[], date: string): Promise<Digest> {
           responseSchema: RESPONSE_SCHEMA,
         },
       }),
-      signal: AbortSignal.timeout(90_000),
     },
+    // Three 90s attempts plus the waits stay inside the function's wall clock.
+    { attempts: 3, backoffMs: 5_000, timeoutMs: 90_000, label: "gemini" },
   );
 
   if (!res.ok) {
@@ -416,6 +471,9 @@ Deno.serve(async () => {
 
     const items = await collectItems();
     if (items.length === 0) {
+      // Every feed was empty or refused us; surface it as an error so the run
+      // is visible in the logs instead of quietly leaving yesterday's digest.
+      console.error("no news collected from any feed");
       return Response.json({ error: "no news collected" }, { status: 502 });
     }
 
