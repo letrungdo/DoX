@@ -6,6 +6,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/repository/avatar_repository.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/services/push_notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/auth_error.dart';
@@ -73,6 +74,10 @@ class AppAccountViewModel extends CoreViewModel {
   Future<void> signOut() async {
     setBusy(true);
     try {
+      // Before the session goes: dropping the push token needs a signed-in
+      // caller, and leaving it behind would push this account's shared-data
+      // notices to whoever signs in next on this device.
+      await pushNotificationService.unregister();
       await supabase.auth.signOut();
       _leaveAccountScreen();
     } catch (e) {

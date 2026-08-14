@@ -20,6 +20,12 @@ class NotificationService {
       'Nhắc kiểm tra tiền điện đầu tháng';
   static const _electricReminderId = 0x0E1EC001;
 
+  static const _sharedChannelId = 'shared_chicken_activity';
+  static const _sharedChannelName = 'Dữ liệu gà được chia sẻ';
+  static const _sharedChannelDescription =
+      'Báo khi người chia sẻ dữ liệu bán gà hoặc thêm chi phí';
+  var _sharedNotificationId = 0x5A1E0000;
+
   final _plugin = FlutterLocalNotificationsPlugin();
   final ValueNotifier<DateTime?> electricNotificationMonth = ValueNotifier(
     null,
@@ -210,6 +216,36 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
       payload: electricNotificationPayload,
+    );
+  }
+
+  /// Draws a push that arrived while the app was in the foreground.
+  ///
+  /// Android hands a foreground message straight to the app instead of the
+  /// system tray, so nothing is shown unless we draw it ourselves. Each one
+  /// gets its own id: a second sale should not overwrite the first.
+  Future<void> showSharedActivity({
+    required String title,
+    required String body,
+  }) async {
+    if (!isSupported) return;
+    await init();
+
+    await _plugin.show(
+      id: _sharedNotificationId++,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _sharedChannelId,
+          _sharedChannelName,
+          channelDescription: _sharedChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+        macOS: DarwinNotificationDetails(),
+      ),
     );
   }
 
