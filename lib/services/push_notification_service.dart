@@ -21,13 +21,42 @@ import 'package:flutter/foundation.dart';
 class PushNotificationService {
   String? _token;
   bool _listening = false;
+  bool _listeningForTaps = false;
   StreamSubscription<String>? _refreshSubscription;
   StreamSubscription<RemoteMessage>? _messageSubscription;
+  StreamSubscription<RemoteMessage>? _openedSubscription;
 
   bool get isSupported =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
+
+  /// Starts listening for taps on a push the system drew itself, in the
+  /// background or with the app closed. Independent of registration: a
+  /// notification can be tapped long before the app knows what is shared with
+  /// this account, and the launch message would otherwise be missed.
+  Future<void> listenForTaps() async {
+    if (!isSupported || _listeningForTaps) return;
+    _listeningForTaps = true;
+
+    _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
+      _openChickenActivity,
+    );
+    try {
+      final launchMessage = await FirebaseMessaging.instance
+          .getInitialMessage();
+      if (launchMessage != null) _openChickenActivity(launchMessage);
+    } catch (e) {
+      logger.e('read the launch push failed', error: e);
+    }
+  }
+
+  void _openChickenActivity(RemoteMessage message) {
+    if (message.data['type'] != 'chicken_activity') return;
+    final ownerId = message.data['owner_id'] as String?;
+    if (ownerId == null) return;
+    notificationService.openSharedActivity(ownerId);
+  }
 
   /// Called whenever the set of data sources is known. [hasSharedData] is false
   /// for an account that only sees its own records, which has nothing to be
@@ -107,6 +136,7 @@ class PushNotificationService {
       notificationService.showSharedActivity(
         title: title,
         body: notification?.body ?? '',
+        ownerId: message.data['owner_id'] as String?,
       );
     });
   }
@@ -115,7 +145,9 @@ class PushNotificationService {
   void dispose() {
     _refreshSubscription?.cancel();
     _messageSubscription?.cancel();
+    _openedSubscription?.cancel();
     _listening = false;
+    _listeningForTaps = false;
   }
 
   String get _languageCode =>

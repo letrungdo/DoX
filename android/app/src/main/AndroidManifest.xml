@@ -64,6 +64,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Without these, a push drawn by the system falls back to the
+             launcher icon, which is fully opaque: Android masks a status bar
+             icon by its alpha channel, so it came out as a plain white square.
+             ic_stat_notification is the logo as white-on-transparent, and the
+             colour tints the icon inside the expanded notification. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notificationColor" />
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
