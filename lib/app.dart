@@ -41,8 +41,14 @@ class _MyAppState extends State<MyApp> {
     notificationService.electricNotificationMonth.addListener(
       _openElectricNotification,
     );
+    notificationService.sharedActivityOwnerId.addListener(
+      _openSharedChickenNotification,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _openElectricNotification();
+      // A push that launched the app is read asynchronously, so it can land
+      // either side of the listener above.
+      _openSharedChickenNotification();
       webSocketService
           .connect(); // Ensure socket connects immediately on app launch
       macOSStatusBarService.init(webSocketService);
@@ -69,10 +75,37 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  /// A tapped shared-activity push opens the chicken page on the data of the
+  /// account that recorded the sale or the expense.
+  void _openSharedChickenNotification() {
+    final ownerId = notificationService.sharedActivityOwnerId.value;
+    if (ownerId == null) return;
+    notificationService.sharedActivityOwnerId.value = null;
+
+    // As with the electric reminder: the page is a tab only while the user
+    // keeps it in the bottom bar, otherwise it lives in the menu.
+    final isTab = appVm.tabPages.contains(AppPage.chicken);
+    if (isTab) storageService.setActiveTabPage(AppPage.chicken.name);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isTab) {
+        appRouter.navigate(const MainRoute(children: [ChickenRoute()]));
+      } else {
+        appRouter.push(const ChickenRoute());
+      }
+      // After the navigation, so the page is already on screen while the
+      // owner's records load in behind it.
+      chickenVm.selectOwner(ownerId);
+    });
+  }
+
   @override
   void dispose() {
     notificationService.electricNotificationMonth.removeListener(
       _openElectricNotification,
+    );
+    notificationService.sharedActivityOwnerId.removeListener(
+      _openSharedChickenNotification,
     );
     super.dispose();
   }

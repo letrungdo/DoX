@@ -1201,5 +1201,36 @@ void main() {
       expect(storageService.getChickenDataSourceSelection(), isNull);
       restarted.dispose();
     });
+
+    test('a tapped push opens the owner it names', () async {
+      final repository = _FakeRepository()..batches = [_batch()];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+      await vm.ensureLoaded({ChickenSection.batches});
+
+      expect(await vm.selectOwner('shared-owner'), isTrue);
+      expect(vm.activeOwnerId, 'shared-owner');
+      expect(vm.activeOwnerEmail, 'shared@example.com');
+      expect(repository.requestedOwners.last, 'shared-owner');
+      vm.dispose();
+    });
+
+    test('a push from an owner who revoked access is ignored', () async {
+      final repository = _FakeRepository()
+        ..sources = [
+          const ChickenDataSource(
+            ownerId: 'user-1',
+            email: 'owner@example.com',
+            isOwner: true,
+          ),
+        ];
+      final vm = ChickenViewModel(repository: repository, auth: _FakeAuth());
+      vm.initState();
+
+      expect(await vm.selectOwner('shared-owner'), isFalse);
+      expect(vm.activeOwnerId, 'user-1');
+      expect(vm.isReadOnly, isFalse);
+      vm.dispose();
+    });
   });
 }

@@ -4,6 +4,7 @@ import 'package:do_x/app.dart';
 import 'package:do_x/firebase_options.dart';
 import 'package:do_x/services/auth_flow_service.dart';
 import 'package:do_x/services/notification_service.dart';
+import 'package:do_x/services/push_notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
@@ -52,6 +53,10 @@ void main() {
       // a password-reset link, and the session that link carries is handed over
       // while the app starts.
       authFlowService.start();
+      // Same reason: the app can be launched by a tap on a shared-chicken
+      // push, and the message that launched it is only readable once Firebase
+      // is up.
+      unawaited(pushNotificationService.listenForTaps());
       if (storageService.getElectricReminderEnabled()) {
         await notificationService.scheduleMonthlyElectricReminder();
       }

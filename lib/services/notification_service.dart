@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/chicken_batch.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -9,6 +11,10 @@ import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
   static const electricNotificationPayload = 'electric:last-month';
+
+  /// Payload of a shared-activity notification, followed by the id of the
+  /// account that recorded the sale or the expense.
+  static const sharedActivityPayloadPrefix = 'chicken-activity:';
 
   static const _channelId = 'chicken_vaccinations';
   static const _channelName = 'Lịch tiêm phòng';
@@ -30,6 +36,10 @@ class NotificationService {
   final ValueNotifier<DateTime?> electricNotificationMonth = ValueNotifier(
     null,
   );
+
+  /// Owner id carried by a tapped shared-activity notification: the app opens
+  /// the chicken page on that owner's data. Cleared by whoever consumes it.
+  final ValueNotifier<String?> sharedActivityOwnerId = ValueNotifier(null);
   bool _initialized = false;
 
   bool get isSupported =>
@@ -51,7 +61,12 @@ class NotificationService {
 
     await _plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // Not the launcher icon: Android masks a status bar icon by its alpha
+        // channel, and the launcher icon is fully opaque, so it showed up as a
+        // plain white square. This one is the logo on transparency.
+        android: AndroidInitializationSettings(
+          '@drawable/ic_stat_notification',
+        ),
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
@@ -76,9 +91,25 @@ class NotificationService {
   }
 
   void _handleNotificationResponse(NotificationResponse response) {
-    if (response.payload != electricNotificationPayload) return;
-    final now = DateTime.now();
-    electricNotificationMonth.value = DateTime(now.year, now.month - 1);
+    final payload = response.payload;
+    if (payload == electricNotificationPayload) {
+      final now = DateTime.now();
+      electricNotificationMonth.value = DateTime(now.year, now.month - 1);
+      return;
+    }
+    if (payload != null && payload.startsWith(sharedActivityPayloadPrefix)) {
+      openSharedActivity(payload.substring(sharedActivityPayloadPrefix.length));
+    }
+  }
+
+  /// Asks the app to show [ownerId]'s shared chicken data. Also called for a
+  /// push the system drew itself, whose tap never reaches this plugin.
+  void openSharedActivity(String ownerId) {
+    if (ownerId.isEmpty) return;
+    // A second tap on the same owner has to notify again, and a ValueNotifier
+    // swallows a write of the value it already holds.
+    sharedActivityOwnerId.value = null;
+    sharedActivityOwnerId.value = ownerId;
   }
 
   Future<bool> requestPermission() async {
@@ -227,6 +258,7 @@ class NotificationService {
   Future<void> showSharedActivity({
     required String title,
     required String body,
+    String? ownerId,
   }) async {
     if (!isSupported) return;
     await init();
@@ -242,10 +274,12 @@ class NotificationService {
           channelDescription: _sharedChannelDescription,
           importance: Importance.high,
           priority: Priority.high,
+          color: Color(0xFF00695C),
         ),
         iOS: DarwinNotificationDetails(),
         macOS: DarwinNotificationDetails(),
       ),
+      payload: ownerId == null ? null : '$sharedActivityPayloadPrefix$ownerId',
     );
   }
 

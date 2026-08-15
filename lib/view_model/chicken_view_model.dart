@@ -856,6 +856,26 @@ class ChickenViewModel extends CoreViewModel {
     await loadData(sections: _requestedSections);
   }
 
+  /// Switches to the data shared by [ownerId] — the account behind a tapped
+  /// push. False when this account cannot (or can no longer) read it, and when
+  /// unsynced local changes hold the current source in place.
+  Future<bool> selectOwner(String ownerId) async {
+    if (!_auth.isSignedIn) return false;
+    if (ownerId == activeOwnerId) return true;
+    try {
+      if (_dataSources.isEmpty) await loadSharing();
+      final source = _dataSources.firstWhereOrNull(
+        (item) => item.ownerId == ownerId,
+      );
+      if (source == null) return false;
+      await selectDataSource(source);
+      return true;
+    } catch (e) {
+      logger.e('open shared chicken data failed', error: e);
+      return false;
+    }
+  }
+
   Future<bool> shareWith(String email) async {
     final emailSent = await _repository.shareWith(email);
     await loadSharing();
