@@ -13,6 +13,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => l10n.wifiShort,
     AppPage.fengShui => l10n.compass,
     AppPage.lunar => l10n.lunarTab,
+    AppPage.imageEditor => l10n.imageEditorTab,
     _ => label(l10n),
   };
 

@@ -1920,4 +1920,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterVintage => 'Vintage';
+
+  @override
+  String get imageEditorTab => 'Photo';
+
+  @override
+  String get draw => 'Draw';
+
+  @override
+  String get brushSize => 'Brush size';
+
+  @override
+  String get apply => 'Apply';
 }

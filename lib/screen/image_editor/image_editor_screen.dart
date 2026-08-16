@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
@@ -18,11 +19,88 @@ import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-/// The editor's four tool groups, one panel each.
-enum _EditorTool { crop, rotate, adjust, filters }
+/// The editor's tool groups, one panel each.
+enum _EditorTool { crop, rotate, adjust, filters, draw }
+
+/// The colours the brush offers. A fixed set rather than a picker: on a picture
+/// these have to stay legible, and eight strong hues cover annotation.
+const _brushColors = <Color>[
+  Color(0xFFFF3B30),
+  Color(0xFFFF9500),
+  Color(0xFFFFCC00),
+  Color(0xFF34C759),
+  Color(0xFF007AFF),
+  Color(0xFFAF52DE),
+  Color(0xFF000000),
+  Color(0xFFFFFFFF),
+];
+
+/// One freehand stroke, held in fractions of the picture rather than in pixels
+/// so it survives the preview being laid out at whatever size the screen has —
+/// and so it lands in the right place when it is drawn again at full size.
+class _Stroke {
+  _Stroke({required this.color, required this.width}) : points = <Offset>[];
+
+  final List<Offset> points;
+  final Color color;
+
+  /// Fraction of the picture's shorter edge.
+  final double width;
+
+  Path pathFor(Size size) {
+    final path = Path();
+    if (points.isEmpty) return path;
+    final first = _scale(points.first, size);
+    path.moveTo(first.dx, first.dy);
+    if (points.length == 1) {
+      // A tap is a dot: a zero-length path draws nothing with a round cap on
+      // some backends, so give it a hair of length.
+      path.lineTo(first.dx + 0.01, first.dy);
+      return path;
+    }
+    for (final point in points.skip(1)) {
+      final scaled = _scale(point, size);
+      path.lineTo(scaled.dx, scaled.dy);
+    }
+    return path;
+  }
+
+  double strokeWidthFor(Size size) => width * math.min(size.width, size.height);
+
+  static Offset _scale(Offset point, Size size) =>
+      Offset(point.dx * size.width, point.dy * size.height);
+}
+
+/// Paints the strokes over the picture, in both the preview and the capture.
+class _DrawingPainter extends CustomPainter {
+  const _DrawingPainter(this.strokes);
+
+  final List<_Stroke> strokes;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final stroke in strokes) {
+      canvas.drawPath(
+        stroke.pathFor(size),
+        Paint()
+          ..color = stroke.color
+          ..strokeWidth = stroke.strokeWidthFor(size)
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..style = PaintingStyle.stroke
+          ..isAntiAlias = true,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DrawingPainter oldDelegate) =>
+      oldDelegate.strokes != strokes || strokes.isNotEmpty;
+}
 
 /// A crop shape offered in the crop panel. A null [ratio] is free selection.
 typedef _AspectOption = ({
@@ -78,6 +156,27 @@ class _ImageEditorScreenState
   /// Anchors the share sheet's popover on iPad.
   final _saveButtonKey = GlobalKey();
 
+  /// The preview, captured at the picture's own resolution when a drawing is
+  /// applied. Everything the user can see inside it — the grade included — is
+  /// what gets flattened in.
+  final _canvasKey = GlobalKey();
+
+  final _strokes = <_Stroke>[];
+  _Stroke? _activeStroke;
+  Color _brushColor = _brushColors.first;
+
+  /// Fraction of the picture's shorter edge, so a brush stays the same
+  /// thickness relative to the picture whatever size it is shown at.
+  double _brushWidth = 0.012;
+  bool _isFlattening = false;
+
+  /// The picture's pixel size, which the preview needs to lay the drawing
+  /// surface out at exactly the picture's shape.
+  Size? _imageSize;
+  Uint8List? _imageSizeFor;
+
+  bool get _hasDrawing => _strokes.isNotEmpty;
+
   void _selectTool(_EditorTool tool) {
     setState(() {
       _tool = tool;
@@ -87,7 +186,81 @@ class _ImageEditorScreenState
       } else {
         _cropController = null;
       }
+      if (tool != _EditorTool.draw) _clearStrokes();
     });
+  }
+
+  void _clearStrokes() {
+    _strokes.clear();
+    _activeStroke = null;
+  }
+
+  /// Reads the picture's pixel size off its header — cheap enough to redo every
+  /// time the bytes change, and needed before the drawing surface can be shaped.
+  Future<void> _syncImageSize(Uint8List bytes) async {
+    _imageSizeFor = bytes;
+    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    final descriptor = await ui.ImageDescriptor.encoded(buffer);
+    final size = Size(
+      descriptor.width.toDouble(),
+      descriptor.height.toDouble(),
+    );
+    descriptor.dispose();
+    buffer.dispose();
+    if (!mounted || !identical(_imageSizeFor, bytes)) return;
+    setState(() => _imageSize = size);
+  }
+
+  void _startStroke(Offset point) {
+    setState(() {
+      _activeStroke = _Stroke(color: _brushColor, width: _brushWidth)
+        ..points.add(point);
+      _strokes.add(_activeStroke!);
+    });
+  }
+
+  void _extendStroke(Offset point) {
+    final stroke = _activeStroke;
+    if (stroke == null) return;
+    setState(() => stroke.points.add(point));
+  }
+
+  void _undoStroke() {
+    if (_strokes.isEmpty) return;
+    setState(() {
+      _strokes.removeLast();
+      _activeStroke = null;
+    });
+  }
+
+  /// Renders the preview — picture, grade and strokes — at the picture's own
+  /// resolution and hands the result to the view model as the new picture.
+  Future<void> _applyDrawing() async {
+    final size = _imageSize;
+    final boundary =
+        _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null || size == null || !_hasDrawing || _isFlattening) {
+      return;
+    }
+    setState(() => _isFlattening = true);
+    try {
+      // The boundary is laid out at the picture's aspect ratio, so this ratio
+      // renders it back at exactly the picture's pixel size.
+      final ratio = size.width / boundary.size.width;
+      final rendered = await boundary.toImage(pixelRatio: ratio);
+      final data = await rendered.toByteData(format: ui.ImageByteFormat.png);
+      rendered.dispose();
+      if (data == null) throw StateError('the canvas rendered no bytes');
+      if (!mounted) return;
+      vm.commitDrawing(data.buffer.asUint8List());
+      setState(_clearStrokes);
+    } catch (e, stack) {
+      logger.e('drawing failed: $e', error: e, stackTrace: stack);
+      if (!mounted) return;
+      context.showToast(context.l10n.imageEditFailed, isError: true);
+    } finally {
+      if (mounted) setState(() => _isFlattening = false);
+    }
   }
 
   void _setCropAspect(double? ratio) {
@@ -182,7 +355,7 @@ class _ImageEditorScreenState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final vm = context.watch<ImageEditorViewModel>();
-    final busy = vm.isProcessing || _isCropping;
+    final busy = vm.isProcessing || _isCropping || _isFlattening;
 
     return AppScaffold(
       bottom: true,
@@ -282,7 +455,15 @@ class _ImageEditorScreenState
         return Column(
           children: [
             Expanded(child: preview),
-            panel,
+            // A Flex hands a non-flex child unbounded space, so without a
+            // ceiling here a tall panel — a big system text size, a tool with
+            // several rows — runs off the bottom instead of scrolling.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constraints.maxHeight * _panelMaxHeightFactor,
+              ),
+              child: panel,
+            ),
           ],
         );
       },
@@ -291,6 +472,8 @@ class _ImageEditorScreenState
 
   Widget _buildPreview(ImageEditorViewModel vm) {
     final image = vm.image!;
+    if (!identical(_imageSizeFor, image)) _syncImageSize(image);
+
     return Padding(
       padding: Dimens.screenPadding,
       child: Center(
@@ -301,49 +484,112 @@ class _ImageEditorScreenState
                 // the crop rectangle has to start over with it.
                 image: Image.memory(image, key: ValueKey(image.hashCode)),
               )
-            : ColorFiltered(
-                colorFilter: ColorFilter.matrix(vm.previewMatrix),
-                child: Image.memory(
-                  image,
-                  // Without this the old frame is dropped while the new bytes
-                  // decode, so every edit flashes the page background.
-                  gaplessPlayback: true,
-                  fit: BoxFit.contain,
-                ),
-              ),
+            : _buildCanvas(vm, image),
       ),
     );
   }
 
+  /// The picture with its grade and any strokes on top, laid out at exactly the
+  /// picture's aspect ratio.
+  ///
+  /// The shape matters beyond looks: it is what lets a stroke recorded as a
+  /// fraction of this box be replayed as the same fraction of the picture, and
+  /// what makes the capture come out at the picture's own pixel size.
+  Widget _buildCanvas(ImageEditorViewModel vm, Uint8List image) {
+    final size = _imageSize;
+    Widget canvas = RepaintBoundary(
+      key: _canvasKey,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          ColorFiltered(
+            colorFilter: ColorFilter.matrix(vm.previewMatrix),
+            child: Image.memory(
+              image,
+              // Without this the old frame is dropped while the new bytes
+              // decode, so every edit flashes the page background.
+              gaplessPlayback: true,
+              fit: size == null ? BoxFit.contain : BoxFit.fill,
+            ),
+          ),
+          if (_hasDrawing)
+            Positioned.fill(
+              child: CustomPaint(painter: _DrawingPainter(_strokes)),
+            ),
+        ],
+      ),
+    );
+
+    // Until the header has been read there is no shape to draw into; the
+    // picture still shows, contained, so the page never blanks.
+    if (size == null) return canvas;
+
+    if (_tool == _EditorTool.draw) {
+      final painted = canvas;
+      // The builder sits inside the aspect ratio, so its constraints *are* the
+      // canvas — which is the box a touch has to be measured against.
+      canvas = LayoutBuilder(
+        builder: (context, constraints) {
+          final box = constraints.biggest;
+          return GestureDetector(
+            onPanStart: (details) =>
+                _startStroke(_normalize(details.localPosition, box)),
+            onPanUpdate: (details) =>
+                _extendStroke(_normalize(details.localPosition, box)),
+            onPanEnd: (_) => _activeStroke = null,
+            child: painted,
+          );
+        },
+      );
+    }
+    return AspectRatio(aspectRatio: size.aspectRatio, child: canvas);
+  }
+
+  /// A touch as a fraction of the canvas, clipped to it: a finger that slides
+  /// off the picture should stop at its edge rather than draw outside it.
+  static Offset _normalize(Offset point, Size size) => Offset(
+    (point.dx / size.width).clamp(0.0, 1.0),
+    (point.dy / size.height).clamp(0.0, 1.0),
+  );
+
   Widget _buildPanel(ImageEditorViewModel vm, AppLocalizations l10n) {
     return NeuCard(
       margin: const EdgeInsets.all(Dimens.pagePadding),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 12,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              spacing: 8,
-              children: [
-                for (final tool in _EditorTool.values)
-                  NeuChip(
-                    label: _toolLabel(tool, l10n),
-                    isSelected: _tool == tool,
-                    onTap: () => _selectTool(tool),
-                  ),
-              ],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      // Scrolls only when it has to: at a normal text size the panel shrink
+      // wraps its tool, and a reader who has scaled the system font up gets to
+      // scroll rather than lose a row off the edge.
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              // Clips at the viewport, so the padding is what keeps the chips'
+              // shadow pair from being sliced off at the edges.
+              padding: _scrollerPadding,
+              child: Row(
+                spacing: 8,
+                children: [
+                  for (final tool in _EditorTool.values)
+                    NeuChip(
+                      label: _toolLabel(tool, l10n),
+                      isSelected: _tool == tool,
+                      onTap: () => _selectTool(tool),
+                    ),
+                ],
+              ),
             ),
-          ),
-          switch (_tool) {
-            _EditorTool.crop => _buildCropPanel(l10n),
-            _EditorTool.rotate => _buildRotatePanel(l10n),
-            _EditorTool.adjust => _buildAdjustPanel(vm, l10n),
-            _EditorTool.filters => _buildFiltersPanel(vm, l10n),
-          },
-        ],
+            switch (_tool) {
+              _EditorTool.crop => _buildCropPanel(l10n),
+              _EditorTool.rotate => _buildRotatePanel(l10n),
+              _EditorTool.adjust => _buildAdjustPanel(vm, l10n),
+              _EditorTool.filters => _buildFiltersPanel(vm, l10n),
+              _EditorTool.draw => _buildDrawPanel(l10n),
+            },
+          ],
+        ),
       ),
     ).contentConstrainedBox();
   }
@@ -351,10 +597,11 @@ class _ImageEditorScreenState
   Widget _buildCropPanel(AppLocalizations l10n) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: 12,
+      spacing: 8,
       children: [
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          padding: _scrollerPadding,
           child: Row(
             spacing: 8,
             children: [
@@ -383,6 +630,85 @@ class _ImageEditorScreenState
                 accent: context.theme.colorScheme.primary,
                 onPressed: _applyCrop,
                 child: Text(l10n.crop),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDrawPanel(AppLocalizations l10n) {
+    final scheme = context.theme.colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          // Same inset as the chip rows above, so every row in the panel starts
+          // on the same line.
+          padding: _scrollerPadding,
+          child: Row(
+            spacing: 10,
+            children: [
+              for (final color in _brushColors)
+                GestureDetector(
+                  onTap: () => setState(() => _brushColor = color),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      // White has to be told apart from the card behind it, and
+                      // the chosen colour from the rest — one ring does both.
+                      border: Border.all(
+                        color: _brushColor == color
+                            ? scheme.primary
+                            : scheme.onSurface.withValues(alpha: 0.25),
+                        width: _brushColor == color ? 3 : 1,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Row(
+          children: [
+            const Icon(Icons.brush_rounded, size: 18),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 74,
+              child: Text(l10n.brushSize, style: context.textTheme.title),
+            ),
+            Expanded(
+              child: Slider(
+                value: _brushWidth,
+                min: 0.004,
+                max: 0.06,
+                onChanged: (value) => setState(() => _brushWidth = value),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          spacing: 12,
+          children: [
+            Expanded(
+              child: NeuButton(
+                expand: true,
+                onPressed: _hasDrawing ? _undoStroke : null,
+                child: Text(l10n.undo),
+              ),
+            ),
+            Expanded(
+              child: NeuButton(
+                expand: true,
+                accent: scheme.primary,
+                onPressed: _hasDrawing ? _applyDrawing : null,
+                child: Text(l10n.apply),
               ),
             ),
           ],
@@ -452,10 +778,18 @@ class _ImageEditorScreenState
 
   Widget _buildFiltersPanel(ImageEditorViewModel vm, AppLocalizations l10n) {
     final image = vm.image!;
+    // The label is laid out first and the thumbnail takes what is left, so the
+    // row has to reserve the label's real height — which grows with the
+    // reader's text size — rather than a number that happens to fit at 1x.
+    final labelHeight =
+        MediaQuery.textScalerOf(context).scale(_thumbLabelSize) *
+        _thumbLabelLineHeight;
     return SizedBox(
-      height: _thumbSize + 26,
+      height:
+          _thumbSize + _thumbLabelGap + labelHeight + _scrollerPadding.vertical,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        padding: _scrollerPadding,
         itemCount: ImageFilterPreset.values.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
@@ -464,29 +798,37 @@ class _ImageEditorScreenState
           return GestureDetector(
             onTap: () => vm.setPreset(preset),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(Dimens.radiusSmall),
-                  child: ColorFiltered(
-                    colorFilter: ColorFilter.matrix(presetMatrix(preset)),
-                    child: Image.memory(
-                      image,
-                      width: _thumbSize,
-                      height: _thumbSize,
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                      // Decoded once at thumbnail size: a full-resolution
-                      // decode per preset would cost tens of megabytes.
-                      cacheWidth: (_thumbSize * 2).round(),
+                // Flexible rather than a fixed square: the label takes the
+                // height it needs and the thumbnail gives way, so a larger
+                // text size costs a few pixels of picture instead of
+                // overflowing the row.
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(Dimens.radiusSmall),
+                      child: ColorFiltered(
+                        colorFilter: ColorFilter.matrix(presetMatrix(preset)),
+                        child: Image.memory(
+                          image,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          // Decoded once at thumbnail size: a full-resolution
+                          // decode per preset would cost tens of megabytes.
+                          cacheWidth: (_thumbSize * 2).round(),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: _thumbLabelGap),
                 Text(
                   _presetLabel(preset, l10n),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: _thumbLabelSize,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                     color: isSelected
                         ? context.theme.colorScheme.primary
@@ -532,7 +874,13 @@ class _ImageEditorScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       spacing: 8,
-      children: [Icon(icon), Text(label)],
+      children: [
+        Icon(icon),
+        // Flexible, not bare: at a large system text size these labels are
+        // wider than the button, and a Row would push them off the edge rather
+        // than wrap them.
+        Flexible(child: Text(label)),
+      ],
     );
   }
 
@@ -541,6 +889,7 @@ class _ImageEditorScreenState
     _EditorTool.rotate => l10n.rotate,
     _EditorTool.adjust => l10n.adjust,
     _EditorTool.filters => l10n.filters,
+    _EditorTool.draw => l10n.draw,
   };
 
   String _geometryLabel(ImageGeometryOp op, AppLocalizations l10n) =>
@@ -564,6 +913,20 @@ class _ImageEditorScreenState
 
 enum _MoreAction { gallery, camera, reset }
 
+/// Room a chip's neumorphic shadow needs inside a scroller, which clips at its
+/// own edge. Matches the inset the movie screen's chip rows use.
+const _scrollerPadding = EdgeInsets.symmetric(horizontal: 6, vertical: 4);
+
 /// Width of the tool panel when it sits beside the picture in landscape.
 const _panelWidth = 320.0;
+
+/// Most of the page the tool panel may take in portrait before it starts to
+/// scroll instead of growing — past this there is no picture left to edit.
+const _panelMaxHeightFactor = 0.5;
 const _thumbSize = 64.0;
+const _thumbLabelSize = 11.0;
+const _thumbLabelGap = 4.0;
+
+/// Line box of the preset label as a multiple of its font size — the figure the
+/// filter row reserves for it before handing the rest to the thumbnail.
+const _thumbLabelLineHeight = 1.5;

@@ -1109,5 +1109,9 @@
   "filterSepia": "Nâu cổ",
   "filterCool": "Lạnh",
   "filterWarm": "Ấm",
-  "filterVintage": "Hoài cổ"
+  "filterVintage": "Hoài cổ",
+  "imageEditorTab": "Ảnh",
+  "draw": "Vẽ",
+  "brushSize": "Cỡ nét",
+  "apply": "Áp dụng"
 }

@@ -17,7 +17,9 @@ import 'package:share_plus/share_plus.dart';
 ///   [undo] pops.
 /// * **Colour** ([adjustments]) is never baked into [image]. It rides along as
 ///   a matrix the preview draws with and the export applies once, so dragging a
-///   slider costs nothing and never degrades the picture.
+///   slider costs nothing and never degrades the picture. The one exception is
+///   [commitDrawing]: strokes land *on top of* the graded picture, so the grade
+///   has to be flattened in with them.
 class ImageEditorViewModel extends CoreViewModel {
   final _picker = ImagePicker();
 
@@ -25,7 +27,7 @@ class ImageEditorViewModel extends CoreViewModel {
   /// much as a usability one.
   static const _maxHistory = 6;
 
-  final _history = <Uint8List>[];
+  final _history = <_Snapshot>[];
 
   Uint8List? _original;
   Uint8List? _image;
@@ -99,6 +101,19 @@ class ImageEditorViewModel extends CoreViewModel {
   /// Takes the bytes the crop widget produced as the new picture.
   void applyCrop(Uint8List cropped) => _commit(cropped);
 
+  /// Takes the picture the drawing canvas rendered — the graded image with the
+  /// strokes already on it.
+  ///
+  /// The grade is part of those pixels now, so the adjustments go back to
+  /// neutral; leaving them on would apply the same grade a second time at
+  /// export and the saved file would not match the preview. [undo] puts both
+  /// halves back together.
+  void commitDrawing(Uint8List bytes) {
+    _commit(bytes);
+    _adjustments = ImageAdjustments.none;
+    notifyListenersSafe();
+  }
+
   void setBrightness(double value) =>
       _setAdjustments(_adjustments.copyWith(brightness: value));
 
@@ -118,7 +133,9 @@ class ImageEditorViewModel extends CoreViewModel {
 
   void undo() {
     if (_history.isEmpty) return;
-    _image = _history.removeLast();
+    final previous = _history.removeLast();
+    _image = previous.bytes;
+    _adjustments = previous.adjustments;
     notifyListenersSafe();
   }
 
@@ -183,7 +200,7 @@ class ImageEditorViewModel extends CoreViewModel {
   void _commit(Uint8List bytes) {
     final current = _image;
     if (current != null) {
-      _history.add(current);
+      _history.add(_Snapshot(current, _adjustments));
       if (_history.length > _maxHistory) _history.removeAt(0);
     }
     _image = bytes;
@@ -204,4 +221,14 @@ class ImageEditorViewModel extends CoreViewModel {
     if (!context.mounted) return;
     context.showToast(message, isError: true);
   }
+}
+
+/// One step of undo: the picture, plus the grade that was riding on it. Both
+/// halves have to travel together — a drawing bakes the grade in, so restoring
+/// the pixels without restoring the sliders would double it up.
+class _Snapshot {
+  const _Snapshot(this.bytes, this.adjustments);
+
+  final Uint8List bytes;
+  final ImageAdjustments adjustments;
 }

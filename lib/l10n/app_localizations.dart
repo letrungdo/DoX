@@ -3487,6 +3487,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vintage'**
   String get filterVintage;
+
+  /// No description provided for @imageEditorTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get imageEditorTab;
+
+  /// No description provided for @draw.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get draw;
+
+  /// No description provided for @brushSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush size'**
+  String get brushSize;
+
+  /// No description provided for @apply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get apply;
 }
 
 class _AppLocalizationsDelegate

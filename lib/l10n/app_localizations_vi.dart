@@ -1912,4 +1912,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get filterVintage => 'Hoài cổ';
+
+  @override
+  String get imageEditorTab => 'Ảnh';
+
+  @override
+  String get draw => 'Vẽ';
+
+  @override
+  String get brushSize => 'Cỡ nét';
+
+  @override
+  String get apply => 'Áp dụng';
 }

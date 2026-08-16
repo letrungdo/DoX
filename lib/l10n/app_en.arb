@@ -1151,5 +1151,9 @@
   "filterSepia": "Sepia",
   "filterCool": "Cool",
   "filterWarm": "Warm",
-  "filterVintage": "Vintage"
+  "filterVintage": "Vintage",
+  "imageEditorTab": "Photo",
+  "draw": "Draw",
+  "brushSize": "Brush size",
+  "apply": "Apply"
 }
