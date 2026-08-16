@@ -59,18 +59,21 @@ class PushNotificationService {
     }
 
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
-      _openChickenActivity,
+      openChickenActivity,
     );
     try {
       final launchMessage = await FirebaseMessaging.instance
           .getInitialMessage();
-      if (launchMessage != null) _openChickenActivity(launchMessage);
+      if (launchMessage != null) openChickenActivity(launchMessage);
     } catch (e) {
       logger.e('read the launch push failed', error: e);
     }
   }
 
-  void _openChickenActivity(RemoteMessage message) {
+  /// A tapped push, wherever it was tapped: only the ones this app sends about
+  /// shared chicken data name a screen to open.
+  @visibleForTesting
+  void openChickenActivity(RemoteMessage message) {
     if (message.data['type'] != 'chicken_activity') return;
     final ownerId = message.data['owner_id'] as String?;
     if (ownerId == null) return;

@@ -91,7 +91,13 @@ class NotificationService {
   }
 
   void _handleNotificationResponse(NotificationResponse response) {
-    final payload = response.payload;
+    handlePayload(response.payload);
+  }
+
+  /// What a tapped notification asks the app to open. A vaccination reminder
+  /// carries a batch id, which no screen listens for — it only opens the app.
+  @visibleForTesting
+  void handlePayload(String? payload) {
     if (payload == electricNotificationPayload) {
       final now = DateTime.now();
       electricNotificationMonth.value = DateTime(now.year, now.month - 1);
