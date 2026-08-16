@@ -1833,4 +1833,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String resumePlayback(String time) {
     return 'Resume from $time';
   }
+
+  @override
+  String get imageEditor => 'Image editor';
+
+  @override
+  String get imageEditorEmptyMessage =>
+      'Pick a photo to crop, straighten, adjust and filter it.';
+
+  @override
+  String get imageOpenFailed => 'Couldn\'t open that picture. Try another one.';
+
+  @override
+  String get imageEditFailed => 'Couldn\'t apply that edit. Please try again.';
+
+  @override
+  String get imageSaved => 'Your picture has been saved.';
+
+  @override
+  String get imageSaveFailed =>
+      'Couldn\'t save that picture. Please try again.';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get rotate => 'Rotate';
+
+  @override
+  String get adjust => 'Adjust';
+
+  @override
+  String get filters => 'Filters';
+
+  @override
+  String get brightness => 'Brightness';
+
+  @override
+  String get contrast => 'Contrast';
+
+  @override
+  String get saturation => 'Saturation';
+
+  @override
+  String get resetSliders => 'Reset sliders';
+
+  @override
+  String get resetEdits => 'Reset edits';
+
+  @override
+  String get resetEditsMessage =>
+      'This puts the picture back the way it was when you picked it.';
+
+  @override
+  String get cropFree => 'Free';
+
+  @override
+  String get rotateLeft => 'Rotate left';
+
+  @override
+  String get rotateRight => 'Rotate right';
+
+  @override
+  String get flipHorizontal => 'Flip horizontally';
+
+  @override
+  String get flipVertical => 'Flip vertically';
+
+  @override
+  String get filterNone => 'Original';
+
+  @override
+  String get filterMono => 'Mono';
+
+  @override
+  String get filterSepia => 'Sepia';
+
+  @override
+  String get filterCool => 'Cool';
+
+  @override
+  String get filterWarm => 'Warm';
+
+  @override
+  String get filterVintage => 'Vintage';
 }

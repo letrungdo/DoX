@@ -116,6 +116,11 @@ class _AppRouter extends RootStackRouter {
             page: MovieRoute.page,
           ),
           AutoRoute(
+            initial: initialTab == AppPage.imageEditor,
+            path: 'image-editor',
+            page: ImageEditorRoute.page,
+          ),
+          AutoRoute(
             initial: initialTab == AppPage.menu,
             path: 'menu',
             page: MenuRoute.page,
@@ -201,6 +206,7 @@ class _AppRouter extends RootStackRouter {
       page: MovieDetailRoute.page,
       guards: [_supabaseAuthGuard],
     ),
+    AutoRoute(path: '/image-editor', page: ImageEditorRoute.page),
   ];
 
   /// The tab to mark as initial: the one the user was last on, as long as it

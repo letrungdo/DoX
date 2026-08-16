@@ -1123,5 +1123,33 @@
         "type": "String"
       }
     }
-  }
+  },
+  "imageEditor": "Image editor",
+  "imageEditorEmptyMessage": "Pick a photo to crop, straighten, adjust and filter it.",
+  "imageOpenFailed": "Couldn't open that picture. Try another one.",
+  "imageEditFailed": "Couldn't apply that edit. Please try again.",
+  "imageSaved": "Your picture has been saved.",
+  "imageSaveFailed": "Couldn't save that picture. Please try again.",
+  "undo": "Undo",
+  "more": "More",
+  "rotate": "Rotate",
+  "adjust": "Adjust",
+  "filters": "Filters",
+  "brightness": "Brightness",
+  "contrast": "Contrast",
+  "saturation": "Saturation",
+  "resetSliders": "Reset sliders",
+  "resetEdits": "Reset edits",
+  "resetEditsMessage": "This puts the picture back the way it was when you picked it.",
+  "cropFree": "Free",
+  "rotateLeft": "Rotate left",
+  "rotateRight": "Rotate right",
+  "flipHorizontal": "Flip horizontally",
+  "flipVertical": "Flip vertically",
+  "filterNone": "Original",
+  "filterMono": "Mono",
+  "filterSepia": "Sepia",
+  "filterCool": "Cool",
+  "filterWarm": "Warm",
+  "filterVintage": "Vintage"
 }

@@ -1081,5 +1081,33 @@
         "type": "String"
       }
     }
-  }
+  },
+  "imageEditor": "Chỉnh sửa ảnh",
+  "imageEditorEmptyMessage": "Chọn một ảnh để cắt, xoay, chỉnh màu và thêm bộ lọc.",
+  "imageOpenFailed": "Không mở được ảnh này. Hãy thử ảnh khác.",
+  "imageEditFailed": "Không áp dụng được chỉnh sửa. Vui lòng thử lại.",
+  "imageSaved": "Đã lưu ảnh của bạn.",
+  "imageSaveFailed": "Không lưu được ảnh. Vui lòng thử lại.",
+  "undo": "Hoàn tác",
+  "more": "Thêm",
+  "rotate": "Xoay",
+  "adjust": "Chỉnh màu",
+  "filters": "Bộ lọc",
+  "brightness": "Độ sáng",
+  "contrast": "Tương phản",
+  "saturation": "Bão hòa",
+  "resetSliders": "Đặt lại thanh trượt",
+  "resetEdits": "Đặt lại chỉnh sửa",
+  "resetEditsMessage": "Ảnh sẽ trở lại đúng như lúc bạn vừa chọn.",
+  "cropFree": "Tự do",
+  "rotateLeft": "Xoay trái",
+  "rotateRight": "Xoay phải",
+  "flipHorizontal": "Lật ngang",
+  "flipVertical": "Lật dọc",
+  "filterNone": "Gốc",
+  "filterMono": "Trắng đen",
+  "filterSepia": "Nâu cổ",
+  "filterCool": "Lạnh",
+  "filterWarm": "Ấm",
+  "filterVintage": "Hoài cổ"
 }

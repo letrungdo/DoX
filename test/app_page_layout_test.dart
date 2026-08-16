@@ -6,7 +6,15 @@ void main() {
     test('keeps the stored placement and order of both sections', () {
       final layout = AppPage.sanitize(
         ['movie', 'news'],
-        ['lunar', 'chicken', 'electric', 'myLife', 'wifi', 'fengShui'],
+        [
+          'lunar',
+          'chicken',
+          'electric',
+          'myLife',
+          'wifi',
+          'fengShui',
+          'imageEditor',
+        ],
       );
 
       expect(layout.tabs, [AppPage.movie, AppPage.news]);
@@ -17,6 +25,7 @@ void main() {
         AppPage.myLife,
         AppPage.wifi,
         AppPage.fengShui,
+        AppPage.imageEditor,
       ]);
     });
 

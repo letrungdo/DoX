@@ -3319,6 +3319,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resume from {time}'**
   String resumePlayback(String time);
+
+  /// No description provided for @imageEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Image editor'**
+  String get imageEditor;
+
+  /// No description provided for @imageEditorEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a photo to crop, straighten, adjust and filter it.'**
+  String get imageEditorEmptyMessage;
+
+  /// No description provided for @imageOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open that picture. Try another one.'**
+  String get imageOpenFailed;
+
+  /// No description provided for @imageEditFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply that edit. Please try again.'**
+  String get imageEditFailed;
+
+  /// No description provided for @imageSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your picture has been saved.'**
+  String get imageSaved;
+
+  /// No description provided for @imageSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save that picture. Please try again.'**
+  String get imageSaveFailed;
+
+  /// No description provided for @undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
+
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
+
+  /// No description provided for @rotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate'**
+  String get rotate;
+
+  /// No description provided for @adjust.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust'**
+  String get adjust;
+
+  /// No description provided for @filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filters;
+
+  /// No description provided for @brightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get brightness;
+
+  /// No description provided for @contrast.
+  ///
+  /// In en, this message translates to:
+  /// **'Contrast'**
+  String get contrast;
+
+  /// No description provided for @saturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get saturation;
+
+  /// No description provided for @resetSliders.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset sliders'**
+  String get resetSliders;
+
+  /// No description provided for @resetEdits.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset edits'**
+  String get resetEdits;
+
+  /// No description provided for @resetEditsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This puts the picture back the way it was when you picked it.'**
+  String get resetEditsMessage;
+
+  /// No description provided for @cropFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get cropFree;
+
+  /// No description provided for @rotateLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate left'**
+  String get rotateLeft;
+
+  /// No description provided for @rotateRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate right'**
+  String get rotateRight;
+
+  /// No description provided for @flipHorizontal.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip horizontally'**
+  String get flipHorizontal;
+
+  /// No description provided for @flipVertical.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip vertically'**
+  String get flipVertical;
+
+  /// No description provided for @filterNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get filterNone;
+
+  /// No description provided for @filterMono.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono'**
+  String get filterMono;
+
+  /// No description provided for @filterSepia.
+  ///
+  /// In en, this message translates to:
+  /// **'Sepia'**
+  String get filterSepia;
+
+  /// No description provided for @filterCool.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool'**
+  String get filterCool;
+
+  /// No description provided for @filterWarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm'**
+  String get filterWarm;
+
+  /// No description provided for @filterVintage.
+  ///
+  /// In en, this message translates to:
+  /// **'Vintage'**
+  String get filterVintage;
 }
 
 class _AppLocalizationsDelegate

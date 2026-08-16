@@ -1826,4 +1826,90 @@ class AppLocalizationsVi extends AppLocalizations {
   String resumePlayback(String time) {
     return 'Tiếp tục xem từ $time';
   }
+
+  @override
+  String get imageEditor => 'Chỉnh sửa ảnh';
+
+  @override
+  String get imageEditorEmptyMessage =>
+      'Chọn một ảnh để cắt, xoay, chỉnh màu và thêm bộ lọc.';
+
+  @override
+  String get imageOpenFailed => 'Không mở được ảnh này. Hãy thử ảnh khác.';
+
+  @override
+  String get imageEditFailed =>
+      'Không áp dụng được chỉnh sửa. Vui lòng thử lại.';
+
+  @override
+  String get imageSaved => 'Đã lưu ảnh của bạn.';
+
+  @override
+  String get imageSaveFailed => 'Không lưu được ảnh. Vui lòng thử lại.';
+
+  @override
+  String get undo => 'Hoàn tác';
+
+  @override
+  String get more => 'Thêm';
+
+  @override
+  String get rotate => 'Xoay';
+
+  @override
+  String get adjust => 'Chỉnh màu';
+
+  @override
+  String get filters => 'Bộ lọc';
+
+  @override
+  String get brightness => 'Độ sáng';
+
+  @override
+  String get contrast => 'Tương phản';
+
+  @override
+  String get saturation => 'Bão hòa';
+
+  @override
+  String get resetSliders => 'Đặt lại thanh trượt';
+
+  @override
+  String get resetEdits => 'Đặt lại chỉnh sửa';
+
+  @override
+  String get resetEditsMessage => 'Ảnh sẽ trở lại đúng như lúc bạn vừa chọn.';
+
+  @override
+  String get cropFree => 'Tự do';
+
+  @override
+  String get rotateLeft => 'Xoay trái';
+
+  @override
+  String get rotateRight => 'Xoay phải';
+
+  @override
+  String get flipHorizontal => 'Lật ngang';
+
+  @override
+  String get flipVertical => 'Lật dọc';
+
+  @override
+  String get filterNone => 'Gốc';
+
+  @override
+  String get filterMono => 'Trắng đen';
+
+  @override
+  String get filterSepia => 'Nâu cổ';
+
+  @override
+  String get filterCool => 'Lạnh';
+
+  @override
+  String get filterWarm => 'Ấm';
+
+  @override
+  String get filterVintage => 'Hoài cổ';
 }

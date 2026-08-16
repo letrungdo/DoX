@@ -17,6 +17,7 @@ enum AppPage {
   wifi,
   fengShui,
   movie,
+  imageEditor,
   menu;
 
   /// Past this the bottom bar's labels start to collide; [menu] sits on top of

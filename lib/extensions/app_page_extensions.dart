@@ -26,6 +26,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => l10n.wifiManagement,
     AppPage.fengShui => l10n.fengShuiCompass,
     AppPage.movie => l10n.movie,
+    AppPage.imageEditor => l10n.imageEditor,
     AppPage.menu => l10n.menu,
   };
 
@@ -38,6 +39,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => Icons.wifi_rounded,
     AppPage.fengShui => Icons.explore_rounded,
     AppPage.movie => Icons.movie_rounded,
+    AppPage.imageEditor => Icons.auto_fix_high_rounded,
     AppPage.menu => Icons.menu_rounded,
   };
 
@@ -53,6 +55,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => const WifiManagementRoute(),
     AppPage.fengShui => const FengShuiCompassRoute(),
     AppPage.movie => const MovieRoute(),
+    AppPage.imageEditor => const ImageEditorRoute(),
     AppPage.menu => const MenuRoute(),
   };
 }
