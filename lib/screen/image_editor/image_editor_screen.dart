@@ -15,9 +15,12 @@ import 'package:do_x/view_model/image_editor_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
+import 'package:do_x/widgets/neu/neu_press.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
@@ -177,7 +180,26 @@ class _ImageEditorScreenState
 
   bool get _hasDrawing => _strokes.isNotEmpty;
 
-  void _selectTool(_EditorTool tool) {
+  /// Tool taps go through here, not straight to [_setTool]: leaving Draw drops
+  /// whatever has been drawn, and work disappearing on a stray tap is the one
+  /// thing an editor must never do quietly.
+  Future<void> _selectTool(_EditorTool tool) async {
+    if (tool == _tool) return;
+    if (_tool == _EditorTool.draw && _hasDrawing) {
+      final l10n = context.l10n;
+      final discard = await showAppConfirmDialog(
+        context,
+        title: l10n.discardDrawing,
+        message: l10n.discardDrawingMessage,
+        confirmText: l10n.discard,
+        isDestructive: true,
+      );
+      if (!discard || !mounted) return;
+    }
+    _setTool(tool);
+  }
+
+  void _setTool(_EditorTool tool) {
     setState(() {
       _tool = tool;
       if (tool == _EditorTool.crop) {
@@ -280,7 +302,7 @@ class _ImageEditorScreenState
       if (data == null) throw StateError('cropped bitmap has no bytes');
       if (!mounted) return;
       vm.applyCrop(data.buffer.asUint8List());
-      _selectTool(_EditorTool.adjust);
+      _setTool(_EditorTool.adjust);
     } catch (e, stack) {
       logger.e('crop failed: $e', error: e, stackTrace: stack);
       if (!mounted) return;
@@ -291,7 +313,7 @@ class _ImageEditorScreenState
   }
 
   Future<void> _pick(ImageSource source) async {
-    _selectTool(_EditorTool.adjust);
+    _setTool(_EditorTool.adjust);
     await vm.pickImage(source);
   }
 
@@ -339,7 +361,7 @@ class _ImageEditorScreenState
           isDestructive: true,
         );
         if (!confirmed || !mounted) return;
-        _selectTool(_EditorTool.adjust);
+        _setTool(_EditorTool.adjust);
         vm.resetAll();
     }
   }
@@ -361,22 +383,32 @@ class _ImageEditorScreenState
       bottom: true,
       appBar: DoAppBar(
         title: l10n.imageEditor,
+        // Neu buttons, like every other app bar in the app — a flat Material
+        // icon button here reads as a control from a different product.
         actions: [
-          IconButton(
-            onPressed: vm.canUndo && !busy ? vm.undo : null,
-            icon: const Icon(Icons.undo_rounded),
+          NeuIconButton(
+            icon: Icons.undo_rounded,
+            size: Dimens.appBarActionSize,
+            depth: Dimens.appBarActionDepth,
             tooltip: l10n.undo,
+            onPressed: vm.canUndo && !busy ? vm.undo : null,
           ),
-          IconButton(
+          const SizedBox(width: 8),
+          NeuIconButton(
             key: _saveButtonKey,
-            onPressed: vm.hasImage && !busy ? _save : null,
-            icon: const Icon(Icons.ios_share_rounded),
+            icon: Icons.ios_share_rounded,
+            size: Dimens.appBarActionSize,
+            depth: Dimens.appBarActionDepth,
             tooltip: l10n.save,
+            onPressed: vm.hasImage && !busy ? _save : null,
           ),
-          IconButton(
-            onPressed: busy ? null : _showMoreActions,
-            icon: const Icon(Icons.more_vert_rounded),
+          const SizedBox(width: 8),
+          NeuIconButton(
+            icon: Icons.more_horiz_rounded,
+            size: Dimens.appBarActionSize,
+            depth: Dimens.appBarActionDepth,
             tooltip: l10n.more,
+            onPressed: busy ? null : _showMoreActions,
           ),
         ],
       ),
@@ -389,51 +421,94 @@ class _ImageEditorScreenState
             absorbing: busy,
             child: vm.hasImage ? _buildEditor(vm, l10n) : _buildEmpty(l10n),
           ),
-          if (busy) const LinearProgressIndicator(minHeight: 4),
+          // A scrim as well as the bar: a 4px line at the top of a page whose
+          // middle has frozen is a status report nobody reads. Dimming the page
+          // is what says "wait", and it lands where the user is looking.
+          if (busy)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Color(0x33000000),
+                child: Center(child: Loading()),
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildEmpty(AppLocalizations l10n) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: Dimens.screenPadding,
-        child: NeuCard(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-          child: Column(
-            spacing: 16,
-            children: [
-              Icon(
-                Icons.image_outlined,
-                size: 56,
-                color: context.theme.colorScheme.primary,
-              ),
-              Text(
-                l10n.imageEditorEmptyMessage,
-                textAlign: TextAlign.center,
-                style: context.textTheme.primary,
-              ),
-              NeuButton(
-                expand: true,
-                accent: context.theme.colorScheme.primary,
-                onPressed: () => _pick(ImageSource.gallery),
-                child: _buttonLabel(
-                  Icons.photo_library_rounded,
-                  l10n.chooseFromGallery,
+    final scheme = context.theme.colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        // Centred in the page rather than pinned under the app bar: with one
+        // card and nothing else, a page that starts at the top edge reads as a
+        // page that failed to load the rest.
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: Dimens.screenPadding,
+            child: Center(
+              child: NeuCard(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                child: Column(
+                  spacing: 12,
+                  children: [
+                    // The icon sits in its own sunken disc: the picture that
+                    // isn't there yet, with a place already made for it.
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: context.neuRaised(
+                        radius: Dimens.radiusPill,
+                        depth: 0.7,
+                        inset: true,
+                      ),
+                      child: Icon(
+                        Icons.add_photo_alternate_outlined,
+                        size: 36,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    Text(
+                      l10n.imageEditorEmptyTitle,
+                      textAlign: TextAlign.center,
+                      style: context.textTheme.primary.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      l10n.imageEditorEmptyMessage,
+                      textAlign: TextAlign.center,
+                      style: context.textTheme.title,
+                    ),
+                    const SizedBox(height: 4),
+                    NeuButton(
+                      expand: true,
+                      accent: scheme.primary,
+                      onPressed: () => _pick(ImageSource.gallery),
+                      child: _buttonLabel(
+                        Icons.photo_library_rounded,
+                        l10n.chooseFromGallery,
+                      ),
+                    ),
+                    NeuButton(
+                      expand: true,
+                      onPressed: () => _pick(ImageSource.camera),
+                      child: _buttonLabel(
+                        Icons.photo_camera_rounded,
+                        l10n.takePhoto,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              NeuButton(
-                expand: true,
-                onPressed: () => _pick(ImageSource.camera),
-                child: _buttonLabel(Icons.photo_camera_rounded, l10n.takePhoto),
-              ),
-            ],
-          ),
+              // The cap goes outside the padding, so this card is exactly as
+              // wide as a card on any other page.
+            ),
+          ).contentConstrainedBox(),
         ),
-        // The cap goes outside the padding, so this card is exactly as wide as
-        // a card on any other page.
-      ).contentConstrainedBox(),
+      ),
     );
   }
 
@@ -524,6 +599,22 @@ class _ImageEditorScreenState
     // picture still shows, contained, so the page never blanks.
     if (size == null) return canvas;
 
+    // Rounded corners and a sunken rim, so the picture reads as set into the
+    // page the way every other surface in the app is. Both live *outside* the
+    // repaint boundary on purpose: the frame is the app's, not the photo's, and
+    // baking rounded corners into an exported file would be a bug.
+    canvas = DecoratedBox(
+      decoration: context.neuRaised(
+        radius: Dimens.radiusCard,
+        depth: 0.8,
+        inset: true,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Dimens.radiusCard),
+        child: canvas,
+      ),
+    );
+
     if (_tool == _EditorTool.draw) {
       final painted = canvas;
       // The builder sits inside the aspect ratio, so its constraints *are* the
@@ -564,22 +655,14 @@ class _ImageEditorScreenState
           mainAxisSize: MainAxisSize.min,
           spacing: 8,
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              // Clips at the viewport, so the padding is what keeps the chips'
-              // shadow pair from being sliced off at the edges.
-              padding: _scrollerPadding,
-              child: Row(
-                spacing: 8,
-                children: [
-                  for (final tool in _EditorTool.values)
-                    NeuChip(
-                      label: _toolLabel(tool, l10n),
-                      isSelected: _tool == tool,
-                      onTap: () => _selectTool(tool),
-                    ),
-                ],
-              ),
+            // Every tool visible at once, no sideways scrolling: a tool you
+            // have to drag a row to find is a tool most people never learn is
+            // there — and Draw was the one off the end of that row.
+            Row(
+              children: [
+                for (final tool in _EditorTool.values)
+                  Expanded(child: _toolButton(tool, l10n)),
+              ],
             ),
             switch (_tool) {
               _EditorTool.crop => _buildCropPanel(l10n),
@@ -592,6 +675,56 @@ class _ImageEditorScreenState
         ),
       ),
     ).contentConstrainedBox();
+  }
+
+  /// One cell of the tool bar: icon over label, lit and sunken when it is the
+  /// tool in hand.
+  ///
+  /// The icon carries the meaning at a glance and the label removes the guess —
+  /// an icon-only bar would make the two flips and the two grading tools a
+  /// memory game.
+  Widget _toolButton(_EditorTool tool, AppLocalizations l10n) {
+    final isSelected = _tool == tool;
+    final scheme = context.theme.colorScheme;
+    final foreground = isSelected ? scheme.onPrimary : scheme.onSurface;
+
+    return Padding(
+      // Room for the shadow pair, which a tight Row would otherwise clip
+      // against its neighbour.
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+      child: NeuPress(
+        onTap: () => _selectTool(tool),
+        builder: (context, pressed) => AnimatedContainer(
+          duration: NeuPress.duration,
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+          decoration: context.neuRaised(
+            radius: Dimens.radiusControlSmall,
+            depth: pressed ? 0 : 0.6,
+            color: isSelected ? scheme.primary : null,
+            inset: isSelected,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_toolIcon(tool), size: 20, color: foreground),
+              const SizedBox(height: 4),
+              Text(
+                _toolLabel(tool, l10n),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildCropPanel(AppLocalizations l10n) {
@@ -620,7 +753,7 @@ class _ImageEditorScreenState
             Expanded(
               child: NeuButton(
                 expand: true,
-                onPressed: () => _selectTool(_EditorTool.adjust),
+                onPressed: () => _setTool(_EditorTool.adjust),
                 child: Text(l10n.cancel),
               ),
             ),
@@ -654,20 +787,33 @@ class _ImageEditorScreenState
             children: [
               for (final color in _brushColors)
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => _brushColor = color),
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      // White has to be told apart from the card behind it, and
-                      // the chosen colour from the rest — one ring does both.
-                      border: Border.all(
-                        color: _brushColor == color
-                            ? scheme.primary
-                            : scheme.onSurface.withValues(alpha: 0.25),
-                        width: _brushColor == color ? 3 : 1,
+                  // 44 square of touch around a 28 dot: the dot is the smallest
+                  // thing on the page, and a swatch you have to aim at is a
+                  // swatch you pick wrong.
+                  child: SizedBox.square(
+                    dimension: 44,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: NeuPress.duration,
+                        curve: Curves.easeOut,
+                        width: _brushColor == color ? 34 : 28,
+                        height: _brushColor == color ? 34 : 28,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          // White has to be told apart from the card behind it,
+                          // and the chosen colour from the rest — one ring does
+                          // both, and the size does it again from across the
+                          // room.
+                          border: Border.all(
+                            color: _brushColor == color
+                                ? scheme.primary
+                                : scheme.onSurface.withValues(alpha: 0.25),
+                            width: _brushColor == color ? 3 : 1,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -725,17 +871,43 @@ class _ImageEditorScreenState
       (ImageGeometryOp.flipVertical, Icons.flip_rounded),
     ];
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         for (final (op, icon) in ops)
-          NeuButton(
-            onPressed: () => vm.applyGeometryOp(op),
-            padding: const EdgeInsets.all(14),
-            child: Transform.rotate(
-              // The two flips share one icon; the quarter turn is what tells
-              // the vertical one apart, as it does in the system photo editors.
-              angle: op == ImageGeometryOp.flipVertical ? math.pi / 2 : 0,
-              child: Icon(icon, semanticLabel: _geometryLabel(op, l10n)),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: NeuButton(
+                expand: true,
+                onPressed: () => vm.applyGeometryOp(op),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.rotate(
+                      // The two flips share one icon; the quarter turn is what
+                      // tells the vertical one apart, as it does in the system
+                      // photo editors.
+                      angle: op == ImageGeometryOp.flipVertical
+                          ? math.pi / 2
+                          : 0,
+                      child: Icon(icon),
+                    ),
+                    const SizedBox(height: 4),
+                    // Labelled, because a rotated flip icon is not a word: the
+                    // two flips are indistinguishable at a glance without one.
+                    Text(
+                      _geometryLabel(op, l10n),
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
       ],
@@ -806,17 +978,36 @@ class _ImageEditorScreenState
                 Expanded(
                   child: AspectRatio(
                     aspectRatio: 1,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(Dimens.radiusSmall),
-                      child: ColorFiltered(
-                        colorFilter: ColorFilter.matrix(presetMatrix(preset)),
-                        child: Image.memory(
-                          image,
-                          fit: BoxFit.cover,
-                          gaplessPlayback: true,
-                          // Decoded once at thumbnail size: a full-resolution
-                          // decode per preset would cost tens of megabytes.
-                          cacheWidth: (_thumbSize * 2).round(),
+                    child: AnimatedContainer(
+                      duration: NeuPress.duration,
+                      curve: Curves.easeOut,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          Dimens.radiusControlSmall,
+                        ),
+                        // The chosen look is framed, not just written in bold
+                        // underneath: on a row of near-identical thumbnails a
+                        // text weight is not a state.
+                        border: Border.all(
+                          color: isSelected
+                              ? context.theme.colorScheme.primary
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
+                        child: ColorFiltered(
+                          colorFilter: ColorFilter.matrix(presetMatrix(preset)),
+                          child: Image.memory(
+                            image,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            // Decoded once at thumbnail size: a full-resolution
+                            // decode per preset would cost tens of megabytes.
+                            cacheWidth: (_thumbSize * 2).round(),
+                          ),
                         ),
                       ),
                     ),
@@ -849,12 +1040,23 @@ class _ImageEditorScreenState
     required double value,
     required ValueChanged<double> onChanged,
   }) {
+    final isNeutral = value == 0;
     return Row(
       children: [
         Icon(icon, size: 18),
         const SizedBox(width: 8),
-        SizedBox(width: 74, child: Text(label, style: context.textTheme.title)),
+        // Flexible, not a fixed 74: a long translation or a scaled-up system
+        // font pushes a fixed column straight off the row.
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.title,
+          ),
+        ),
         Expanded(
+          flex: 3,
           child: Slider(
             value: value,
             min: -1,
@@ -862,12 +1064,35 @@ class _ImageEditorScreenState
             // 40 stops each way: fine enough to feel continuous, coarse enough
             // that the reported value is a round number.
             divisions: 80,
-            label: (value * 100).round().toString(),
+            label: _sliderValue(value),
             onChanged: onChanged,
+          ),
+        ),
+        // A permanent readout, not just the drag bubble: it says how far the
+        // picture has been pushed, and where neutral is, without touching it.
+        SizedBox(
+          width: 38,
+          child: Text(
+            _sliderValue(value),
+            textAlign: TextAlign.right,
+            style: context.textTheme.title.copyWith(
+              fontWeight: isNeutral ? FontWeight.w400 : FontWeight.w700,
+              color: isNeutral
+                  ? context.colors.disabled
+                  : context.theme.colorScheme.primary,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],
     );
+  }
+
+  /// `0`, `+20`, `-35` — the sign is what tells "warmer" from "cooler" apart at
+  /// a glance, so it is always there on a non-neutral value.
+  static String _sliderValue(double value) {
+    final percent = (value * 100).round();
+    return percent > 0 ? '+$percent' : '$percent';
   }
 
   Widget _buttonLabel(IconData icon, String label) {
@@ -883,6 +1108,14 @@ class _ImageEditorScreenState
       ],
     );
   }
+
+  IconData _toolIcon(_EditorTool tool) => switch (tool) {
+    _EditorTool.crop => Icons.crop_rounded,
+    _EditorTool.rotate => Icons.rotate_90_degrees_ccw_rounded,
+    _EditorTool.adjust => Icons.tune_rounded,
+    _EditorTool.filters => Icons.auto_awesome_rounded,
+    _EditorTool.draw => Icons.brush_rounded,
+  };
 
   String _toolLabel(_EditorTool tool, AppLocalizations l10n) => switch (tool) {
     _EditorTool.crop => l10n.crop,

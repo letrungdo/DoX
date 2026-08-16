@@ -1083,7 +1083,7 @@
     }
   },
   "imageEditor": "Chỉnh sửa ảnh",
-  "imageEditorEmptyMessage": "Chọn một ảnh để cắt, xoay, chỉnh màu và thêm bộ lọc.",
+  "imageEditorEmptyMessage": "Cắt, xoay, chỉnh màu, thêm bộ lọc và vẽ lên ảnh.",
   "imageOpenFailed": "Không mở được ảnh này. Hãy thử ảnh khác.",
   "imageEditFailed": "Không áp dụng được chỉnh sửa. Vui lòng thử lại.",
   "imageSaved": "Đã lưu ảnh của bạn.",
@@ -1091,7 +1091,7 @@
   "undo": "Hoàn tác",
   "more": "Thêm",
   "rotate": "Xoay",
-  "adjust": "Chỉnh màu",
+  "adjust": "Màu",
   "filters": "Bộ lọc",
   "brightness": "Độ sáng",
   "contrast": "Tương phản",
@@ -1113,5 +1113,9 @@
   "imageEditorTab": "Ảnh",
   "draw": "Vẽ",
   "brushSize": "Cỡ nét",
-  "apply": "Áp dụng"
+  "apply": "Áp dụng",
+  "imageEditorEmptyTitle": "Bắt đầu với một tấm ảnh",
+  "discardDrawing": "Bỏ nét vẽ?",
+  "discardDrawingMessage": "Những nét chưa áp dụng sẽ bị mất.",
+  "discard": "Bỏ"
 }

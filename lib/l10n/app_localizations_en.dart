@@ -1839,7 +1839,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get imageEditorEmptyMessage =>
-      'Pick a photo to crop, straighten, adjust and filter it.';
+      'Crop it, straighten it, grade it, filter it, draw on it.';
 
   @override
   String get imageOpenFailed => 'Couldn\'t open that picture. Try another one.';
@@ -1864,7 +1864,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rotate => 'Rotate';
 
   @override
-  String get adjust => 'Adjust';
+  String get adjust => 'Colour';
 
   @override
   String get filters => 'Filters';
@@ -1932,4 +1932,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apply => 'Apply';
+
+  @override
+  String get imageEditorEmptyTitle => 'Start with a photo';
+
+  @override
+  String get discardDrawing => 'Discard the drawing?';
+
+  @override
+  String get discardDrawingMessage =>
+      'The strokes you haven\'t applied yet will be lost.';
+
+  @override
+  String get discard => 'Discard';
 }

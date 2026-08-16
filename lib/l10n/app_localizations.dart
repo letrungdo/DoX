@@ -3329,7 +3329,7 @@ abstract class AppLocalizations {
   /// No description provided for @imageEditorEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Pick a photo to crop, straighten, adjust and filter it.'**
+  /// **'Crop it, straighten it, grade it, filter it, draw on it.'**
   String get imageEditorEmptyMessage;
 
   /// No description provided for @imageOpenFailed.
@@ -3377,7 +3377,7 @@ abstract class AppLocalizations {
   /// No description provided for @adjust.
   ///
   /// In en, this message translates to:
-  /// **'Adjust'**
+  /// **'Colour'**
   String get adjust;
 
   /// No description provided for @filters.
@@ -3511,6 +3511,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply'**
   String get apply;
+
+  /// No description provided for @imageEditorEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a photo'**
+  String get imageEditorEmptyTitle;
+
+  /// No description provided for @discardDrawing.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard the drawing?'**
+  String get discardDrawing;
+
+  /// No description provided for @discardDrawingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The strokes you haven\'t applied yet will be lost.'**
+  String get discardDrawingMessage;
+
+  /// No description provided for @discard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discard;
 }
 
 class _AppLocalizationsDelegate

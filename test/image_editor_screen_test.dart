@@ -68,15 +68,15 @@ void main() {
   ) async {
     await _pump(tester);
 
-    IconButton button(IconData icon) =>
-        tester.widget<IconButton>(find.widgetWithIcon(IconButton, icon));
+    NeuIconButton button(IconData icon) =>
+        tester.widget<NeuIconButton>(find.widgetWithIcon(NeuIconButton, icon));
 
     // Sharing nothing, and undoing an edit that was never made, are the two
     // taps an empty editor has to refuse.
     expect(button(Icons.ios_share_rounded).onPressed, isNull);
     expect(button(Icons.undo_rounded).onPressed, isNull);
     // Picking a picture is still on offer from the app bar.
-    expect(button(Icons.more_vert_rounded).onPressed, isNotNull);
+    expect(button(Icons.more_horiz_rounded).onPressed, isNotNull);
   });
 
   testWidgets('a picture brings up the tools, sharing included', (
@@ -84,13 +84,13 @@ void main() {
   ) async {
     await _withPicture(tester);
 
-    for (final tool in ['Cắt', 'Xoay', 'Chỉnh màu', 'Bộ lọc', 'Vẽ']) {
+    for (final tool in ['Cắt', 'Xoay', 'Màu', 'Bộ lọc', 'Vẽ']) {
       expect(find.text(tool), findsWidgets, reason: 'missing the $tool tool');
     }
     expect(
       tester
-          .widget<IconButton>(
-            find.widgetWithIcon(IconButton, Icons.ios_share_rounded),
+          .widget<NeuIconButton>(
+            find.widgetWithIcon(NeuIconButton, Icons.ios_share_rounded),
           )
           .onPressed,
       isNotNull,
@@ -100,10 +100,6 @@ void main() {
   testWidgets('drawing a stroke is what arms the apply action', (tester) async {
     await _withPicture(tester);
 
-    // Five tools in a scrolling row: on this surface the last one starts off
-    // the edge of the panel.
-    await tester.ensureVisible(find.text('Vẽ'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Vẽ'));
     await tester.pumpAndSettle();
 
@@ -128,8 +124,6 @@ void main() {
   ) async {
     await _withPicture(tester, textScale: 2);
 
-    await tester.ensureVisible(find.text('Bộ lọc'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Bộ lọc'));
     await tester.pumpAndSettle();
 
@@ -159,5 +153,53 @@ void main() {
       ),
       findsWidgets,
     );
+  });
+
+  testWidgets('leaving the draw tool asks before dropping the strokes', (
+    tester,
+  ) async {
+    await _withPicture(tester);
+    await tester.tap(find.text('Vẽ'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(AspectRatio), const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Xoay'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bỏ nét vẽ?'), findsOneWidget);
+
+    // Backing out of the question leaves the drawing — and the tool — alone.
+    await tester.tap(find.text('Hủy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Áp dụng'), findsOneWidget);
+
+    await tester.tap(find.text('Xoay'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bỏ'));
+    await tester.pumpAndSettle();
+    expect(find.text('Áp dụng'), findsNothing);
+    expect(find.text('Xoay trái'), findsOneWidget);
+  });
+
+  testWidgets('every tool panel fits the page at a large text size', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1125, 2436);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await _withPicture(tester, textScale: 1.6);
+
+    for (final tool in ['Xoay', 'Màu', 'Bộ lọc', 'Vẽ', 'Cắt']) {
+      await tester.tap(find.text(tool));
+      // pump, not pumpAndSettle: the crop widget keeps an image-stream frame
+      // callback alive, so settling never returns once that tool is open.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'the $tool panel overflows',
+      );
+    }
   });
 }

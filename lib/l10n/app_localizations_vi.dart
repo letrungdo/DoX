@@ -1832,7 +1832,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get imageEditorEmptyMessage =>
-      'Chọn một ảnh để cắt, xoay, chỉnh màu và thêm bộ lọc.';
+      'Cắt, xoay, chỉnh màu, thêm bộ lọc và vẽ lên ảnh.';
 
   @override
   String get imageOpenFailed => 'Không mở được ảnh này. Hãy thử ảnh khác.';
@@ -1857,7 +1857,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get rotate => 'Xoay';
 
   @override
-  String get adjust => 'Chỉnh màu';
+  String get adjust => 'Màu';
 
   @override
   String get filters => 'Bộ lọc';
@@ -1924,4 +1924,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get apply => 'Áp dụng';
+
+  @override
+  String get imageEditorEmptyTitle => 'Bắt đầu với một tấm ảnh';
+
+  @override
+  String get discardDrawing => 'Bỏ nét vẽ?';
+
+  @override
+  String get discardDrawingMessage => 'Những nét chưa áp dụng sẽ bị mất.';
+
+  @override
+  String get discard => 'Bỏ';
 }

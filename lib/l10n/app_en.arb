@@ -1125,7 +1125,7 @@
     }
   },
   "imageEditor": "Image editor",
-  "imageEditorEmptyMessage": "Pick a photo to crop, straighten, adjust and filter it.",
+  "imageEditorEmptyMessage": "Crop it, straighten it, grade it, filter it, draw on it.",
   "imageOpenFailed": "Couldn't open that picture. Try another one.",
   "imageEditFailed": "Couldn't apply that edit. Please try again.",
   "imageSaved": "Your picture has been saved.",
@@ -1133,7 +1133,7 @@
   "undo": "Undo",
   "more": "More",
   "rotate": "Rotate",
-  "adjust": "Adjust",
+  "adjust": "Colour",
   "filters": "Filters",
   "brightness": "Brightness",
   "contrast": "Contrast",
@@ -1155,5 +1155,9 @@
   "imageEditorTab": "Photo",
   "draw": "Draw",
   "brushSize": "Brush size",
-  "apply": "Apply"
+  "apply": "Apply",
+  "imageEditorEmptyTitle": "Start with a photo",
+  "discardDrawing": "Discard the drawing?",
+  "discardDrawingMessage": "The strokes you haven't applied yet will be lost.",
+  "discard": "Discard"
 }
