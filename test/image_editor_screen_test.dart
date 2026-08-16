@@ -221,4 +221,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ColorPicker), findsNothing);
   });
+
+  testWidgets('the draw tool offers both an eyedropper and a colour picker', (
+    tester,
+  ) async {
+    await _withPicture(tester);
+    await tester.tap(find.text('Vẽ'));
+    await tester.pumpAndSettle();
+
+    // Arming the eyedropper itself is left to the device: it snapshots the
+    // preview through `RepaintBoundary.toImage`, which the test rasteriser
+    // never completes.
+    expect(find.byTooltip('Lấy màu từ ảnh'), findsOneWidget);
+    expect(find.byTooltip('Màu tuỳ chỉnh'), findsOneWidget);
+  });
 }

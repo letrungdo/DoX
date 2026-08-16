@@ -177,6 +177,17 @@ class _ImageEditorScreenState
   /// gone back to without opening the picker again.
   Color? _customColor;
 
+  /// Eyedropper state. The preview is snapshotted once when the mode opens and
+  /// every sample is then a lookup into those pixels — sampling per frame off
+  /// the live render tree would stutter under the finger.
+  bool _isPicking = false;
+  ByteData? _pickPixels;
+  int _pickWidth = 0;
+  int _pickHeight = 0;
+
+  /// Where the finger is, in fractions of the canvas, while sampling.
+  Offset? _pickPoint;
+
   /// Fraction of the picture's shorter edge, so a brush stays the same
   /// thickness relative to the picture whatever size it is shown at.
   double _brushWidth = 0.012;
@@ -218,6 +229,11 @@ class _ImageEditorScreenState
         _cropController = null;
       }
       if (tool != _EditorTool.draw) _clearStrokes();
+      // An armed eyedropper belongs to the canvas it snapshotted; leaving the
+      // brush behind leaves it behind too.
+      _isPicking = false;
+      _pickPixels = null;
+      _pickPoint = null;
     });
   }
 
@@ -634,6 +650,25 @@ class _ImageEditorScreenState
       canvas = LayoutBuilder(
         builder: (context, constraints) {
           final box = constraints.biggest;
+          if (_isPicking) {
+            // A raw Listener, not a gesture: sampling has to follow the finger
+            // from the moment it lands, with no arena to win and no slop to
+            // travel first.
+            return Listener(
+              onPointerDown: (event) =>
+                  _sampleColorAt(_normalize(event.localPosition, box)),
+              onPointerMove: (event) =>
+                  _sampleColorAt(_normalize(event.localPosition, box)),
+              onPointerUp: (_) => _endColorPick(),
+              onPointerCancel: (_) => _endColorPick(),
+              child: Stack(
+                children: [
+                  painted,
+                  if (_pickPoint != null) _pickLoupe(_pickPoint!, box),
+                ],
+              ),
+            );
+          }
           return GestureDetector(
             onPanStart: (details) =>
                 _startStroke(_normalize(details.localPosition, box)),
@@ -646,6 +681,39 @@ class _ImageEditorScreenState
       );
     }
     return AspectRatio(aspectRatio: size.aspectRatio, child: canvas);
+  }
+
+  /// The colour under the finger, held above it where the finger isn't
+  /// covering it — otherwise the one pixel being sampled is the one pixel the
+  /// user cannot see.
+  Widget _pickLoupe(Offset point, Size box) {
+    const diameter = 46.0;
+    const lift = 58.0;
+    final center = Offset(point.dx * box.width, point.dy * box.height);
+    return Positioned(
+      left: (center.dx - diameter / 2).clamp(0.0, box.width - diameter),
+      top: (center.dy - lift).clamp(0.0, box.height - diameter),
+      child: IgnorePointer(
+        child: Container(
+          width: diameter,
+          height: diameter,
+          decoration: BoxDecoration(
+            color: _brushColor,
+            shape: BoxShape.circle,
+            // Two rims, light over dark: the sampled colour can be anything, so
+            // one rim alone would vanish against some of them.
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66000000),
+                blurRadius: 6,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// A touch as a fraction of the canvas, clipped to it: a finger that slides
@@ -833,6 +901,71 @@ class _ImageEditorScreenState
     return tooltip == null ? swatch : Tooltip(message: tooltip, child: swatch);
   }
 
+  /// Arms the eyedropper: snapshots the preview so the next touch can read the
+  /// colour under it.
+  ///
+  /// The snapshot is of what is on screen — grade, filter and any strokes
+  /// included — so the colour that comes back is the colour the user is
+  /// pointing at, not the one buried in the original file.
+  Future<void> _startColorPick() async {
+    final boundary =
+        _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null || _isPicking) return;
+    try {
+      final snapshot = await boundary.toImage();
+      final pixels = await snapshot.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      );
+      final width = snapshot.width;
+      final height = snapshot.height;
+      snapshot.dispose();
+      if (pixels == null || !mounted) return;
+      setState(() {
+        _pickPixels = pixels;
+        _pickWidth = width;
+        _pickHeight = height;
+        _pickPoint = null;
+        _isPicking = true;
+      });
+    } catch (e, stack) {
+      logger.e('colour pick failed: $e', error: e, stackTrace: stack);
+      if (!mounted) return;
+      context.showToast(context.l10n.imageEditFailed, isError: true);
+    }
+  }
+
+  /// Loads the brush with the colour under [point] (a fraction of the canvas).
+  void _sampleColorAt(Offset point) {
+    final pixels = _pickPixels;
+    if (pixels == null || _pickWidth == 0 || _pickHeight == 0) return;
+    final x = (point.dx * _pickWidth).floor().clamp(0, _pickWidth - 1);
+    final y = (point.dy * _pickHeight).floor().clamp(0, _pickHeight - 1);
+    final offset = (y * _pickWidth + x) * 4;
+    if (offset + 3 >= pixels.lengthInBytes) return;
+    final color = Color.fromARGB(
+      pixels.getUint8(offset + 3),
+      pixels.getUint8(offset),
+      pixels.getUint8(offset + 1),
+      pixels.getUint8(offset + 2),
+    );
+    setState(() {
+      _pickPoint = point;
+      _customColor = color;
+      _brushColor = color;
+    });
+  }
+
+  /// Lifting the finger takes the colour and hands the canvas back to the
+  /// brush; the snapshot goes with it, since the next pick needs a fresh one.
+  void _endColorPick() {
+    if (!_isPicking) return;
+    setState(() {
+      _isPicking = false;
+      _pickPixels = null;
+      _pickPoint = null;
+    });
+  }
+
   /// Opens the app's colour picker — the same one My Life uses for overlay
   /// colours — starting on whatever the brush is currently loaded with.
   Future<void> _pickCustomColor() async {
@@ -924,8 +1057,8 @@ class _ImageEditorScreenState
                     onTap: () => setState(() => _brushColor = color),
                   ),
                 ),
-              // The eight presets cover annotation; anything else — matching a
-              // colour already in the photo, a brand colour — comes from here.
+              // The six presets cover annotation; anything else — a brand
+              // colour, a shade mixed by eye — comes from these two.
               Expanded(
                 child: _brushSwatch(
                   color: _customColor,
@@ -934,22 +1067,62 @@ class _ImageEditorScreenState
                   tooltip: l10n.customColor,
                   onTap: _pickCustomColor,
                   child: Icon(
-                    Icons.colorize_rounded,
+                    Icons.palette_rounded,
                     size: 15,
                     color: _customColor?.getTextColor() ?? Colors.white,
+                  ),
+                ),
+              ),
+              // The eyedropper: for annotating *this* photo, the colour that
+              // matches is almost always already somewhere in it.
+              Expanded(
+                child: _brushSwatch(
+                  color: _isPicking ? _brushColor : null,
+                  isSelected: _isPicking,
+                  tooltip: l10n.pickColorFromPhoto,
+                  onTap: _startColorPick,
+                  child: Icon(
+                    Icons.colorize_rounded,
+                    size: 15,
+                    color: _isPicking
+                        ? _brushColor.getTextColor()
+                        : Colors.white,
                   ),
                 ),
               ),
             ],
           ),
         ),
+        // Only while the eyedropper is armed: the canvas has stopped drawing
+        // and started sampling, and nothing else on screen says so.
+        if (_isPicking)
+          Row(
+            children: [
+              Icon(
+                Icons.touch_app_rounded,
+                size: 16,
+                color: context.theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.pickColorFromPhotoHint,
+                  style: context.textTheme.title,
+                ),
+              ),
+            ],
+          ),
         Row(
           children: [
             const Icon(Icons.brush_rounded, size: 18),
             const SizedBox(width: 8),
-            SizedBox(
-              width: 74,
-              child: Text(l10n.brushSize, style: context.textTheme.title),
+            Flexible(
+              child: Text(
+                l10n.brushSize,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.title,
+              ),
             ),
             Expanded(
               child: Slider(

@@ -1121,5 +1121,7 @@
   "customColor": "Màu tuỳ chỉnh",
   "selectColor": "Chọn màu",
   "selectColorShade": "Chọn sắc độ",
-  "selectedColorShades": "Màu đã chọn và các sắc độ"
+  "selectedColorShades": "Màu đã chọn và các sắc độ",
+  "pickColorFromPhoto": "Lấy màu từ ảnh",
+  "pickColorFromPhotoHint": "Chạm và rê trên ảnh để chọn màu, rồi nhấc tay ra."
 }

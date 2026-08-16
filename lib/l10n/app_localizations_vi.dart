@@ -1948,4 +1948,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get selectedColorShades => 'Màu đã chọn và các sắc độ';
+
+  @override
+  String get pickColorFromPhoto => 'Lấy màu từ ảnh';
+
+  @override
+  String get pickColorFromPhotoHint =>
+      'Chạm và rê trên ảnh để chọn màu, rồi nhấc tay ra.';
 }

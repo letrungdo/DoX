@@ -3559,6 +3559,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The colour and its shades'**
   String get selectedColorShades;
+
+  /// No description provided for @pickColorFromPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a colour from the photo'**
+  String get pickColorFromPhoto;
+
+  /// No description provided for @pickColorFromPhotoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch the photo and drag to find the colour, then lift.'**
+  String get pickColorFromPhotoHint;
 }
 
 class _AppLocalizationsDelegate

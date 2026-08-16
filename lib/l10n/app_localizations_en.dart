@@ -1957,4 +1957,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectedColorShades => 'The colour and its shades';
+
+  @override
+  String get pickColorFromPhoto => 'Pick a colour from the photo';
+
+  @override
+  String get pickColorFromPhotoHint =>
+      'Touch the photo and drag to find the colour, then lift.';
 }

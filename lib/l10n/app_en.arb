@@ -1163,5 +1163,7 @@
   "customColor": "Custom colour",
   "selectColor": "Pick a colour",
   "selectColorShade": "Pick a shade",
-  "selectedColorShades": "The colour and its shades"
+  "selectedColorShades": "The colour and its shades",
+  "pickColorFromPhoto": "Pick a colour from the photo",
+  "pickColorFromPhotoHint": "Touch the photo and drag to find the colour, then lift."
 }
