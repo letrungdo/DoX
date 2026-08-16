@@ -1117,5 +1117,9 @@
   "imageEditorEmptyTitle": "Bắt đầu với một tấm ảnh",
   "discardDrawing": "Bỏ nét vẽ?",
   "discardDrawingMessage": "Những nét chưa áp dụng sẽ bị mất.",
-  "discard": "Bỏ"
+  "discard": "Bỏ",
+  "customColor": "Màu tuỳ chỉnh",
+  "selectColor": "Chọn màu",
+  "selectColorShade": "Chọn sắc độ",
+  "selectedColorShades": "Màu đã chọn và các sắc độ"
 }

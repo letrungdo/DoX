@@ -1945,4 +1945,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discard => 'Discard';
+
+  @override
+  String get customColor => 'Custom colour';
+
+  @override
+  String get selectColor => 'Pick a colour';
+
+  @override
+  String get selectColorShade => 'Pick a shade';
+
+  @override
+  String get selectedColorShades => 'The colour and its shades';
 }

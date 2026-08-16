@@ -1936,4 +1936,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get discard => 'Bỏ';
+
+  @override
+  String get customColor => 'Màu tuỳ chỉnh';
+
+  @override
+  String get selectColor => 'Chọn màu';
+
+  @override
+  String get selectColorShade => 'Chọn sắc độ';
+
+  @override
+  String get selectedColorShades => 'Màu đã chọn và các sắc độ';
 }

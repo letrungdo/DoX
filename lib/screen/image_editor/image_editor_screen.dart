@@ -5,22 +5,25 @@ import 'dart:ui' as ui;
 import 'package:auto_route/auto_route.dart';
 import 'package:crop_image/crop_image.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/color_extensions.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/utils/image_edit.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/image_editor_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
@@ -29,15 +32,17 @@ import 'package:provider/provider.dart';
 /// The editor's tool groups, one panel each.
 enum _EditorTool { crop, rotate, adjust, filters, draw }
 
-/// The colours the brush offers. A fixed set rather than a picker: on a picture
-/// these have to stay legible, and eight strong hues cover annotation.
+/// The colours the brush keeps to hand.
+///
+/// Six, not a dozen: the row has to fit a phone's width without scrolling, and
+/// a swatch off the edge of a row is a swatch nobody finds. These six are the
+/// ones that stay legible over a photograph — everything else comes from the
+/// custom swatch at the end of the row.
 const _brushColors = <Color>[
   Color(0xFFFF3B30),
-  Color(0xFFFF9500),
   Color(0xFFFFCC00),
   Color(0xFF34C759),
   Color(0xFF007AFF),
-  Color(0xFFAF52DE),
   Color(0xFF000000),
   Color(0xFFFFFFFF),
 ];
@@ -167,6 +172,10 @@ class _ImageEditorScreenState
   final _strokes = <_Stroke>[];
   _Stroke? _activeStroke;
   Color _brushColor = _brushColors.first;
+
+  /// The colour the user mixed themselves, kept in the last swatch so it can be
+  /// gone back to without opening the picker again.
+  Color? _customColor;
 
   /// Fraction of the picture's shorter edge, so a brush stays the same
   /// thickness relative to the picture whatever size it is shown at.
@@ -389,6 +398,7 @@ class _ImageEditorScreenState
           NeuIconButton(
             icon: Icons.undo_rounded,
             size: Dimens.appBarActionSize,
+            iconSize: 18,
             depth: Dimens.appBarActionDepth,
             tooltip: l10n.undo,
             onPressed: vm.canUndo && !busy ? vm.undo : null,
@@ -398,14 +408,16 @@ class _ImageEditorScreenState
             key: _saveButtonKey,
             icon: Icons.ios_share_rounded,
             size: Dimens.appBarActionSize,
+            iconSize: 18,
             depth: Dimens.appBarActionDepth,
             tooltip: l10n.save,
             onPressed: vm.hasImage && !busy ? _save : null,
           ),
           const SizedBox(width: 8),
           NeuIconButton(
-            icon: Icons.more_horiz_rounded,
+            icon: Icons.more_vert_rounded,
             size: Dimens.appBarActionSize,
+            iconSize: 18,
             depth: Dimens.appBarActionDepth,
             tooltip: l10n.more,
             onPressed: busy ? null : _showMoreActions,
@@ -771,53 +783,163 @@ class _ImageEditorScreenState
     );
   }
 
+  /// One brush colour.
+  ///
+  /// A 44 square of touch around a 28 dot: the dot is the smallest thing on the
+  /// page, and a swatch you have to aim at is a swatch you pick wrong. A null
+  /// [color] is the custom slot before anything has been picked — it shows the
+  /// spectrum instead of a colour.
+  Widget _brushSwatch({
+    required Color? color,
+    required bool isSelected,
+    required VoidCallback onTap,
+    String? tooltip,
+    Widget? child,
+  }) {
+    final scheme = context.theme.colorScheme;
+    final swatch = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        // Height stays at the 44 minimum; the width is whatever share of the
+        // row this swatch was given, all of it tappable.
+        height: 44,
+        child: Center(
+          child: AnimatedContainer(
+            duration: NeuPress.duration,
+            curve: Curves.easeOut,
+            width: isSelected ? 34 : 28,
+            height: isSelected ? 34 : 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color,
+              gradient: color == null ? _spectrum : null,
+              shape: BoxShape.circle,
+              // White has to be told apart from the card behind it, and the
+              // chosen colour from the rest — one ring does both, and the size
+              // does it again from across the room.
+              border: Border.all(
+                color: isSelected
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.25),
+                width: isSelected ? 3 : 1,
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+    return tooltip == null ? swatch : Tooltip(message: tooltip, child: swatch);
+  }
+
+  /// Opens the app's colour picker — the same one My Life uses for overlay
+  /// colours — starting on whatever the brush is currently loaded with.
+  Future<void> _pickCustomColor() async {
+    final l10n = context.l10n;
+    final textTheme = context.theme.textTheme;
+    var picked = _customColor ?? _brushColor;
+
+    final confirmed = await showAppModal<bool>(
+      context,
+      builder: (dialogContext) => AppDialog(
+        contentPadding: EdgeInsets.zero,
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            color: picked,
+            onColorChanged: (color) => picked = color,
+            width: 40,
+            height: 40,
+            borderRadius: 4,
+            spacing: 5,
+            runSpacing: 5,
+            wheelDiameter: 155,
+            heading: Text(l10n.selectColor, style: textTheme.titleSmall),
+            subheading: Text(
+              l10n.selectColorShade,
+              style: textTheme.titleSmall,
+            ),
+            wheelSubheading: Text(
+              l10n.selectedColorShades,
+              style: textTheme.titleSmall,
+            ),
+            copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+              longPressMenu: true,
+            ),
+            materialNameTextStyle: textTheme.bodySmall,
+            colorNameTextStyle: textTheme.bodySmall,
+            colorCodeTextStyle: textTheme.bodySmall,
+            pickersEnabled: const <ColorPickerType, bool>{
+              ColorPickerType.both: false,
+              ColorPickerType.primary: true,
+              ColorPickerType.accent: true,
+              ColorPickerType.bw: true,
+              ColorPickerType.custom: false,
+              // The wheel is the point of this dialog: any colour in the photo
+              // can be matched by eye.
+              ColorPickerType.wheel: true,
+            },
+          ),
+        ),
+        actions: [
+          DialogActionButton(
+            text: l10n.cancel,
+            kind: DialogActionKind.cancel,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+          ),
+          DialogActionButton(
+            text: l10n.ok,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _customColor = picked;
+      _brushColor = picked;
+    });
+  }
+
   Widget _buildDrawPanel(AppLocalizations l10n) {
     final scheme = context.theme.colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       spacing: 8,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        Padding(
           // Same inset as the chip rows above, so every row in the panel starts
           // on the same line.
           padding: _scrollerPadding,
+          // One row, no scrolling: the swatches share the width out between
+          // them, so the custom one at the end is always in sight instead of
+          // hiding off the edge where nobody would think to look.
           child: Row(
-            spacing: 10,
             children: [
               for (final color in _brushColors)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _brushColor = color),
-                  // 44 square of touch around a 28 dot: the dot is the smallest
-                  // thing on the page, and a swatch you have to aim at is a
-                  // swatch you pick wrong.
-                  child: SizedBox.square(
-                    dimension: 44,
-                    child: Center(
-                      child: AnimatedContainer(
-                        duration: NeuPress.duration,
-                        curve: Curves.easeOut,
-                        width: _brushColor == color ? 34 : 28,
-                        height: _brushColor == color ? 34 : 28,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          // White has to be told apart from the card behind it,
-                          // and the chosen colour from the rest — one ring does
-                          // both, and the size does it again from across the
-                          // room.
-                          border: Border.all(
-                            color: _brushColor == color
-                                ? scheme.primary
-                                : scheme.onSurface.withValues(alpha: 0.25),
-                            width: _brushColor == color ? 3 : 1,
-                          ),
-                        ),
-                      ),
-                    ),
+                Expanded(
+                  child: _brushSwatch(
+                    color: color,
+                    isSelected: _brushColor == color,
+                    onTap: () => setState(() => _brushColor = color),
                   ),
                 ),
+              // The eight presets cover annotation; anything else — matching a
+              // colour already in the photo, a brand colour — comes from here.
+              Expanded(
+                child: _brushSwatch(
+                  color: _customColor,
+                  isSelected:
+                      _customColor != null && _brushColor == _customColor,
+                  tooltip: l10n.customColor,
+                  onTap: _pickCustomColor,
+                  child: Icon(
+                    Icons.colorize_rounded,
+                    size: 15,
+                    color: _customColor?.getTextColor() ?? Colors.white,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1149,6 +1271,20 @@ enum _MoreAction { gallery, camera, reset }
 /// Room a chip's neumorphic shadow needs inside a scroller, which clips at its
 /// own edge. Matches the inset the movie screen's chip rows use.
 const _scrollerPadding = EdgeInsets.symmetric(horizontal: 6, vertical: 4);
+
+/// Fills the custom swatch before a colour has been mixed: the spectrum reads
+/// as "any colour", where a grey dot would read as "no colour".
+const _spectrum = SweepGradient(
+  colors: [
+    Color(0xFFFF3B30),
+    Color(0xFFFFCC00),
+    Color(0xFF34C759),
+    Color(0xFF00C7BE),
+    Color(0xFF007AFF),
+    Color(0xFFAF52DE),
+    Color(0xFFFF3B30),
+  ],
+);
 
 /// Width of the tool panel when it sits beside the picture in landscape.
 const _panelWidth = 320.0;

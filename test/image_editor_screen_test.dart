@@ -6,6 +6,7 @@ import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/image_editor_view_model.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -76,7 +77,7 @@ void main() {
     expect(button(Icons.ios_share_rounded).onPressed, isNull);
     expect(button(Icons.undo_rounded).onPressed, isNull);
     // Picking a picture is still on offer from the app bar.
-    expect(button(Icons.more_horiz_rounded).onPressed, isNotNull);
+    expect(button(Icons.more_vert_rounded).onPressed, isNotNull);
   });
 
   testWidgets('a picture brings up the tools, sharing included', (
@@ -201,5 +202,23 @@ void main() {
         reason: 'the $tool panel overflows',
       );
     }
+  });
+
+  testWidgets('the last brush swatch opens the app colour picker', (
+    tester,
+  ) async {
+    await _withPicture(tester);
+    await tester.tap(find.text('Vẽ'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Màu tuỳ chỉnh'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ColorPicker), findsOneWidget);
+    expect(find.text('Chọn màu'), findsOneWidget);
+
+    // Backing out leaves the brush on the preset it was already holding.
+    await tester.tap(find.text('Hủy'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ColorPicker), findsNothing);
   });
 }

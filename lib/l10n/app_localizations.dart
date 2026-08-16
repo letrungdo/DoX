@@ -3535,6 +3535,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discard'**
   String get discard;
+
+  /// No description provided for @customColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom colour'**
+  String get customColor;
+
+  /// No description provided for @selectColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a colour'**
+  String get selectColor;
+
+  /// No description provided for @selectColorShade.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a shade'**
+  String get selectColorShade;
+
+  /// No description provided for @selectedColorShades.
+  ///
+  /// In en, this message translates to:
+  /// **'The colour and its shades'**
+  String get selectedColorShades;
 }
 
 class _AppLocalizationsDelegate

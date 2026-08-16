@@ -1159,5 +1159,9 @@
   "imageEditorEmptyTitle": "Start with a photo",
   "discardDrawing": "Discard the drawing?",
   "discardDrawingMessage": "The strokes you haven't applied yet will be lost.",
-  "discard": "Discard"
+  "discard": "Discard",
+  "customColor": "Custom colour",
+  "selectColor": "Pick a colour",
+  "selectColorShade": "Pick a shade",
+  "selectedColorShades": "The colour and its shades"
 }
