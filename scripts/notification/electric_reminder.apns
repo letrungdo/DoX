@@ -1,0 +1,15 @@
+{
+  "Simulator Target Bundle": "vn.dox.app",
+  "aps": {
+    "alert": {
+      "title": "Đến kỳ chốt tiền điện ⚡",
+      "body": "Xem điện năng tiêu thụ và tiền điện tháng vừa rồi trong app nhé!"
+    },
+    "sound": "default"
+  },
+  "NotificationId": 236896257,
+  "presentAlert": true,
+  "presentSound": true,
+  "presentBadge": false,
+  "payload": "electric:last-month"
+}

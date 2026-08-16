@@ -62,18 +62,7 @@ class _MyAppState extends State<MyApp> {
     notificationService.electricNotificationMonth.value = null;
 
     appVm.requestElectricMonth(month);
-    // The page is only reachable as a tab when the user kept it in the bottom
-    // bar; otherwise it lives in the menu and has to be pushed.
-    final isTab = appVm.tabPages.contains(AppPage.electric);
-    if (isTab) storageService.setActiveTabPage(AppPage.electric.name);
-
-    _afterFrame(() {
-      if (isTab) {
-        appRouter.navigate(const MainRoute(children: [ElectricRoute()]));
-      } else {
-        appRouter.push(const ElectricRoute());
-      }
-    });
+    _afterFrame(() => _showPage(AppPage.electric, const ElectricRoute()));
   }
 
   /// A tapped shared-activity push opens the chicken page on the data of the
@@ -84,7 +73,7 @@ class _MyAppState extends State<MyApp> {
     notificationService.sharedActivityOwnerId.value = null;
 
     _afterFrame(() {
-      _showChickenPage();
+      _showPage(AppPage.chicken, const ChickenRoute());
       // After the navigation, so the page is already on screen while the
       // owner's records load in behind it.
       chickenVm.selectOwner(ownerId);
@@ -103,34 +92,35 @@ class _MyAppState extends State<MyApp> {
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 
-  /// Brings the chicken page to the front from wherever the app was.
+  /// Brings [page] to the front from wherever the app was, for a notification
+  /// that names it. Never stacks a second copy of a page already open.
   ///
-  /// The page is a tab only while the user keeps it in the bottom bar,
-  /// otherwise it lives in the menu and is pushed. Switching tab goes through
-  /// the tabs router, the way the bottom bar itself does: the tab is a child
-  /// of a shell route, which `navigate` resolves to the root-stack copy of the
-  /// page instead of to the tab.
-  void _showChickenPage() {
-    final index = appVm.visibleTabs.indexOf(AppPage.chicken);
+  /// A page is a tab only while the user keeps it in the bottom bar, otherwise
+  /// it lives in the menu and is pushed. Switching tab goes through the tabs
+  /// router, the way the bottom bar itself does: a tab can be a child of a
+  /// shell route, which `navigate` resolves to the root-stack copy of the page
+  /// instead of to the tab.
+  void _showPage(AppPage page, PageRouteInfo route) {
+    final index = appVm.visibleTabs.indexOf(page);
     final tabsRouter = appRouter.innerRouterOf<TabsRouter>(MainRoute.name);
     if (index < 0 || tabsRouter == null) {
       // From the menu the page is pushed — unless it is already open, in which
       // case come back to it rather than stack a second copy of it.
-      if (appRouter.stackData.any((data) => data.name == ChickenRoute.name)) {
-        appRouter.popUntilRouteWithName(ChickenRoute.name);
+      if (appRouter.stackData.any((data) => data.name == route.routeName)) {
+        appRouter.popUntilRouteWithName(route.routeName);
       } else {
-        appRouter.push(const ChickenRoute());
+        appRouter.push(route);
       }
       return;
     }
 
-    storageService.setActiveTabPage(AppPage.chicken.name);
+    storageService.setActiveTabPage(page.name);
     // Anything sitting on top of the bottom bar — a pushed page, a settings
     // screen — would otherwise hide the tab we just switched to.
     appRouter.popUntilRouteWithName(MainRoute.name);
     tabsRouter.setActiveIndex(index);
-    // The tab keeps its own stack, so it can still be showing a batch detail
-    // from last time.
+    // A tab keeps its own stack, so it can still be showing a detail page from
+    // last time.
     tabsRouter.stackRouterOfIndex(index)?.popUntilRoot();
   }
 
