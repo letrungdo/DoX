@@ -1,0 +1,14 @@
+{
+  "Simulator Target Bundle": "vn.dox.app",
+  "aps": {
+    "alert": {
+      "title": "Có gà vừa bán",
+      "body": "shared@example.com vừa bán 5 con gà — 1.250.000 đ"
+    },
+    "sound": "default"
+  },
+  "gcm.message_id": "simulator-chicken-activity-1",
+  "type": "chicken_activity",
+  "kind": "cock_sale",
+  "owner_id": "REPLACE_WITH_OWNER_UUID"
+}

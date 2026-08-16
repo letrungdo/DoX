@@ -861,7 +861,12 @@ class ChickenViewModel extends CoreViewModel {
   /// unsynced local changes hold the current source in place.
   Future<bool> selectOwner(String ownerId) async {
     if (!_auth.isSignedIn) return false;
-    if (ownerId == activeOwnerId) return true;
+    if (ownerId == activeOwnerId) {
+      // Already on that owner: the push announced a record we have not read
+      // yet, so refetch rather than show the snapshot from before it.
+      await loadData(sections: _requestedSections);
+      return true;
+    }
     try {
       if (_dataSources.isEmpty) await loadSharing();
       final source = _dataSources.firstWhereOrNull(

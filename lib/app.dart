@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/router/app_router.dart';
@@ -82,21 +83,37 @@ class _MyAppState extends State<MyApp> {
     if (ownerId == null) return;
     notificationService.sharedActivityOwnerId.value = null;
 
-    // As with the electric reminder: the page is a tab only while the user
-    // keeps it in the bottom bar, otherwise it lives in the menu.
-    final isTab = appVm.tabPages.contains(AppPage.chicken);
-    if (isTab) storageService.setActiveTabPage(AppPage.chicken.name);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isTab) {
-        appRouter.navigate(const MainRoute(children: [ChickenRoute()]));
-      } else {
-        appRouter.push(const ChickenRoute());
-      }
+      _showChickenPage();
       // After the navigation, so the page is already on screen while the
       // owner's records load in behind it.
       chickenVm.selectOwner(ownerId);
     });
+  }
+
+  /// Brings the chicken page to the front from wherever the app was.
+  ///
+  /// The page is a tab only while the user keeps it in the bottom bar,
+  /// otherwise it lives in the menu and is pushed. Switching tab goes through
+  /// the tabs router, the way the bottom bar itself does: the tab is a child
+  /// of a shell route, which `navigate` resolves to the root-stack copy of the
+  /// page instead of to the tab.
+  void _showChickenPage() {
+    final index = appVm.visibleTabs.indexOf(AppPage.chicken);
+    final tabsRouter = appRouter.innerRouterOf<TabsRouter>(MainRoute.name);
+    if (index < 0 || tabsRouter == null) {
+      appRouter.push(const ChickenRoute());
+      return;
+    }
+
+    storageService.setActiveTabPage(AppPage.chicken.name);
+    // Anything sitting on top of the bottom bar — a pushed page, a settings
+    // screen — would otherwise hide the tab we just switched to.
+    appRouter.popUntilRouteWithName(MainRoute.name);
+    tabsRouter.setActiveIndex(index);
+    // The tab keeps its own stack, so it can still be showing a batch detail
+    // from last time.
+    tabsRouter.stackRouterOfIndex(index)?.popUntilRoot();
   }
 
   @override
