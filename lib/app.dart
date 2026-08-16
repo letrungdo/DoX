@@ -67,7 +67,7 @@ class _MyAppState extends State<MyApp> {
     final isTab = appVm.tabPages.contains(AppPage.electric);
     if (isTab) storageService.setActiveTabPage(AppPage.electric.name);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _afterFrame(() {
       if (isTab) {
         appRouter.navigate(const MainRoute(children: [ElectricRoute()]));
       } else {
@@ -83,12 +83,24 @@ class _MyAppState extends State<MyApp> {
     if (ownerId == null) return;
     notificationService.sharedActivityOwnerId.value = null;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _afterFrame(() {
       _showChickenPage();
       // After the navigation, so the page is already on screen while the
       // owner's records load in behind it.
       chickenVm.selectOwner(ownerId);
     });
+  }
+
+  /// Runs [action] once the frame in progress is done — the app can be mid
+  /// build when a notification arrives.
+  ///
+  /// The frame has to be *asked for*: an app sitting idle in the foreground,
+  /// which is exactly where a tapped banner finds it, draws no frames at all,
+  /// so a plain post-frame callback would wait until something else woke the
+  /// engine up — in practice the next time the app was resumed.
+  void _afterFrame(VoidCallback action) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => action());
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   /// Brings the chicken page to the front from wherever the app was.
@@ -102,7 +114,13 @@ class _MyAppState extends State<MyApp> {
     final index = appVm.visibleTabs.indexOf(AppPage.chicken);
     final tabsRouter = appRouter.innerRouterOf<TabsRouter>(MainRoute.name);
     if (index < 0 || tabsRouter == null) {
-      appRouter.push(const ChickenRoute());
+      // From the menu the page is pushed — unless it is already open, in which
+      // case come back to it rather than stack a second copy of it.
+      if (appRouter.stackData.any((data) => data.name == ChickenRoute.name)) {
+        appRouter.popUntilRouteWithName(ChickenRoute.name);
+      } else {
+        appRouter.push(const ChickenRoute());
+      }
       return;
     }
 

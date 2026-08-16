@@ -31,6 +31,8 @@ class PushNotificationService {
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 
+  bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+
   /// Starts listening for taps on a push the system drew itself, in the
   /// background or with the app closed. Independent of registration: a
   /// notification can be tapped long before the app knows what is shared with
@@ -38,6 +40,23 @@ class PushNotificationService {
   Future<void> listenForTaps() async {
     if (!isSupported || _listeningForTaps) return;
     _listeningForTaps = true;
+
+    // iOS hides a push that arrives while the app is open unless it is asked
+    // not to. Firebase Messaging is the notification centre's delegate, so it
+    // decides this for local notifications too — without it, nothing at all
+    // showed up in the foreground.
+    if (_isIOS) {
+      try {
+        await FirebaseMessaging.instance
+            .setForegroundNotificationPresentationOptions(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+      } catch (e) {
+        logger.e('set foreground push presentation failed', error: e);
+      }
+    }
 
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
       _openChickenActivity,
@@ -73,6 +92,11 @@ class PushNotificationService {
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         return;
       }
+      // On iOS the FCM token is derived from the APNs one, which arrives from
+      // Apple a moment after launch — asking for it too early throws. It never
+      // arrives at all on a simulator, where the next sign-in or refresh is a
+      // good enough time to try again.
+      if (_isIOS && !await _waitForApnsToken()) return;
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;
       await _register(token);
@@ -82,6 +106,16 @@ class PushNotificationService {
       // the app works without push, so this stays a log line.
       logger.e('register for chicken push failed', error: e);
     }
+  }
+
+  Future<bool> _waitForApnsToken() async {
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+      if (apnsToken != null) return true;
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    logger.d('no APNs token yet, skipping chicken push registration');
+    return false;
   }
 
   /// Drops this device's token. Call it *before* signing out, while the session
@@ -128,8 +162,11 @@ class PushNotificationService {
     });
 
     // Backgrounded, the system draws the notification itself. In the foreground
-    // it hands the message to the app instead, so draw it here.
+    // Android hands the message to the app instead, so draw it here. iOS shows
+    // it itself, now that the presentation options above allow it — drawing a
+    // copy would show the same sale twice.
     _messageSubscription = FirebaseMessaging.onMessage.listen((message) {
+      if (_isIOS) return;
       final notification = message.notification;
       final title = notification?.title;
       if (title == null) return;
