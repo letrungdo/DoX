@@ -232,20 +232,25 @@
   "goldPrice": "Giá vàng",
   "exchangeRate": "Tỷ giá",
   "market": "Thị trường",
+  "stormAlert": "Cảnh báo bão",
+  "stormAdvice": "Khuyến nghị",
+  "stormSeverityWatch": "Theo dõi",
+  "stormSeverityWarning": "Cảnh báo",
+  "stormSeverityEmergency": "Khẩn cấp",
   "goldNews": "Tin ảnh hưởng giá vàng",
   "goldNewsEmpty": "Chưa có bản tin cho hôm nay.",
   "goldNewsSources": "Nguồn tham khảo",
-  "goldNewsDetails": "Chi tiết ({count})",
-  "@goldNewsDetails": {
+  "newsDetails": "Chi tiết ({count})",
+  "@newsDetails": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "goldNewsCollapse": "Thu gọn",
-  "goldNewsUpdatedAt": "Tổng hợp {time}",
-  "@goldNewsUpdatedAt": {
+  "newsCollapse": "Thu gọn",
+  "newsUpdatedAt": "Tổng hợp {time}",
+  "@newsUpdatedAt": {
     "placeholders": {
       "time": {
         "type": "String"

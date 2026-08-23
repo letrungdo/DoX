@@ -15,6 +15,8 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/model/news/gold_news.dart';
+import 'package:do_x/model/news/news_source.dart';
+import 'package:do_x/model/news/storm_news.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/news/market_picker_sheet.dart';
 import 'package:do_x/screen/core/screen_state.dart';
@@ -67,6 +69,10 @@ class _NewsScreenState<V extends NewsViewModel>
   /// The digest opens collapsed: the paragraph is the headline, the bullets and
   /// their source links only come out once the reader asks for them.
   bool _isNewsExpanded = false;
+
+  /// Same for the storm bulletin: the headline and the summary carry the alert,
+  /// the per-source bullets wait behind the toggle.
+  bool _isStormExpanded = false;
 
   WebSocketService get _socketService => context.read<WebSocketService>();
 
@@ -165,6 +171,10 @@ class _NewsScreenState<V extends NewsViewModel>
   List<Widget> _buildPrice(AppLocalizations l10n) {
     final colors = context.colors;
     return [
+      // A live storm warning outranks every price on the page, so it sits above
+      // them — and takes its own vertical gap with it, since the whole section
+      // disappears whenever there is nothing to warn about.
+      _buildStormSection(l10n),
       _SectionHeader(
         icon: Icons.currency_exchange_rounded, //
         color: colors.info,
@@ -353,6 +363,169 @@ class _NewsScreenState<V extends NewsViewModel>
     );
   }
 
+  /// The storm bulletin, shown only while a storm is actually affecting
+  /// Vietnam: with nothing to warn about the view model hands back null and
+  /// the whole section — header, card and gap — is left out of the page.
+  Widget _buildStormSection(AppLocalizations l10n) {
+    return Selector<V, StormNews?>(
+      selector: (_, vm) => vm.stormNews,
+      builder: (context, news, _) {
+        if (news == null) return const SizedBox.shrink();
+        final color = _stormColor(news.severity);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              icon: Icons.cyclone_rounded, //
+              color: color,
+              title: l10n.stormAlert,
+              badge: _stormSeverityLabel(l10n, news.severity),
+            ),
+            const SizedBox(height: 10),
+            _buildStormCard(l10n, news, color),
+            const SizedBox(height: 22),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStormCard(AppLocalizations l10n, StormNews news, Color color) {
+    final lang = l10n.localeName;
+    final name = news.name(lang);
+    final headline = news.headline(lang);
+    final advice = news.advice(lang);
+    final expanded = _isStormExpanded;
+    // With no bullets there is no toggle, so nothing would ever open the
+    // advice: show it straight away instead of hiding it for good.
+    final showAdvice = expanded || news.highlights.isEmpty;
+    return NeuCard(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    name.isEmpty ? l10n.stormAlert : name,
+                    style: context.textTheme.primary.size17.bold.textColor(
+                      color,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _bulletinTime(l10n, news.updatedAt, news.date),
+                  style: context.textTheme.title.size13,
+                ),
+              ],
+            ),
+            if (headline != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                headline,
+                style: context.textTheme.primary.size16.copyWith(height: 1.4),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              news.summary(lang),
+              maxLines: expanded ? null : 3,
+              overflow: expanded ? null : TextOverflow.ellipsis,
+              style: context.textTheme.title.size15.copyWith(height: 1.45),
+            ),
+            if (advice != null && showAdvice) ...[
+              const SizedBox(height: 10),
+              _buildStormAdvice(l10n, advice, color),
+            ],
+            if (news.highlights.isNotEmpty) ...[
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                alignment: Alignment.topCenter,
+                child: expanded
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final item in news.highlights) ...[
+                            const SizedBox(height: 12),
+                            const Divider(height: 1),
+                            const SizedBox(height: 12),
+                            _buildNewsHighlight(
+                              title: item.title(lang),
+                              detail: item.detail(lang),
+                              icon: Icons.chevron_right_rounded,
+                              color: color,
+                              source: news.sourceOf(item),
+                            ),
+                          ],
+                        ],
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
+              _buildExpandToggle(
+                l10n,
+                count: news.highlights.length,
+                expanded: expanded,
+                color: color,
+                onTap: () => setState(() => _isStormExpanded = !expanded),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// What to do about it, set apart from the reporting above it: the one part
+  /// of the bulletin the reader may need to act on.
+  Widget _buildStormAdvice(AppLocalizations l10n, String advice, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.neuTint(color, amount: 0.14),
+        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 3,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 5,
+            children: [
+              Icon(Icons.shield_outlined, size: 15, color: color),
+              Text(
+                l10n.stormAdvice,
+                style: context.textTheme.secondary.size13.bold.textColor(color),
+              ),
+            ],
+          ),
+          Text(
+            advice,
+            style: context.textTheme.title.size15.copyWith(height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _stormColor(StormSeverity severity) => switch (severity) {
+    StormSeverity.watch => context.colors.info,
+    StormSeverity.warning => context.colors.warning,
+    StormSeverity.emergency => context.colors.danger,
+  };
+
+  String _stormSeverityLabel(AppLocalizations l10n, StormSeverity severity) =>
+      switch (severity) {
+        StormSeverity.watch => l10n.stormSeverityWatch,
+        StormSeverity.warning => l10n.stormSeverityWarning,
+        StormSeverity.emergency => l10n.stormSeverityEmergency,
+      };
+
   /// The daily digest: one AI paragraph, the headlines behind it, and the
   /// articles they came from. The whole thing is built server-side, in both of
   /// the app's languages, so switching language needs no extra fetch — only
@@ -388,7 +561,7 @@ class _NewsScreenState<V extends NewsViewModel>
             _buildSentimentChip(l10n, news.sentiment),
             const Spacer(),
             Text(
-              _digestTime(l10n, news),
+              _bulletinTime(l10n, news.updatedAt, news.date),
               style: context.textTheme.title.size13,
             ),
           ],
@@ -426,19 +599,29 @@ class _NewsScreenState<V extends NewsViewModel>
                   )
                 : const SizedBox(width: double.infinity),
           ),
-          _buildDigestToggle(l10n, news.highlights.length),
+          _buildExpandToggle(
+            l10n,
+            count: news.highlights.length,
+            expanded: expanded,
+            color: context.colors.info,
+            onTap: () => setState(() => _isNewsExpanded = !expanded),
+          ),
         ],
       ],
     );
   }
 
-  /// The one control that opens the digest. Collapsed it reads as "n bullets
+  /// The one control that opens a bulletin. Collapsed it reads as "n bullets
   /// waiting"; expanded it is the way back to the short card.
-  Widget _buildDigestToggle(AppLocalizations l10n, int count) {
-    final expanded = _isNewsExpanded;
-    final color = context.colors.info;
+  Widget _buildExpandToggle(
+    AppLocalizations l10n, {
+    required int count,
+    required bool expanded,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
-      onTap: () => setState(() => _isNewsExpanded = !expanded),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       child: Padding(
         padding: const EdgeInsets.only(top: 8, bottom: 2),
@@ -447,7 +630,7 @@ class _NewsScreenState<V extends NewsViewModel>
           spacing: 4,
           children: [
             Text(
-              expanded ? l10n.goldNewsCollapse : l10n.goldNewsDetails(count),
+              expanded ? l10n.newsCollapse : l10n.newsDetails(count),
               style: context.textTheme.secondary.size13.bold.textColor(color),
             ),
             AnimatedRotation(
@@ -461,18 +644,22 @@ class _NewsScreenState<V extends NewsViewModel>
     );
   }
 
-  /// When the digest was put together. It is rebuilt once a day, so the time
-  /// of day is what tells the reader how stale the card is; the date is only
-  /// spelled out once the digest is no longer from today.
-  String _digestTime(AppLocalizations l10n, GoldNews news) {
-    final updatedAt = news.updatedAt?.toLocal();
-    if (updatedAt == null) return news.date.toStringFormat("dd/MM");
+  /// When a bulletin was put together. The time of day is what tells the reader
+  /// how stale the card is; the date is only spelled out once the bulletin is
+  /// no longer from today.
+  String _bulletinTime(
+    AppLocalizations l10n,
+    DateTime? updatedAtUtc,
+    DateTime date,
+  ) {
+    final updatedAt = updatedAtUtc?.toLocal();
+    if (updatedAt == null) return date.toStringFormat("dd/MM");
     final now = DateTime.now();
     final isToday =
         updatedAt.year == now.year &&
         updatedAt.month == now.month &&
         updatedAt.day == now.day;
-    return l10n.goldNewsUpdatedAt(
+    return l10n.newsUpdatedAt(
       updatedAt.toStringFormat(isToday ? "HH:mm" : "HH:mm dd/MM"),
     );
   }
@@ -515,11 +702,11 @@ class _NewsScreenState<V extends NewsViewModel>
     );
   }
 
-  /// One bullet of the digest. Tapping it opens the article it came from —
-  /// the AI text is a summary, so the original stays one tap away.
+  /// One bullet of the gold digest: the impact decides its colour and arrow,
+  /// the rest is the shared bullet row.
   Widget _buildHighlight(
     GoldNewsHighlight item,
-    GoldNewsSource? source,
+    NewsSource? source,
     String lang,
   ) {
     final color = switch (item.impact) {
@@ -532,6 +719,24 @@ class _NewsScreenState<V extends NewsViewModel>
       GoldImpact.down => Icons.arrow_drop_down_rounded,
       GoldImpact.neutral => Icons.remove_rounded,
     };
+    return _buildNewsHighlight(
+      title: item.title(lang),
+      detail: item.detail(lang),
+      icon: icon,
+      color: color,
+      source: source,
+    );
+  }
+
+  /// One bullet of a bulletin. Tapping it opens the article it came from — the
+  /// AI text is a summary, so the original stays one tap away.
+  Widget _buildNewsHighlight({
+    required String title,
+    required String detail,
+    required IconData icon,
+    required Color color,
+    required NewsSource? source,
+  }) {
     return InkWell(
       onTap: source == null ? null : () => _openSource(source),
       borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
@@ -554,13 +759,10 @@ class _NewsScreenState<V extends NewsViewModel>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title(lang),
-                    style: context.textTheme.primary.size16.bold,
-                  ),
+                  Text(title, style: context.textTheme.primary.size16.bold),
                   const SizedBox(height: 3),
                   Text(
-                    item.detail(lang),
+                    detail,
                     style: context.textTheme.title.size15.copyWith(height: 1.4),
                   ),
                   if (source != null) ...[
@@ -595,7 +797,7 @@ class _NewsScreenState<V extends NewsViewModel>
     );
   }
 
-  Future<void> _openSource(GoldNewsSource source) async {
+  Future<void> _openSource(NewsSource source) async {
     final uri = Uri.tryParse(source.url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);

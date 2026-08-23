@@ -239,20 +239,25 @@
   "goldPrice": "Gold Price",
   "exchangeRate": "Exchange rate",
   "market": "Market",
+  "stormAlert": "Storm alert",
+  "stormAdvice": "What to do",
+  "stormSeverityWatch": "Watch",
+  "stormSeverityWarning": "Warning",
+  "stormSeverityEmergency": "Emergency",
   "goldNews": "Gold price drivers",
   "goldNewsEmpty": "No digest for today yet.",
   "goldNewsSources": "Sources",
-  "goldNewsDetails": "Details ({count})",
-  "@goldNewsDetails": {
+  "newsDetails": "Details ({count})",
+  "@newsDetails": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "goldNewsCollapse": "Collapse",
-  "goldNewsUpdatedAt": "Compiled {time}",
-  "@goldNewsUpdatedAt": {
+  "newsCollapse": "Collapse",
+  "newsUpdatedAt": "Compiled {time}",
+  "@newsUpdatedAt": {
     "placeholders": {
       "time": {
         "type": "String"

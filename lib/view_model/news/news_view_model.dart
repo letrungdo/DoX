@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:do_x/extensions/double_extensions.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/news/gold_news.dart';
+import 'package:do_x/model/news/storm_news.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:do_x/view_model/news/coin_chart.dart';
 
@@ -12,6 +13,15 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
 
   GoldNews? _goldNews;
   GoldNews? get goldNews => _goldNews;
+
+  StormNews? _stormNews;
+
+  /// Only a live, freshly-rebuilt bulletin reaches the screen: with no storm
+  /// around this stays null and the page shows no storm section at all.
+  StormNews? get stormNews {
+    final news = _stormNews;
+    return news != null && news.shouldShow ? news : null;
+  }
 
   String? _googleRate;
   String? get googleRate => _googleRate;
@@ -64,6 +74,7 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
       await Future.wait([
         _getGoldPrice(), //
         _getGoldNews(),
+        _getStormNews(),
         _getFxRates(),
         getMarket(),
       ]);
@@ -105,6 +116,16 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
     final news = res.data;
     if (news == null) return;
     _goldNews = news;
+    notifyListenersSafe();
+  }
+
+  /// Same as the gold digest: a failed fetch keeps whatever is on screen and
+  /// waits for the next refresh instead of raising a dialog.
+  Future<void> _getStormNews() async {
+    final res = await fxRateService.getStormNews(cancelToken: cancelToken);
+    final news = res.data;
+    if (news == null) return;
+    _stormNews = news;
     notifyListenersSafe();
   }
 

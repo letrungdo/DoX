@@ -524,6 +524,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get market => 'Market';
 
   @override
+  String get stormAlert => 'Storm alert';
+
+  @override
+  String get stormAdvice => 'What to do';
+
+  @override
+  String get stormSeverityWatch => 'Watch';
+
+  @override
+  String get stormSeverityWarning => 'Warning';
+
+  @override
+  String get stormSeverityEmergency => 'Emergency';
+
+  @override
   String get goldNews => 'Gold price drivers';
 
   @override
@@ -533,15 +548,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goldNewsSources => 'Sources';
 
   @override
-  String goldNewsDetails(int count) {
+  String newsDetails(int count) {
     return 'Details ($count)';
   }
 
   @override
-  String get goldNewsCollapse => 'Collapse';
+  String get newsCollapse => 'Collapse';
 
   @override
-  String goldNewsUpdatedAt(String time) {
+  String newsUpdatedAt(String time) {
     return 'Compiled $time';
   }
 

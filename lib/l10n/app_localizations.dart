@@ -1058,6 +1058,36 @@ abstract class AppLocalizations {
   /// **'Market'**
   String get market;
 
+  /// No description provided for @stormAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'Storm alert'**
+  String get stormAlert;
+
+  /// No description provided for @stormAdvice.
+  ///
+  /// In en, this message translates to:
+  /// **'What to do'**
+  String get stormAdvice;
+
+  /// No description provided for @stormSeverityWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch'**
+  String get stormSeverityWatch;
+
+  /// No description provided for @stormSeverityWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get stormSeverityWarning;
+
+  /// No description provided for @stormSeverityEmergency.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency'**
+  String get stormSeverityEmergency;
+
   /// No description provided for @goldNews.
   ///
   /// In en, this message translates to:
@@ -1076,23 +1106,23 @@ abstract class AppLocalizations {
   /// **'Sources'**
   String get goldNewsSources;
 
-  /// No description provided for @goldNewsDetails.
+  /// No description provided for @newsDetails.
   ///
   /// In en, this message translates to:
   /// **'Details ({count})'**
-  String goldNewsDetails(int count);
+  String newsDetails(int count);
 
-  /// No description provided for @goldNewsCollapse.
+  /// No description provided for @newsCollapse.
   ///
   /// In en, this message translates to:
   /// **'Collapse'**
-  String get goldNewsCollapse;
+  String get newsCollapse;
 
-  /// No description provided for @goldNewsUpdatedAt.
+  /// No description provided for @newsUpdatedAt.
   ///
   /// In en, this message translates to:
   /// **'Compiled {time}'**
-  String goldNewsUpdatedAt(String time);
+  String newsUpdatedAt(String time);
 
   /// No description provided for @trendUp.
   ///

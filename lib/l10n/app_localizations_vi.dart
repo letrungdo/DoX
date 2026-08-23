@@ -524,6 +524,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get market => 'Thị trường';
 
   @override
+  String get stormAlert => 'Cảnh báo bão';
+
+  @override
+  String get stormAdvice => 'Khuyến nghị';
+
+  @override
+  String get stormSeverityWatch => 'Theo dõi';
+
+  @override
+  String get stormSeverityWarning => 'Cảnh báo';
+
+  @override
+  String get stormSeverityEmergency => 'Khẩn cấp';
+
+  @override
   String get goldNews => 'Tin ảnh hưởng giá vàng';
 
   @override
@@ -533,15 +548,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get goldNewsSources => 'Nguồn tham khảo';
 
   @override
-  String goldNewsDetails(int count) {
+  String newsDetails(int count) {
     return 'Chi tiết ($count)';
   }
 
   @override
-  String get goldNewsCollapse => 'Thu gọn';
+  String get newsCollapse => 'Thu gọn';
 
   @override
-  String goldNewsUpdatedAt(String time) {
+  String newsUpdatedAt(String time) {
     return 'Tổng hợp $time';
   }
 

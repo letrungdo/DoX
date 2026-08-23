@@ -8,6 +8,7 @@ import 'package:do_x/extensions/string_extensions.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/model/news/gold_news.dart';
+import 'package:do_x/model/news/storm_news.dart';
 import 'package:do_x/model/response/market_response.dart';
 import 'package:do_x/repository/client/dio_client.dart';
 import 'package:do_x/repository/client/error_handler.dart';
@@ -135,6 +136,18 @@ class FxRateService {
       final row = await supabase.from('gold_news').select().maybeSingle();
 
       return row == null ? null : GoldNews.fromJson(row);
+    });
+  }
+
+  /// The storm bulletin, rebuilt every three hours by the
+  /// `summarize-storm-news` edge function. Like the gold digest the table holds
+  /// a single row; when no storm is affecting Vietnam that row comes back with
+  /// `active: false` and the app draws nothing.
+  Future<Result<StormNews?>> getStormNews({CancelToken? cancelToken}) {
+    return Result.guardFuture(() async {
+      final row = await supabase.from('storm_news').select().maybeSingle();
+
+      return row == null ? null : StormNews.fromJson(row);
     });
   }
 

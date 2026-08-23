@@ -1,27 +1,32 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'gold_news.dart';
+part of 'storm_news.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-GoldNews _$GoldNewsFromJson(Map<String, dynamic> json) => GoldNews(
+StormNews _$StormNewsFromJson(Map<String, dynamic> json) => StormNews(
   date: DateTime.parse(json['date'] as String),
-  summaryVi: json['summary_vi'] as String,
-  summaryEn: json['summary_en'] as String,
-  sentiment:
+  active: json['active'] as bool? ?? false,
+  nameVi: json['name_vi'] as String?,
+  nameEn: json['name_en'] as String?,
+  severity:
       $enumDecodeNullable(
-        _$GoldImpactEnumMap,
-        json['sentiment'],
-        unknownValue: GoldImpact.neutral,
+        _$StormSeverityEnumMap,
+        json['severity'],
+        unknownValue: StormSeverity.watch,
       ) ??
-      GoldImpact.neutral,
-  sentimentReasonVi: json['sentiment_reason_vi'] as String?,
-  sentimentReasonEn: json['sentiment_reason_en'] as String?,
+      StormSeverity.watch,
+  headlineVi: json['headline_vi'] as String?,
+  headlineEn: json['headline_en'] as String?,
+  summaryVi: json['summary_vi'] as String?,
+  summaryEn: json['summary_en'] as String?,
+  adviceVi: json['advice_vi'] as String?,
+  adviceEn: json['advice_en'] as String?,
   highlights:
       (json['highlights'] as List<dynamic>?)
-          ?.map((e) => GoldNewsHighlight.fromJson(e as Map<String, dynamic>))
+          ?.map((e) => StormNewsHighlight.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
   sources:
@@ -34,46 +39,43 @@ GoldNews _$GoldNewsFromJson(Map<String, dynamic> json) => GoldNews(
       : DateTime.parse(json['updated_at'] as String),
 );
 
-Map<String, dynamic> _$GoldNewsToJson(GoldNews instance) => <String, dynamic>{
+Map<String, dynamic> _$StormNewsToJson(StormNews instance) => <String, dynamic>{
+  'active': instance.active,
   'date': instance.date.toIso8601String(),
+  'name_vi': instance.nameVi,
+  'name_en': instance.nameEn,
+  'severity': _$StormSeverityEnumMap[instance.severity]!,
+  'headline_vi': instance.headlineVi,
+  'headline_en': instance.headlineEn,
   'summary_vi': instance.summaryVi,
   'summary_en': instance.summaryEn,
-  'sentiment': _$GoldImpactEnumMap[instance.sentiment]!,
-  'sentiment_reason_vi': instance.sentimentReasonVi,
-  'sentiment_reason_en': instance.sentimentReasonEn,
+  'advice_vi': instance.adviceVi,
+  'advice_en': instance.adviceEn,
   'highlights': instance.highlights.map((e) => e.toJson()).toList(),
   'sources': instance.sources.map((e) => e.toJson()).toList(),
   'updated_at': instance.updatedAt?.toIso8601String(),
 };
 
-const _$GoldImpactEnumMap = {
-  GoldImpact.up: 'up',
-  GoldImpact.down: 'down',
-  GoldImpact.neutral: 'neutral',
+const _$StormSeverityEnumMap = {
+  StormSeverity.watch: 'watch',
+  StormSeverity.warning: 'warning',
+  StormSeverity.emergency: 'emergency',
 };
 
-GoldNewsHighlight _$GoldNewsHighlightFromJson(Map<String, dynamic> json) =>
-    GoldNewsHighlight(
+StormNewsHighlight _$StormNewsHighlightFromJson(Map<String, dynamic> json) =>
+    StormNewsHighlight(
       titleVi: json['title_vi'] as String,
       titleEn: json['title_en'] as String,
       detailVi: json['detail_vi'] as String,
       detailEn: json['detail_en'] as String,
-      impact:
-          $enumDecodeNullable(
-            _$GoldImpactEnumMap,
-            json['impact'],
-            unknownValue: GoldImpact.neutral,
-          ) ??
-          GoldImpact.neutral,
       sourceIndex: (json['source_index'] as num?)?.toInt(),
     );
 
-Map<String, dynamic> _$GoldNewsHighlightToJson(GoldNewsHighlight instance) =>
+Map<String, dynamic> _$StormNewsHighlightToJson(StormNewsHighlight instance) =>
     <String, dynamic>{
       'title_vi': instance.titleVi,
       'title_en': instance.titleEn,
       'detail_vi': instance.detailVi,
       'detail_en': instance.detailEn,
-      'impact': _$GoldImpactEnumMap[instance.impact]!,
       'source_index': instance.sourceIndex,
     };
