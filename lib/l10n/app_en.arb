@@ -536,6 +536,8 @@
   },
   "eggQuantity": "Number of eggs/chicks",
   "incubationDate": "Incubation date",
+  "hatchDate": "Hatch date",
+  "expectedHatchDateLabel": "Expected hatch date",
   "batchDetailTitle": "Batch details",
   "batchNotFound": "Batch not found.",
   "deleteThisBatch": "Delete this batch",
@@ -805,6 +807,7 @@
     }
   },
   "errorEnterBatchName": "Please enter a batch name",
+  "errorEnterIncubationOrHatchDate": "Pick either the incubation or the hatch date",
   "revenue": "Revenue",
   "totalLabel": "Total",
   "sellGrownChicken": "Sell grown chickens",

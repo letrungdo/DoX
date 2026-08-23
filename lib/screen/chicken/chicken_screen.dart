@@ -15,7 +15,6 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -718,13 +717,19 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
 
   /// Adds a batch. If the insert fails the view model has already removed it
   /// again locally, so the user is told it wasn't saved.
-  Future<void> _addBatch(String name, DateTime incubationDate, int qty) async {
+  Future<void> _addBatch(
+    String name,
+    DateTime incubationDate,
+    int qty, {
+    DateTime? actualHatchDate,
+  }) async {
     final l10n = AppLocalizations.of(context);
     try {
       await vm.addBatch(
         name: name,
         incubationDate: incubationDate,
         quantity: qty,
+        actualHatchDate: actualHatchDate,
       );
     } catch (error) {
       if (!mounted) return;
@@ -785,9 +790,17 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
     }
     final nameController = TextEditingController(text: suggestedName);
     final quantityController = TextEditingController();
-    DateTime selectedDate = DateTime.now().dateOnly;
+    // The two dates are one value seen from either end: both start empty, the
+    // user fills in whichever they know and the other follows, 21 incubation
+    // days apart. Whichever one was typed is the real one — a typed hatch date
+    // means the chicks are already out, so it is recorded as the actual hatch
+    // date; a typed incubation date leaves the hatch date a mere expectation.
+    DateTime? incubationDate;
+    DateTime? hatchDate;
+    bool hatchDateIsActual = false;
     String? nameError;
     String? qtyError;
+    String? dateError;
 
     showAppModal(
       context,
@@ -799,14 +812,25 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           onConfirm: () {
             final name = nameController.text.trim();
             final qty = int.tryParse(quantityController.text) ?? 0;
-            if (name.isEmpty || qty <= 0) {
+            final incubation = incubationDate;
+            if (name.isEmpty || qty <= 0 || incubation == null) {
               setState(() {
                 nameError = name.isEmpty ? l10n.errorEnterBatchName : null;
                 qtyError = qty <= 0 ? l10n.errorEnterQuantity : null;
+                dateError = incubation == null
+                    ? l10n.errorEnterIncubationOrHatchDate
+                    : null;
               });
               return;
             }
-            unawaited(_addBatch(name, selectedDate, qty));
+            unawaited(
+              _addBatch(
+                name,
+                incubation,
+                qty,
+                actualHatchDate: hatchDateIsActual ? hatchDate : null,
+              ),
+            );
             _scrollToTop();
             Navigator.pop(context);
           },
@@ -836,9 +860,32 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             ),
             LunarDateField(
               label: l10n.incubationDate,
-              value: selectedDate,
+              value: incubationDate,
               useLunar: vm.useLunarCalendar,
-              onChanged: (d) => setState(() => selectedDate = d),
+              errorText: dateError,
+              onChanged: (d) => setState(() {
+                incubationDate = d;
+                hatchDate = d.add(ChickenBatch.incubationDuration);
+                hatchDateIsActual = false;
+                dateError = null;
+              }),
+            ),
+            LunarDateField(
+              // Plain "hatch date" until one of the two is filled in — only
+              // then is it known to be an expectation or the real thing.
+              label: hatchDate == null
+                  ? l10n.hatchDate
+                  : hatchDateIsActual
+                  ? l10n.actualHatchDateLabel
+                  : l10n.expectedHatchDateLabel,
+              value: hatchDate,
+              useLunar: vm.useLunarCalendar,
+              onChanged: (d) => setState(() {
+                hatchDate = d;
+                incubationDate = d.subtract(ChickenBatch.incubationDuration);
+                hatchDateIsActual = true;
+                dateError = null;
+              }),
             ),
           ],
         ),

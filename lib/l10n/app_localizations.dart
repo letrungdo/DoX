@@ -1742,6 +1742,18 @@ abstract class AppLocalizations {
   /// **'Incubation date'**
   String get incubationDate;
 
+  /// No description provided for @hatchDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Hatch date'**
+  String get hatchDate;
+
+  /// No description provided for @expectedHatchDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected hatch date'**
+  String get expectedHatchDateLabel;
+
   /// No description provided for @batchDetailTitle.
   ///
   /// In en, this message translates to:
@@ -2287,6 +2299,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a batch name'**
   String get errorEnterBatchName;
+
+  /// No description provided for @errorEnterIncubationOrHatchDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick either the incubation or the hatch date'**
+  String get errorEnterIncubationOrHatchDate;
 
   /// No description provided for @revenue.
   ///

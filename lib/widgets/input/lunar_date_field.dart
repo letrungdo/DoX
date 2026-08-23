@@ -12,6 +12,7 @@ class LunarDateField extends StatelessWidget {
   final DateTime? value;
   final bool useLunar;
   final ValueChanged<DateTime> onChanged;
+  final String? errorText;
 
   const LunarDateField({
     super.key,
@@ -19,6 +20,7 @@ class LunarDateField extends StatelessWidget {
     required this.value,
     required this.useLunar,
     required this.onChanged,
+    this.errorText,
   });
 
   Future<void> _pick(BuildContext context) async {
@@ -42,6 +44,7 @@ class LunarDateField extends StatelessWidget {
           context,
           label,
           suffixIcon: const Icon(Icons.calendar_month_rounded, size: 20),
+          errorText: errorText,
         ),
         child: value == null
             ? const SizedBox.shrink()

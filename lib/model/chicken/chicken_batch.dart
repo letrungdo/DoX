@@ -8,6 +8,10 @@ part 'chicken_batch.g.dart';
 
 @JsonSerializable()
 class ChickenBatch {
+  /// How long eggs sit in the incubator. Both directions of the
+  /// incubation date <-> hatch date conversion go through this.
+  static const incubationDuration = Duration(days: 21);
+
   final String id;
   final String name;
   final DateTime incubationDate;
@@ -39,8 +43,7 @@ class ChickenBatch {
   // lunar calendar is a display layer on top; see [ChickenDate].
 
   /// Expected hatch date, usually 21 days after incubation.
-  DateTime get expectedHatchDate =>
-      incubationDate.add(const Duration(days: 21));
+  DateTime get expectedHatchDate => incubationDate.add(incubationDuration);
 
   DateTime get _hatchDate => actualHatchDate ?? expectedHatchDate;
 

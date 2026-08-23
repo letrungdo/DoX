@@ -929,6 +929,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get incubationDate => 'Ngày ấp trứng';
 
   @override
+  String get hatchDate => 'Ngày nở';
+
+  @override
+  String get expectedHatchDateLabel => 'Ngày nở dự kiến';
+
+  @override
   String get batchDetailTitle => 'Chi tiết lứa gà';
 
   @override
@@ -1254,6 +1260,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get errorEnterBatchName => 'Vui lòng nhập tên lứa gà';
+
+  @override
+  String get errorEnterIncubationOrHatchDate =>
+      'Vui lòng chọn ngày ấp hoặc ngày nở';
 
   @override
   String get revenue => 'Doanh thu';

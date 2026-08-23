@@ -973,12 +973,14 @@ class ChickenViewModel extends CoreViewModel {
     required String name,
     required DateTime incubationDate,
     required int quantity,
+    DateTime? actualHatchDate,
   }) async {
     final newBatch = ChickenBatch(
       id: _uuid.v4(),
       name: name,
       incubationDate: incubationDate,
       quantity: quantity,
+      actualHatchDate: actualHatchDate,
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
     );
     _batches.insert(0, newBatch);
@@ -1331,7 +1333,7 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   List<Vaccination> _getDefaultVaccinationSchedule(DateTime incubationDate) {
-    final hatchDate = incubationDate.add(const Duration(days: 21));
+    final hatchDate = incubationDate.add(ChickenBatch.incubationDuration);
 
     Vaccination vaccination(String title, int daysAfterHatch) => Vaccination(
       id: _uuid.v4(),

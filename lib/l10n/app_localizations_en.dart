@@ -928,6 +928,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get incubationDate => 'Incubation date';
 
   @override
+  String get hatchDate => 'Hatch date';
+
+  @override
+  String get expectedHatchDateLabel => 'Expected hatch date';
+
+  @override
   String get batchDetailTitle => 'Batch details';
 
   @override
@@ -1256,6 +1262,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorEnterBatchName => 'Please enter a batch name';
+
+  @override
+  String get errorEnterIncubationOrHatchDate =>
+      'Pick either the incubation or the hatch date';
 
   @override
   String get revenue => 'Revenue';
