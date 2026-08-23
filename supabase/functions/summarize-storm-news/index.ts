@@ -6,9 +6,14 @@
 // there is nothing to warn about the row is stored with `active: false` and the
 // app shows no card at all.
 //
-// Secrets: GEMINI_API_KEY (required), GEMINI_MODEL (optional).
+// A live storm is also pushed to every registered device — see `shouldNotify`
+// for the rule that keeps a multi-day storm from notifying every three hours.
+//
+// Secrets: GEMINI_API_KEY (required), GEMINI_MODEL (optional),
+// FCM_SERVICE_ACCOUNT (required for the push).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { PushDevice, sendPush } from "../_shared/fcm.ts";
 import {
   collectItems,
   Feed,
@@ -187,6 +192,78 @@ Nhiệm vụ:
 Chỉ dựa trên các tiêu đề được cung cấp, không bịa thêm số liệu về cấp gió, toạ độ hay thời điểm đổ bộ. Trả về đúng JSON theo schema.`;
 }
 
+const SEVERITY_RANK: Record<string, number> = {
+  watch: 0,
+  warning: 1,
+  emergency: 2,
+};
+
+/// A storm hangs around for days while the cron runs every three hours, so most
+/// runs must stay silent. A push goes out when the reader has something new to
+/// learn: a different storm than the one they were told about, a storm that has
+/// got worse, or the same storm a whole day later.
+const RENOTIFY_AFTER_MS = 24 * 3600_000;
+
+interface NotifyState {
+  notified_at: string | null;
+  notified_name: string | null;
+  notified_severity: string | null;
+}
+
+function shouldNotify(previous: NotifyState | null, digest: Digest): boolean {
+  if (!digest.active) return false;
+  if (!previous?.notified_at || !previous.notified_name) return true;
+  if (previous.notified_name !== digest.name_vi) return true;
+  const before = SEVERITY_RANK[previous.notified_severity ?? "watch"] ?? 0;
+  const now = SEVERITY_RANK[digest.severity] ?? 0;
+  if (now > before) return true;
+  return Date.now() - Date.parse(previous.notified_at) >= RENOTIFY_AFTER_MS;
+}
+
+const SEVERITY_PREFIX: Record<string, { vi: string; en: string }> = {
+  watch: { vi: "Theo dõi", en: "Watch" },
+  warning: { vi: "Cảnh báo", en: "Warning" },
+  emergency: { vi: "Khẩn cấp", en: "Emergency" },
+};
+
+/// Everyone with a registered device hears about a storm, whatever else they
+/// use the app for — so this reads the whole table rather than one account's
+/// rows. `locale` decides which half of the bilingual bulletin they get.
+async function notifyEveryDevice(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  digest: Digest,
+): Promise<{ sent: number; dropped: number }> {
+  const { data, error } = await admin
+    .from("device_tokens")
+    .select("token, locale");
+  if (error) {
+    console.error("could not read device tokens", error.message);
+    return { sent: 0, dropped: 0 };
+  }
+  const devices = (data ?? []) as PushDevice[];
+  if (devices.length === 0) return { sent: 0, dropped: 0 };
+
+  const result = await sendPush(devices, (locale) => {
+    const english = locale === "en";
+    const prefix = SEVERITY_PREFIX[digest.severity] ?? SEVERITY_PREFIX.watch;
+    const name = english ? digest.name_en : digest.name_vi;
+    const headline = english ? digest.headline_en : digest.headline_vi;
+    const summary = english ? digest.summary_en : digest.summary_vi;
+    return {
+      title: `${english ? prefix.en : prefix.vi}: ${name}`,
+      body: headline || summary,
+      data: { type: "storm_news", severity: digest.severity },
+      androidChannelId: "storm_alert",
+    };
+  });
+
+  if (result.stale.length > 0) {
+    await admin.from("device_tokens").delete().in("token", result.stale);
+  }
+  return { sent: result.sent, dropped: result.stale.length };
+}
+
 /// The cron only needs an anon-level key to call this, so the endpoint is in
 /// practice public. A digest younger than this is returned as-is rather than
 /// rebuilt, which keeps anyone else's calls from spending Gemini quota. Kept
@@ -204,7 +281,7 @@ Deno.serve(async () => {
 
     const { data: existing } = await supabase
       .from("storm_news")
-      .select("updated_at")
+      .select("updated_at, notified_at, notified_name, notified_severity")
       .eq("id", 1)
       .maybeSingle();
     if (
@@ -286,13 +363,42 @@ Deno.serve(async () => {
       updated_at: new Date().toISOString(),
     };
 
+    const notify = shouldNotify(existing ?? null, digest);
     // Single-row table: the bulletin is always written over the previous one.
-    const { error } = await supabase.from("storm_news").upsert(row, {
-      onConflict: "id",
-    });
+    // The `notified_*` columns are only touched when we are about to push, so a
+    // silent run cannot reset the anti-spam clock.
+    const { error } = await supabase.from("storm_news").upsert(
+      notify
+        ? {
+          ...row,
+          notified_at: new Date().toISOString(),
+          notified_name: digest.name_vi,
+          notified_severity: digest.severity,
+        }
+        : row,
+      { onConflict: "id" },
+    );
     if (error) throw new Error(`upsert failed: ${error.message}`);
 
-    return Response.json({ ok: true, collected: items.length, ...row });
+    // After the upsert: a push nobody can act on is worse than a late one, so
+    // the bulletin the notification points at is on the table first. A failure
+    // here is logged and the run still counts as a success.
+    let push = { sent: 0, dropped: 0 };
+    if (notify) {
+      try {
+        push = await notifyEveryDevice(supabase, digest);
+      } catch (error) {
+        console.error("could not push the storm alert", error);
+      }
+    }
+
+    return Response.json({
+      ok: true,
+      collected: items.length,
+      notified: notify,
+      ...push,
+      ...row,
+    });
   } catch (error) {
     console.error(error);
     return Response.json({ error: String(error) }, { status: 500 });

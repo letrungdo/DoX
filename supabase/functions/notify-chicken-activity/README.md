@@ -40,3 +40,7 @@ function answers 403 and no push goes out (the write itself still lands).
 Push on iOS also needs an APNs authentication key (`.p8`) uploaded under
 Firebase Console → Project settings → Cloud Messaging, and the *Push
 Notifications* capability on the Runner target in Xcode.
+
+Phần mint OAuth token và gọi FCM nằm ở [`../_shared/fcm.ts`](../_shared/fcm.ts),
+dùng chung với [`summarize-storm-news`](../summarize-storm-news/README.md) —
+sửa file đó thì deploy lại cả hai function.

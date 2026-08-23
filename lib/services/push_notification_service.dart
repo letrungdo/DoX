@@ -6,14 +6,16 @@ import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Registers this device for the pushes the server sends when an owner who
-/// shared their chicken data records a sale or an expense.
+/// Registers this device for the pushes the server sends: a storm warning,
+/// which goes to everyone, and shared-chicken activity, which goes to the
+/// accounts a dataset is shared with.
 ///
-/// Registration is deliberately lazy. A device is registered — and the system
-/// permission prompt shown — only once the signed-in account actually has
-/// somebody else's data shared with it, so an account that never receives a
-/// share is never asked for a permission it has no use for.
+/// Every signed-in device registers, because a storm alert concerns any reader
+/// whatever else they use the app for. Registration needs a session — a token
+/// row belongs to an account — so [start] both registers now and follows the
+/// session from there.
 ///
 /// The token is a property of the device install, not of the account: signing
 /// out removes it so the next person on this phone does not get pushes about
@@ -25,6 +27,7 @@ class PushNotificationService {
   StreamSubscription<String>? _refreshSubscription;
   StreamSubscription<RemoteMessage>? _messageSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
+  StreamSubscription<AuthState>? _authSubscription;
 
   bool get isSupported =>
       !kIsWeb &&
@@ -32,6 +35,32 @@ class PushNotificationService {
           defaultTargetPlatform == TargetPlatform.iOS);
 
   bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+
+  /// Everything this service does at launch: catch the tap that may have
+  /// started the app, register this device if somebody is signed in, and keep
+  /// the registration in step with the session from then on.
+  Future<void> start() async {
+    if (!isSupported) return;
+    await listenForTaps();
+
+    _authSubscription ??= supabase.auth.onAuthStateChange.listen((state) {
+      switch (state.event) {
+        case AuthChangeEvent.signedIn:
+        case AuthChangeEvent.userUpdated:
+          unawaited(syncRegistration());
+        case AuthChangeEvent.signedOut:
+          // The token is dropped before the sign-out, while the session is
+          // still there; this only clears what we remember of it.
+          _token = null;
+        default:
+          break;
+      }
+    });
+
+    // A session restored from disk is already there by the time we get here, so
+    // it produces no event to react to.
+    if (supabase.auth.currentSession != null) await syncRegistration();
+  }
 
   /// Starts listening for taps on a push the system drew itself, in the
   /// background or with the app closed. Independent of registration: a
@@ -59,36 +88,39 @@ class PushNotificationService {
     }
 
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
-      openChickenActivity,
+      handleTappedPush,
     );
     try {
       final launchMessage = await FirebaseMessaging.instance
           .getInitialMessage();
-      if (launchMessage != null) openChickenActivity(launchMessage);
+      if (launchMessage != null) handleTappedPush(launchMessage);
     } catch (e) {
       logger.e('read the launch push failed', error: e);
     }
   }
 
-  /// A tapped push, wherever it was tapped: only the ones this app sends about
-  /// shared chicken data name a screen to open.
+  /// A tapped push, wherever it was tapped. Anything the server did not label
+  /// with a screen to open just brings the app to the front.
   @visibleForTesting
-  void openChickenActivity(RemoteMessage message) {
-    if (message.data['type'] != 'chicken_activity') return;
-    final ownerId = message.data['owner_id'] as String?;
-    if (ownerId == null) return;
-    notificationService.openSharedActivity(ownerId);
+  void handleTappedPush(RemoteMessage message) {
+    switch (message.data['type']) {
+      case 'storm_news':
+        notificationService.openStormAlert();
+      case 'chicken_activity':
+        final ownerId = message.data['owner_id'] as String?;
+        if (ownerId == null) return;
+        notificationService.openSharedActivity(ownerId);
+      default:
+        break;
+    }
   }
 
-  /// Called whenever the set of data sources is known. [hasSharedData] is false
-  /// for an account that only sees its own records, which has nothing to be
-  /// notified about.
-  Future<void> syncRegistration({required bool hasSharedData}) async {
+  /// Registers this device against the signed-in account, asking for the
+  /// notification permission the first time. Does nothing without a session:
+  /// there would be no account to hang the token on.
+  Future<void> syncRegistration() async {
     if (!isSupported) return;
-    if (!hasSharedData) {
-      await unregister();
-      return;
-    }
+    if (supabase.auth.currentSession == null) return;
 
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
@@ -107,7 +139,7 @@ class PushNotificationService {
     } catch (e) {
       // A device with no Play Services, or an APNs registration that timed out:
       // the app works without push, so this stays a log line.
-      logger.e('register for chicken push failed', error: e);
+      logger.e('register for push failed', error: e);
     }
   }
 
@@ -117,7 +149,7 @@ class PushNotificationService {
       if (apnsToken != null) return true;
       await Future.delayed(const Duration(seconds: 1));
     }
-    logger.d('no APNs token yet, skipping chicken push registration');
+    logger.d('no APNs token yet, skipping push registration');
     return false;
   }
 
@@ -130,7 +162,7 @@ class PushNotificationService {
     try {
       await supabase.rpc('unregister_device_token', params: {'p_token': token});
     } catch (e) {
-      logger.e('unregister chicken push failed', error: e);
+      logger.e('unregister push failed', error: e);
     }
   }
 
@@ -160,7 +192,7 @@ class PushNotificationService {
       try {
         await _register(token);
       } catch (e) {
-        logger.e('refresh chicken push token failed', error: e);
+        logger.e('refresh push token failed', error: e);
       }
     });
 
@@ -173,9 +205,14 @@ class PushNotificationService {
       final notification = message.notification;
       final title = notification?.title;
       if (title == null) return;
+      final body = notification?.body ?? '';
+      if (message.data['type'] == 'storm_news') {
+        notificationService.showStormAlert(title: title, body: body);
+        return;
+      }
       notificationService.showSharedActivity(
         title: title,
-        body: notification?.body ?? '',
+        body: body,
         ownerId: message.data['owner_id'] as String?,
       );
     });
@@ -183,6 +220,8 @@ class PushNotificationService {
 
   @visibleForTesting
   void dispose() {
+    _authSubscription?.cancel();
+    _authSubscription = null;
     _refreshSubscription?.cancel();
     _messageSubscription?.cancel();
     _openedSubscription?.cancel();

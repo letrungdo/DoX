@@ -23,12 +23,14 @@ class NotificationRouting {
   void start() {
     notificationService.electricNotificationMonth.addListener(_openElectric);
     notificationService.sharedActivityOwnerId.addListener(_openSharedChicken);
+    notificationService.stormAlertRequested.addListener(_openStormNews);
 
     // The notification that launched the app is read asynchronously, so it can
     // land either side of the listeners above.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _openElectric();
       _openSharedChicken();
+      _openStormNews();
     });
   }
 
@@ -37,6 +39,7 @@ class NotificationRouting {
     notificationService.sharedActivityOwnerId.removeListener(
       _openSharedChicken,
     );
+    notificationService.stormAlertRequested.removeListener(_openStormNews);
   }
 
   /// The monthly reminder opens the electricity page on the month it is about.
@@ -62,6 +65,15 @@ class NotificationRouting {
       // owner's records load in behind it.
       chickenVm.selectOwner(ownerId);
     });
+  }
+
+  /// A storm alert opens the news page, where the bulletin it is about sits at
+  /// the top — the notification carries only the headline.
+  void _openStormNews() {
+    if (!notificationService.stormAlertRequested.value) return;
+    notificationService.stormAlertRequested.value = false;
+
+    _afterFrame(() => showPage(AppPage.news, const NewsRoute()));
   }
 
   /// Runs [action] once the frame in progress is done — the app can be mid

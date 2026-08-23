@@ -14,7 +14,6 @@ import 'package:do_x/services/chicken_import_service.dart';
 import 'package:do_x/model/chicken/record_change.dart';
 import 'package:do_x/services/chicken_sync_queue.dart';
 import 'package:do_x/services/notification_service.dart';
-import 'package:do_x/services/push_notification_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -809,13 +808,6 @@ class ChickenViewModel extends CoreViewModel {
       ]);
       _dataSources = results[0] as List<ChickenDataSource>;
       _shareViewers = results[1] as List<ChickenShareViewer>;
-      // Only somebody who reads another account's data has anything to be
-      // pushed about, so this is also where the permission is first asked for.
-      unawaited(
-        pushNotificationService.syncRegistration(
-          hasSharedData: _dataSources.any((source) => !source.isOwner),
-        ),
-      );
       final activeId = activeOwnerId;
       final activeSource = _dataSources.firstWhereOrNull(
         (source) => source.ownerId == activeId,

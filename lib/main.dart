@@ -53,10 +53,11 @@ void main() {
       // a password-reset link, and the session that link carries is handed over
       // while the app starts.
       authFlowService.start();
-      // Same reason: the app can be launched by a tap on a shared-chicken
-      // push, and the message that launched it is only readable once Firebase
-      // is up.
-      unawaited(pushNotificationService.listenForTaps());
+      // Same reason: the app can be launched by a tap on a push — a storm
+      // alert or shared-chicken activity — and the message that launched it is
+      // only readable once Firebase is up. This also registers the device for
+      // the storm alerts, which every signed-in device receives.
+      unawaited(pushNotificationService.start());
       if (storageService.getElectricReminderEnabled()) {
         await notificationService.scheduleMonthlyElectricReminder();
       }

@@ -82,6 +82,7 @@ void main() {
   setUp(() {
     notificationService.electricNotificationMonth.value = null;
     notificationService.sharedActivityOwnerId.value = null;
+    notificationService.stormAlertRequested.value = false;
     appVm = AppViewModel();
     chickenVm = ChickenViewModel(
       repository: _FakeRepository(),
@@ -122,6 +123,24 @@ void main() {
       expect(notificationService.electricNotificationMonth.value, isNull);
     });
 
+    test('a storm alert asks for the news page', () {
+      notificationService.handlePayload(NotificationService.stormAlertPayload);
+
+      expect(notificationService.stormAlertRequested.value, isTrue);
+      expect(notificationService.sharedActivityOwnerId.value, isNull);
+    });
+
+    test('a storm push asks for the news page', () {
+      pushNotificationService.handleTappedPush(
+        const RemoteMessage(
+          data: {'type': 'storm_news', 'severity': 'warning'},
+        ),
+      );
+
+      expect(notificationService.stormAlertRequested.value, isTrue);
+      expect(notificationService.sharedActivityOwnerId.value, isNull);
+    });
+
     test('a vaccination reminder only opens the app', () {
       notificationService.handlePayload('batch-1');
 
@@ -130,7 +149,7 @@ void main() {
     });
 
     test('a push carries the owner of the data it is about', () {
-      pushNotificationService.openChickenActivity(
+      pushNotificationService.handleTappedPush(
         const RemoteMessage(
           data: {
             'type': 'chicken_activity',
@@ -144,10 +163,10 @@ void main() {
     });
 
     test('a push about anything else is left alone', () {
-      pushNotificationService.openChickenActivity(
+      pushNotificationService.handleTappedPush(
         const RemoteMessage(data: {'type': 'something_else'}),
       );
-      pushNotificationService.openChickenActivity(
+      pushNotificationService.handleTappedPush(
         const RemoteMessage(data: {'type': 'chicken_activity'}),
       );
 
@@ -194,6 +213,24 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(routing.opened, [AppPage.chicken, AppPage.chicken]);
+    });
+
+    testWidgets('a storm alert opens the news page', (tester) async {
+      notificationService.openStormAlert();
+      await tester.pump();
+
+      expect(routing.opened, [AppPage.news]);
+      // Consumed: a rebuild must not send the app back there.
+      expect(notificationService.stormAlertRequested.value, isFalse);
+    });
+
+    testWidgets('a second storm alert navigates again', (tester) async {
+      notificationService.openStormAlert();
+      await tester.pump();
+      notificationService.openStormAlert();
+      await tester.pump();
+
+      expect(routing.opened, [AppPage.news, AppPage.news]);
     });
 
     testWidgets('an empty owner id is not a destination', (tester) async {

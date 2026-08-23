@@ -16,6 +16,10 @@ class NotificationService {
   /// account that recorded the sale or the expense.
   static const sharedActivityPayloadPrefix = 'chicken-activity:';
 
+  /// Payload of a storm alert. It names no storm: the bulletin itself lives on
+  /// the news page, which is all the notification has to open.
+  static const stormAlertPayload = 'storm-alert';
+
   static const _channelId = 'chicken_vaccinations';
   static const _channelName = 'Lịch tiêm phòng';
   static const _channelDescription = 'Nhắc lịch tiêm phòng cho các lứa gà';
@@ -25,6 +29,12 @@ class NotificationService {
   static const _electricChannelDescription =
       'Nhắc kiểm tra tiền điện đầu tháng';
   static const _electricReminderId = 0x0E1EC001;
+
+  static const _stormChannelId = 'storm_alert';
+  static const _stormChannelName = 'Cảnh báo bão';
+  static const _stormChannelDescription =
+      'Báo khi có bão hoặc áp thấp nhiệt đới ảnh hưởng Việt Nam';
+  var _stormNotificationId = 0x570A0000;
 
   static const _sharedChannelId = 'shared_chicken_activity';
   static const _sharedChannelName = 'Dữ liệu gà được chia sẻ';
@@ -40,6 +50,10 @@ class NotificationService {
   /// Owner id carried by a tapped shared-activity notification: the app opens
   /// the chicken page on that owner's data. Cleared by whoever consumes it.
   final ValueNotifier<String?> sharedActivityOwnerId = ValueNotifier(null);
+
+  /// Set when a storm alert is tapped: the app opens the news page, where the
+  /// bulletin is. Cleared by whoever consumes it.
+  final ValueNotifier<bool> stormAlertRequested = ValueNotifier(false);
   bool _initialized = false;
 
   bool get isSupported =>
@@ -81,6 +95,7 @@ class NotificationService {
       onDidReceiveNotificationResponse: _handleNotificationResponse,
     );
     _initialized = true;
+    await _createAndroidChannels();
 
     final launchDetails = await _plugin.getNotificationAppLaunchDetails();
     final launchResponse = launchDetails?.notificationResponse;
@@ -88,6 +103,39 @@ class NotificationService {
         launchResponse != null) {
       _handleNotificationResponse(launchResponse);
     }
+  }
+
+  /// Declares the push channels up front, before any notification uses them.
+  ///
+  /// A push that arrives while the app is killed is drawn by the system, not by
+  /// this plugin, so the channel it names has to exist already — otherwise
+  /// Android files a storm warning under the fallback channel, at default
+  /// importance, and it never gets to interrupt anybody. The channels a local
+  /// reminder uses are created on first use, which is soon enough.
+  Future<void> _createAndroidChannels() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android == null) return;
+
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _stormChannelId,
+        _stormChannelName,
+        description: _stormChannelDescription,
+        importance: Importance.max,
+      ),
+    );
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _sharedChannelId,
+        _sharedChannelName,
+        description: _sharedChannelDescription,
+        importance: Importance.high,
+      ),
+    );
   }
 
   void _handleNotificationResponse(NotificationResponse response) {
@@ -103,9 +151,23 @@ class NotificationService {
       electricNotificationMonth.value = DateTime(now.year, now.month - 1);
       return;
     }
+    if (payload == stormAlertPayload) {
+      openStormAlert();
+      return;
+    }
     if (payload != null && payload.startsWith(sharedActivityPayloadPrefix)) {
       openSharedActivity(payload.substring(sharedActivityPayloadPrefix.length));
     }
+  }
+
+  /// Asks the app to show the news page, where the storm bulletin is. Also
+  /// called for a push the system drew itself, whose tap never reaches this
+  /// plugin.
+  void openStormAlert() {
+    // Same reason as [openSharedActivity]: a ValueNotifier swallows a write of
+    // the value it already holds, and a second tap has to navigate again.
+    stormAlertRequested.value = false;
+    stormAlertRequested.value = true;
   }
 
   /// Asks the app to show [ownerId]'s shared chicken data. Also called for a
@@ -286,6 +348,36 @@ class NotificationService {
         macOS: DarwinNotificationDetails(),
       ),
       payload: ownerId == null ? null : '$sharedActivityPayloadPrefix$ownerId',
+    );
+  }
+
+  /// Draws a storm alert that arrived while the app was in the foreground, for
+  /// the same reason as [showSharedActivity]. Its own channel, so a reader can
+  /// mute chicken activity and keep the weather warnings.
+  Future<void> showStormAlert({
+    required String title,
+    required String body,
+  }) async {
+    if (!isSupported) return;
+    await init();
+
+    await _plugin.show(
+      id: _stormNotificationId++,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _stormChannelId,
+          _stormChannelName,
+          channelDescription: _stormChannelDescription,
+          importance: Importance.max,
+          priority: Priority.max,
+          color: Color(0xFFB3261E),
+        ),
+        iOS: DarwinNotificationDetails(),
+        macOS: DarwinNotificationDetails(),
+      ),
+      payload: stormAlertPayload,
     );
   }
 

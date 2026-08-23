@@ -7,11 +7,15 @@
 // caller proves itself with the shared secret the migration put in Vault, so
 // this function runs with JWT verification off.
 //
+// The FCM plumbing lives in `../_shared/fcm.ts`, shared with
+// `summarize-storm-news`.
+//
 // Required secrets:
 //   CHICKEN_NOTIFY_SECRET  — the `chicken_notify_secret` Vault value
 //   FCM_SERVICE_ACCOUNT    — the Firebase service account JSON, verbatim
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { sendPush } from "../_shared/fcm.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -75,62 +79,6 @@ function messageFor(
   return { title, body: `${ownerEmail} ${what} — ${amount} đ` };
 }
 
-// FCM's HTTP v1 API only takes an OAuth token, which means signing a JWT with
-// the service account key here — there is no Google SDK in this runtime.
-async function accessToken(account: {
-  client_email: string;
-  private_key: string;
-}): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS256", typ: "JWT" };
-  const claim = {
-    iss: account.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-  const base64url = (input: string) =>
-    btoa(input).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const unsigned = `${base64url(JSON.stringify(header))}.${
-    base64url(JSON.stringify(claim))
-  }`;
-
-  const pem = account.private_key
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\s+/g, "");
-  const der = Uint8Array.from(atob(pem), (character) => character.charCodeAt(0));
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    der,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(unsigned),
-  );
-  const signed = `${unsigned}.${
-    base64url(String.fromCharCode(...new Uint8Array(signature)))
-  }`;
-
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: signed,
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Google rejected the assertion: ${await response.text()}`);
-  }
-  return (await response.json()).access_token as string;
-}
-
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
@@ -190,59 +138,25 @@ Deno.serve(async (req) => {
   const { data: owner } = await admin.auth.admin.getUserById(ownerId);
   const ownerEmail = owner?.user?.email ?? "Một người dùng Do X";
 
-  const account = JSON.parse(FCM_SERVICE_ACCOUNT);
-  let bearer: string;
+  let result;
   try {
-    bearer = await accessToken(account);
+    result = await sendPush(tokens, (locale) => {
+      const { title, body } = messageFor(kind, count, total, ownerEmail, locale);
+      return {
+        title,
+        body,
+        data: { type: "chicken_activity", kind, owner_id: ownerId },
+        androidChannelId: "shared_chicken_activity",
+      };
+    });
   } catch (error) {
-    console.error("could not mint an FCM access token", error);
+    console.error("could not send the chicken push", error);
     return json({ error: "Push provider is unavailable" }, 502);
   }
-  const endpoint =
-    `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`;
 
-  let sent = 0;
-  const stale: string[] = [];
-  await Promise.all(tokens.map(async (device) => {
-    const { title, body } = messageFor(
-      kind,
-      count,
-      total,
-      ownerEmail,
-      device.locale,
-    );
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${bearer}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: {
-          token: device.token,
-          notification: { title, body },
-          data: { type: "chicken_activity", kind, owner_id: ownerId },
-          android: { priority: "high" },
-          apns: { payload: { aps: { sound: "default" } } },
-        },
-      }),
-    });
-    if (response.ok) {
-      sent++;
-      return;
-    }
-    // A token dies when the app is uninstalled or reinstalled. Google keeps
-    // answering 404/400 for it forever, so drop it rather than retry it daily.
-    const failure = await response.text();
-    if (response.status === 404 || response.status === 400) {
-      stale.push(device.token);
-    }
-    console.error(`FCM rejected a token: HTTP ${response.status}`, failure);
-  }));
-
-  if (stale.length > 0) {
-    await admin.from("device_tokens").delete().in("token", stale);
+  if (result.stale.length > 0) {
+    await admin.from("device_tokens").delete().in("token", result.stale);
   }
 
-  return json({ sent, dropped: stale.length });
+  return json({ sent: result.sent, dropped: result.stale.length });
 });
