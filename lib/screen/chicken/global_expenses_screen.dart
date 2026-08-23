@@ -223,7 +223,7 @@ class _GlobalExpensesScreenState
                               title: Row(
                                 children: [
                                   ChickenChangeBadge(
-                                    vm.changeBadgeOf(expense.id),
+                                    expense.changeBadge,
                                     leading: true,
                                   ),
                                   Flexible(

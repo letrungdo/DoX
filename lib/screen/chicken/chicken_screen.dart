@@ -563,8 +563,8 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
-              ChickenChangeBadge(vm.changeBadgeOf(batch.id)),
-              if (vm.changeBadgeOf(batch.id) != null) const SizedBox(height: 4),
+              ChickenChangeBadge(batch.changeBadge),
+              if (batch.changeBadge != null) const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

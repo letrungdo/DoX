@@ -363,7 +363,7 @@ class _ChickenBatchDetailScreenState
                       Row(
                         children: [
                           _buildStatusChip(batch),
-                          ChickenChangeBadge(vm.changeBadgeOf(batch.id)),
+                          ChickenChangeBadge(batch.changeBadge),
                         ],
                       ),
                     ],
@@ -596,7 +596,7 @@ class _ChickenBatchDetailScreenState
                         Row(
                           children: [
                             ChickenChangeBadge(
-                              vm.changeBadgeOf(e.id),
+                              e.changeBadge,
                               compact: true,
                               leading: true,
                             ),
@@ -810,7 +810,7 @@ class _ChickenBatchDetailScreenState
                   Row(
                     children: [
                       ChickenChangeBadge(
-                        vm.changeBadgeOf(sale.id),
+                        sale.changeBadge,
                         compact: true,
                         leading: true,
                       ),

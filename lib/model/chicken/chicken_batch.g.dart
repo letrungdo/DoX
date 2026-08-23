@@ -34,6 +34,12 @@ ChickenBatch _$ChickenBatchFromJson(Map<String, dynamic> json) => ChickenBatch(
   actualHatchDate: json['actualHatchDate'] == null
       ? null
       : DateTime.parse(json['actualHatchDate'] as String),
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
 );
 
 Map<String, dynamic> _$ChickenBatchToJson(ChickenBatch instance) =>
@@ -47,4 +53,6 @@ Map<String, dynamic> _$ChickenBatchToJson(ChickenBatch instance) =>
       'cockSales': instance.cockSales,
       'sales': instance.sales,
       'actualHatchDate': instance.actualHatchDate?.toIso8601String(),
+      'createdAt': instance.createdAt?.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
     };

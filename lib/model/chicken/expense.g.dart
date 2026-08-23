@@ -12,6 +12,12 @@ Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
   amount: (json['amount'] as num).toDouble(),
   date: DateTime.parse(json['date'] as String),
   note: json['note'] as String?,
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
 );
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
@@ -20,6 +26,8 @@ Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
   'amount': instance.amount,
   'date': instance.date.toIso8601String(),
   'note': instance.note,
+  'createdAt': instance.createdAt?.toIso8601String(),
+  'updatedAt': instance.updatedAt?.toIso8601String(),
 };
 
 const _$ExpenseTypeEnumMap = {

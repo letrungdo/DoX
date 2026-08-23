@@ -11,7 +11,7 @@ import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:do_x/repository/chicken_repository.dart';
 import 'package:do_x/services/chicken_export_service.dart';
 import 'package:do_x/services/chicken_import_service.dart';
-import 'package:do_x/services/chicken_recent_changes.dart';
+import 'package:do_x/model/chicken/record_change.dart';
 import 'package:do_x/services/chicken_sync_queue.dart';
 import 'package:do_x/services/notification_service.dart';
 import 'package:do_x/services/push_notification_service.dart';
@@ -191,12 +191,18 @@ class ChickenViewModel extends CoreViewModel {
     await storageService.setChickenLunarDisplay(value);
   }
 
-  final ChickenRecentChanges _recentChanges = ChickenRecentChanges();
+  /// Provisional local stamps on a record the user has just added, so its
+  /// badge shows at once, offline included. The server writes its own stamps;
+  /// the next load replaces these.
+  T _stampCreated<T extends TimestampedRecord<T>>(T record) {
+    final now = DateTime.now();
+    return record.stamped(createdAt: now, updatedAt: now);
+  }
 
-  /// Badge a record should show in the lists ("new" / "edited"), or null when it
-  /// has not changed recently. Keyed by record id, so it works for batches,
-  /// sales and expenses alike.
-  RecordChange? changeBadgeOf(String id) => _recentChanges.statusOf(id);
+  /// Same for an edit, keeping the record's own creation stamp: something added
+  /// minutes ago stays badged "new" instead of dropping to "edited".
+  T _stampUpdated<T extends TimestampedRecord<T>>(T record, T previous) =>
+      record.stamped(createdAt: previous.createdAt, updatedAt: DateTime.now());
 
   /// Year of a stored (solar) [date] in the currently displayed calendar:
   /// the lunar year in lunar mode, the solar year in solar mode. Used by the
@@ -524,7 +530,6 @@ class ChickenViewModel extends CoreViewModel {
   @override
   void initState() {
     super.initState();
-    _recentChanges.restore();
     _restoreDataSourceSelection();
     _restoreFromCache();
     // This view model lives app-wide and initState runs on every screen mount,
@@ -564,8 +569,6 @@ class ChickenViewModel extends CoreViewModel {
           // The cache goes, the queue stays: it holds work the user believes is
           // saved, and it is replayed when the same account signs back in.
           unawaited(storageService.clearChickenCache());
-          // The badges describe this account's records, so they go with them.
-          _recentChanges.clear();
           _cacheRestored = false;
           notifyListenersSafe();
           unawaited(_syncVaccinationNotifications());
@@ -982,10 +985,13 @@ class ChickenViewModel extends CoreViewModel {
       quantity: quantity,
       actualHatchDate: actualHatchDate,
       vaccinations: _getDefaultVaccinationSchedule(incubationDate),
+      // Provisional stamps so the badge shows at once, offline included. The
+      // server writes its own on insert; the next load replaces these.
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
     _batches.insert(0, newBatch);
     _markSectionChanged(ChickenSection.batches);
-    _recentChanges.markAdded(newBatch.id);
     // Stable sort so a batch added with the same incubation date as an existing
     // one stays on top (it was just inserted at the front).
     mergeSort(
@@ -1009,13 +1015,13 @@ class ChickenViewModel extends CoreViewModel {
     final incubationDateDelta = batch.incubationDate.difference(
       previousBatch.incubationDate,
     );
+    final edited = _stampUpdated(batch, previousBatch);
     final updatedBatch = incubationDateDelta == Duration.zero
-        ? batch
-        : batch.shiftVaccinationSchedule(incubationDateDelta);
+        ? edited
+        : edited.shiftVaccinationSchedule(incubationDateDelta);
 
     _batches[index] = updatedBatch;
     _markSectionChanged(ChickenSection.batches);
-    _recentChanges.markUpdated(updatedBatch.id);
     notifyListenersSafe();
     await _commit("update chicken batch", [
       _repository.updateBatchOp(updatedBatch),
@@ -1030,7 +1036,6 @@ class ChickenViewModel extends CoreViewModel {
     if (batch == null) return;
     _batches.removeWhere((e) => e.id == id);
     _markSectionChanged(ChickenSection.batches);
-    _recentChanges.forget(id);
     // Guard against an in-flight load re-adding this batch before the server
     // delete has settled. The guard is cleared by a later load once the
     // server confirms the batch is gone.
@@ -1053,23 +1058,22 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addExpense(String batchId, Expense expense) {
-    _recentChanges.markAdded(expense.id);
+    final added = _stampCreated(expense);
     return _editBatch(
       batchId,
       "insert expense",
-      (batch) => batch.copyWith(expenses: [...batch.expenses, expense]),
-      [_repository.insertExpenseOp(batchId, expense)],
+      (batch) => batch.copyWith(expenses: [...batch.expenses, added]),
+      [_repository.insertExpenseOp(batchId, added)],
     );
   }
 
   Future<void> updateExpense(String batchId, Expense expense) {
-    _recentChanges.markUpdated(expense.id);
     return _editBatch(
       batchId,
       "update expense",
       (batch) => batch.copyWith(
         expenses: batch.expenses
-            .map((e) => e.id == expense.id ? expense : e)
+            .map((e) => e.id == expense.id ? _stampUpdated(expense, e) : e)
             .toList(),
       ),
       [_repository.updateExpenseOp(expense)],
@@ -1077,7 +1081,6 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> deleteExpense(String batchId, String expenseId) {
-    _recentChanges.forget(expenseId);
     return _editBatch(
       batchId,
       "delete expense",
@@ -1089,32 +1092,34 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addBatchSale(String batchId, BatchSale sale) {
-    _recentChanges.markAdded(sale.id);
+    final added = _stampCreated(sale);
     return _editBatch(
       batchId,
       "insert batch sale",
       (batch) => batch.copyWith(
-        sales: [...batch.sales, sale]..sort((a, b) => a.date.compareTo(b.date)),
+        sales: [...batch.sales, added]
+          ..sort((a, b) => a.date.compareTo(b.date)),
       ),
-      [_repository.insertBatchSaleOp(batchId, sale)],
+      [_repository.insertBatchSaleOp(batchId, added)],
     );
   }
 
   Future<void> updateBatchSale(String batchId, BatchSale sale) {
-    _recentChanges.markUpdated(sale.id);
     return _editBatch(
       batchId,
       "update batch sale",
       (batch) => batch.copyWith(
-        sales: batch.sales.map((s) => s.id == sale.id ? sale : s).toList()
-          ..sort((a, b) => a.date.compareTo(b.date)),
+        sales:
+            batch.sales
+                .map((s) => s.id == sale.id ? _stampUpdated(sale, s) : s)
+                .toList()
+              ..sort((a, b) => a.date.compareTo(b.date)),
       ),
       [_repository.updateBatchSaleOp(sale)],
     );
   }
 
   Future<void> deleteBatchSale(String batchId, String saleId) {
-    _recentChanges.forget(saleId);
     return _editBatch(
       batchId,
       "delete batch sale",
@@ -1126,25 +1131,25 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addCockSale(String batchId, CockSale sale) {
-    _recentChanges.markAdded(sale.id);
+    final added = _stampCreated(sale);
     return _editBatch(
       batchId,
       "insert cock sale",
-      (batch) => batch.copyWith(cockSales: [...batch.cockSales, sale]),
-      [_repository.insertCockSaleOp(batchId, sale)],
+      (batch) => batch.copyWith(cockSales: [...batch.cockSales, added]),
+      [_repository.insertCockSaleOp(batchId, added)],
     );
   }
 
   Future<void> addGlobalCockSale(CockSale sale) async {
+    final added = _stampCreated(sale);
     // Front of the list so a same-date sale shows on top (stable sort keeps it).
-    _globalCockSales.insert(0, sale);
+    _globalCockSales.insert(0, added);
     _markSectionChanged(ChickenSection.globalCockSales);
-    _recentChanges.markAdded(sale.id);
     notifyListenersSafe();
     await _commit(
       "insert global cock sale",
-      [_repository.insertCockSaleOp(null, sale)],
-      rollback: () => _globalCockSales.removeWhere((s) => s.id == sale.id),
+      [_repository.insertCockSaleOp(null, added)],
+      rollback: () => _globalCockSales.removeWhere((s) => s.id == added.id),
     );
   }
 
@@ -1152,9 +1157,8 @@ class ChickenViewModel extends CoreViewModel {
     final index = _globalCockSales.indexWhere((item) => item.id == sale.id);
     if (index == -1) return;
     final previous = _globalCockSales[index];
-    _globalCockSales[index] = sale;
+    _globalCockSales[index] = _stampUpdated(sale, previous);
     _markSectionChanged(ChickenSection.globalCockSales);
-    _recentChanges.markUpdated(sale.id);
     notifyListenersSafe();
     await _commit(
       "update global cock sale",
@@ -1171,7 +1175,6 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final removed = _globalCockSales.removeAt(index);
     _markSectionChanged(ChickenSection.globalCockSales);
-    _recentChanges.forget(id);
     notifyListenersSafe();
     await _commit(
       "delete global cock sale",
@@ -1184,14 +1187,14 @@ class ChickenViewModel extends CoreViewModel {
   }
 
   Future<void> addGlobalExpense(Expense expense) async {
-    _globalExpenses.insert(0, expense);
+    final added = _stampCreated(expense);
+    _globalExpenses.insert(0, added);
     _markSectionChanged(ChickenSection.globalExpenses);
-    _recentChanges.markAdded(expense.id);
     notifyListenersSafe();
     await _commit(
       "insert global expense",
-      [_repository.insertExpenseOp(null, expense)],
-      rollback: () => _globalExpenses.removeWhere((e) => e.id == expense.id),
+      [_repository.insertExpenseOp(null, added)],
+      rollback: () => _globalExpenses.removeWhere((e) => e.id == added.id),
     );
   }
 
@@ -1199,9 +1202,8 @@ class ChickenViewModel extends CoreViewModel {
     final index = _globalExpenses.indexWhere((item) => item.id == expense.id);
     if (index == -1) return;
     final previous = _globalExpenses[index];
-    _globalExpenses[index] = expense;
+    _globalExpenses[index] = _stampUpdated(expense, previous);
     _markSectionChanged(ChickenSection.globalExpenses);
-    _recentChanges.markUpdated(expense.id);
     notifyListenersSafe();
     await _commit(
       "update global expense",
@@ -1218,7 +1220,6 @@ class ChickenViewModel extends CoreViewModel {
     if (index == -1) return;
     final removed = _globalExpenses.removeAt(index);
     _markSectionChanged(ChickenSection.globalExpenses);
-    _recentChanges.forget(id);
     notifyListenersSafe();
     await _commit(
       "delete global expense",
@@ -1299,8 +1300,6 @@ class ChickenViewModel extends CoreViewModel {
     await _loadTask;
 
     final deletedCount = await _repository.deleteAllData();
-    // Nothing is left to badge.
-    _recentChanges.clear();
     _clearLoadedData();
     await storageService.clearChickenCache();
     notifyListenersSafe();

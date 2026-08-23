@@ -1,13 +1,14 @@
 import 'package:do_x/model/chicken/batch_sale.dart';
 import 'package:do_x/model/chicken/cock_sale.dart';
 import 'package:do_x/model/chicken/expense.dart';
+import 'package:do_x/model/chicken/record_change.dart';
 import 'package:do_x/model/chicken/vaccination.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'chicken_batch.g.dart';
 
 @JsonSerializable()
-class ChickenBatch {
+class ChickenBatch with TimestampedRecord<ChickenBatch> {
   /// How long eggs sit in the incubator. Both directions of the
   /// incubation date <-> hatch date conversion go through this.
   static const incubationDuration = Duration(days: 21);
@@ -21,6 +22,10 @@ class ChickenBatch {
   final List<CockSale> cockSales;
   final List<BatchSale> sales;
   final DateTime? actualHatchDate;
+  @override
+  final DateTime? createdAt;
+  @override
+  final DateTime? updatedAt;
 
   ChickenBatch({
     required this.id,
@@ -32,6 +37,8 @@ class ChickenBatch {
     this.cockSales = const [],
     this.sales = const [],
     this.actualHatchDate,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory ChickenBatch.fromJson(Map<String, dynamic> json) =>
@@ -101,6 +108,10 @@ class ChickenBatch {
     return referenceDate.difference(_hatchDate).inDays;
   }
 
+  @override
+  ChickenBatch stamped({DateTime? createdAt, DateTime? updatedAt}) =>
+      copyWith(createdAt: createdAt, updatedAt: updatedAt);
+
   ChickenBatch copyWith({
     String? id,
     String? name,
@@ -111,6 +122,8 @@ class ChickenBatch {
     List<CockSale>? cockSales,
     List<BatchSale>? sales,
     DateTime? actualHatchDate,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return ChickenBatch(
       id: id ?? this.id,
@@ -122,6 +135,8 @@ class ChickenBatch {
       cockSales: cockSales ?? this.cockSales,
       sales: sales ?? this.sales,
       actualHatchDate: actualHatchDate ?? this.actualHatchDate,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

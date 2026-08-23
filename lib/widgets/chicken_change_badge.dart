@@ -1,7 +1,7 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
-import 'package:do_x/services/chicken_recent_changes.dart';
+import 'package:do_x/model/chicken/record_change.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:flutter/material.dart';
 

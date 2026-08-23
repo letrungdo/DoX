@@ -286,7 +286,7 @@ class _CockSalesScreenState
                               title: Row(
                                 children: [
                                   ChickenChangeBadge(
-                                    vm.changeBadgeOf(sale.id),
+                                    sale.changeBadge,
                                     leading: true,
                                   ),
                                   Flexible(

@@ -470,6 +470,11 @@ class ChickenRepository {
   static DateTime? _parseDate(dynamic value) =>
       value == null ? null : DateTime.parse(value as String);
 
+  /// Row timestamps come back as UTC; the badges compare them against the
+  /// device clock, so they have to be local.
+  static DateTime? _parseTimestamp(dynamic value) =>
+      value == null ? null : DateTime.parse(value as String).toLocal();
+
   Map<String, dynamic> _batchToRow(ChickenBatch b) => {
     'id': b.id,
     'name': b.name,
@@ -509,6 +514,8 @@ class ChickenRepository {
       cockSales: cockSales,
       sales: sales,
       actualHatchDate: _parseDate(row['actual_hatch_date']),
+      createdAt: _parseTimestamp(row['created_at']),
+      updatedAt: _parseTimestamp(row['updated_at']),
     );
   }
 
@@ -527,6 +534,8 @@ class ChickenRepository {
     quantity: row['quantity'] ?? 0,
     amount: (row['amount'] as num).toDouble(),
     note: row['note'],
+    createdAt: _parseTimestamp(row['created_at']),
+    updatedAt: _parseTimestamp(row['updated_at']),
   );
 
   Map<String, dynamic> _vaccinationToRow(Vaccination v, String batchId) => {
@@ -559,6 +568,8 @@ class ChickenRepository {
     amount: (row['amount'] as num).toDouble(),
     date: _parseDate(row['date'])!,
     note: row['note'],
+    createdAt: _parseTimestamp(row['created_at']),
+    updatedAt: _parseTimestamp(row['updated_at']),
   );
 
   Map<String, dynamic> _cockSaleToRow(CockSale s, String? batchId) => {
@@ -578,5 +589,7 @@ class ChickenRepository {
     category:
         SaleCategory.values.asNameMap()[row['category']] ??
         SaleCategory.fighting,
+    createdAt: _parseTimestamp(row['created_at']),
+    updatedAt: _parseTimestamp(row['updated_at']),
   );
 }
