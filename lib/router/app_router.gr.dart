@@ -9,99 +9,167 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:io' as _i34;
+import 'dart:io' as _i37;
 
-import 'package:auto_route/auto_route.dart' as _i28;
-import 'package:do_x/constants/enum/market_code.dart' as _i31;
-import 'package:do_x/model/movie_model.dart' as _i33;
+import 'package:auto_route/auto_route.dart' as _i30;
+import 'package:do_x/constants/enum/market_code.dart' as _i34;
+import 'package:do_x/model/movie_model.dart' as _i36;
 import 'package:do_x/screen/account/app_account_screen.dart' as _i2;
 import 'package:do_x/screen/account/app_login_screen.dart' as _i3;
-import 'package:do_x/screen/account/update_password_screen.dart' as _i25;
-import 'package:do_x/screen/account/verify_otp_screen.dart' as _i26;
-import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart' as _i4;
-import 'package:do_x/screen/chicken/chicken_screen.dart' as _i5;
-import 'package:do_x/screen/chicken/chicken_settings_screen.dart' as _i6;
-import 'package:do_x/screen/chicken/chicken_statistics_screen.dart' as _i7;
-import 'package:do_x/screen/chicken/cock_sales_screen.dart' as _i8;
-import 'package:do_x/screen/chicken/global_expenses_screen.dart' as _i12;
-import 'package:do_x/screen/electric_screen.dart' as _i9;
-import 'package:do_x/screen/electric_settings_screen.dart' as _i10;
-import 'package:do_x/screen/feng_shui_compass_screen.dart' as _i11;
-import 'package:do_x/screen/image_editor/image_editor_screen.dart' as _i13;
-import 'package:do_x/screen/lunar_screen.dart' as _i15;
-import 'package:do_x/screen/main_screen.dart' as _i16;
-import 'package:do_x/screen/menu_screen.dart' as _i18;
-import 'package:do_x/screen/movie/movie_detail_screen.dart' as _i19;
-import 'package:do_x/screen/movie/movie_screen.dart' as _i20;
+import 'package:do_x/screen/account/update_password_screen.dart' as _i27;
+import 'package:do_x/screen/account/verify_otp_screen.dart' as _i28;
+import 'package:do_x/screen/asset/asset_screen.dart' as _i4;
+import 'package:do_x/screen/asset/asset_summary_screen.dart' as _i5;
+import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart' as _i6;
+import 'package:do_x/screen/chicken/chicken_screen.dart' as _i7;
+import 'package:do_x/screen/chicken/chicken_settings_screen.dart' as _i8;
+import 'package:do_x/screen/chicken/chicken_statistics_screen.dart' as _i9;
+import 'package:do_x/screen/chicken/cock_sales_screen.dart' as _i10;
+import 'package:do_x/screen/chicken/global_expenses_screen.dart' as _i14;
+import 'package:do_x/screen/electric_screen.dart' as _i11;
+import 'package:do_x/screen/electric_settings_screen.dart' as _i12;
+import 'package:do_x/screen/feng_shui_compass_screen.dart' as _i13;
+import 'package:do_x/screen/image_editor/image_editor_screen.dart' as _i15;
+import 'package:do_x/screen/lunar_screen.dart' as _i17;
+import 'package:do_x/screen/main_screen.dart' as _i18;
+import 'package:do_x/screen/menu_screen.dart' as _i20;
+import 'package:do_x/screen/movie/movie_detail_screen.dart' as _i21;
+import 'package:do_x/screen/movie/movie_screen.dart' as _i22;
 import 'package:do_x/screen/my_life/account_screen.dart' as _i1;
-import 'package:do_x/screen/my_life/login_screen.dart' as _i14;
-import 'package:do_x/screen/my_life/my_life_screen.dart' as _i21;
-import 'package:do_x/screen/my_life/trimmer_screen.dart' as _i24;
-import 'package:do_x/screen/network/wifi_management_screen.dart' as _i27;
-import 'package:do_x/screen/news/market_detail_screen.dart' as _i17;
-import 'package:do_x/screen/news/news_screen.dart' as _i22;
-import 'package:do_x/screen/settings_screen.dart' as _i23;
-import 'package:do_x/view_model/electric_view_model.dart' as _i30;
-import 'package:do_x/view_model/verify_otp_view_model.dart' as _i35;
-import 'package:flutter/foundation.dart' as _i32;
-import 'package:flutter/material.dart' as _i29;
+import 'package:do_x/screen/my_life/login_screen.dart' as _i16;
+import 'package:do_x/screen/my_life/my_life_screen.dart' as _i23;
+import 'package:do_x/screen/my_life/trimmer_screen.dart' as _i26;
+import 'package:do_x/screen/network/wifi_management_screen.dart' as _i29;
+import 'package:do_x/screen/news/market_detail_screen.dart' as _i19;
+import 'package:do_x/screen/news/news_screen.dart' as _i24;
+import 'package:do_x/screen/settings_screen.dart' as _i25;
+import 'package:do_x/view_model/asset_view_model.dart' as _i32;
+import 'package:do_x/view_model/electric_view_model.dart' as _i33;
+import 'package:do_x/view_model/verify_otp_view_model.dart' as _i38;
+import 'package:flutter/foundation.dart' as _i35;
+import 'package:flutter/material.dart' as _i31;
 
 /// generated route for
 /// [_i1.AccountScreen]
-class AccountRoute extends _i28.PageRouteInfo<void> {
-  const AccountRoute({List<_i28.PageRouteInfo>? children})
+class AccountRoute extends _i30.PageRouteInfo<void> {
+  const AccountRoute({List<_i30.PageRouteInfo>? children})
     : super(AccountRoute.name, initialChildren: children);
 
   static const String name = 'AccountRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i1.AccountScreen());
+      return _i30.WrappedRoute(child: const _i1.AccountScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i2.AppAccountScreen]
-class AppAccountRoute extends _i28.PageRouteInfo<void> {
-  const AppAccountRoute({List<_i28.PageRouteInfo>? children})
+class AppAccountRoute extends _i30.PageRouteInfo<void> {
+  const AppAccountRoute({List<_i30.PageRouteInfo>? children})
     : super(AppAccountRoute.name, initialChildren: children);
 
   static const String name = 'AppAccountRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i2.AppAccountScreen());
+      return _i30.WrappedRoute(child: const _i2.AppAccountScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i3.AppLoginScreen]
-class AppLoginRoute extends _i28.PageRouteInfo<void> {
-  const AppLoginRoute({List<_i28.PageRouteInfo>? children})
+class AppLoginRoute extends _i30.PageRouteInfo<void> {
+  const AppLoginRoute({List<_i30.PageRouteInfo>? children})
     : super(AppLoginRoute.name, initialChildren: children);
 
   static const String name = 'AppLoginRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i3.AppLoginScreen());
+      return _i30.WrappedRoute(child: const _i3.AppLoginScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i4.ChickenBatchDetailScreen]
+/// [_i4.AssetScreen]
+class AssetRoute extends _i30.PageRouteInfo<void> {
+  const AssetRoute({List<_i30.PageRouteInfo>? children})
+    : super(AssetRoute.name, initialChildren: children);
+
+  static const String name = 'AssetRoute';
+
+  static _i30.PageInfo page = _i30.PageInfo(
+    name,
+    builder: (data) {
+      return _i30.WrappedRoute(child: const _i4.AssetScreen());
+    },
+  );
+}
+
+/// generated route for
+/// [_i5.AssetSummaryScreen]
+class AssetSummaryRoute extends _i30.PageRouteInfo<AssetSummaryRouteArgs> {
+  AssetSummaryRoute({
+    _i31.Key? key,
+    required _i32.AssetViewModel assetVm,
+    List<_i30.PageRouteInfo>? children,
+  }) : super(
+         AssetSummaryRoute.name,
+         args: AssetSummaryRouteArgs(key: key, assetVm: assetVm),
+         initialChildren: children,
+       );
+
+  static const String name = 'AssetSummaryRoute';
+
+  static _i30.PageInfo page = _i30.PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<AssetSummaryRouteArgs>();
+      return _i30.WrappedRoute(
+        child: _i5.AssetSummaryScreen(key: args.key, assetVm: args.assetVm),
+      );
+    },
+  );
+}
+
+class AssetSummaryRouteArgs {
+  const AssetSummaryRouteArgs({this.key, required this.assetVm});
+
+  final _i31.Key? key;
+
+  final _i32.AssetViewModel assetVm;
+
+  @override
+  String toString() {
+    return 'AssetSummaryRouteArgs{key: $key, assetVm: $assetVm}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AssetSummaryRouteArgs) return false;
+    return key == other.key && assetVm == other.assetVm;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ assetVm.hashCode;
+}
+
+/// generated route for
+/// [_i6.ChickenBatchDetailScreen]
 class ChickenBatchDetailRoute
-    extends _i28.PageRouteInfo<ChickenBatchDetailRouteArgs> {
+    extends _i30.PageRouteInfo<ChickenBatchDetailRouteArgs> {
   ChickenBatchDetailRoute({
-    _i29.Key? key,
+    _i31.Key? key,
     required String batchId,
-    List<_i28.PageRouteInfo>? children,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          ChickenBatchDetailRoute.name,
          args: ChickenBatchDetailRouteArgs(key: key, batchId: batchId),
@@ -110,12 +178,12 @@ class ChickenBatchDetailRoute
 
   static const String name = 'ChickenBatchDetailRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<ChickenBatchDetailRouteArgs>();
-      return _i28.WrappedRoute(
-        child: _i4.ChickenBatchDetailScreen(
+      return _i30.WrappedRoute(
+        child: _i6.ChickenBatchDetailScreen(
           key: args.key,
           batchId: args.batchId,
         ),
@@ -127,7 +195,7 @@ class ChickenBatchDetailRoute
 class ChickenBatchDetailRouteArgs {
   const ChickenBatchDetailRouteArgs({this.key, required this.batchId});
 
-  final _i29.Key? key;
+  final _i31.Key? key;
 
   final String batchId;
 
@@ -148,93 +216,93 @@ class ChickenBatchDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i5.ChickenScreen]
-class ChickenRoute extends _i28.PageRouteInfo<void> {
-  const ChickenRoute({List<_i28.PageRouteInfo>? children})
+/// [_i7.ChickenScreen]
+class ChickenRoute extends _i30.PageRouteInfo<void> {
+  const ChickenRoute({List<_i30.PageRouteInfo>? children})
     : super(ChickenRoute.name, initialChildren: children);
 
   static const String name = 'ChickenRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i5.ChickenScreen());
+      return _i30.WrappedRoute(child: const _i7.ChickenScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i6.ChickenSettingsScreen]
-class ChickenSettingsRoute extends _i28.PageRouteInfo<void> {
-  const ChickenSettingsRoute({List<_i28.PageRouteInfo>? children})
+/// [_i8.ChickenSettingsScreen]
+class ChickenSettingsRoute extends _i30.PageRouteInfo<void> {
+  const ChickenSettingsRoute({List<_i30.PageRouteInfo>? children})
     : super(ChickenSettingsRoute.name, initialChildren: children);
 
   static const String name = 'ChickenSettingsRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i6.ChickenSettingsScreen());
+      return _i30.WrappedRoute(child: const _i8.ChickenSettingsScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i7.ChickenStatisticsScreen]
-class ChickenStatisticsRoute extends _i28.PageRouteInfo<void> {
-  const ChickenStatisticsRoute({List<_i28.PageRouteInfo>? children})
+/// [_i9.ChickenStatisticsScreen]
+class ChickenStatisticsRoute extends _i30.PageRouteInfo<void> {
+  const ChickenStatisticsRoute({List<_i30.PageRouteInfo>? children})
     : super(ChickenStatisticsRoute.name, initialChildren: children);
 
   static const String name = 'ChickenStatisticsRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i7.ChickenStatisticsScreen());
+      return _i30.WrappedRoute(child: const _i9.ChickenStatisticsScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i8.CockSalesScreen]
-class CockSalesRoute extends _i28.PageRouteInfo<void> {
-  const CockSalesRoute({List<_i28.PageRouteInfo>? children})
+/// [_i10.CockSalesScreen]
+class CockSalesRoute extends _i30.PageRouteInfo<void> {
+  const CockSalesRoute({List<_i30.PageRouteInfo>? children})
     : super(CockSalesRoute.name, initialChildren: children);
 
   static const String name = 'CockSalesRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i8.CockSalesScreen());
+      return _i30.WrappedRoute(child: const _i10.CockSalesScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i9.ElectricScreen]
-class ElectricRoute extends _i28.PageRouteInfo<void> {
-  const ElectricRoute({List<_i28.PageRouteInfo>? children})
+/// [_i11.ElectricScreen]
+class ElectricRoute extends _i30.PageRouteInfo<void> {
+  const ElectricRoute({List<_i30.PageRouteInfo>? children})
     : super(ElectricRoute.name, initialChildren: children);
 
   static const String name = 'ElectricRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i9.ElectricScreen());
+      return _i30.WrappedRoute(child: const _i11.ElectricScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i10.ElectricSettingsScreen]
+/// [_i12.ElectricSettingsScreen]
 class ElectricSettingsRoute
-    extends _i28.PageRouteInfo<ElectricSettingsRouteArgs> {
+    extends _i30.PageRouteInfo<ElectricSettingsRouteArgs> {
   ElectricSettingsRoute({
-    _i29.Key? key,
-    required _i30.ElectricViewModel electricVm,
-    List<_i28.PageRouteInfo>? children,
+    _i31.Key? key,
+    required _i33.ElectricViewModel electricVm,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          ElectricSettingsRoute.name,
          args: ElectricSettingsRouteArgs(key: key, electricVm: electricVm),
@@ -243,12 +311,12 @@ class ElectricSettingsRoute
 
   static const String name = 'ElectricSettingsRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<ElectricSettingsRouteArgs>();
-      return _i28.WrappedRoute(
-        child: _i10.ElectricSettingsScreen(
+      return _i30.WrappedRoute(
+        child: _i12.ElectricSettingsScreen(
           key: args.key,
           electricVm: args.electricVm,
         ),
@@ -260,9 +328,9 @@ class ElectricSettingsRoute
 class ElectricSettingsRouteArgs {
   const ElectricSettingsRouteArgs({this.key, required this.electricVm});
 
-  final _i29.Key? key;
+  final _i31.Key? key;
 
-  final _i30.ElectricViewModel electricVm;
+  final _i33.ElectricViewModel electricVm;
 
   @override
   String toString() {
@@ -281,108 +349,108 @@ class ElectricSettingsRouteArgs {
 }
 
 /// generated route for
-/// [_i11.FengShuiCompassScreen]
-class FengShuiCompassRoute extends _i28.PageRouteInfo<void> {
-  const FengShuiCompassRoute({List<_i28.PageRouteInfo>? children})
+/// [_i13.FengShuiCompassScreen]
+class FengShuiCompassRoute extends _i30.PageRouteInfo<void> {
+  const FengShuiCompassRoute({List<_i30.PageRouteInfo>? children})
     : super(FengShuiCompassRoute.name, initialChildren: children);
 
   static const String name = 'FengShuiCompassRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return const _i11.FengShuiCompassScreen();
+      return const _i13.FengShuiCompassScreen();
     },
   );
 }
 
 /// generated route for
-/// [_i12.GlobalExpensesScreen]
-class GlobalExpensesRoute extends _i28.PageRouteInfo<void> {
-  const GlobalExpensesRoute({List<_i28.PageRouteInfo>? children})
+/// [_i14.GlobalExpensesScreen]
+class GlobalExpensesRoute extends _i30.PageRouteInfo<void> {
+  const GlobalExpensesRoute({List<_i30.PageRouteInfo>? children})
     : super(GlobalExpensesRoute.name, initialChildren: children);
 
   static const String name = 'GlobalExpensesRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i12.GlobalExpensesScreen());
+      return _i30.WrappedRoute(child: const _i14.GlobalExpensesScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i13.ImageEditorScreen]
-class ImageEditorRoute extends _i28.PageRouteInfo<void> {
-  const ImageEditorRoute({List<_i28.PageRouteInfo>? children})
+/// [_i15.ImageEditorScreen]
+class ImageEditorRoute extends _i30.PageRouteInfo<void> {
+  const ImageEditorRoute({List<_i30.PageRouteInfo>? children})
     : super(ImageEditorRoute.name, initialChildren: children);
 
   static const String name = 'ImageEditorRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i13.ImageEditorScreen());
+      return _i30.WrappedRoute(child: const _i15.ImageEditorScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i14.LoginScreen]
-class LoginRoute extends _i28.PageRouteInfo<void> {
-  const LoginRoute({List<_i28.PageRouteInfo>? children})
+/// [_i16.LoginScreen]
+class LoginRoute extends _i30.PageRouteInfo<void> {
+  const LoginRoute({List<_i30.PageRouteInfo>? children})
     : super(LoginRoute.name, initialChildren: children);
 
   static const String name = 'LoginRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i14.LoginScreen());
+      return _i30.WrappedRoute(child: const _i16.LoginScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i15.LunarScreen]
-class LunarRoute extends _i28.PageRouteInfo<void> {
-  const LunarRoute({List<_i28.PageRouteInfo>? children})
+/// [_i17.LunarScreen]
+class LunarRoute extends _i30.PageRouteInfo<void> {
+  const LunarRoute({List<_i30.PageRouteInfo>? children})
     : super(LunarRoute.name, initialChildren: children);
 
   static const String name = 'LunarRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return const _i15.LunarScreen();
+      return const _i17.LunarScreen();
     },
   );
 }
 
 /// generated route for
-/// [_i16.MainScreen]
-class MainRoute extends _i28.PageRouteInfo<void> {
-  const MainRoute({List<_i28.PageRouteInfo>? children})
+/// [_i18.MainScreen]
+class MainRoute extends _i30.PageRouteInfo<void> {
+  const MainRoute({List<_i30.PageRouteInfo>? children})
     : super(MainRoute.name, initialChildren: children);
 
   static const String name = 'MainRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i16.MainScreen());
+      return _i30.WrappedRoute(child: const _i18.MainScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i17.MarketDetailScreen]
-class MarketDetailRoute extends _i28.PageRouteInfo<MarketDetailRouteArgs> {
+/// [_i19.MarketDetailScreen]
+class MarketDetailRoute extends _i30.PageRouteInfo<MarketDetailRouteArgs> {
   MarketDetailRoute({
-    _i29.Key? key,
-    required _i31.MarketCode code,
-    List<_i28.PageRouteInfo>? children,
+    _i31.Key? key,
+    required _i34.MarketCode code,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          MarketDetailRoute.name,
          args: MarketDetailRouteArgs(key: key, code: code),
@@ -391,12 +459,12 @@ class MarketDetailRoute extends _i28.PageRouteInfo<MarketDetailRouteArgs> {
 
   static const String name = 'MarketDetailRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<MarketDetailRouteArgs>();
-      return _i28.WrappedRoute(
-        child: _i17.MarketDetailScreen(key: args.key, code: args.code),
+      return _i30.WrappedRoute(
+        child: _i19.MarketDetailScreen(key: args.key, code: args.code),
       );
     },
   );
@@ -405,9 +473,9 @@ class MarketDetailRoute extends _i28.PageRouteInfo<MarketDetailRouteArgs> {
 class MarketDetailRouteArgs {
   const MarketDetailRouteArgs({this.key, required this.code});
 
-  final _i29.Key? key;
+  final _i31.Key? key;
 
-  final _i31.MarketCode code;
+  final _i34.MarketCode code;
 
   @override
   String toString() {
@@ -426,40 +494,40 @@ class MarketDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i18.MenuScreen]
-class MenuRoute extends _i28.PageRouteInfo<void> {
-  const MenuRoute({List<_i28.PageRouteInfo>? children})
+/// [_i20.MenuScreen]
+class MenuRoute extends _i30.PageRouteInfo<void> {
+  const MenuRoute({List<_i30.PageRouteInfo>? children})
     : super(MenuRoute.name, initialChildren: children);
 
   static const String name = 'MenuRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i18.MenuScreen());
+      return _i30.WrappedRoute(child: const _i20.MenuScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i19.MovieDetailScreen]
-class MovieDetailRoute extends _i28.PageRouteInfo<MovieDetailRouteArgs> {
+/// [_i21.MovieDetailScreen]
+class MovieDetailRoute extends _i30.PageRouteInfo<MovieDetailRouteArgs> {
   MovieDetailRoute({
-    _i32.Key? key,
+    _i35.Key? key,
     required String movieUrl,
     required String movieId,
-    _i33.Movie? initialMovie,
+    _i36.Movie? initialMovie,
     bool embedded = false,
     double minimizeProgress = 1,
-    _i32.ValueChanged<bool>? onFullScreenChanged,
-    _i19.MovieDetailController? controller,
-    _i32.ValueChanged<_i33.Movie>? onRelatedMovieTap,
-    _i32.VoidCallback? onClose,
-    _i32.VoidCallback? onMinimize,
-    _i29.GestureDragStartCallback? onPlayerDragStart,
-    _i29.GestureDragUpdateCallback? onPlayerDragUpdate,
-    _i29.GestureDragEndCallback? onPlayerDragEnd,
-    List<_i28.PageRouteInfo>? children,
+    _i35.ValueChanged<bool>? onFullScreenChanged,
+    _i21.MovieDetailController? controller,
+    _i35.ValueChanged<_i36.Movie>? onRelatedMovieTap,
+    _i35.VoidCallback? onClose,
+    _i35.VoidCallback? onMinimize,
+    _i31.GestureDragStartCallback? onPlayerDragStart,
+    _i31.GestureDragUpdateCallback? onPlayerDragUpdate,
+    _i31.GestureDragEndCallback? onPlayerDragEnd,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          MovieDetailRoute.name,
          args: MovieDetailRouteArgs(
@@ -483,12 +551,12 @@ class MovieDetailRoute extends _i28.PageRouteInfo<MovieDetailRouteArgs> {
 
   static const String name = 'MovieDetailRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<MovieDetailRouteArgs>();
-      return _i28.WrappedRoute(
-        child: _i19.MovieDetailScreen(
+      return _i30.WrappedRoute(
+        child: _i21.MovieDetailScreen(
           key: args.key,
           movieUrl: args.movieUrl,
           movieId: args.movieId,
@@ -527,33 +595,33 @@ class MovieDetailRouteArgs {
     this.onPlayerDragEnd,
   });
 
-  final _i32.Key? key;
+  final _i35.Key? key;
 
   final String movieUrl;
 
   final String movieId;
 
-  final _i33.Movie? initialMovie;
+  final _i36.Movie? initialMovie;
 
   final bool embedded;
 
   final double minimizeProgress;
 
-  final _i32.ValueChanged<bool>? onFullScreenChanged;
+  final _i35.ValueChanged<bool>? onFullScreenChanged;
 
-  final _i19.MovieDetailController? controller;
+  final _i21.MovieDetailController? controller;
 
-  final _i32.ValueChanged<_i33.Movie>? onRelatedMovieTap;
+  final _i35.ValueChanged<_i36.Movie>? onRelatedMovieTap;
 
-  final _i32.VoidCallback? onClose;
+  final _i35.VoidCallback? onClose;
 
-  final _i32.VoidCallback? onMinimize;
+  final _i35.VoidCallback? onMinimize;
 
-  final _i29.GestureDragStartCallback? onPlayerDragStart;
+  final _i31.GestureDragStartCallback? onPlayerDragStart;
 
-  final _i29.GestureDragUpdateCallback? onPlayerDragUpdate;
+  final _i31.GestureDragUpdateCallback? onPlayerDragUpdate;
 
-  final _i29.GestureDragEndCallback? onPlayerDragEnd;
+  final _i31.GestureDragEndCallback? onPlayerDragEnd;
 
   @override
   String toString() {
@@ -599,76 +667,76 @@ class MovieDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i20.MovieScreen]
-class MovieRoute extends _i28.PageRouteInfo<void> {
-  const MovieRoute({List<_i28.PageRouteInfo>? children})
+/// [_i22.MovieScreen]
+class MovieRoute extends _i30.PageRouteInfo<void> {
+  const MovieRoute({List<_i30.PageRouteInfo>? children})
     : super(MovieRoute.name, initialChildren: children);
 
   static const String name = 'MovieRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i20.MovieScreen());
+      return _i30.WrappedRoute(child: const _i22.MovieScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i21.MyLifeScreen]
-class MyLifeRoute extends _i28.PageRouteInfo<void> {
-  const MyLifeRoute({List<_i28.PageRouteInfo>? children})
+/// [_i23.MyLifeScreen]
+class MyLifeRoute extends _i30.PageRouteInfo<void> {
+  const MyLifeRoute({List<_i30.PageRouteInfo>? children})
     : super(MyLifeRoute.name, initialChildren: children);
 
   static const String name = 'MyLifeRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i21.MyLifeScreen());
+      return _i30.WrappedRoute(child: const _i23.MyLifeScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i22.NewsScreen]
-class NewsRoute extends _i28.PageRouteInfo<void> {
-  const NewsRoute({List<_i28.PageRouteInfo>? children})
+/// [_i24.NewsScreen]
+class NewsRoute extends _i30.PageRouteInfo<void> {
+  const NewsRoute({List<_i30.PageRouteInfo>? children})
     : super(NewsRoute.name, initialChildren: children);
 
   static const String name = 'NewsRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i22.NewsScreen());
+      return _i30.WrappedRoute(child: const _i24.NewsScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i23.SettingsScreen]
-class SettingsRoute extends _i28.PageRouteInfo<void> {
-  const SettingsRoute({List<_i28.PageRouteInfo>? children})
+/// [_i25.SettingsScreen]
+class SettingsRoute extends _i30.PageRouteInfo<void> {
+  const SettingsRoute({List<_i30.PageRouteInfo>? children})
     : super(SettingsRoute.name, initialChildren: children);
 
   static const String name = 'SettingsRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return const _i23.SettingsScreen();
+      return const _i25.SettingsScreen();
     },
   );
 }
 
 /// generated route for
-/// [_i24.TrimmerScreen]
-class TrimmerRoute extends _i28.PageRouteInfo<TrimmerRouteArgs> {
+/// [_i26.TrimmerScreen]
+class TrimmerRoute extends _i30.PageRouteInfo<TrimmerRouteArgs> {
   TrimmerRoute({
-    required _i34.File file,
-    _i29.Key? key,
-    List<_i28.PageRouteInfo>? children,
+    required _i37.File file,
+    _i31.Key? key,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          TrimmerRoute.name,
          args: TrimmerRouteArgs(file: file, key: key),
@@ -677,11 +745,11 @@ class TrimmerRoute extends _i28.PageRouteInfo<TrimmerRouteArgs> {
 
   static const String name = 'TrimmerRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<TrimmerRouteArgs>();
-      return _i24.TrimmerScreen(args.file, key: args.key);
+      return _i26.TrimmerScreen(args.file, key: args.key);
     },
   );
 }
@@ -689,9 +757,9 @@ class TrimmerRoute extends _i28.PageRouteInfo<TrimmerRouteArgs> {
 class TrimmerRouteArgs {
   const TrimmerRouteArgs({required this.file, this.key});
 
-  final _i34.File file;
+  final _i37.File file;
 
-  final _i29.Key? key;
+  final _i31.Key? key;
 
   @override
   String toString() {
@@ -710,12 +778,12 @@ class TrimmerRouteArgs {
 }
 
 /// generated route for
-/// [_i25.UpdatePasswordScreen]
-class UpdatePasswordRoute extends _i28.PageRouteInfo<UpdatePasswordRouteArgs> {
+/// [_i27.UpdatePasswordScreen]
+class UpdatePasswordRoute extends _i30.PageRouteInfo<UpdatePasswordRouteArgs> {
   UpdatePasswordRoute({
-    _i29.Key? key,
+    _i31.Key? key,
     bool isRecovery = false,
-    List<_i28.PageRouteInfo>? children,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          UpdatePasswordRoute.name,
          args: UpdatePasswordRouteArgs(key: key, isRecovery: isRecovery),
@@ -724,14 +792,14 @@ class UpdatePasswordRoute extends _i28.PageRouteInfo<UpdatePasswordRouteArgs> {
 
   static const String name = 'UpdatePasswordRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<UpdatePasswordRouteArgs>(
         orElse: () => const UpdatePasswordRouteArgs(),
       );
-      return _i28.WrappedRoute(
-        child: _i25.UpdatePasswordScreen(
+      return _i30.WrappedRoute(
+        child: _i27.UpdatePasswordScreen(
           key: args.key,
           isRecovery: args.isRecovery,
         ),
@@ -743,7 +811,7 @@ class UpdatePasswordRoute extends _i28.PageRouteInfo<UpdatePasswordRouteArgs> {
 class UpdatePasswordRouteArgs {
   const UpdatePasswordRouteArgs({this.key, this.isRecovery = false});
 
-  final _i29.Key? key;
+  final _i31.Key? key;
 
   final bool isRecovery;
 
@@ -764,13 +832,13 @@ class UpdatePasswordRouteArgs {
 }
 
 /// generated route for
-/// [_i26.VerifyOtpScreen]
-class VerifyOtpRoute extends _i28.PageRouteInfo<VerifyOtpRouteArgs> {
+/// [_i28.VerifyOtpScreen]
+class VerifyOtpRoute extends _i30.PageRouteInfo<VerifyOtpRouteArgs> {
   VerifyOtpRoute({
-    _i29.Key? key,
+    _i31.Key? key,
     required String email,
-    required _i35.OtpPurpose purpose,
-    List<_i28.PageRouteInfo>? children,
+    required _i38.OtpPurpose purpose,
+    List<_i30.PageRouteInfo>? children,
   }) : super(
          VerifyOtpRoute.name,
          args: VerifyOtpRouteArgs(key: key, email: email, purpose: purpose),
@@ -779,12 +847,12 @@ class VerifyOtpRoute extends _i28.PageRouteInfo<VerifyOtpRouteArgs> {
 
   static const String name = 'VerifyOtpRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<VerifyOtpRouteArgs>();
-      return _i28.WrappedRoute(
-        child: _i26.VerifyOtpScreen(
+      return _i30.WrappedRoute(
+        child: _i28.VerifyOtpScreen(
           key: args.key,
           email: args.email,
           purpose: args.purpose,
@@ -801,11 +869,11 @@ class VerifyOtpRouteArgs {
     required this.purpose,
   });
 
-  final _i29.Key? key;
+  final _i31.Key? key;
 
   final String email;
 
-  final _i35.OtpPurpose purpose;
+  final _i38.OtpPurpose purpose;
 
   @override
   String toString() {
@@ -824,17 +892,17 @@ class VerifyOtpRouteArgs {
 }
 
 /// generated route for
-/// [_i27.WifiManagementScreen]
-class WifiManagementRoute extends _i28.PageRouteInfo<void> {
-  const WifiManagementRoute({List<_i28.PageRouteInfo>? children})
+/// [_i29.WifiManagementScreen]
+class WifiManagementRoute extends _i30.PageRouteInfo<void> {
+  const WifiManagementRoute({List<_i30.PageRouteInfo>? children})
     : super(WifiManagementRoute.name, initialChildren: children);
 
   static const String name = 'WifiManagementRoute';
 
-  static _i28.PageInfo page = _i28.PageInfo(
+  static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i28.WrappedRoute(child: const _i27.WifiManagementScreen());
+      return _i30.WrappedRoute(child: const _i29.WifiManagementScreen());
     },
   );
 }

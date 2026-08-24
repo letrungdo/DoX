@@ -182,6 +182,13 @@ Using gstack skills: After install, skills like /qa, /ship, /review, /investigat
 and /browse are available. Use /browse for all web browsing.
 Use ~/.claude/skills/gstack/... for gstack file paths (the global path).
 
+## Localization & Validation Rules
+
+- **Strict l10n**: All user-facing strings MUST use `l10n` from `context.l10n`. Never hard-code Vietnamese or English text in widgets.
+- **In-place Validation**: Prefer showing errors directly on input fields via `errorText` rather than using `showToast`.
+- **Form Dialogs**: Always use `CuteDialog` for data entry forms to ensure consistent layout, scrolling, and keyboard handling.
+- **Money Input**: Use `CuteMoneyField` for all currency amounts to get automatic formatting and suggestions.
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.

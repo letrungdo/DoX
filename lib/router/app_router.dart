@@ -121,6 +121,16 @@ class _AppRouter extends RootStackRouter {
             page: ImageEditorRoute.page,
           ),
           AutoRoute(
+            initial: initialTab == AppPage.asset,
+            path: 'asset',
+            page: assetTab.page,
+            guards: [_supabaseAuthGuard],
+            children: [
+              AutoRoute(path: '', page: AssetRoute.page),
+              AutoRoute(path: 'summary', page: AssetSummaryRoute.page),
+            ],
+          ),
+          AutoRoute(
             initial: initialTab == AppPage.menu,
             path: 'menu',
             page: MenuRoute.page,
@@ -207,6 +217,15 @@ class _AppRouter extends RootStackRouter {
       guards: [_supabaseAuthGuard],
     ),
     AutoRoute(path: '/image-editor', page: ImageEditorRoute.page),
+    AutoRoute(
+      path: '$_pushPrefix/asset',
+      page: AssetRoute.page,
+      guards: [_supabaseAuthGuard],
+    ),
+    AutoRoute(
+      path: '$_pushPrefix/asset/summary',
+      page: AssetSummaryRoute.page,
+    ),
   ];
 
   /// The tab to mark as initial: the one the user was last on, as long as it
@@ -232,5 +251,6 @@ const _pushPrefix = '/p';
 const newsTab = EmptyShellRoute('NewsTab');
 const myLifeTab = EmptyShellRoute('MyLifeTab');
 const chickenTab = EmptyShellRoute('ChickenTab');
+const assetTab = EmptyShellRoute('AssetTab');
 
 final appRouter = _AppRouter();

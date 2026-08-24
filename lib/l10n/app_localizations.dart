@@ -3619,6 +3619,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Touch the photo and drag to find the colour, then lift.'**
   String get pickColorFromPhotoHint;
+
+  /// No description provided for @asset.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
+  String get asset;
+
+  /// No description provided for @assetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset Management'**
+  String get assetTitle;
+
+  /// No description provided for @assetSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings'**
+  String get assetSavings;
+
+  /// No description provided for @assetInvestments.
+  ///
+  /// In en, this message translates to:
+  /// **'Investments'**
+  String get assetInvestments;
+
+  /// No description provided for @assetGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
+  String get assetGold;
+
+  /// No description provided for @assetSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset Summary'**
+  String get assetSummary;
+
+  /// No description provided for @assetTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Assets'**
+  String get assetTotal;
+
+  /// No description provided for @assetMonthlyInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Interest'**
+  String get assetMonthlyInterest;
+
+  /// No description provided for @assetProfitLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit/Loss'**
+  String get assetProfitLoss;
+
+  /// No description provided for @assetAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Asset'**
+  String get assetAdd;
+
+  /// No description provided for @assetDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this asset record?'**
+  String get assetDeleteConfirm;
+
+  /// No description provided for @assetBankName.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank name'**
+  String get assetBankName;
+
+  /// No description provided for @assetAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get assetAmount;
+
+  /// No description provided for @assetInterestRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest rate'**
+  String get assetInterestRate;
+
+  /// No description provided for @assetStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get assetStartDate;
+
+  /// No description provided for @assetBuyDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy date'**
+  String get assetBuyDate;
+
+  /// No description provided for @assetSymbol.
+  ///
+  /// In en, this message translates to:
+  /// **'Symbol'**
+  String get assetSymbol;
+
+  /// No description provided for @assetQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get assetQuantity;
+
+  /// No description provided for @assetBuyPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy price'**
+  String get assetBuyPrice;
+
+  /// No description provided for @assetGoldType.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold type'**
+  String get assetGoldType;
+
+  /// No description provided for @assetErrorRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required'**
+  String get assetErrorRequired;
+
+  /// No description provided for @assetErrorInvalidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid amount'**
+  String get assetErrorInvalidAmount;
+
+  /// No description provided for @assetErrorInvalidRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid interest rate'**
+  String get assetErrorInvalidRate;
+
+  /// No description provided for @assetErrorInvalidQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid quantity'**
+  String get assetErrorInvalidQuantity;
+
+  /// No description provided for @assetErrorInvalidPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid price'**
+  String get assetErrorInvalidPrice;
 }
 
 class _AppLocalizationsDelegate

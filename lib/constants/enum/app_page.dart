@@ -18,6 +18,7 @@ enum AppPage {
   fengShui,
   movie,
   imageEditor,
+  asset,
   menu;
 
   /// Past this the bottom bar's labels start to collide; [menu] sits on top of
@@ -37,7 +38,7 @@ enum AppPage {
 
   /// Pages needing the shared Supabase account. Route guards don't run for tab
   /// routes, so the tab bar has to enforce this itself.
-  bool get requiresSupabaseAuth => this == chicken || this == movie;
+  bool get requiresSupabaseAuth => this == chicken || this == movie || this == asset;
 
   static AppPage? byName(String? name) =>
       values.where((page) => page.name == name).firstOrNull;

@@ -1,3 +1,4 @@
+import 'package:do_x/constants/app_const.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,9 @@ class CuteMoneyField extends StatefulWidget {
   /// context-specific defaults (e.g. chick prices vs. adult-bird prices).
   final List<int>? presetSuggestions;
 
+  /// Maximum amount offered in the suggestion bar. Defaults to 50 million.
+  final int maxSuggestion;
+
   const CuteMoneyField({
     super.key,
     required this.controller,
@@ -35,6 +39,7 @@ class CuteMoneyField extends StatefulWidget {
     this.autofocus = false,
     this.showSuggestions = true,
     this.presetSuggestions,
+    this.maxSuggestion = AppConst.moneySuggestionDefault,
   });
 
   @override
@@ -44,6 +49,9 @@ class CuteMoneyField extends StatefulWidget {
 class _CuteMoneyFieldState extends State<CuteMoneyField> {
   final FocusNode _focusNode = FocusNode();
   OverlayEntry? _overlayEntry;
+
+  /// Completions smaller than this are too noisy to offer (e.g. "2.5k").
+  static const int _minSuggestion = 10000;
 
   @override
   void initState() {
@@ -93,27 +101,22 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
     return buffer.toString();
   }
 
-  /// Suggestions never exceed 50 million.
-  static const int _maxSuggestion = 50000000;
-
-  /// Completions smaller than this are too noisy to offer (e.g. "2.5k").
-  static const int _minSuggestion = 10000;
-
   List<int> _suggestions() {
     final raw = _rawDigits;
+    final maxSugg = widget.maxSuggestion;
     // Nothing typed yet: offer this field's preset amounts.
     if (raw.isEmpty) {
       final presets = widget.presetSuggestions;
       if (presets == null) return const [];
-      return presets.where((v) => v <= _maxSuggestion).toList();
+      return presets.where((v) => v <= maxSugg).toList();
     }
     final base = int.tryParse(raw);
     if (base == null || base == 0) return const [];
     // Offer round "×10" completions above what's typed, e.g. "25" -> 25k/250k/
-    // 2.5tr, "10000" -> 100k/1tr/10tr. Bounded to [10k, 50tr], so the list
+    // 2.5tr, "10000" -> 100k/1tr/10tr. Bounded to [10k, maxSugg], so the list
     // stays short (at most a handful of chips) whatever the input length.
     final result = <int>[];
-    for (var value = base * 10; value <= _maxSuggestion; value *= 10) {
+    for (var value = base * 10; value <= maxSugg; value *= 10) {
       if (value >= _minSuggestion) result.add(value);
     }
     return result;

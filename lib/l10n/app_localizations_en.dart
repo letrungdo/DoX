@@ -1989,4 +1989,79 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pickColorFromPhotoHint =>
       'Touch the photo and drag to find the colour, then lift.';
+
+  @override
+  String get asset => 'Assets';
+
+  @override
+  String get assetTitle => 'Asset Management';
+
+  @override
+  String get assetSavings => 'Savings';
+
+  @override
+  String get assetInvestments => 'Investments';
+
+  @override
+  String get assetGold => 'Gold';
+
+  @override
+  String get assetSummary => 'Asset Summary';
+
+  @override
+  String get assetTotal => 'Total Assets';
+
+  @override
+  String get assetMonthlyInterest => 'Monthly Interest';
+
+  @override
+  String get assetProfitLoss => 'Profit/Loss';
+
+  @override
+  String get assetAdd => 'Add Asset';
+
+  @override
+  String get assetDeleteConfirm => 'Delete this asset record?';
+
+  @override
+  String get assetBankName => 'Bank name';
+
+  @override
+  String get assetAmount => 'Amount';
+
+  @override
+  String get assetInterestRate => 'Interest rate';
+
+  @override
+  String get assetStartDate => 'Start date';
+
+  @override
+  String get assetBuyDate => 'Buy date';
+
+  @override
+  String get assetSymbol => 'Symbol';
+
+  @override
+  String get assetQuantity => 'Quantity';
+
+  @override
+  String get assetBuyPrice => 'Buy price';
+
+  @override
+  String get assetGoldType => 'Gold type';
+
+  @override
+  String get assetErrorRequired => 'This field is required';
+
+  @override
+  String get assetErrorInvalidAmount => 'Please enter a valid amount';
+
+  @override
+  String get assetErrorInvalidRate => 'Please enter a valid interest rate';
+
+  @override
+  String get assetErrorInvalidQuantity => 'Please enter a valid quantity';
+
+  @override
+  String get assetErrorInvalidPrice => 'Please enter a valid price';
 }

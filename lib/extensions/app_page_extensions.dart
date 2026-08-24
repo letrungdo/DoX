@@ -28,6 +28,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => l10n.fengShuiCompass,
     AppPage.movie => l10n.movie,
     AppPage.imageEditor => l10n.imageEditor,
+    AppPage.asset => l10n.asset,
     AppPage.menu => l10n.menu,
   };
 
@@ -41,6 +42,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => Icons.explore_rounded,
     AppPage.movie => Icons.movie_rounded,
     AppPage.imageEditor => Icons.auto_fix_high_rounded,
+    AppPage.asset => Icons.account_balance_wallet_rounded,
     AppPage.menu => Icons.menu_rounded,
   };
 
@@ -57,6 +59,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => const FengShuiCompassRoute(),
     AppPage.movie => const MovieRoute(),
     AppPage.imageEditor => const ImageEditorRoute(),
+    AppPage.asset => const AssetRoute(),
     AppPage.menu => const MenuRoute(),
   };
 }

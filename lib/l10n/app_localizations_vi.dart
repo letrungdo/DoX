@@ -1980,4 +1980,79 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get pickColorFromPhotoHint =>
       'Chạm và rê trên ảnh để chọn màu, rồi nhấc tay ra.';
+
+  @override
+  String get asset => 'Tài sản';
+
+  @override
+  String get assetTitle => 'Quản lý tài sản';
+
+  @override
+  String get assetSavings => 'Tiết kiệm';
+
+  @override
+  String get assetInvestments => 'Đầu tư';
+
+  @override
+  String get assetGold => 'Vàng';
+
+  @override
+  String get assetSummary => 'Tổng quan tài sản';
+
+  @override
+  String get assetTotal => 'Tổng tài sản';
+
+  @override
+  String get assetMonthlyInterest => 'Lãi tháng';
+
+  @override
+  String get assetProfitLoss => 'Lợi nhuận/Lỗ';
+
+  @override
+  String get assetAdd => 'Thêm tài sản';
+
+  @override
+  String get assetDeleteConfirm => 'Xóa ghi chép tài sản này?';
+
+  @override
+  String get assetBankName => 'Tên ngân hàng';
+
+  @override
+  String get assetAmount => 'Số tiền';
+
+  @override
+  String get assetInterestRate => 'Lãi suất';
+
+  @override
+  String get assetStartDate => 'Ngày bắt đầu';
+
+  @override
+  String get assetBuyDate => 'Ngày mua';
+
+  @override
+  String get assetSymbol => 'Mã';
+
+  @override
+  String get assetQuantity => 'Số lượng';
+
+  @override
+  String get assetBuyPrice => 'Giá mua';
+
+  @override
+  String get assetGoldType => 'Loại vàng';
+
+  @override
+  String get assetErrorRequired => 'Vui lòng nhập thông tin này';
+
+  @override
+  String get assetErrorInvalidAmount => 'Vui lòng nhập số tiền hợp lệ';
+
+  @override
+  String get assetErrorInvalidRate => 'Vui lòng nhập lãi suất hợp lệ';
+
+  @override
+  String get assetErrorInvalidQuantity => 'Vui lòng nhập số lượng hợp lệ';
+
+  @override
+  String get assetErrorInvalidPrice => 'Vui lòng nhập giá hợp lệ';
 }
