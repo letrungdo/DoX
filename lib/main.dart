@@ -19,7 +19,7 @@ import 'utils/logger.dart';
 
 void main() {
   runZonedGuarded(
-    () async {
+    () {
       WidgetsFlutterBinding.ensureInitialized();
       debugPrint = (String? message, {int? wrapWidth}) {
         if (kDebugMode) {
@@ -41,28 +41,10 @@ void main() {
       // app's own background/bottom nav colour shows through instead of the
       // system's default bar colour.
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      await Future.wait([
-        storageService.init(),
-        appInfo.init(),
-        Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
-        secureStorage.getAccount(),
-        initSupabase(),
-        notificationService.init(),
-      ]);
-      // Has to be listening before the first frame: the app can be launched by
-      // a password-reset link, and the session that link carries is handed over
-      // while the app starts.
-      authFlowService.start();
-      // Same reason: the app can be launched by a tap on a push — a storm
-      // alert or shared-chicken activity — and the message that launched it is
-      // only readable once Firebase is up. This also registers the device for
-      // the storm alerts, which every signed-in device receives.
-      unawaited(pushNotificationService.start());
-      if (storageService.getElectricReminderEnabled()) {
-        await notificationService.scheduleMonthlyElectricReminder();
-      }
-
-      runApp(const MyApp());
+      // Paint a Flutter loading screen immediately. Previously runApp was
+      // called only after every plugin had initialized, leaving a blank page
+      // throughout that work (especially noticeable on a cold web load).
+      runApp(AppBootstrap(initialize: _initializeApp));
     },
     (error, stack) {
       logger.e("___App error!!", error: error, stackTrace: stack);
@@ -70,18 +52,109 @@ void main() {
   );
 }
 
+Future<void> _initializeApp() async {
+  final initializers = <Future<void>>[
+    storageService.init(),
+    appInfo.init(),
+    secureStorage.getAccount(),
+    initSupabase(),
+  ];
+
+  // Neither local notifications nor Firebase Messaging is used by the web
+  // app. Avoid initializing Firebase there: it adds work to the critical path
+  // without enabling a feature. Native platforms keep their launch behavior.
+  if (!kIsWeb) {
+    initializers.addAll([
+      Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+      notificationService.init(),
+    ]);
+  }
+
+  await Future.wait(initializers);
+
+  // Listen before MyApp builds so auth links received during Supabase startup
+  // can still route to the right screen.
+  authFlowService.start();
+  if (!kIsWeb) {
+    unawaited(pushNotificationService.start());
+    if (storageService.getElectricReminderEnabled()) {
+      // Recreating an existing reminder does not need to delay the first UI.
+      unawaited(notificationService.scheduleMonthlyElectricReminder());
+    }
+  }
+}
+
+@visibleForTesting
+class AppBootstrap extends StatefulWidget {
+  const AppBootstrap({
+    required this.initialize,
+    this.app = const MyApp(),
+    super.key,
+  });
+
+  final Future<void> Function() initialize;
+  final Widget app;
+
+  @override
+  State<AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<AppBootstrap> {
+  late final Future<void> _initialization = widget.initialize();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            !snapshot.hasError) {
+          return widget.app;
+        }
+        return const Directionality(
+          textDirection: TextDirection.ltr,
+          child: ColoredBox(
+            color: Color(0xFFF4F0E8),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image(
+                    image: AssetImage('assets/images/app_icon.png'),
+                    width: 72,
+                    height: 72,
+                  ),
+                  SizedBox(height: 24),
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Color(0xFF715C3A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 void _catchAllError() {
   if (kDebugMode) return;
   FlutterError.onError = (details) {
     logger.e(details.exceptionAsString(), stackTrace: details.stack);
-    if (kReleaseMode) {
+    if (kReleaseMode && !kIsWeb && Firebase.apps.isNotEmpty) {
       FirebaseCrashlytics.instance.recordFlutterFatalError(details);
     }
     FlutterError.presentError(details);
   };
   PlatformDispatcher.instance.onError = (error, stack) {
     logger.e("__PlatformDispatcher Error!!", error: error, stackTrace: stack);
-    if (kReleaseMode) {
+    if (kReleaseMode && !kIsWeb && Firebase.apps.isNotEmpty) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     }
     return true;

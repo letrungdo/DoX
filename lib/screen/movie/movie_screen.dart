@@ -9,6 +9,7 @@ import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
+import 'package:do_x/screen/movie/movie_detail_controller.dart';
 import 'package:do_x/screen/movie/movie_detail_screen.dart';
 import 'package:do_x/screen/movie/movie_filter_sheet.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';

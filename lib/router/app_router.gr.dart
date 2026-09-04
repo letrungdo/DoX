@@ -9,43 +9,51 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:io' as _i37;
+import 'dart:io' as _i38;
 
 import 'package:auto_route/auto_route.dart' as _i30;
 import 'package:do_x/constants/enum/market_code.dart' as _i34;
 import 'package:do_x/model/movie_model.dart' as _i36;
-import 'package:do_x/screen/account/app_account_screen.dart' as _i2;
-import 'package:do_x/screen/account/app_login_screen.dart' as _i3;
-import 'package:do_x/screen/account/update_password_screen.dart' as _i27;
-import 'package:do_x/screen/account/verify_otp_screen.dart' as _i28;
-import 'package:do_x/screen/asset/asset_screen.dart' as _i4;
-import 'package:do_x/screen/asset/asset_summary_screen.dart' as _i5;
-import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart' as _i6;
-import 'package:do_x/screen/chicken/chicken_screen.dart' as _i7;
-import 'package:do_x/screen/chicken/chicken_settings_screen.dart' as _i8;
-import 'package:do_x/screen/chicken/chicken_statistics_screen.dart' as _i9;
-import 'package:do_x/screen/chicken/cock_sales_screen.dart' as _i10;
-import 'package:do_x/screen/chicken/global_expenses_screen.dart' as _i14;
-import 'package:do_x/screen/electric_screen.dart' as _i11;
-import 'package:do_x/screen/electric_settings_screen.dart' as _i12;
-import 'package:do_x/screen/feng_shui_compass_screen.dart' as _i13;
-import 'package:do_x/screen/image_editor/image_editor_screen.dart' as _i15;
-import 'package:do_x/screen/lunar_screen.dart' as _i17;
-import 'package:do_x/screen/main_screen.dart' as _i18;
-import 'package:do_x/screen/menu_screen.dart' as _i20;
-import 'package:do_x/screen/movie/movie_detail_screen.dart' as _i21;
-import 'package:do_x/screen/movie/movie_screen.dart' as _i22;
-import 'package:do_x/screen/my_life/account_screen.dart' as _i1;
-import 'package:do_x/screen/my_life/login_screen.dart' as _i16;
-import 'package:do_x/screen/my_life/my_life_screen.dart' as _i23;
-import 'package:do_x/screen/my_life/trimmer_screen.dart' as _i26;
-import 'package:do_x/screen/network/wifi_management_screen.dart' as _i29;
-import 'package:do_x/screen/news/market_detail_screen.dart' as _i19;
-import 'package:do_x/screen/news/news_screen.dart' as _i24;
-import 'package:do_x/screen/settings_screen.dart' as _i25;
+import 'package:do_x/screen/account/app_account_screen.dart' deferred as _i2;
+import 'package:do_x/screen/account/app_login_screen.dart' deferred as _i3;
+import 'package:do_x/screen/account/update_password_screen.dart'
+    deferred as _i27;
+import 'package:do_x/screen/account/verify_otp_screen.dart' deferred as _i28;
+import 'package:do_x/screen/asset/asset_screen.dart' deferred as _i4;
+import 'package:do_x/screen/asset/asset_summary_screen.dart' deferred as _i5;
+import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart'
+    deferred as _i6;
+import 'package:do_x/screen/chicken/chicken_screen.dart' deferred as _i7;
+import 'package:do_x/screen/chicken/chicken_settings_screen.dart'
+    deferred as _i8;
+import 'package:do_x/screen/chicken/chicken_statistics_screen.dart'
+    deferred as _i9;
+import 'package:do_x/screen/chicken/cock_sales_screen.dart' deferred as _i10;
+import 'package:do_x/screen/chicken/global_expenses_screen.dart'
+    deferred as _i14;
+import 'package:do_x/screen/electric_screen.dart' deferred as _i11;
+import 'package:do_x/screen/electric_settings_screen.dart' deferred as _i12;
+import 'package:do_x/screen/feng_shui_compass_screen.dart' deferred as _i13;
+import 'package:do_x/screen/image_editor/image_editor_screen.dart'
+    deferred as _i15;
+import 'package:do_x/screen/lunar_screen.dart' deferred as _i17;
+import 'package:do_x/screen/main_screen.dart' deferred as _i18;
+import 'package:do_x/screen/menu_screen.dart' deferred as _i20;
+import 'package:do_x/screen/movie/movie_detail_controller.dart' as _i37;
+import 'package:do_x/screen/movie/movie_detail_screen.dart' deferred as _i21;
+import 'package:do_x/screen/movie/movie_screen.dart' deferred as _i22;
+import 'package:do_x/screen/my_life/account_screen.dart' deferred as _i1;
+import 'package:do_x/screen/my_life/login_screen.dart' deferred as _i16;
+import 'package:do_x/screen/my_life/my_life_screen.dart' deferred as _i23;
+import 'package:do_x/screen/my_life/trimmer_screen.dart' deferred as _i26;
+import 'package:do_x/screen/network/wifi_management_screen.dart'
+    deferred as _i29;
+import 'package:do_x/screen/news/market_detail_screen.dart' deferred as _i19;
+import 'package:do_x/screen/news/news_screen.dart' deferred as _i24;
+import 'package:do_x/screen/settings_screen.dart' deferred as _i25;
 import 'package:do_x/view_model/asset_view_model.dart' as _i32;
 import 'package:do_x/view_model/electric_view_model.dart' as _i33;
-import 'package:do_x/view_model/verify_otp_view_model.dart' as _i38;
+import 'package:do_x/view_model/verify_otp_view_model.dart' as _i39;
 import 'package:flutter/foundation.dart' as _i35;
 import 'package:flutter/material.dart' as _i31;
 
@@ -60,7 +68,10 @@ class AccountRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i1.AccountScreen());
+      return _i30.DeferredWidget(
+        _i1.loadLibrary,
+        () => _i30.WrappedRoute(child: _i1.AccountScreen()),
+      );
     },
   );
 }
@@ -76,7 +87,10 @@ class AppAccountRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i2.AppAccountScreen());
+      return _i30.DeferredWidget(
+        _i2.loadLibrary,
+        () => _i30.WrappedRoute(child: _i2.AppAccountScreen()),
+      );
     },
   );
 }
@@ -92,7 +106,10 @@ class AppLoginRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i3.AppLoginScreen());
+      return _i30.DeferredWidget(
+        _i3.loadLibrary,
+        () => _i30.WrappedRoute(child: _i3.AppLoginScreen()),
+      );
     },
   );
 }
@@ -108,7 +125,10 @@ class AssetRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i4.AssetScreen());
+      return _i30.DeferredWidget(
+        _i4.loadLibrary,
+        () => _i30.WrappedRoute(child: _i4.AssetScreen()),
+      );
     },
   );
 }
@@ -132,8 +152,11 @@ class AssetSummaryRoute extends _i30.PageRouteInfo<AssetSummaryRouteArgs> {
     name,
     builder: (data) {
       final args = data.argsAs<AssetSummaryRouteArgs>();
-      return _i30.WrappedRoute(
-        child: _i5.AssetSummaryScreen(key: args.key, assetVm: args.assetVm),
+      return _i30.DeferredWidget(
+        _i5.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i5.AssetSummaryScreen(key: args.key, assetVm: args.assetVm),
+        ),
       );
     },
   );
@@ -182,10 +205,13 @@ class ChickenBatchDetailRoute
     name,
     builder: (data) {
       final args = data.argsAs<ChickenBatchDetailRouteArgs>();
-      return _i30.WrappedRoute(
-        child: _i6.ChickenBatchDetailScreen(
-          key: args.key,
-          batchId: args.batchId,
+      return _i30.DeferredWidget(
+        _i6.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i6.ChickenBatchDetailScreen(
+            key: args.key,
+            batchId: args.batchId,
+          ),
         ),
       );
     },
@@ -226,7 +252,10 @@ class ChickenRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i7.ChickenScreen());
+      return _i30.DeferredWidget(
+        _i7.loadLibrary,
+        () => _i30.WrappedRoute(child: _i7.ChickenScreen()),
+      );
     },
   );
 }
@@ -242,7 +271,10 @@ class ChickenSettingsRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i8.ChickenSettingsScreen());
+      return _i30.DeferredWidget(
+        _i8.loadLibrary,
+        () => _i30.WrappedRoute(child: _i8.ChickenSettingsScreen()),
+      );
     },
   );
 }
@@ -258,7 +290,10 @@ class ChickenStatisticsRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i9.ChickenStatisticsScreen());
+      return _i30.DeferredWidget(
+        _i9.loadLibrary,
+        () => _i30.WrappedRoute(child: _i9.ChickenStatisticsScreen()),
+      );
     },
   );
 }
@@ -274,7 +309,10 @@ class CockSalesRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i10.CockSalesScreen());
+      return _i30.DeferredWidget(
+        _i10.loadLibrary,
+        () => _i30.WrappedRoute(child: _i10.CockSalesScreen()),
+      );
     },
   );
 }
@@ -290,7 +328,10 @@ class ElectricRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i11.ElectricScreen());
+      return _i30.DeferredWidget(
+        _i11.loadLibrary,
+        () => _i30.WrappedRoute(child: _i11.ElectricScreen()),
+      );
     },
   );
 }
@@ -315,10 +356,13 @@ class ElectricSettingsRoute
     name,
     builder: (data) {
       final args = data.argsAs<ElectricSettingsRouteArgs>();
-      return _i30.WrappedRoute(
-        child: _i12.ElectricSettingsScreen(
-          key: args.key,
-          electricVm: args.electricVm,
+      return _i30.DeferredWidget(
+        _i12.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i12.ElectricSettingsScreen(
+            key: args.key,
+            electricVm: args.electricVm,
+          ),
         ),
       );
     },
@@ -359,7 +403,10 @@ class FengShuiCompassRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return const _i13.FengShuiCompassScreen();
+      return _i30.DeferredWidget(
+        _i13.loadLibrary,
+        () => _i13.FengShuiCompassScreen(),
+      );
     },
   );
 }
@@ -375,7 +422,10 @@ class GlobalExpensesRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i14.GlobalExpensesScreen());
+      return _i30.DeferredWidget(
+        _i14.loadLibrary,
+        () => _i30.WrappedRoute(child: _i14.GlobalExpensesScreen()),
+      );
     },
   );
 }
@@ -391,7 +441,10 @@ class ImageEditorRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i15.ImageEditorScreen());
+      return _i30.DeferredWidget(
+        _i15.loadLibrary,
+        () => _i30.WrappedRoute(child: _i15.ImageEditorScreen()),
+      );
     },
   );
 }
@@ -407,7 +460,10 @@ class LoginRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i16.LoginScreen());
+      return _i30.DeferredWidget(
+        _i16.loadLibrary,
+        () => _i30.WrappedRoute(child: _i16.LoginScreen()),
+      );
     },
   );
 }
@@ -423,7 +479,7 @@ class LunarRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return const _i17.LunarScreen();
+      return _i30.DeferredWidget(_i17.loadLibrary, () => _i17.LunarScreen());
     },
   );
 }
@@ -439,7 +495,10 @@ class MainRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i18.MainScreen());
+      return _i30.DeferredWidget(
+        _i18.loadLibrary,
+        () => _i30.WrappedRoute(child: _i18.MainScreen()),
+      );
     },
   );
 }
@@ -463,8 +522,11 @@ class MarketDetailRoute extends _i30.PageRouteInfo<MarketDetailRouteArgs> {
     name,
     builder: (data) {
       final args = data.argsAs<MarketDetailRouteArgs>();
-      return _i30.WrappedRoute(
-        child: _i19.MarketDetailScreen(key: args.key, code: args.code),
+      return _i30.DeferredWidget(
+        _i19.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i19.MarketDetailScreen(key: args.key, code: args.code),
+        ),
       );
     },
   );
@@ -504,7 +566,10 @@ class MenuRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i20.MenuScreen());
+      return _i30.DeferredWidget(
+        _i20.loadLibrary,
+        () => _i30.WrappedRoute(child: _i20.MenuScreen()),
+      );
     },
   );
 }
@@ -520,7 +585,7 @@ class MovieDetailRoute extends _i30.PageRouteInfo<MovieDetailRouteArgs> {
     bool embedded = false,
     double minimizeProgress = 1,
     _i35.ValueChanged<bool>? onFullScreenChanged,
-    _i21.MovieDetailController? controller,
+    _i37.MovieDetailController? controller,
     _i35.ValueChanged<_i36.Movie>? onRelatedMovieTap,
     _i35.VoidCallback? onClose,
     _i35.VoidCallback? onMinimize,
@@ -555,22 +620,25 @@ class MovieDetailRoute extends _i30.PageRouteInfo<MovieDetailRouteArgs> {
     name,
     builder: (data) {
       final args = data.argsAs<MovieDetailRouteArgs>();
-      return _i30.WrappedRoute(
-        child: _i21.MovieDetailScreen(
-          key: args.key,
-          movieUrl: args.movieUrl,
-          movieId: args.movieId,
-          initialMovie: args.initialMovie,
-          embedded: args.embedded,
-          minimizeProgress: args.minimizeProgress,
-          onFullScreenChanged: args.onFullScreenChanged,
-          controller: args.controller,
-          onRelatedMovieTap: args.onRelatedMovieTap,
-          onClose: args.onClose,
-          onMinimize: args.onMinimize,
-          onPlayerDragStart: args.onPlayerDragStart,
-          onPlayerDragUpdate: args.onPlayerDragUpdate,
-          onPlayerDragEnd: args.onPlayerDragEnd,
+      return _i30.DeferredWidget(
+        _i21.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i21.MovieDetailScreen(
+            key: args.key,
+            movieUrl: args.movieUrl,
+            movieId: args.movieId,
+            initialMovie: args.initialMovie,
+            embedded: args.embedded,
+            minimizeProgress: args.minimizeProgress,
+            onFullScreenChanged: args.onFullScreenChanged,
+            controller: args.controller,
+            onRelatedMovieTap: args.onRelatedMovieTap,
+            onClose: args.onClose,
+            onMinimize: args.onMinimize,
+            onPlayerDragStart: args.onPlayerDragStart,
+            onPlayerDragUpdate: args.onPlayerDragUpdate,
+            onPlayerDragEnd: args.onPlayerDragEnd,
+          ),
         ),
       );
     },
@@ -609,7 +677,7 @@ class MovieDetailRouteArgs {
 
   final _i35.ValueChanged<bool>? onFullScreenChanged;
 
-  final _i21.MovieDetailController? controller;
+  final _i37.MovieDetailController? controller;
 
   final _i35.ValueChanged<_i36.Movie>? onRelatedMovieTap;
 
@@ -677,7 +745,10 @@ class MovieRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i22.MovieScreen());
+      return _i30.DeferredWidget(
+        _i22.loadLibrary,
+        () => _i30.WrappedRoute(child: _i22.MovieScreen()),
+      );
     },
   );
 }
@@ -693,7 +764,10 @@ class MyLifeRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i23.MyLifeScreen());
+      return _i30.DeferredWidget(
+        _i23.loadLibrary,
+        () => _i30.WrappedRoute(child: _i23.MyLifeScreen()),
+      );
     },
   );
 }
@@ -709,7 +783,10 @@ class NewsRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i24.NewsScreen());
+      return _i30.DeferredWidget(
+        _i24.loadLibrary,
+        () => _i30.WrappedRoute(child: _i24.NewsScreen()),
+      );
     },
   );
 }
@@ -725,7 +802,7 @@ class SettingsRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return const _i25.SettingsScreen();
+      return _i30.DeferredWidget(_i25.loadLibrary, () => _i25.SettingsScreen());
     },
   );
 }
@@ -734,7 +811,7 @@ class SettingsRoute extends _i30.PageRouteInfo<void> {
 /// [_i26.TrimmerScreen]
 class TrimmerRoute extends _i30.PageRouteInfo<TrimmerRouteArgs> {
   TrimmerRoute({
-    required _i37.File file,
+    required _i38.File file,
     _i31.Key? key,
     List<_i30.PageRouteInfo>? children,
   }) : super(
@@ -749,7 +826,10 @@ class TrimmerRoute extends _i30.PageRouteInfo<TrimmerRouteArgs> {
     name,
     builder: (data) {
       final args = data.argsAs<TrimmerRouteArgs>();
-      return _i26.TrimmerScreen(args.file, key: args.key);
+      return _i30.DeferredWidget(
+        _i26.loadLibrary,
+        () => _i26.TrimmerScreen(args.file, key: args.key),
+      );
     },
   );
 }
@@ -757,7 +837,7 @@ class TrimmerRoute extends _i30.PageRouteInfo<TrimmerRouteArgs> {
 class TrimmerRouteArgs {
   const TrimmerRouteArgs({required this.file, this.key});
 
-  final _i37.File file;
+  final _i38.File file;
 
   final _i31.Key? key;
 
@@ -798,10 +878,13 @@ class UpdatePasswordRoute extends _i30.PageRouteInfo<UpdatePasswordRouteArgs> {
       final args = data.argsAs<UpdatePasswordRouteArgs>(
         orElse: () => const UpdatePasswordRouteArgs(),
       );
-      return _i30.WrappedRoute(
-        child: _i27.UpdatePasswordScreen(
-          key: args.key,
-          isRecovery: args.isRecovery,
+      return _i30.DeferredWidget(
+        _i27.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i27.UpdatePasswordScreen(
+            key: args.key,
+            isRecovery: args.isRecovery,
+          ),
         ),
       );
     },
@@ -837,7 +920,7 @@ class VerifyOtpRoute extends _i30.PageRouteInfo<VerifyOtpRouteArgs> {
   VerifyOtpRoute({
     _i31.Key? key,
     required String email,
-    required _i38.OtpPurpose purpose,
+    required _i39.OtpPurpose purpose,
     List<_i30.PageRouteInfo>? children,
   }) : super(
          VerifyOtpRoute.name,
@@ -851,11 +934,14 @@ class VerifyOtpRoute extends _i30.PageRouteInfo<VerifyOtpRouteArgs> {
     name,
     builder: (data) {
       final args = data.argsAs<VerifyOtpRouteArgs>();
-      return _i30.WrappedRoute(
-        child: _i28.VerifyOtpScreen(
-          key: args.key,
-          email: args.email,
-          purpose: args.purpose,
+      return _i30.DeferredWidget(
+        _i28.loadLibrary,
+        () => _i30.WrappedRoute(
+          child: _i28.VerifyOtpScreen(
+            key: args.key,
+            email: args.email,
+            purpose: args.purpose,
+          ),
         ),
       );
     },
@@ -873,7 +959,7 @@ class VerifyOtpRouteArgs {
 
   final String email;
 
-  final _i38.OtpPurpose purpose;
+  final _i39.OtpPurpose purpose;
 
   @override
   String toString() {
@@ -902,7 +988,10 @@ class WifiManagementRoute extends _i30.PageRouteInfo<void> {
   static _i30.PageInfo page = _i30.PageInfo(
     name,
     builder: (data) {
-      return _i30.WrappedRoute(child: const _i29.WifiManagementScreen());
+      return _i30.DeferredWidget(
+        _i29.loadLibrary,
+        () => _i30.WrappedRoute(child: _i29.WifiManagementScreen()),
+      );
     },
   );
 }

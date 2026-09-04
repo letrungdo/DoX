@@ -53,4 +53,8 @@ mkdir -p envs
 } > envs/dart-define.env
 
 flutter pub get
-flutter build web --release --dart-define-from-file envs/dart-define.env
+# Keep CanvasKit on the same HTTP/2 origin as the application. A cold browser
+# no longer needs an extra DNS/TLS connection to Google's Flutter CDN before
+# it can draw the first frame.
+flutter build web --release --no-web-resources-cdn \
+  --dart-define-from-file envs/dart-define.env

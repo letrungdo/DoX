@@ -24,7 +24,14 @@ final _myLifeAuthGuard = AutoRouteGuard.simple((resolver, _) {
   }
 });
 
-@AutoRouterConfig(replaceInRouteName: 'Screen|Page,Route')
+@AutoRouterConfig(
+  replaceInRouteName: 'Screen|Page,Route',
+  // Route screens (camera, video editor, charts, movies, etc.) are large and
+  // only one feature is visible at launch. On web, deferred imports split
+  // those features into lazy chunks instead of putting all of them in
+  // main.dart.js. Native targets load the same libraries transparently.
+  deferredLoading: true,
+)
 class _AppRouter extends RootStackRouter {
   @override
   RouteType get defaultRouteType => RouteType.material();

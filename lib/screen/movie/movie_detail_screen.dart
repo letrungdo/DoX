@@ -9,6 +9,7 @@ import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/movie/movie_detail_body.dart';
+import 'package:do_x/screen/movie/movie_detail_controller.dart';
 import 'package:do_x/screen/movie/movie_player_controls.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_settings_sheet.dart';
@@ -94,14 +95,6 @@ class MovieDetailScreen extends StatefulScreen implements AutoRouteWrapper {
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
 }
 
-/// Lets the overlay host drive the embedded detail screen — currently only to
-/// leave full screen, which the host cannot do on its own.
-class MovieDetailController {
-  VoidCallback? _exitFullScreen;
-
-  void exitFullScreen() => _exitFullScreen?.call();
-}
-
 class _MovieDetailScreenState
     extends ScreenState<MovieDetailScreen, MovieDetailViewModel> {
   late MovieDetailViewModel _vm;
@@ -183,7 +176,7 @@ class _MovieDetailScreenState
   void initState() {
     super.initState();
     logger.d('MovieDetailScreen: initState');
-    widget.controller?._exitFullScreen = _exitFullScreen;
+    widget.controller?.attach(_exitFullScreen);
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final shouldAutoEnterFullScreen =
@@ -225,10 +218,8 @@ class _MovieDetailScreenState
   void didUpdateWidget(MovieDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      if (oldWidget.controller?._exitFullScreen == _exitFullScreen) {
-        oldWidget.controller?._exitFullScreen = null;
-      }
-      widget.controller?._exitFullScreen = _exitFullScreen;
+      oldWidget.controller?.detach(_exitFullScreen);
+      widget.controller?.attach(_exitFullScreen);
     }
     if (oldWidget.movieId != widget.movieId ||
         oldWidget.movieUrl != widget.movieUrl) {
@@ -250,9 +241,7 @@ class _MovieDetailScreenState
   @override
   void dispose() {
     logger.d('MovieDetailScreen: dispose');
-    if (widget.controller?._exitFullScreen == _exitFullScreen) {
-      widget.controller?._exitFullScreen = null;
-    }
+    widget.controller?.detach(_exitFullScreen);
     _controllerGeneration++;
     final controller = _videoController;
     final listener = _videoValueListener;
