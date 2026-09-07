@@ -24,6 +24,15 @@ class RepeaterStatus {
   final List<String> localSsids;
 
   bool get isRepeating => (upstreamSsid ?? "").isNotEmpty;
+
+  RepeaterStatus copyWith({List<String>? localSsids}) {
+    return RepeaterStatus(
+      upstreamSsid: upstreamSsid,
+      signal: signal,
+      band: band,
+      localSsids: localSsids ?? this.localSsids,
+    );
+  }
 }
 
 /// One access point seen by the router's own scan.
@@ -104,48 +113,64 @@ class RouterRepeaterService {
     );
   }
 
-  Future<RepeaterStatus> getStatus({
+  /// Read just the upstream SSID and its quality — one cheap call (~0.3s),
+  /// which is what the live signal poll uses.
+  Future<RepeaterStatus> getUpstream({
     void Function(String message)? onLog,
     CancelToken? cancelToken,
   }) async {
     final signal = await _client.apiGet(
       "api/xqnetwork/wifiap_signal",
+      timeout: const Duration(seconds: 6),
       cancelToken: cancelToken,
       onLog: onLog,
     );
     final ssid = signal["ssid"]?.toString().trim();
     final band = signal["band"]?.toString().trim();
+    return RepeaterStatus(
+      upstreamSsid: (ssid ?? "").isEmpty ? null : ssid,
+      signal: _asInt(signal["signal"]),
+      band: (band ?? "").isEmpty ? null : band,
+    );
+  }
 
-    // The router's own SSIDs are a separate call, and a failure there must not
-    // hide the upstream we already know about.
+  /// The SSIDs the router broadcasts itself, radios that are off left out.
+  Future<List<String>> getLocalSsids({
+    void Function(String message)? onLog,
+    CancelToken? cancelToken,
+  }) async {
+    final detail = await _client.apiGet(
+      "api/xqnetwork/wifi_detail_all",
+      cancelToken: cancelToken,
+      onLog: onLog,
+    );
+    final info = detail["info"];
+    if (info is! List) return const [];
+    return info
+        .whereType<Map>()
+        .where((entry) => entry["status"].toString() == "1")
+        .map((entry) => entry["ssid"]?.toString() ?? "")
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+  }
+
+  Future<RepeaterStatus> getStatus({
+    void Function(String message)? onLog,
+    CancelToken? cancelToken,
+  }) async {
+    final upstream = await getUpstream(onLog: onLog, cancelToken: cancelToken);
+
+    // A failure reading the router's own SSIDs must not hide the upstream we
+    // already know about.
     var localSsids = const <String>[];
     try {
-      final detail = await _client.apiGet(
-        "api/xqnetwork/wifi_detail_all",
-        cancelToken: cancelToken,
-        onLog: onLog,
-      );
-      final info = detail["info"];
-      if (info is List) {
-        localSsids = info
-            .whereType<Map>()
-            .where((entry) => entry["status"].toString() == "1")
-            .map((entry) => entry["ssid"]?.toString() ?? "")
-            .where((entry) => entry.isNotEmpty)
-            .toList();
-      }
+      localSsids = await getLocalSsids(onLog: onLog, cancelToken: cancelToken);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) rethrow;
     } on RouterApiException catch (e) {
       onLog?.call("wifi_detail_all failed: $e");
     }
-
-    return RepeaterStatus(
-      upstreamSsid: (ssid ?? "").isEmpty ? null : ssid,
-      signal: _asInt(signal["signal"]),
-      band: (band ?? "").isEmpty ? null : band,
-      localSsids: localSsids,
-    );
+    return upstream.copyWith(localSsids: localSsids);
   }
 
   /// Ask the router to scan for nearby access points, strongest first.

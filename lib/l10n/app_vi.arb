@@ -1210,5 +1210,8 @@
   "routerErrorUnreachable": "Không kết nối được tới router. Kiểm tra địa chỉ IP và bạn có đang trong mạng của router không.",
   "routerErrorAuth": "Sai mật khẩu trang quản trị router.",
   "routerErrorMalformed": "Router trả về dữ liệu không hợp lệ.",
-  "routerErrorRejected": "Router từ chối yêu cầu."
+  "routerErrorRejected": "Router từ chối yêu cầu.",
+  "repeaterLive": "Trực tiếp",
+  "repeaterSignalStale": "Chưa đọc được tín hiệu — đang thử lại…",
+  "repeaterAutoScan": "Tự quét lại mỗi 20s"
 }

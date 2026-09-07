@@ -65,9 +65,26 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
   }
 
   /// The repeater status needs a router login, so it is fetched when the tab is
-  /// first opened rather than on every visit to the screen.
+  /// first opened rather than on every visit to the screen. The live signal
+  /// poll runs only while that tab is the visible one.
   void _onTabChanged() {
-    if (_tabController.index == _repeaterTabIndex) vm.connectRepeaterOnce();
+    if (_tabController.index == _repeaterTabIndex) {
+      vm.connectRepeaterOnce();
+      vm.startRepeaterLive();
+    } else {
+      vm.stopRepeaterLive();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Nothing should poll the router while the app is in the background.
+    if (state == AppLifecycleState.resumed) {
+      if (_tabController.index == _repeaterTabIndex) vm.startRepeaterLive();
+    } else if (state != AppLifecycleState.inactive) {
+      vm.stopRepeaterLive();
+    }
   }
 
   @override
@@ -253,11 +270,11 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                 fontWeight: FontWeight.bold,
               ),
             ),
+          if (isRepeating && status!.signal != null)
+            _buildSignalBar(l10n, vm, status.signal!),
           if (status != null)
             Text(
               [
-                if (isRepeating && status.signal != null)
-                  l10n.repeaterSignalPercent(status.signal!),
                 if (isRepeating && (status.band ?? "").isNotEmpty)
                   _bandLabel(status.band!),
                 if (status.localSsids.isNotEmpty)
@@ -267,8 +284,66 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
                 color: context.theme.colorScheme.onSurfaceVariant,
               ),
             ),
+          if (isRepeating && vm.isSignalStale)
+            Text(
+              l10n.repeaterSignalStale,
+              style: context.theme.textTheme.labelSmall?.copyWith(
+                color: context.colors.warning,
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  /// The live uplink reading: percentage, a bar and a pulsing dot while the
+  /// poll is running.
+  Widget _buildSignalBar(AppLocalizations l10n, V vm, int signal) {
+    final color = _signalColor(signal);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 4,
+      children: [
+        Row(
+          spacing: 6,
+          children: [
+            Text(
+              "$signal%",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const Spacer(),
+            if (vm.isLive && !vm.isSignalStale) ...[
+              _LivePulse(color: color),
+              Text(
+                l10n.repeaterLive,
+                style: context.theme.textTheme.labelSmall?.copyWith(
+                  color: color,
+                ),
+              ),
+            ],
+          ],
+        ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(Dimens.radiusTiny),
+          child: TweenAnimationBuilder(
+            // Animating the bar keeps a 3-second tick from looking like a jump.
+            tween: Tween<double>(end: (signal / 100).clamp(0.0, 1.0)),
+            duration: const Duration(milliseconds: 400),
+            builder: (context, value, _) => LinearProgressIndicator(
+              value: value,
+              minHeight: 6,
+              backgroundColor:
+                  context.theme.colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -286,11 +361,33 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
       children: [
-        Text(
-          l10n.repeaterNearbyTitle,
-          style: context.theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          spacing: 8,
+          children: [
+            Text(
+              l10n.repeaterNearbyTitle,
+              style: context.theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            // A fixed slot, so the header does not move when a background
+            // scan starts.
+            SizedBox.square(
+              dimension: 16,
+              child: vm.isBackgroundScanning
+                  ? const Loading(size: 14, strokeWidth: 2)
+                  : null,
+            ),
+            const Spacer(),
+            Text(
+              l10n.repeaterAutoScan,
+              style: context.theme.textTheme.labelSmall,
+            ),
+            Switch(
+              value: vm.isAutoScanOn,
+              onChanged: (_) => vm.toggleAutoScan(),
+            ),
+          ],
         ),
         for (final wifi in list)
           _buildNearbyRow(l10n, vm, wifi, isCurrent: wifi.ssid == current),
@@ -351,11 +448,18 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
               color: context.colors.success,
               fontSize: 18,
             ),
-          Text(
-            "${wifi.signal}%",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFeatures: [FontFeature.tabularFigures()],
+          // A fixed slot: a live refresh changing 9% to 100% must not shove
+          // the row's text sideways.
+          SizedBox(
+            width: 42,
+            child: Text(
+              "${wifi.signal}%",
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: _signalColor(wifi.signal),
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
         ],
@@ -972,6 +1076,42 @@ class _UpstreamDialogState extends State<_UpstreamDialog> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Slowly breathing dot that marks a value as live.
+class _LivePulse extends StatefulWidget {
+  const _LivePulse({required this.color});
+
+  final Color color;
+
+  @override
+  State<_LivePulse> createState() => _LivePulseState();
+}
+
+class _LivePulseState extends State<_LivePulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.25, end: 1).animate(_controller),
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+      ),
     );
   }
 }

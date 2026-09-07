@@ -3925,6 +3925,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The router rejected the request.'**
   String get routerErrorRejected;
+
+  /// No description provided for @repeaterLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get repeaterLive;
+
+  /// No description provided for @repeaterSignalStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot read the signal — retrying…'**
+  String get repeaterSignalStale;
+
+  /// No description provided for @repeaterAutoScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan every 20s'**
+  String get repeaterAutoScan;
 }
 
 class _AppLocalizationsDelegate

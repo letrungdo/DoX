@@ -2155,4 +2155,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routerErrorRejected => 'The router rejected the request.';
+
+  @override
+  String get repeaterLive => 'Live';
+
+  @override
+  String get repeaterSignalStale => 'Cannot read the signal — retrying…';
+
+  @override
+  String get repeaterAutoScan => 'Rescan every 20s';
 }

@@ -2146,4 +2146,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get routerErrorRejected => 'Router từ chối yêu cầu.';
+
+  @override
+  String get repeaterLive => 'Trực tiếp';
+
+  @override
+  String get repeaterSignalStale => 'Chưa đọc được tín hiệu — đang thử lại…';
+
+  @override
+  String get repeaterAutoScan => 'Tự quét lại mỗi 20s';
 }

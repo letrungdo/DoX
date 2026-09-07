@@ -1252,5 +1252,8 @@
   "routerErrorUnreachable": "Cannot reach the router. Check the IP address and that you are on its network.",
   "routerErrorAuth": "Wrong router admin password.",
   "routerErrorMalformed": "The router answered with unexpected data.",
-  "routerErrorRejected": "The router rejected the request."
+  "routerErrorRejected": "The router rejected the request.",
+  "repeaterLive": "Live",
+  "repeaterSignalStale": "Cannot read the signal — retrying…",
+  "repeaterAutoScan": "Rescan every 20s"
 }

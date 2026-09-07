@@ -59,6 +59,8 @@ class WifiManagementViewModel extends CoreViewModel {
 
   @override
   void dispose() {
+    _signalTimer?.cancel();
+    _autoScanTimer?.cancel();
     _lanCancelToken?.cancel("Wifi management disposed");
     _internetCancelToken?.cancel("Wifi management disposed");
     _lanSubscription?.cancel();
@@ -178,8 +180,32 @@ class WifiManagementViewModel extends CoreViewModel {
   /// distinguishable.
   List<NearbyWifi>? nearbyWifi;
 
+  /// The upstream signal poll: cheap (~0.3s per call), so it can run live
+  /// while the repeater tab is on screen.
+  static const _signalInterval = Duration(seconds: 3);
+
+  /// A scan takes the radio off the air for ~3.5s, and a second one landing
+  /// on top of it hangs the router for ~40s — so auto scans are slow and
+  /// never overlap.
+  static const _autoScanInterval = Duration(seconds: 20);
+  static const _minScanGap = Duration(seconds: 10);
+
+  Timer? _signalTimer;
+  Timer? _autoScanTimer;
+  DateTime? _lastScanAt;
+  bool _isPollingSignal = false;
+
   bool isRepeaterLoading = false;
   bool isScanning = false;
+
+  /// An auto scan, which keeps the old list on screen and leaves the main
+  /// scan button alone.
+  bool isBackgroundScanning = false;
+  bool isAutoScanOn = false;
+
+  /// Set when a signal poll fails, so the card can mark the value as old
+  /// instead of flashing an error banner every few seconds.
+  bool isSignalStale = false;
   bool isApplyingUpstream = false;
   String? repeaterError;
   String? repeaterSuccess;
@@ -192,6 +218,107 @@ class WifiManagementViewModel extends CoreViewModel {
   // A getter, so a message built after an await still reads the live context
   // instead of one captured before the gap.
   AppLocalizations get _l10n => context.l10n;
+
+  bool get isLive => _signalTimer != null;
+
+  /// Starts the live signal poll; called when the repeater tab becomes
+  /// visible. Resumes auto scanning too, if it was left on.
+  void startRepeaterLive() {
+    if (_signalTimer == null && password.isNotEmpty) {
+      _signalTimer = Timer.periodic(_signalInterval, (_) => _pollSignal());
+      _pollSignal();
+    }
+    if (isAutoScanOn && _autoScanTimer == null) {
+      _autoScanTimer = Timer.periodic(_autoScanInterval, (_) => _autoScan());
+    }
+    notifyListenersSafe();
+  }
+
+  /// Stops every repeater timer — leaving the tab, or leaving the screen.
+  /// [isAutoScanOn] is kept so returning to the tab resumes it.
+  void stopRepeaterLive() {
+    _signalTimer?.cancel();
+    _signalTimer = null;
+    _autoScanTimer?.cancel();
+    _autoScanTimer = null;
+    notifyListenersSafe();
+  }
+
+  void toggleAutoScan() {
+    isAutoScanOn = !isAutoScanOn;
+    if (isAutoScanOn) {
+      _autoScanTimer = Timer.periodic(_autoScanInterval, (_) => _autoScan());
+      _autoScan();
+    } else {
+      _autoScanTimer?.cancel();
+      _autoScanTimer = null;
+    }
+    notifyListenersSafe();
+  }
+
+  /// One live tick: reads the uplink quality only, and stays quiet about
+  /// failures beyond marking the value stale.
+  Future<void> _pollSignal() async {
+    if (_isPollingSignal ||
+        isRepeaterLoading ||
+        isApplyingUpstream ||
+        isDispose) {
+      return;
+    }
+    _isPollingSignal = true;
+    try {
+      if (!_repeaterService.isLoggedIn) {
+        await _repeaterService.login(
+          ip: ip,
+          password: password,
+          cancelToken: cancelToken,
+        );
+      }
+      final upstream = await _repeaterService.getUpstream(
+        cancelToken: cancelToken,
+      );
+      if (isDispose || cancelToken.isCancelled) return;
+      repeaterStatus = upstream.copyWith(
+        localSsids: repeaterStatus?.localSsids,
+      );
+      isSignalStale = false;
+      notifyListenersSafe();
+    } catch (e) {
+      if (isDispose) return;
+      isSignalStale = true;
+      // An expired token is the usual cause; dropping it makes the next tick
+      // log in again.
+      if (e is RouterApiException && e.error == RouterApiError.auth) {
+        _repeaterService.logout();
+      }
+      notifyListenersSafe();
+    } finally {
+      _isPollingSignal = false;
+    }
+  }
+
+  /// Re-applies the order of the list already on screen to [fresh], keeping
+  /// each access point's new signal. Newly appeared ones go last.
+  List<NearbyWifi> _keepScanOrder(List<NearbyWifi> fresh) {
+    final previous = nearbyWifi;
+    if (previous == null || previous.isEmpty) return fresh;
+    final byBssid = {for (final wifi in fresh) wifi.bssid: wifi};
+    final ordered = <NearbyWifi>[];
+    for (final wifi in previous) {
+      final updated = byBssid.remove(wifi.bssid);
+      if (updated != null) ordered.add(updated);
+    }
+    return [...ordered, ...byBssid.values];
+  }
+
+  /// A scan on the timer. Skipped whenever the radio is likely still busy, so
+  /// two scans can never pile up on the router.
+  void _autoScan() {
+    if (isScanning || isBackgroundScanning || isApplyingUpstream) return;
+    final last = _lastScanAt;
+    if (last != null && DateTime.now().difference(last) < _minScanGap) return;
+    scanNearbyWifi(background: true);
+  }
 
   /// Logs in with the credentials from the config section and reads which
   /// Wi-Fi the router currently repeats.
@@ -220,6 +347,8 @@ class WifiManagementViewModel extends CoreViewModel {
       );
       if (isDispose || cancelToken.isCancelled) return;
       repeaterStatus = status;
+      isSignalStale = false;
+      startRepeaterLive();
     } catch (e) {
       _handleRepeaterFailure(e, "connectRepeater");
     } finally {
@@ -236,11 +365,18 @@ class WifiManagementViewModel extends CoreViewModel {
     connectRepeater();
   }
 
-  Future<void> scanNearbyWifi() async {
-    if (isScanning) return;
-    isScanning = true;
-    repeaterError = null;
-    repeaterSuccess = null;
+  /// Scans for nearby Wi-Fi. A [background] scan keeps whatever is already on
+  /// screen — the list, and any success or error message.
+  Future<void> scanNearbyWifi({bool background = false}) async {
+    if (isScanning || isBackgroundScanning) return;
+    if (background) {
+      isBackgroundScanning = true;
+    } else {
+      isScanning = true;
+      repeaterError = null;
+      repeaterSuccess = null;
+    }
+    _lastScanAt = DateTime.now();
     notifyListenersSafe();
 
     try {
@@ -257,11 +393,24 @@ class WifiManagementViewModel extends CoreViewModel {
         cancelToken: cancelToken,
       );
       if (isDispose || cancelToken.isCancelled) return;
-      nearbyWifi = list;
+      // A manual scan sorts by signal; a background one keeps the order the
+      // user is looking at, so rows do not swap places under their finger.
+      nearbyWifi = background ? _keepScanOrder(list) : list;
     } catch (e) {
-      _handleRepeaterFailure(e, "scanNearbyWifi");
+      // A background scan that fails leaves the previous list alone rather
+      // than replacing the page with an error.
+      if (background) {
+        _log("autoScan -> $e");
+        if (e is RouterApiException && e.error == RouterApiError.auth) {
+          _repeaterService.logout();
+        }
+      } else {
+        _handleRepeaterFailure(e, "scanNearbyWifi");
+      }
     } finally {
+      _lastScanAt = DateTime.now();
       isScanning = false;
+      isBackgroundScanning = false;
       notifyListenersSafe();
     }
   }
@@ -273,6 +422,10 @@ class WifiManagementViewModel extends CoreViewModel {
   Future<bool> applyUpstream(NearbyWifi wifi, String wifiPassword) async {
     if (isApplyingUpstream) return false;
     isApplyingUpstream = true;
+    // The router restarts its network here, so nothing should be polling it.
+    _autoScanTimer?.cancel();
+    _autoScanTimer = null;
+    isAutoScanOn = false;
     repeaterError = null;
     repeaterSuccess = null;
     notifyListenersSafe();
@@ -304,14 +457,17 @@ class WifiManagementViewModel extends CoreViewModel {
         band: wifi.band,
         localSsids: repeaterStatus?.localSsids ?? const [],
       );
-      // The session dies with the network restart.
+      // The session dies with the network restart, and the router usually
+      // comes back on a different address, so polling stops here.
       _repeaterService.logout();
+      stopRepeaterLive();
       return true;
     } on RouterApiException catch (e) {
       if (e.error == RouterApiError.unreachable) {
         // The router applied the change and dropped the link before it could
         // answer, which is the common case rather than an error.
         _repeaterService.logout();
+        stopRepeaterLive();
         repeaterSuccess = _l10n.repeaterApplyDropped;
         return true;
       }
