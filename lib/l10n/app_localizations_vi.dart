@@ -2055,4 +2055,95 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get assetErrorInvalidPrice => 'Vui lòng nhập giá hợp lệ';
+
+  @override
+  String get tabRepeater => 'Repeater';
+
+  @override
+  String get repeaterConnect => 'Đăng nhập router';
+
+  @override
+  String get repeaterReload => 'Tải lại';
+
+  @override
+  String get repeaterNeedsLogin =>
+      'Đăng nhập router để xem đang repeater từ wifi nào.';
+
+  @override
+  String get repeaterCurrentUpstream => 'Đang repeater từ';
+
+  @override
+  String get repeaterNotRepeating => 'Router hiện không ở chế độ repeater.';
+
+  @override
+  String get repeaterOwnSsid => 'Đang phát wifi';
+
+  @override
+  String repeaterSignalPercent(int percent) {
+    return 'Tín hiệu $percent%';
+  }
+
+  @override
+  String get repeaterScan => 'Khảo sát wifi xung quanh';
+
+  @override
+  String get repeaterScanning => 'Đang khảo sát…';
+
+  @override
+  String get repeaterNearbyTitle => 'Wifi xung quanh';
+
+  @override
+  String get repeaterNearbyEmpty =>
+      'Router không tìm thấy wifi nào xung quanh.';
+
+  @override
+  String repeaterChannel(int channel) {
+    return 'Kênh $channel';
+  }
+
+  @override
+  String get repeaterOpenNetwork => 'Không mật khẩu';
+
+  @override
+  String get repeaterPickTitle => 'Repeater từ wifi này?';
+
+  @override
+  String get repeaterWifiPassword => 'Mật khẩu wifi';
+
+  @override
+  String get repeaterApplyConfirm => 'Chuyển';
+
+  @override
+  String get repeaterApplyWarning =>
+      'Router sẽ khởi động lại mạng để áp dụng, nên mất kết nối khoảng 30 giây và địa chỉ IP thường đổi. Nhập sai mật khẩu thì router sẽ không có mạng.';
+
+  @override
+  String get repeaterPasswordRequired => 'Nhập mật khẩu của wifi này';
+
+  @override
+  String repeaterApplied(String ssid) {
+    return 'Đã chuyển sang repeater từ “$ssid”.';
+  }
+
+  @override
+  String repeaterAppliedIp(String ip) {
+    return 'Địa chỉ router mới: $ip';
+  }
+
+  @override
+  String get repeaterApplyDropped =>
+      'Đã gửi lệnh rồi mất kết nối — router đang áp dụng. Chờ khoảng 30 giây rồi kết nối lại.';
+
+  @override
+  String get routerErrorUnreachable =>
+      'Không kết nối được tới router. Kiểm tra địa chỉ IP và bạn có đang trong mạng của router không.';
+
+  @override
+  String get routerErrorAuth => 'Sai mật khẩu trang quản trị router.';
+
+  @override
+  String get routerErrorMalformed => 'Router trả về dữ liệu không hợp lệ.';
+
+  @override
+  String get routerErrorRejected => 'Router từ chối yêu cầu.';
 }

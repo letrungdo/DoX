@@ -5,12 +5,16 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/network/local_network_screen.dart';
+import 'package:do_x/services/router_repeater_service.dart';
 import 'package:do_x/services/speed_test_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
 import 'package:do_x/view_model/wifi_management_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
+import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
@@ -40,16 +44,30 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     extends ScreenState<WifiManagementScreen, V>
     with SingleTickerProviderStateMixin {
   static const _speedTabIndex = 1;
+  static const _repeaterTabIndex = 3;
 
   late final TabController _tabController = TabController(
-    length: 3,
+    length: 4,
     vsync: this,
   );
 
   @override
+  void initState() {
+    super.initState();
+    _tabController.addListener(_onTabChanged);
+  }
+
+  @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// The repeater status needs a router login, so it is fetched when the tab is
+  /// first opened rather than on every visit to the screen.
+  void _onTabChanged() {
+    if (_tabController.index == _repeaterTabIndex) vm.connectRepeaterOnce();
   }
 
   @override
@@ -69,6 +87,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
             ),
             Tab(icon: const Icon(Icons.speed_rounded), text: l10n.tabSpeed),
             Tab(icon: const Icon(Icons.lan_outlined), text: l10n.tabDevices),
+            Tab(icon: const Icon(Icons.wifi_tethering), text: l10n.tabRepeater),
           ],
         ),
       ),
@@ -80,6 +99,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
               _buildWifiTab(l10n, vm),
               _buildSpeedTab(l10n, vm),
               const _LocalNetworkTab(),
+              _buildRepeaterTab(l10n, vm),
             ],
           );
         },
@@ -132,6 +152,237 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       ),
     ).contentConstrainedBox();
   }
+
+  Widget _buildRepeaterTab(AppLocalizations l10n, V vm) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: [
+            _buildRepeaterStatus(l10n, vm),
+            if (vm.repeaterSuccess != null)
+              _buildAlert(vm.repeaterSuccess!, isError: false),
+            if (vm.repeaterError != null)
+              _buildAlert(vm.repeaterError!, isError: true),
+            DoButton(
+              isBusy: vm.isScanning,
+              onPressed: vm.scanNearbyWifi,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                spacing: 8,
+                children: [
+                  const SFIcon(SFIcons.sf_dot_radiowaves_left_and_right),
+                  Text(
+                    vm.isScanning ? l10n.repeaterScanning : l10n.repeaterScan,
+                  ),
+                ],
+              ),
+            ),
+            if (vm.nearbyWifi != null) _buildNearbyList(l10n, vm),
+            if (kDebugMode && vm.logs.isNotEmpty) _buildLogs(vm),
+          ],
+        ),
+      ).contentConstrainedBox(),
+    );
+  }
+
+  Widget _buildRepeaterStatus(AppLocalizations l10n, V vm) {
+    final status = vm.repeaterStatus;
+    final isRepeating = status?.isRepeating ?? false;
+    final color = isRepeating ? context.colors.success : context.colors.info;
+
+    return NeuCard(
+      radius: 14,
+      color: context.neuTint(color, amount: 0.12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Row(
+            spacing: 10,
+            children: [
+              SFIcon(
+                isRepeating ? SFIcons.sf_wifi : SFIcons.sf_wifi_slash,
+                color: color,
+                fontSize: 22,
+              ),
+              Expanded(
+                child: Text(
+                  isRepeating
+                      ? l10n.repeaterCurrentUpstream
+                      : status == null
+                      ? l10n.repeaterNeedsLogin
+                      : l10n.repeaterNotRepeating,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // The spinner replaces the glyph *inside* the button, so the
+              // row keeps its height and the header text keeps its width
+              // while a reload runs.
+              IconButton(
+                onPressed: vm.isRepeaterLoading ? null : vm.connectRepeater,
+                visualDensity: VisualDensity.compact,
+                tooltip: status == null
+                    ? l10n.repeaterConnect
+                    : l10n.repeaterReload,
+                icon: SizedBox.square(
+                  dimension: 20,
+                  child: vm.isRepeaterLoading
+                      ? const Loading(size: 16, strokeWidth: 2)
+                      : SFIcon(
+                          status == null
+                              ? SFIcons.sf_person_badge_key
+                              : SFIcons.sf_arrow_clockwise,
+                          fontSize: 16,
+                        ),
+                ),
+              ),
+            ],
+          ),
+          if (isRepeating)
+            Text(
+              status!.upstreamSsid!,
+              style: context.theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          if (status != null)
+            Text(
+              [
+                if (isRepeating && status.signal != null)
+                  l10n.repeaterSignalPercent(status.signal!),
+                if (isRepeating && (status.band ?? "").isNotEmpty)
+                  _bandLabel(status.band!),
+                if (status.localSsids.isNotEmpty)
+                  "${l10n.repeaterOwnSsid}: ${status.localSsids.join(", ")}",
+              ].join(" · "),
+              style: context.theme.textTheme.bodySmall?.copyWith(
+                color: context.theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNearbyList(AppLocalizations l10n, V vm) {
+    final list = vm.nearbyWifi!;
+    if (list.isEmpty) {
+      return Text(
+        l10n.repeaterNearbyEmpty,
+        style: context.theme.textTheme.bodySmall,
+      );
+    }
+    final current = vm.repeaterStatus?.upstreamSsid;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: [
+        Text(
+          l10n.repeaterNearbyTitle,
+          style: context.theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        for (final wifi in list)
+          _buildNearbyRow(l10n, vm, wifi, isCurrent: wifi.ssid == current),
+      ],
+    );
+  }
+
+  Widget _buildNearbyRow(
+    AppLocalizations l10n,
+    V vm,
+    NearbyWifi wifi, {
+    required bool isCurrent,
+  }) {
+    final subtitle = [
+      if ((wifi.band ?? "").isNotEmpty) _bandLabel(wifi.band!),
+      if (wifi.channel != null) l10n.repeaterChannel(wifi.channel!),
+      wifi.isOpen ? l10n.repeaterOpenNetwork : (wifi.encryption ?? ""),
+    ].where((part) => part.isNotEmpty).join(" · ");
+
+    return NeuCard(
+      radius: 14,
+      depth: 0.8,
+      color: isCurrent
+          ? context.neuTint(context.colors.success, amount: 0.12)
+          : null,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      onTap: vm.isApplyingUpstream ? null : () => _pickUpstream(vm, wifi),
+      child: Row(
+        spacing: 12,
+        children: [
+          SFIcon(
+            SFIcons.sf_wifi,
+            fontSize: 20,
+            color: _signalColor(wifi.signal),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  wifi.ssid,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Text(
+                  subtitle,
+                  style: context.theme.textTheme.bodySmall?.copyWith(
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isCurrent)
+            SFIcon(
+              SFIcons.sf_checkmark_circle_fill,
+              color: context.colors.success,
+              fontSize: 18,
+            ),
+          Text(
+            "${wifi.signal}%",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickUpstream(V vm, NearbyWifi wifi) async {
+    await showAppModal<void>(
+      context,
+      builder: (_) => _UpstreamDialog(wifi: wifi, vm: vm),
+    );
+  }
+
+  String _bandLabel(String band) => switch (band.toLowerCase()) {
+    "2g" => "2.4GHz",
+    "5g" => "5GHz",
+    _ => band,
+  };
+
+  /// SF Symbols has no per-strength Wi-Fi glyph, so strength is carried by
+  /// colour on the one icon.
+  Color _signalColor(int signal) => switch (signal) {
+    >= 60 => context.colors.success,
+    >= 30 => context.colors.warning,
+    _ => context.colors.danger,
+  };
 
   Widget _buildSpeedTab(AppLocalizations l10n, V vm) {
     return SingleChildScrollView(
@@ -644,6 +895,83 @@ class _LocalNetworkTabState extends State<_LocalNetworkTab>
     return ChangeNotifierProvider.value(
       value: _vm,
       child: const LocalNetworkView(),
+    );
+  }
+}
+
+/// Asks for the upstream Wi-Fi password, then points the repeater at it.
+class _UpstreamDialog extends StatefulWidget {
+  const _UpstreamDialog({required this.wifi, required this.vm});
+
+  final NearbyWifi wifi;
+  final WifiManagementViewModel vm;
+
+  @override
+  State<_UpstreamDialog> createState() => _UpstreamDialogState();
+}
+
+class _UpstreamDialogState extends State<_UpstreamDialog> {
+  final _controller = TextEditingController();
+  bool _obscure = true;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    final l10n = context.l10n;
+    final password = _controller.text;
+    if (!widget.wifi.isOpen && password.isEmpty) {
+      setState(() => _error = l10n.repeaterPasswordRequired);
+      return;
+    }
+    setState(() => _error = null);
+    final applied = await widget.vm.applyUpstream(widget.wifi, password);
+    if (!mounted || !applied) return;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return CuteDialog(
+      title: l10n.repeaterPickTitle,
+      confirmText: l10n.repeaterApplyConfirm,
+      onConfirm: _confirm,
+      children: [
+        Text(
+          widget.wifi.ssid,
+          style: context.theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (!widget.wifi.isOpen)
+          CuteTextField(
+            controller: _controller,
+            label: l10n.repeaterWifiPassword,
+            obscureText: _obscure,
+            errorText: _error,
+            autofocus: true,
+            suffixIcon: IconButton(
+              onPressed: () => setState(() => _obscure = !_obscure),
+              icon: SFIcon(
+                _obscure ? SFIcons.sf_eye : SFIcons.sf_eye_slash,
+                fontSize: 18,
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Text(
+          l10n.repeaterApplyWarning,
+          style: context.theme.textTheme.bodySmall?.copyWith(
+            color: context.colors.warning,
+          ),
+        ),
+      ],
     );
   }
 }

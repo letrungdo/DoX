@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/services/router_api_client.dart';
 import 'package:do_x/services/router_reboot_service.dart';
+import 'package:do_x/services/router_repeater_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/speed_test_service.dart';
@@ -10,6 +14,7 @@ import 'package:do_x/view_model/core/core_view_model.dart';
 class WifiManagementViewModel extends CoreViewModel {
   final _rebootService = RouterRebootService();
   final _speedTestService = SpeedTestService();
+  final _repeaterService = RouterRepeaterService();
 
   static const stepLabels = [
     "Kết nối & Quét MAC", //
@@ -162,6 +167,185 @@ class WifiManagementViewModel extends CoreViewModel {
     } finally {
       setBusy(false);
     }
+  }
+
+  // --- Repeater (wireless relay) ---
+
+  /// Null until the router has been asked; set once [connectRepeater] runs.
+  RepeaterStatus? repeaterStatus;
+
+  /// Null until a scan has run, so "not scanned yet" and "nothing found" stay
+  /// distinguishable.
+  List<NearbyWifi>? nearbyWifi;
+
+  bool isRepeaterLoading = false;
+  bool isScanning = false;
+  bool isApplyingUpstream = false;
+  String? repeaterError;
+  String? repeaterSuccess;
+
+  /// Guards the one-shot auto login when the repeater tab is first opened.
+  bool _repeaterAutoConnected = false;
+
+  bool get isRepeaterLoggedIn => _repeaterService.isLoggedIn;
+
+  // A getter, so a message built after an await still reads the live context
+  // instead of one captured before the gap.
+  AppLocalizations get _l10n => context.l10n;
+
+  /// Logs in with the credentials from the config section and reads which
+  /// Wi-Fi the router currently repeats.
+  Future<void> connectRepeater() async {
+    if (isRepeaterLoading) return;
+    isRepeaterLoading = true;
+    repeaterError = null;
+    repeaterSuccess = null;
+    notifyListenersSafe();
+
+    storageService.setRouterIp(ip);
+    secureStorage.saveRouterPassword(password);
+
+    try {
+      if (!_repeaterService.isLoggedIn) {
+        await _repeaterService.login(
+          ip: ip,
+          password: password,
+          onLog: _log,
+          cancelToken: cancelToken,
+        );
+      }
+      final status = await _repeaterService.getStatus(
+        onLog: _log,
+        cancelToken: cancelToken,
+      );
+      if (isDispose || cancelToken.isCancelled) return;
+      repeaterStatus = status;
+    } catch (e) {
+      _handleRepeaterFailure(e, "connectRepeater");
+    } finally {
+      isRepeaterLoading = false;
+      notifyListenersSafe();
+    }
+  }
+
+  /// Called when the repeater tab is first shown, so the status is already
+  /// there without the user pressing anything.
+  void connectRepeaterOnce() {
+    if (_repeaterAutoConnected || password.isEmpty) return;
+    _repeaterAutoConnected = true;
+    connectRepeater();
+  }
+
+  Future<void> scanNearbyWifi() async {
+    if (isScanning) return;
+    isScanning = true;
+    repeaterError = null;
+    repeaterSuccess = null;
+    notifyListenersSafe();
+
+    try {
+      if (!_repeaterService.isLoggedIn) {
+        await _repeaterService.login(
+          ip: ip,
+          password: password,
+          onLog: _log,
+          cancelToken: cancelToken,
+        );
+      }
+      final list = await _repeaterService.scan(
+        onLog: _log,
+        cancelToken: cancelToken,
+      );
+      if (isDispose || cancelToken.isCancelled) return;
+      nearbyWifi = list;
+    } catch (e) {
+      _handleRepeaterFailure(e, "scanNearbyWifi");
+    } finally {
+      isScanning = false;
+      notifyListenersSafe();
+    }
+  }
+
+  /// Points the repeater at [wifi]. Returns true when the router accepted it.
+  ///
+  /// The router restarts its network right after answering, so losing the
+  /// connection here is expected rather than a failure.
+  Future<bool> applyUpstream(NearbyWifi wifi, String wifiPassword) async {
+    if (isApplyingUpstream) return false;
+    isApplyingUpstream = true;
+    repeaterError = null;
+    repeaterSuccess = null;
+    notifyListenersSafe();
+
+    try {
+      if (!_repeaterService.isLoggedIn) {
+        await _repeaterService.login(
+          ip: ip,
+          password: password,
+          onLog: _log,
+          cancelToken: cancelToken,
+        );
+      }
+      final result = await _repeaterService.setUpstream(
+        wifi: wifi,
+        password: wifiPassword,
+        onLog: _log,
+        cancelToken: cancelToken,
+      );
+      if (isDispose || cancelToken.isCancelled) return false;
+
+      repeaterSuccess = [
+        _l10n.repeaterApplied(result.ssid),
+        if (result.ip != null && result.ip!.isNotEmpty)
+          _l10n.repeaterAppliedIp(result.ip!),
+      ].join(" ");
+      repeaterStatus = RepeaterStatus(
+        upstreamSsid: result.ssid,
+        band: wifi.band,
+        localSsids: repeaterStatus?.localSsids ?? const [],
+      );
+      // The session dies with the network restart.
+      _repeaterService.logout();
+      return true;
+    } on RouterApiException catch (e) {
+      if (e.error == RouterApiError.unreachable) {
+        // The router applied the change and dropped the link before it could
+        // answer, which is the common case rather than an error.
+        _repeaterService.logout();
+        repeaterSuccess = _l10n.repeaterApplyDropped;
+        return true;
+      }
+      _handleRepeaterFailure(e, "applyUpstream");
+      return false;
+    } catch (e) {
+      _handleRepeaterFailure(e, "applyUpstream");
+      return false;
+    } finally {
+      isApplyingUpstream = false;
+      notifyListenersSafe();
+    }
+  }
+
+  void _handleRepeaterFailure(Object error, String action) {
+    if (error is DioException && error.type == DioExceptionType.cancel) return;
+    if (error is RouterApiException) {
+      _log("$action -> $error");
+      repeaterError = _repeaterErrorMessage(error.error);
+      return;
+    }
+    logger.e("Router repeater $action failed", error: error);
+    _log("$action -> $error");
+    repeaterError = _l10n.routerErrorMalformed;
+  }
+
+  String _repeaterErrorMessage(RouterApiError error) {
+    final l10n = _l10n;
+    return switch (error) {
+      RouterApiError.unreachable => l10n.routerErrorUnreachable,
+      RouterApiError.auth => l10n.routerErrorAuth,
+      RouterApiError.malformed => l10n.routerErrorMalformed,
+      RouterApiError.rejected => l10n.routerErrorRejected,
+    };
   }
 
   void stopTests() {

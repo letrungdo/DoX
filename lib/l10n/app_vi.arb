@@ -1156,5 +1156,59 @@
   "assetErrorInvalidAmount": "Vui lòng nhập số tiền hợp lệ",
   "assetErrorInvalidRate": "Vui lòng nhập lãi suất hợp lệ",
   "assetErrorInvalidQuantity": "Vui lòng nhập số lượng hợp lệ",
-  "assetErrorInvalidPrice": "Vui lòng nhập giá hợp lệ"
+  "assetErrorInvalidPrice": "Vui lòng nhập giá hợp lệ",
+  "tabRepeater": "Repeater",
+  "repeaterConnect": "Đăng nhập router",
+  "repeaterReload": "Tải lại",
+  "repeaterNeedsLogin": "Đăng nhập router để xem đang repeater từ wifi nào.",
+  "repeaterCurrentUpstream": "Đang repeater từ",
+  "repeaterNotRepeating": "Router hiện không ở chế độ repeater.",
+  "repeaterOwnSsid": "Đang phát wifi",
+  "repeaterSignalPercent": "Tín hiệu {percent}%",
+  "@repeaterSignalPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "repeaterScan": "Khảo sát wifi xung quanh",
+  "repeaterScanning": "Đang khảo sát…",
+  "repeaterNearbyTitle": "Wifi xung quanh",
+  "repeaterNearbyEmpty": "Router không tìm thấy wifi nào xung quanh.",
+  "repeaterChannel": "Kênh {channel}",
+  "@repeaterChannel": {
+    "placeholders": {
+      "channel": {
+        "type": "int"
+      }
+    }
+  },
+  "repeaterOpenNetwork": "Không mật khẩu",
+  "repeaterPickTitle": "Repeater từ wifi này?",
+  "repeaterWifiPassword": "Mật khẩu wifi",
+  "repeaterApplyConfirm": "Chuyển",
+  "repeaterApplyWarning": "Router sẽ khởi động lại mạng để áp dụng, nên mất kết nối khoảng 30 giây và địa chỉ IP thường đổi. Nhập sai mật khẩu thì router sẽ không có mạng.",
+  "repeaterPasswordRequired": "Nhập mật khẩu của wifi này",
+  "repeaterApplied": "Đã chuyển sang repeater từ “{ssid}”.",
+  "@repeaterApplied": {
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "repeaterAppliedIp": "Địa chỉ router mới: {ip}",
+  "@repeaterAppliedIp": {
+    "placeholders": {
+      "ip": {
+        "type": "String"
+      }
+    }
+  },
+  "repeaterApplyDropped": "Đã gửi lệnh rồi mất kết nối — router đang áp dụng. Chờ khoảng 30 giây rồi kết nối lại.",
+  "routerErrorUnreachable": "Không kết nối được tới router. Kiểm tra địa chỉ IP và bạn có đang trong mạng của router không.",
+  "routerErrorAuth": "Sai mật khẩu trang quản trị router.",
+  "routerErrorMalformed": "Router trả về dữ liệu không hợp lệ.",
+  "routerErrorRejected": "Router từ chối yêu cầu."
 }

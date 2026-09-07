@@ -2064,4 +2064,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assetErrorInvalidPrice => 'Please enter a valid price';
+
+  @override
+  String get tabRepeater => 'Repeater';
+
+  @override
+  String get repeaterConnect => 'Log in to router';
+
+  @override
+  String get repeaterReload => 'Reload';
+
+  @override
+  String get repeaterNeedsLogin =>
+      'Log in to the router to see which Wi-Fi it is repeating from.';
+
+  @override
+  String get repeaterCurrentUpstream => 'Repeating from';
+
+  @override
+  String get repeaterNotRepeating => 'This router is not in repeater mode.';
+
+  @override
+  String get repeaterOwnSsid => 'Broadcasting as';
+
+  @override
+  String repeaterSignalPercent(int percent) {
+    return 'Signal $percent%';
+  }
+
+  @override
+  String get repeaterScan => 'Scan nearby Wi-Fi';
+
+  @override
+  String get repeaterScanning => 'Scanning…';
+
+  @override
+  String get repeaterNearbyTitle => 'Nearby Wi-Fi';
+
+  @override
+  String get repeaterNearbyEmpty => 'The router found no Wi-Fi nearby.';
+
+  @override
+  String repeaterChannel(int channel) {
+    return 'Ch. $channel';
+  }
+
+  @override
+  String get repeaterOpenNetwork => 'No password';
+
+  @override
+  String get repeaterPickTitle => 'Repeat from this Wi-Fi?';
+
+  @override
+  String get repeaterWifiPassword => 'Wi-Fi password';
+
+  @override
+  String get repeaterApplyConfirm => 'Switch';
+
+  @override
+  String get repeaterApplyWarning =>
+      'The router restarts its network to apply this, so the connection drops for about 30 seconds and its IP address usually changes. A wrong password leaves the router without an uplink.';
+
+  @override
+  String get repeaterPasswordRequired => 'Enter the password of this Wi-Fi';
+
+  @override
+  String repeaterApplied(String ssid) {
+    return 'Now repeating from “$ssid”.';
+  }
+
+  @override
+  String repeaterAppliedIp(String ip) {
+    return 'New router address: $ip';
+  }
+
+  @override
+  String get repeaterApplyDropped =>
+      'Command sent, then the connection dropped — the router is applying it. Wait about 30 seconds and reconnect.';
+
+  @override
+  String get routerErrorUnreachable =>
+      'Cannot reach the router. Check the IP address and that you are on its network.';
+
+  @override
+  String get routerErrorAuth => 'Wrong router admin password.';
+
+  @override
+  String get routerErrorMalformed =>
+      'The router answered with unexpected data.';
+
+  @override
+  String get routerErrorRejected => 'The router rejected the request.';
 }

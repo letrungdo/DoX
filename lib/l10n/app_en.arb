@@ -1198,5 +1198,59 @@
   "assetErrorInvalidAmount": "Please enter a valid amount",
   "assetErrorInvalidRate": "Please enter a valid interest rate",
   "assetErrorInvalidQuantity": "Please enter a valid quantity",
-  "assetErrorInvalidPrice": "Please enter a valid price"
+  "assetErrorInvalidPrice": "Please enter a valid price",
+  "tabRepeater": "Repeater",
+  "repeaterConnect": "Log in to router",
+  "repeaterReload": "Reload",
+  "repeaterNeedsLogin": "Log in to the router to see which Wi-Fi it is repeating from.",
+  "repeaterCurrentUpstream": "Repeating from",
+  "repeaterNotRepeating": "This router is not in repeater mode.",
+  "repeaterOwnSsid": "Broadcasting as",
+  "repeaterSignalPercent": "Signal {percent}%",
+  "@repeaterSignalPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "repeaterScan": "Scan nearby Wi-Fi",
+  "repeaterScanning": "Scanning…",
+  "repeaterNearbyTitle": "Nearby Wi-Fi",
+  "repeaterNearbyEmpty": "The router found no Wi-Fi nearby.",
+  "repeaterChannel": "Ch. {channel}",
+  "@repeaterChannel": {
+    "placeholders": {
+      "channel": {
+        "type": "int"
+      }
+    }
+  },
+  "repeaterOpenNetwork": "No password",
+  "repeaterPickTitle": "Repeat from this Wi-Fi?",
+  "repeaterWifiPassword": "Wi-Fi password",
+  "repeaterApplyConfirm": "Switch",
+  "repeaterApplyWarning": "The router restarts its network to apply this, so the connection drops for about 30 seconds and its IP address usually changes. A wrong password leaves the router without an uplink.",
+  "repeaterPasswordRequired": "Enter the password of this Wi-Fi",
+  "repeaterApplied": "Now repeating from “{ssid}”.",
+  "@repeaterApplied": {
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "repeaterAppliedIp": "New router address: {ip}",
+  "@repeaterAppliedIp": {
+    "placeholders": {
+      "ip": {
+        "type": "String"
+      }
+    }
+  },
+  "repeaterApplyDropped": "Command sent, then the connection dropped — the router is applying it. Wait about 30 seconds and reconnect.",
+  "routerErrorUnreachable": "Cannot reach the router. Check the IP address and that you are on its network.",
+  "routerErrorAuth": "Wrong router admin password.",
+  "routerErrorMalformed": "The router answered with unexpected data.",
+  "routerErrorRejected": "The router rejected the request."
 }

@@ -3769,6 +3769,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a valid price'**
   String get assetErrorInvalidPrice;
+
+  /// No description provided for @tabRepeater.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeater'**
+  String get tabRepeater;
+
+  /// No description provided for @repeaterConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to router'**
+  String get repeaterConnect;
+
+  /// No description provided for @repeaterReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get repeaterReload;
+
+  /// No description provided for @repeaterNeedsLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to the router to see which Wi-Fi it is repeating from.'**
+  String get repeaterNeedsLogin;
+
+  /// No description provided for @repeaterCurrentUpstream.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeating from'**
+  String get repeaterCurrentUpstream;
+
+  /// No description provided for @repeaterNotRepeating.
+  ///
+  /// In en, this message translates to:
+  /// **'This router is not in repeater mode.'**
+  String get repeaterNotRepeating;
+
+  /// No description provided for @repeaterOwnSsid.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcasting as'**
+  String get repeaterOwnSsid;
+
+  /// No description provided for @repeaterSignalPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Signal {percent}%'**
+  String repeaterSignalPercent(int percent);
+
+  /// No description provided for @repeaterScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan nearby Wi-Fi'**
+  String get repeaterScan;
+
+  /// No description provided for @repeaterScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning…'**
+  String get repeaterScanning;
+
+  /// No description provided for @repeaterNearbyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Wi-Fi'**
+  String get repeaterNearbyTitle;
+
+  /// No description provided for @repeaterNearbyEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'The router found no Wi-Fi nearby.'**
+  String get repeaterNearbyEmpty;
+
+  /// No description provided for @repeaterChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ch. {channel}'**
+  String repeaterChannel(int channel);
+
+  /// No description provided for @repeaterOpenNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No password'**
+  String get repeaterOpenNetwork;
+
+  /// No description provided for @repeaterPickTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat from this Wi-Fi?'**
+  String get repeaterPickTitle;
+
+  /// No description provided for @repeaterWifiPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi password'**
+  String get repeaterWifiPassword;
+
+  /// No description provided for @repeaterApplyConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get repeaterApplyConfirm;
+
+  /// No description provided for @repeaterApplyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The router restarts its network to apply this, so the connection drops for about 30 seconds and its IP address usually changes. A wrong password leaves the router without an uplink.'**
+  String get repeaterApplyWarning;
+
+  /// No description provided for @repeaterPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the password of this Wi-Fi'**
+  String get repeaterPasswordRequired;
+
+  /// No description provided for @repeaterApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Now repeating from “{ssid}”.'**
+  String repeaterApplied(String ssid);
+
+  /// No description provided for @repeaterAppliedIp.
+  ///
+  /// In en, this message translates to:
+  /// **'New router address: {ip}'**
+  String repeaterAppliedIp(String ip);
+
+  /// No description provided for @repeaterApplyDropped.
+  ///
+  /// In en, this message translates to:
+  /// **'Command sent, then the connection dropped — the router is applying it. Wait about 30 seconds and reconnect.'**
+  String get repeaterApplyDropped;
+
+  /// No description provided for @routerErrorUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reach the router. Check the IP address and that you are on its network.'**
+  String get routerErrorUnreachable;
+
+  /// No description provided for @routerErrorAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong router admin password.'**
+  String get routerErrorAuth;
+
+  /// No description provided for @routerErrorMalformed.
+  ///
+  /// In en, this message translates to:
+  /// **'The router answered with unexpected data.'**
+  String get routerErrorMalformed;
+
+  /// No description provided for @routerErrorRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The router rejected the request.'**
+  String get routerErrorRejected;
 }
 
 class _AppLocalizationsDelegate
