@@ -190,10 +190,21 @@ class WifiManagementViewModel extends CoreViewModel {
   static const _autoScanInterval = Duration(seconds: 20);
   static const _minScanGap = Duration(seconds: 10);
 
+  /// How long the uplink reading stays untrustworthy after a scan. Measured
+  /// on ROM 2.25.124: the router answers 0 for the ~3.5s the radio is away
+  /// and one more depressed value ~0.5s after it comes back, so the poll
+  /// waits for the link to settle rather than drawing the dip.
+  static const _scanSettleDelay = Duration(milliseconds: 1500);
+
   Timer? _signalTimer;
   Timer? _autoScanTimer;
   DateTime? _lastScanAt;
   bool _isPollingSignal = false;
+
+  /// Bumped whenever a scan starts or ends. A poll whose reply crosses a scan
+  /// is thrown away: the scan pulls the radio off the uplink channel, and the
+  /// router answers `wifiap_signal` with 0 while it is away.
+  int _scanTick = 0;
 
   bool isRepeaterLoading = false;
   bool isScanning = false;
@@ -262,9 +273,17 @@ class WifiManagementViewModel extends CoreViewModel {
     if (_isPollingSignal ||
         isRepeaterLoading ||
         isApplyingUpstream ||
+        isScanning ||
+        isBackgroundScanning ||
         isDispose) {
       return;
     }
+    final settledAt = _lastScanAt;
+    if (settledAt != null &&
+        DateTime.now().difference(settledAt) < _scanSettleDelay) {
+      return;
+    }
+    final tick = _scanTick;
     _isPollingSignal = true;
     try {
       if (!_repeaterService.isLoggedIn) {
@@ -278,6 +297,9 @@ class WifiManagementViewModel extends CoreViewModel {
         cancelToken: cancelToken,
       );
       if (isDispose || cancelToken.isCancelled) return;
+      // A scan started while this call was out, so the reading is the router's
+      // off-channel 0 rather than the uplink. The old value stays on screen.
+      if (_scanTick != tick) return;
       repeaterStatus = upstream.copyWith(
         localSsids: repeaterStatus?.localSsids,
       );
@@ -377,6 +399,7 @@ class WifiManagementViewModel extends CoreViewModel {
       repeaterSuccess = null;
     }
     _lastScanAt = DateTime.now();
+    _scanTick++;
     notifyListenersSafe();
 
     try {
@@ -409,6 +432,7 @@ class WifiManagementViewModel extends CoreViewModel {
       }
     } finally {
       _lastScanAt = DateTime.now();
+      _scanTick++;
       isScanning = false;
       isBackgroundScanning = false;
       notifyListenersSafe();
