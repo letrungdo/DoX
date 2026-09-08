@@ -14,7 +14,7 @@ class RepeaterStatus {
   /// in repeater mode.
   final String? upstreamSsid;
 
-  /// Uplink quality in percent, as the router reports it.
+  /// Uplink quality in percent, on the same scale as [NearbyWifi.signal].
   final int? signal;
 
   /// "2g" / "5g" when the router reports one.
@@ -127,9 +127,10 @@ class RouterRepeaterService {
     );
     final ssid = signal["ssid"]?.toString().trim();
     final band = signal["band"]?.toString().trim();
+    final raw = _asInt(signal["signal"]);
     return RepeaterStatus(
       upstreamSsid: (ssid ?? "").isEmpty ? null : ssid,
-      signal: _asInt(signal["signal"]),
+      signal: raw == null ? null : uplinkSignalPercent(raw),
       band: (band ?? "").isEmpty ? null : band,
     );
   }
@@ -258,6 +259,19 @@ class RouterRepeaterService {
       ssid: data["ssid"]?.toString() ?? wifi.ssid,
       ip: data["ip"]?.toString(),
     );
+  }
+
+  /// `wifiap_signal` and `wifi_list` do not report the same link on the same
+  /// scale, which is why the repeater card read 19% for a network the scan
+  /// listed at 40%. Measured against ROM 2.25.124 with the uplink sitting at
+  /// -82 dBm: `wifi_detail_all` reported -79..-83, `wifi_list` 32..43 — a
+  /// `2 * (rssi + 100)` quality percent — and `wifiap_signal` 19..24, which is
+  /// `rssi + 100`, half of it. Doubling folds the uplink onto the scan's
+  /// percent. A ROM that reports the raw negative dBm instead is converted the
+  /// same way.
+  static int uplinkSignalPercent(int raw) {
+    final offset = raw < 0 ? raw + 100 : raw;
+    return (offset * 2).clamp(0, 100);
   }
 
   int? _asInt(Object? value) {
