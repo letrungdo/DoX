@@ -151,22 +151,23 @@ class FxRateService {
     });
   }
 
-  /// Symbols dropped from the API response before they reach the UI.
-  /// `SJCBTMCHN` (vàng miếng SJC - Bảo Tín Minh Châu Hà Nội) duplicates the
-  /// SJC Hồ Chí Minh row at nearly the same price.
-  static const _ignoredGoldCodes = {'SJCBTMCHN'};
-
   Future<Result<List<GoldSymbol>?>> getGoldPrice({CancelToken? cancelToken}) {
     return Result.guardFuture(() async {
-      final response = await dio.get(
-        '${Envs.marketApiUrl}/api/domesticgold/symbols'.withProxy(), //
-        cancelToken: cancelToken,
-      );
-      final data = GoldResponse.fromJson(response.data);
+      final rows = await supabase
+          .from('gold_prices')
+          .select()
+          .order('code', ascending: true);
 
-      return data.data?.symbols
-          ?.where((e) => !_ignoredGoldCodes.contains(e.code))
-          .toList();
+      return rows.map((row) {
+        return GoldSymbol(
+          code: row['code'] as String?,
+          name: row['name'] as String?,
+          desc: row['desc'] as String?,
+          bid: (row['bid'] as num?)?.toDouble(),
+          ask: (row['ask'] as num?)?.toDouble(),
+          time: DateTime.tryParse(row['updated_at'] as String),
+        );
+      }).toList();
     });
   }
 }
