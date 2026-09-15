@@ -593,14 +593,39 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _buildBatchInfo(
-                    null,
-                    batch.sales.isEmpty
-                        ? l10n.chickenQuantity(batch.quantity)
-                        : l10n.soldOfTotal(batch.soldQuantity, batch.quantity),
-                    highlighted: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildBatchInfo(
+                        null,
+                        batch.sales.isEmpty
+                            ? l10n.chickenQuantity(batch.quantity)
+                            : l10n.soldOfTotal(batch.soldQuantity, batch.quantity),
+                        highlighted: true,
+                      ),
+                      if (batch.deadQuantity > 0 || batch.keptQuantity > 0) ...[
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
+                          children: [
+                            if (batch.deadQuantity > 0)
+                              _buildBatchInfo(
+                                Icons.heart_broken_outlined,
+                                l10n.deadQuantityValue(batch.deadQuantity),
+                              ),
+                            if (batch.keptQuantity > 0)
+                              _buildBatchInfo(
+                                Icons.home_outlined,
+                                l10n.keptQuantityValue(batch.keptQuantity),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -678,6 +703,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
         : context.theme.colorScheme.onSurfaceVariant;
     return Row(
       mainAxisAlignment: alignment,
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[
           Icon(icon, size: 15, color: color),

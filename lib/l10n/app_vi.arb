@@ -527,7 +527,23 @@
   "deleteThisBatch": "Xóa lứa gà này",
   "initialQuantity": "Số lượng",
   "deadQuantityLabel": "Số con chết",
+  "deadQuantityValue": "{count} chết",
+  "@deadQuantityValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "keptQuantityLabel": "Để lại nuôi",
+  "keptQuantityValue": "{count} nuôi",
+  "@keptQuantityValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "soldRemainingLabel": "Đã bán / còn lại",
   "remainingLabel": "Còn lại",
   "soldRemainingValue": "{sold} / {remaining} con",

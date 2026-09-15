@@ -965,7 +965,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get deadQuantityLabel => 'Số con chết';
 
   @override
+  String deadQuantityValue(int count) {
+    return '$count chết';
+  }
+
+  @override
   String get keptQuantityLabel => 'Để lại nuôi';
+
+  @override
+  String keptQuantityValue(int count) {
+    return '$count nuôi';
+  }
 
   @override
   String get soldRemainingLabel => 'Đã bán / còn lại';

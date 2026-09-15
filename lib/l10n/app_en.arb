@@ -548,7 +548,23 @@
   "deleteThisBatch": "Delete this batch",
   "initialQuantity": "Quantity",
   "deadQuantityLabel": "Dead quantity",
+  "deadQuantityValue": "{count} dead",
+  "@deadQuantityValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "keptQuantityLabel": "Kept for raising",
+  "keptQuantityValue": "{count} kept",
+  "@keptQuantityValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "soldRemainingLabel": "Sold / remaining",
   "remainingLabel": "Remaining",
   "soldRemainingValue": "{sold} / {remaining}",

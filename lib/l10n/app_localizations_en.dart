@@ -964,7 +964,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deadQuantityLabel => 'Dead quantity';
 
   @override
+  String deadQuantityValue(int count) {
+    return '$count dead';
+  }
+
+  @override
   String get keptQuantityLabel => 'Kept for raising';
+
+  @override
+  String keptQuantityValue(int count) {
+    return '$count kept';
+  }
 
   @override
   String get soldRemainingLabel => 'Sold / remaining';

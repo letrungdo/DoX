@@ -1814,11 +1814,23 @@ abstract class AppLocalizations {
   /// **'Dead quantity'**
   String get deadQuantityLabel;
 
+  /// No description provided for @deadQuantityValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} dead'**
+  String deadQuantityValue(int count);
+
   /// No description provided for @keptQuantityLabel.
   ///
   /// In en, this message translates to:
   /// **'Kept for raising'**
   String get keptQuantityLabel;
+
+  /// No description provided for @keptQuantityValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} kept'**
+  String keptQuantityValue(int count);
 
   /// No description provided for @soldRemainingLabel.
   ///
