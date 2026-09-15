@@ -961,6 +961,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get initialQuantity => 'Quantity';
 
   @override
+  String get deadQuantityLabel => 'Dead quantity';
+
+  @override
+  String get keptQuantityLabel => 'Kept for raising';
+
+  @override
   String get soldRemainingLabel => 'Sold / remaining';
 
   @override

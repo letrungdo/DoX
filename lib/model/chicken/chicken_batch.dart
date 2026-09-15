@@ -17,6 +17,8 @@ class ChickenBatch with TimestampedRecord<ChickenBatch> {
   final String name;
   final DateTime incubationDate;
   final int quantity;
+  final int deadQuantity;
+  final int keptQuantity;
   final List<Expense> expenses;
   final List<Vaccination> vaccinations;
   final List<CockSale> cockSales;
@@ -32,6 +34,8 @@ class ChickenBatch with TimestampedRecord<ChickenBatch> {
     required this.name,
     required this.incubationDate,
     required this.quantity,
+    this.deadQuantity = 0,
+    this.keptQuantity = 0,
     this.expenses = const [],
     this.vaccinations = const [],
     this.cockSales = const [],
@@ -75,7 +79,7 @@ class ChickenBatch with TimestampedRecord<ChickenBatch> {
 
   int get soldQuantity => sales.fold(0, (sum, item) => sum + item.quantity);
 
-  int get remainingQuantity => quantity - soldQuantity;
+  int get remainingQuantity => quantity - soldQuantity - deadQuantity - keptQuantity;
 
   DateTime? get lastSaleDate => sales.isEmpty
       ? null
@@ -117,6 +121,8 @@ class ChickenBatch with TimestampedRecord<ChickenBatch> {
     String? name,
     DateTime? incubationDate,
     int? quantity,
+    int? deadQuantity,
+    int? keptQuantity,
     List<Expense>? expenses,
     List<Vaccination>? vaccinations,
     List<CockSale>? cockSales,
@@ -130,6 +136,8 @@ class ChickenBatch with TimestampedRecord<ChickenBatch> {
       name: name ?? this.name,
       incubationDate: incubationDate ?? this.incubationDate,
       quantity: quantity ?? this.quantity,
+      deadQuantity: deadQuantity ?? this.deadQuantity,
+      keptQuantity: keptQuantity ?? this.keptQuantity,
       expenses: expenses ?? this.expenses,
       vaccinations: vaccinations ?? this.vaccinations,
       cockSales: cockSales ?? this.cockSales,

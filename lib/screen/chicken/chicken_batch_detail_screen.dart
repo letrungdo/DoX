@@ -452,6 +452,18 @@ class _ChickenBatchDetailScreenState
                       l10n.actualHatchDateLabel,
                       _fmt(batch.actualHatchDate!),
                     ),
+                  if (batch.deadQuantity > 0)
+                    _buildIconInfoRow(
+                      Icons.heart_broken_outlined,
+                      l10n.deadQuantityLabel,
+                      "${batch.deadQuantity} con",
+                    ),
+                  if (batch.keptQuantity > 0)
+                    _buildIconInfoRow(
+                      Icons.home_outlined,
+                      l10n.keptQuantityLabel,
+                      "${batch.keptQuantity} con",
+                    ),
                 ],
               ),
             ),
@@ -1318,6 +1330,12 @@ class _ChickenBatchDetailScreenState
     final quantityController = TextEditingController(
       text: batch.quantity.toString(),
     );
+    final deadQuantityController = TextEditingController(
+      text: batch.deadQuantity.toString(),
+    );
+    final keptQuantityController = TextEditingController(
+      text: batch.keptQuantity.toString(),
+    );
     DateTime incubationDate = batch.incubationDate;
     DateTime? actualHatchDate = batch.actualHatchDate;
     String? nameError;
@@ -1333,6 +1351,8 @@ class _ChickenBatchDetailScreenState
           onConfirm: () {
             final name = nameController.text.trim();
             final qty = int.tryParse(quantityController.text);
+            final deadQty = int.tryParse(deadQuantityController.text) ?? 0;
+            final keptQty = int.tryParse(keptQuantityController.text) ?? 0;
             if (name.isEmpty || qty == null || qty < 0) {
               setState(() {
                 nameError = name.isEmpty ? l10n.errorEnterBatchName : null;
@@ -1348,6 +1368,8 @@ class _ChickenBatchDetailScreenState
                   batch.copyWith(
                     name: name,
                     quantity: qty,
+                    deadQuantity: deadQty,
+                    keptQuantity: keptQty,
                     incubationDate: incubationDate,
                     actualHatchDate: actualHatchDate,
                   ),
@@ -1377,6 +1399,22 @@ class _ChickenBatchDetailScreenState
               onChanged: (_) {
                 if (qtyError != null) setState(() => qtyError = null);
               },
+            ),
+            CuteTextField(
+              controller: deadQuantityController,
+              label: l10n.deadQuantityLabel,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+            ),
+            CuteTextField(
+              controller: keptQuantityController,
+              label: l10n.keptQuantityLabel,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
             ),
             LunarDateField(
               label: l10n.incubationDate,

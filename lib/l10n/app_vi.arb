@@ -526,6 +526,8 @@
   "batchNotFound": "Không tìm thấy thông tin lứa gà.",
   "deleteThisBatch": "Xóa lứa gà này",
   "initialQuantity": "Số lượng",
+  "deadQuantityLabel": "Số con chết",
+  "keptQuantityLabel": "Để lại nuôi",
   "soldRemainingLabel": "Đã bán / còn lại",
   "remainingLabel": "Còn lại",
   "soldRemainingValue": "{sold} / {remaining} con",

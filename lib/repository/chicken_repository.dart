@@ -481,6 +481,8 @@ class ChickenRepository {
     'incubation_date': _dateStr(b.incubationDate),
     'quantity': b.quantity,
     'actual_hatch_date': _dateStr(b.actualHatchDate),
+    'dead_quantity': b.deadQuantity,
+    'kept_quantity': b.keptQuantity,
   };
 
   ChickenBatch _batchFromRow(Map<String, dynamic> row) {
@@ -509,6 +511,8 @@ class ChickenRepository {
       name: row['name'],
       incubationDate: _parseDate(row['incubation_date'])!,
       quantity: row['quantity'],
+      deadQuantity: row['dead_quantity'] ?? 0,
+      keptQuantity: row['kept_quantity'] ?? 0,
       vaccinations: vaccinations,
       expenses: expenses,
       cockSales: cockSales,

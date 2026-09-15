@@ -11,6 +11,8 @@ ChickenBatch _$ChickenBatchFromJson(Map<String, dynamic> json) => ChickenBatch(
   name: json['name'] as String,
   incubationDate: DateTime.parse(json['incubationDate'] as String),
   quantity: (json['quantity'] as num).toInt(),
+  deadQuantity: (json['deadQuantity'] as num?)?.toInt() ?? 0,
+  keptQuantity: (json['keptQuantity'] as num?)?.toInt() ?? 0,
   expenses:
       (json['expenses'] as List<dynamic>?)
           ?.map((e) => Expense.fromJson(e as Map<String, dynamic>))
@@ -48,6 +50,8 @@ Map<String, dynamic> _$ChickenBatchToJson(ChickenBatch instance) =>
       'name': instance.name,
       'incubationDate': instance.incubationDate.toIso8601String(),
       'quantity': instance.quantity,
+      'deadQuantity': instance.deadQuantity,
+      'keptQuantity': instance.keptQuantity,
       'expenses': instance.expenses,
       'vaccinations': instance.vaccinations,
       'cockSales': instance.cockSales,

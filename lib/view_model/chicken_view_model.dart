@@ -57,6 +57,7 @@ class ChickenViewModel extends CoreViewModel {
   String? _activeOwnerId;
   String? _activeOwnerEmail;
   String? _selectionRestoredForUserId;
+  String? _lastLoadedOwnerId;
 
   String? get activeOwnerId => _activeOwnerId ?? _auth.userId;
   String? get activeOwnerEmail => _activeOwnerEmail;
@@ -302,6 +303,7 @@ class ChickenViewModel extends CoreViewModel {
         Expense.fromJson,
         (value) => _globalExpenses = value,
       );
+      _lastLoadedOwnerId = _auth.userId; // Mark that we are now holding this user's cached data
       notifyListenersSafe();
     } catch (e) {
       logger.e('restore chicken cache failed', error: e);
@@ -726,6 +728,18 @@ class ChickenViewModel extends CoreViewModel {
         year: serverYear,
         ownerId: activeOwnerId,
       );
+
+      // If the owner has changed while the request was in flight, or if we are
+      // switching between shared and private data, the current memory is
+      // irrelevant and dangerous (it contains records from a different owner).
+      final ownerChanged = activeOwnerId != _lastLoadedOwnerId;
+      if (ownerChanged || year == null) {
+        _batches = [];
+        _globalCockSales = [];
+        _globalExpenses = [];
+        _lastLoadedOwnerId = activeOwnerId;
+      }
+
       final batches = data.batches;
       if (batches != null && isCurrent(ChickenSection.batches)) {
         if (_pendingDeletedBatchIds.isNotEmpty) {
@@ -737,7 +751,7 @@ class ChickenViewModel extends CoreViewModel {
           batches
               .where((b) => !_pendingDeletedBatchIds.contains(b.id))
               .toList(),
-          _batches,
+          (ownerChanged || year == null) ? [] : _batches,
           serverYear,
           (b) => b.incubationDate.year,
           (b) => b.id,
@@ -751,7 +765,7 @@ class ChickenViewModel extends CoreViewModel {
           isCurrent(ChickenSection.globalCockSales)) {
         _globalCockSales = _mergeYearWindow(
           data.globalCockSales!,
-          _globalCockSales,
+          (ownerChanged || year == null) ? [] : _globalCockSales,
           serverYear,
           (s) => s.date.year,
           (s) => s.id,
@@ -765,7 +779,7 @@ class ChickenViewModel extends CoreViewModel {
           isCurrent(ChickenSection.globalExpenses)) {
         _globalExpenses = _mergeYearWindow(
           data.globalExpenses!,
-          _globalExpenses,
+          (ownerChanged || year == null) ? [] : _globalExpenses,
           serverYear,
           (e) => e.date.year,
           (e) => e.id,
@@ -841,12 +855,12 @@ class ChickenViewModel extends CoreViewModel {
     _activeOwnerEmail = source.email;
     await _saveDataSourceSelection(source);
     _clearLoadedData();
-    // Back on the user's own data: the cache restore is skipped while a shared
-    // source is selected, so do it here rather than leaving it to fire from the
-    // next screen that happens to mount. It also puts the user's own records
-    // back on screen straight away instead of showing an empty list until the
-    // fetch lands.
-    _restoreFromCache();
+    
+    // Crucial: Only restore from cache if switching back to the current user's OWN private data!
+    // Shared data (isReadOnly) should NEVER load private local cache.
+    if (!isReadOnly) {
+      _restoreFromCache();
+    }
     notifyListenersSafe();
     await loadData(sections: _requestedSections);
   }
@@ -897,6 +911,11 @@ class ChickenViewModel extends CoreViewModel {
     _failedSections.clear();
     _serverYears.clear();
     _pendingDeletedBatchIds.clear();
+    _loadTask = null;
+    _loadTaskSections = const {};
+    _loadTaskYear = null;
+    _cacheRestored = false;
+    _lastLoadedOwnerId = null; 
   }
 
   /// Sends a change that was already applied to the local lists to the server.
@@ -1033,19 +1052,27 @@ class ChickenViewModel extends CoreViewModel {
     // server confirms the batch is gone.
     _pendingDeletedBatchIds.add(id);
     notifyListenersSafe();
-    await _commit(
-      "delete chicken batch",
-      [_repository.deleteBatchOp(id)],
-      rollback: () {
-        // Rejected: stop guarding and restore the batch locally.
-        _pendingDeletedBatchIds.remove(id);
-        _batches.add(batch);
-        mergeSort(
-          _batches,
-          compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
-        );
-      },
-    );
+    try {
+      await _commit(
+        "delete chicken batch",
+        [_repository.deleteBatchOp(id)],
+        rollback: () {
+          // Rejected: stop guarding and restore the batch locally.
+          _pendingDeletedBatchIds.remove(id);
+          _batches.add(batch);
+          mergeSort(
+            _batches,
+            compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
+          );
+        },
+      );
+      // Clean up the pending guard after a successful server deletion commitment
+      _pendingDeletedBatchIds.remove(id);
+      _saveCache();
+    } catch (e) {
+      // Errors are handled inside _commit rollback, rethrow for UI notification if any
+      rethrow;
+    }
     await _syncVaccinationNotifications();
   }
 
