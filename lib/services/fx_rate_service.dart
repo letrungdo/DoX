@@ -165,6 +165,8 @@ class FxRateService {
           desc: row['desc'] as String?,
           bid: (row['bid'] as num?)?.toDouble(),
           ask: (row['ask'] as num?)?.toDouble(),
+          bidDayChange: (row['bid_change'] as num?)?.toDouble(),
+          askDayChange: (row['ask_change'] as num?)?.toDouble(),
           time: DateTime.tryParse(row['updated_at'] as String),
         );
       }).toList();
