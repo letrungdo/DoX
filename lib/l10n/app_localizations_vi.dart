@@ -978,6 +978,14 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get totalSoldLabel => 'Tổng con đã bán';
+
+  @override
+  String soldQuantityValue(int count) {
+    return '$count đã bán';
+  }
+
+  @override
   String get soldRemainingLabel => 'Đã bán / còn lại';
 
   @override

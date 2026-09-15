@@ -1832,6 +1832,18 @@ abstract class AppLocalizations {
   /// **'{count} kept'**
   String keptQuantityValue(int count);
 
+  /// No description provided for @totalSoldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total sold'**
+  String get totalSoldLabel;
+
+  /// No description provided for @soldQuantityValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sold'**
+  String soldQuantityValue(int count);
+
   /// No description provided for @soldRemainingLabel.
   ///
   /// In en, this message translates to:

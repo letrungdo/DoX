@@ -977,6 +977,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get totalSoldLabel => 'Total sold';
+
+  @override
+  String soldQuantityValue(int count) {
+    return '$count sold';
+  }
+
+  @override
   String get soldRemainingLabel => 'Sold / remaining';
 
   @override

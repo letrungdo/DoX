@@ -1452,10 +1452,23 @@ class ChickenViewModel extends CoreViewModel {
 
     for (var batch in _batches) {
       for (var sale in batch.sales) {
-        bucketOf(bucketDate(sale.date))?.batchRevenue += sale.amount;
+        final bucket = bucketOf(bucketDate(sale.date));
+        if (bucket != null) {
+          bucket.batchRevenue += sale.amount;
+          bucket.soldQuantity += sale.quantity;
+        }
       }
       batch.cockSales.forEach(addSale);
       batch.expenses.forEach(addExpense);
+
+      // Map batch-level quantities to the month the batch hatched.
+      final hatchBucket = bucketOf(
+        bucketDate(batch.actualHatchDate ?? batch.expectedHatchDate),
+      );
+      if (hatchBucket != null) {
+        hatchBucket.deadQuantity += batch.deadQuantity;
+        hatchBucket.keptQuantity += batch.keptQuantity;
+      }
     }
     _globalCockSales.forEach(addSale);
     _globalExpenses.forEach(addExpense);
@@ -1472,6 +1485,9 @@ typedef ChickenStats = ({
   double meatRevenue,
   double expense,
   double profit,
+  int deadQuantity,
+  int keptQuantity,
+  int soldQuantity,
 });
 
 /// A month in the currently displayed calendar. Solar months never use
@@ -1486,6 +1502,9 @@ class _MutableStats {
   double cockRevenue = 0;
   double meatRevenue = 0;
   double expense = 0;
+  int deadQuantity = 0;
+  int keptQuantity = 0;
+  int soldQuantity = 0;
 
   ChickenStats toRecord() => (
     batchRevenue: batchRevenue,
@@ -1493,5 +1512,8 @@ class _MutableStats {
     meatRevenue: meatRevenue,
     expense: expense,
     profit: (batchRevenue + cockRevenue + meatRevenue) - expense,
+    deadQuantity: deadQuantity,
+    keptQuantity: keptQuantity,
+    soldQuantity: soldQuantity,
   );
 }

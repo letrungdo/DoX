@@ -244,18 +244,25 @@ class _ChickenStatisticsScreenState
       p.data.batchRevenue != 0 ||
       p.data.cockRevenue != 0 ||
       p.data.meatRevenue != 0 ||
-      p.data.expense != 0;
+      p.data.expense != 0 ||
+      p.data.deadQuantity != 0 ||
+      p.data.keptQuantity != 0 ||
+      p.data.soldQuantity != 0;
 
   double _revenueOf(ChickenStats s) =>
       s.batchRevenue + s.cockRevenue + s.meatRevenue;
 
   ChickenStats _totalOf(Iterable<ChickenStats> all) {
     var batch = 0.0, cock = 0.0, meat = 0.0, expense = 0.0;
+    var dead = 0, kept = 0, sold = 0;
     for (final s in all) {
       batch += s.batchRevenue;
       cock += s.cockRevenue;
       meat += s.meatRevenue;
       expense += s.expense;
+      dead += s.deadQuantity;
+      kept += s.keptQuantity;
+      sold += s.soldQuantity;
     }
     return (
       batchRevenue: batch,
@@ -263,6 +270,9 @@ class _ChickenStatisticsScreenState
       meatRevenue: meat,
       expense: expense,
       profit: batch + cock + meat - expense,
+      deadQuantity: dead,
+      keptQuantity: kept,
+      soldQuantity: sold,
     );
   }
 
@@ -463,6 +473,52 @@ class _ChickenStatisticsScreenState
               ),
             ],
           ),
+          if (total.soldQuantity > 0 ||
+              total.deadQuantity > 0 ||
+              total.keptQuantity > 0) ...[
+            const SizedBox(height: 10),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 10) / 2;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    if (total.soldQuantity > 0)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _buildQuantityMetric(
+                          Icons.sell_outlined,
+                          l10n.totalSoldLabel,
+                          total.soldQuantity,
+                          colors.success,
+                        ),
+                      ),
+                    if (total.deadQuantity > 0)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _buildQuantityMetric(
+                          Icons.heart_broken_outlined,
+                          l10n.deadQuantityLabel,
+                          total.deadQuantity,
+                          colors.danger,
+                        ),
+                      ),
+                    if (total.keptQuantity > 0)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _buildQuantityMetric(
+                          Icons.home_outlined,
+                          l10n.keptQuantityLabel,
+                          total.keptQuantity,
+                          _scheme.primary,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
           if (revenue > 0) ...[
             const SizedBox(height: 14),
             Text(
@@ -642,6 +698,35 @@ class _ChickenStatisticsScreenState
                 ),
               ],
             ),
+            if (data.soldQuantity > 0 ||
+                data.deadQuantity > 0 ||
+                data.keptQuantity > 0) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 6,
+                children: [
+                  if (data.soldQuantity > 0)
+                    _buildInlineQuantityStat(
+                      l10n.soldLabel,
+                      data.soldQuantity,
+                      colors.success,
+                    ),
+                  if (data.deadQuantity > 0)
+                    _buildInlineQuantityStat(
+                      l10n.deadQuantityLabel,
+                      data.deadQuantity,
+                      colors.danger,
+                    ),
+                  if (data.keptQuantity > 0)
+                    _buildInlineQuantityStat(
+                      l10n.keptQuantityLabel,
+                      data.keptQuantity,
+                      _scheme.primary,
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -894,6 +979,49 @@ class _ChickenStatisticsScreenState
     );
   }
 
+  Widget _buildQuantityMetric(
+    IconData icon,
+    String label,
+    int value,
+    Color accent,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: context.neuRaised(radius: 12, depth: 0.5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: accent),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            "$value con",
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFooterStat(String label, String value, Color accent) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -936,6 +1064,28 @@ class _ChickenStatisticsScreenState
               fontWeight: FontWeight.w700,
               color: accent,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInlineQuantityStat(String label, int value, Color accent) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          "$label ",
+          style: TextStyle(fontSize: 13, color: _scheme.onSurfaceVariant),
+        ),
+        Text(
+          "$value con",
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: accent,
           ),
         ),
       ],

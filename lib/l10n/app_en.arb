@@ -565,6 +565,15 @@
       }
     }
   },
+  "totalSoldLabel": "Total sold",
+  "soldQuantityValue": "{count} sold",
+  "@soldQuantityValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "soldRemainingLabel": "Sold / remaining",
   "remainingLabel": "Remaining",
   "soldRemainingValue": "{sold} / {remaining}",

@@ -544,6 +544,15 @@
       }
     }
   },
+  "totalSoldLabel": "Tổng con đã bán",
+  "soldQuantityValue": "{count} đã bán",
+  "@soldQuantityValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "soldRemainingLabel": "Đã bán / còn lại",
   "remainingLabel": "Còn lại",
   "soldRemainingValue": "{sold} / {remaining} con",
