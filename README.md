@@ -168,6 +168,17 @@ fvm flutter pub get
 bash scripts/patch-easy-video-editor.sh
 ```
 
+The script is idempotent and already runs from `ios/Podfile` and CI, so this is
+only needed when building without a `pod install`. It carries three fixes, none
+of which have an upstream release to move to - 0.1.6 is the latest published
+version:
+
+| Fix | Why |
+| --- | --- |
+| iOS crop | Wrong crop rect on portrait video. |
+| Swift imports | Missing `import Dispatch`. |
+| `workItem` | Swift 6.2 (Xcode 27) rejects a local `lazy var` whose initializer refers to itself, failing every command handler with "Use of local variable 'workItem' before its declaration". |
+
 Build the Web app locally:
 
 ```bash

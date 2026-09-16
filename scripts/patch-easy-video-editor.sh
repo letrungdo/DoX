@@ -41,6 +41,35 @@ apply_fix() {
   patch -p1 -l -d "$pkg" < "$patch_file" || echo "[patch-evd] Warning: patch failed for $label"
 }
 
+# Swift 6.2 (Xcode 27) rejects a local `lazy var` whose initializer refers to
+# itself - "Use of local variable 'workItem' before its declaration". Every
+# command handler in the package opens with that exact shape, so this is one
+# mechanical rewrite applied eleven times. It stays a rewrite rather than a
+# patch file because a context diff across eleven files breaks on any upstream
+# edit, and there is no upstream release to move to: 0.1.6 is the latest.
+apply_workitem_fix() {
+  pkg="$1"
+  dir="$pkg/ios/easy_video_editor/Sources/easy_video_editor/handler"
+
+  # A bare `return` here would carry the failed test's status out under
+  # `set -e` and kill the run - older cached copies lay their sources out
+  # differently and have no such directory.
+  [[ -d "$dir" ]] || return 0
+
+  count=0
+  for f in "$dir"/*.swift; do
+    [[ -f "$f" ]] || continue
+    grep -q 'lazy var workItem' "$f" || continue
+    perl -0pi -e 's/lazy var workItem: DispatchWorkItem = DispatchWorkItem \{[ \t]*/var workItem: DispatchWorkItem!\n        workItem = DispatchWorkItem {/g' "$f"
+    echo "[patch-evd] patched workItem: $(basename "$f")"
+    count=$((count + 1))
+  done
+
+  if [[ $count -eq 0 ]]; then
+    echo "[patch-evd] already patched: workItem (Swift 6.2)"
+  fi
+}
+
 # Find easy_video_editor in all possible pub cache locations
 candidates=()
 search_paths=(
@@ -76,5 +105,6 @@ for pkg in "${candidates[@]}"; do
   apply_fix "$pkg" "$CROP_PATCH" "$CROP_REL" "iOS crop"
   apply_fix "$pkg" "$IMPORTS_PATCH" "$IMPORTS_REL" "Swift imports (1)"
   apply_fix "$pkg" "$IMPORTS_PATCH" "$IMPORTS_REL_2" "Swift imports (2)"
+  apply_workitem_fix "$pkg"
 done
 echo "[patch-evd] done."
