@@ -19,12 +19,21 @@ interface PnjResponse {
 }
 
 /**
- * Parses a price string from PNJ API into a numeric value.
- * Example: "145.300" -> 145.3
+ * Parses a price string from the PNJ API into VND per tael.
+ * PNJ quotes thousands of VND with Vietnamese grouping, so "146.500" means
+ * 146,500 thousand VND -> 146,500,000 VND.
  */
 const parsePrice = (s: string): number => {
-  return parseFloat(s.replace(",", ".")) * 1000000;
+  const normalized = s.replace(/\./g, "").replace(",", ".");
+
+  return parseFloat(normalized) * 1000;
 };
+
+/**
+ * A gold price is never below this, so a reference snapshot under it was
+ * written in a different unit and must not be subtracted from today's price.
+ */
+const MIN_PLAUSIBLE_PRICE = 1000000;
 
 Deno.serve(async () => {
   try {
@@ -85,8 +94,10 @@ Deno.serve(async () => {
         .limit(1)
         .maybeSingle();
 
-      const bidChange = refData ? currentBid - (refData.bid as number) : 0;
-      const askChange = refData ? currentAsk - (refData.ask as number) : 0;
+      const refBid = Number(refData?.bid);
+      const refAsk = Number(refData?.ask);
+      const bidChange = refBid >= MIN_PLAUSIBLE_PRICE ? currentBid - refBid : 0;
+      const askChange = refAsk >= MIN_PLAUSIBLE_PRICE ? currentAsk - refAsk : 0;
 
       results.push({
         code,
