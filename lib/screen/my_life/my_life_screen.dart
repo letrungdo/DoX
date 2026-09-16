@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:auto_route/auto_route.dart';
 import 'package:camera/camera.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -5,6 +7,7 @@ import 'package:collection/collection.dart';
 import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/constants/overlay_style.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/string_extensions.dart';
@@ -13,7 +16,6 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/weather_data.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
-import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/my_life/my_life_view_model.dart';
 import 'package:do_x/view_model/my_life/weather.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';

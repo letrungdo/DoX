@@ -49,7 +49,7 @@ class CurrentWeather {
   @JsonKey(name: "weather_code")
   final int? weatherCode;
 
-  String get temperatureText => "$temperature2m°C";
+  String get temperatureText => "${temperature2m?.round()}°C";
 
   const CurrentWeather({
     this.time, //

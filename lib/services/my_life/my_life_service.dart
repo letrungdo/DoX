@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/date_time.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/constants/overlay_style.dart';
 import 'package:do_x/extensions/color_extensions.dart';
 import 'package:do_x/extensions/date_extensions.dart';
 import 'package:do_x/extensions/double_extensions.dart';
@@ -95,11 +96,16 @@ class MyLifeService {
                 "comment": reviewCaption,
                 "rating": {
                   "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                  // The picker allows half stars, so this stays a double - the
+                  // capture only ever shows whole ratings because that client
+                  // rounds them.
                   "value": reviewRating,
                 },
               },
-              "text_color": "#FFFFFFE6",
+              "text_color": OverlayStyle.text.toHexString(),
               "type": overlayName,
+              // The capture came from a free account, where the review caption
+              // is capped at a single line. Paid accounts get four.
               "max_lines": {
                 "@type": "type.googleapis.com/google.protobuf.Int64Value",
                 "value": "4",
@@ -127,11 +133,13 @@ class MyLifeService {
               "background": {"material_blur": "regular", "colors": []},
               "type": overlayName,
               "icon": {
-                "color": "#24B0FF",
+                "color": OverlayStyle.locationIcon.toHexString(
+                  includeAlpha: false,
+                ),
                 "data": "location.fill",
                 "type": "sf_symbol",
               },
-              "text_color": "#FFFFFFE6",
+              "text_color": OverlayStyle.text.toHexString(),
             },
             "alt_text": text,
             "overlay_id": "caption:$overlayName",
@@ -154,20 +162,26 @@ class MyLifeService {
                 "temperature": weather.temperature2m.celsiusToFahrenheit(),
                 "wk_condition": data?.description,
                 "is_daylight": weather.isDaylight,
-                "cloud_cover": {
-                  "value": weather.cloudCover, //
-                  "@type": "type.googleapis.com/google.protobuf.Int64Value",
-                },
+                // A plain fraction of the sky, not an Int64Value percentage.
+                "cloud_cover": (weather.cloudCover ?? 0) / 100,
               },
               "text": text,
+              // The weather badge is a gradient rather than a blurred surface,
+              // so it carries colors and no material_blur. Which gradient goes
+              // with which condition is the API client's own table, and this
+              // app offers no way to pick one, so it posts none.
               "background": {"colors": []},
               "type": overlayName,
               "icon": {
-                "color": "#FFFFFF",
+                "color": OverlayStyle.weatherIcon.toHexString(
+                  includeAlpha: false,
+                ),
                 "data": data.symbolName(weather.isDaylight),
                 "type": "sf_symbol",
               },
-              "text_color": "#FFFFFFE6",
+              "text_color": OverlayStyle.weatherText.toHexString(
+                includeAlpha: false,
+              ),
             },
             "alt_text": text,
             "overlay_id": "caption:$overlayName",
@@ -191,10 +205,10 @@ class MyLifeService {
               "type": overlayName,
               "icon": {
                 "type": "sf_symbol",
-                "color": "#FFFFFFCC",
+                "color": OverlayStyle.timeIcon.toHexString(),
                 "data": "clock.fill",
               },
-              "text_color": "#FFFFFFE6",
+              "text_color": OverlayStyle.text.toHexString(),
             },
             "alt_text": text,
             "overlay_id": "caption:$overlayName",
@@ -204,8 +218,23 @@ class MyLifeService {
     }
   }
 
+  /// A plain text overlay is also the moment's caption: the API stores it
+  /// outside the overlay so clients that cannot draw the overlay still have
+  /// something to show. Every other overlay type leaves the caption unset.
+  void _addCaption(
+    Map<String, Map> body, {
+    required OverlayType overlayType,
+    required String? caption,
+  }) {
+    if (overlayType != OverlayType.standard) return;
+    final text = caption?.trim();
+    if (text.isNullOrEmpty) return;
+    body["data"]!["caption"] = text;
+  }
+
   Future<Result> postImage(
     String? thumbnailUrl, {
+    required String? md5,
     required UserModel user,
     CancelToken? cancelToken,
     required OverlayType overlayType,
@@ -220,10 +249,12 @@ class MyLifeService {
   }) {
     return Result.guardFuture(() async {
       if (thumbnailUrl == null) throw "thumbnail url invalid";
+      if (md5 == null) throw "thumbnail md5 invalid";
       // final analytics = {"platform": "ios"};
       final body = {
         "data": {
           "thumbnail_url": thumbnailUrl,
+          "md5": md5,
           "recipients": [],
           // "analytics": analytics,
           "sent_to_self_only": false,
@@ -248,6 +279,7 @@ class MyLifeService {
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
       }
+      _addCaption(body, overlayType: overlayType, caption: caption);
       final response = await dio.post(
         '/postMomentV2', //
         data: body,
@@ -264,6 +296,7 @@ class MyLifeService {
     required OverlayType overlayType,
     required String? thumbnailUrl,
     required String? videoUrl,
+    required String? md5,
     required String? caption, //
     required String? reviewCaption,
     required double? reviewRating,
@@ -276,13 +309,15 @@ class MyLifeService {
     return Result.guardFuture(() async {
       if (thumbnailUrl == null) throw "thumbnail url invalid";
       if (videoUrl == null) throw "video url invalid";
+      if (md5 == null) throw "video md5 invalid";
 
       final body = {
         "data": {
           "thumbnail_url": thumbnailUrl, //
           "video_url": videoUrl,
-          "md5": videoUrl.toMd5(),
+          "md5": md5,
           "recipients": [],
+          "sent_to_self_only": false,
           "sent_to_all": true,
         },
       };
@@ -300,6 +335,7 @@ class MyLifeService {
       if (overlays != null) {
         body["data"]!["overlays"] = overlays;
       }
+      _addCaption(body, overlayType: overlayType, caption: caption);
       final response = await dio.post(
         "/postMomentV2", //
         data: body,

@@ -193,7 +193,7 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     );
   }
 
-  Future<String?> _uploadImage() async {
+  Future<UploadedFile?> _uploadImage() async {
     final imgData = await FlutterImageCompress.compressWithList(
       _croppedImage!, //
       minWidth: 1020,
@@ -208,12 +208,12 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     if (uploadRes.isError) {
       return null;
     }
-    final thumbnailUrl = uploadRes.data!;
-    logger.d("thumbnailUrl: $thumbnailUrl");
-    return thumbnailUrl;
+    final thumbnail = uploadRes.data!;
+    logger.d("thumbnailUrl: ${thumbnail.url}");
+    return thumbnail;
   }
 
-  Future<String?> _uploadVideo(Uint8List videoCompressed) async {
+  Future<UploadedFile?> _uploadVideo(Uint8List videoCompressed) async {
     logger.d(
       "upload video size: ${(videoCompressed.lengthInBytes / 1024 / 1024).toStringAsFixed(2)} MB",
     );
@@ -225,19 +225,20 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     if (uploadRes.isError) {
       return null;
     }
-    final videoUrl = uploadRes.data!;
-    logger.d("videoUrl: $videoUrl");
-    return videoUrl;
+    final video = uploadRes.data!;
+    logger.d("videoUrl: ${video.url}");
+    return video;
   }
 
   Future<void> _postImage() async {
     renewCancelToken("upload image");
     setBusy(true);
 
-    final thumbnailUrl = await _uploadImage();
+    final thumbnail = await _uploadImage();
 
     final resPost = await _myLifeService.postImage(
-      thumbnailUrl, //
+      thumbnail?.url, //
+      md5: thumbnail?.md5,
       overlayType: OverlayType.options[overlayIndex],
       user: appData.user!,
       cancelToken: cancelToken,
@@ -272,7 +273,7 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     renewCancelToken("upload video");
     setBusy(true);
 
-    final [thumbnailUrl, videoUrl] = await Future.wait([
+    final [thumbnail, video] = await Future.wait([
       _uploadImage(), //
       _uploadVideo(videoCroped!),
     ]);
@@ -281,8 +282,10 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
       overlayType: OverlayType.values[overlayIndex],
       user: appData.user!,
       cancelToken: cancelToken,
-      thumbnailUrl: thumbnailUrl, //
-      videoUrl: videoUrl,
+      thumbnailUrl: thumbnail?.url, //
+      videoUrl: video?.url,
+      // The moment is identified by the video it carries, not by its cover.
+      md5: video?.md5,
       caption: caption,
       reviewCaption: reviewCaption,
       reviewRating: reviewRating,

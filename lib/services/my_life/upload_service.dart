@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/extensions/string_extensions.dart';
@@ -144,7 +145,7 @@ class UploadService {
     return "$getUrl?alt=media&token=$downloadToken";
   }
 
-  Future<Result<String>> uploadImage({
+  Future<Result<UploadedFile>> uploadImage({
     required Uint8List data, //
     required UserModel user,
     CancelToken? cancelToken,
@@ -172,11 +173,11 @@ class UploadService {
         cancelToken: cancelToken,
       );
 
-      return downloadUrl;
+      return UploadedFile(url: downloadUrl, md5: _md5Of(data));
     });
   }
 
-  Future<Result<String>> uploadVideo({
+  Future<Result<UploadedFile>> uploadVideo({
     required Uint8List data, //
     required UserModel user,
     CancelToken? cancelToken,
@@ -204,9 +205,13 @@ class UploadService {
         cancelToken: cancelToken,
       );
 
-      return downloadUrl;
+      return UploadedFile(url: downloadUrl, md5: _md5Of(data));
     });
   }
+
+  /// The moment API identifies a media file by the md5 of its bytes - the same
+  /// digest Firebase Storage reports as `md5Hash` once the upload lands.
+  String _md5Of(Uint8List data) => crypto.md5.convert(data).toString();
 
   String _generateName({required FileType type}) {
     const chars =
@@ -228,3 +233,12 @@ class UploadService {
 }
 
 enum FileType { image, video }
+
+/// A file that finished uploading: where it can be downloaded from, and the
+/// md5 the moment API expects to be posted alongside it.
+class UploadedFile {
+  const UploadedFile({required this.url, required this.md5});
+
+  final String url;
+  final String md5;
+}

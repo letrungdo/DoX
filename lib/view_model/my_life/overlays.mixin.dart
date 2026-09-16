@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/enum/overlay_type.dart';
+import 'package:do_x/constants/overlay_style.dart';
 import 'package:do_x/extensions/color_extensions.dart';
 import 'package:do_x/model/weather_data.dart';
 import 'package:do_x/services/location_service.dart';
@@ -45,7 +46,9 @@ mixin MyLifeOverlays on CoreViewModel {
   int _overlayIndex = 0;
   int get overlayIndex => _overlayIndex;
 
-  Color overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
+  /// With no background color picked the caption sits on a blurred surface,
+  /// so it starts - and resets - at the light text the moment API expects.
+  Color overlayTextColor = OverlayStyle.text;
   Color? overlayBgColor;
 
   void setOverlayIndex(int index) async {
@@ -201,7 +204,7 @@ mixin MyLifeOverlays on CoreViewModel {
               kind: DialogActionKind.destructiveOutline,
               onPressed: () {
                 overlayBgColor = null;
-                overlayTextColor = Colors.white.withAlpha(200).getTextColor()!;
+                overlayTextColor = OverlayStyle.text;
                 notifyListeners();
                 Navigator.of(context).pop(true);
               },
@@ -216,8 +219,11 @@ mixin MyLifeOverlays on CoreViewModel {
             DialogActionButton(
               text: 'OK',
               onPressed: () {
-                overlayBgColor = tempColor;
-                overlayTextColor = tempColor.getTextColor()!;
+                // A color straight off the wheel is often one neither black nor
+                // white text survives, so the pair is settled together.
+                final readable = tempColor.readablePair();
+                overlayBgColor = readable.background;
+                overlayTextColor = readable.foreground;
                 notifyListeners();
                 Navigator.of(context).pop(true);
               },

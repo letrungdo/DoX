@@ -24,41 +24,34 @@ Widget _buildOverlays<V extends MyLifeViewModel>(
           items: OverlayType.options.map((type) {
             return Align(
               alignment: Alignment.bottomCenter,
-              child: Theme(
-                data: AppTheme.lightTheme,
-                child: Selector<V, (Color, Color?)>(
-                  selector: (p0, p1) =>
-                      (p1.overlayTextColor, p1.overlayBgColor),
-                  builder: (context, data, _) {
-                    final textColor = data.$1;
-                    final bgColor = type == OverlayType.standard
-                        ? data.$2
-                        : null;
-                    return Container(
-                      margin: EdgeInsets.symmetric(horizontal: 10),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: type == OverlayType.review
-                            ? 3
-                            : type == OverlayType.time
-                            ? 7
-                            : 8, //
-                      ),
-                      decoration: BoxDecoration(
-                        color: bgColor ?? Colors.white.withAlpha(200), //
-                        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
-                      ),
-                      child: switch (type) {
-                        OverlayType.standard => _buildCaptionOverlay(textColor),
-                        OverlayType.review => _buildReviewOverlay(),
-                        // OverlayType.music =>
-                        OverlayType.location => _buildLocationOverlay(),
-                        OverlayType.weather => _buildWeatherOverlay(),
-                        OverlayType.time => _buildTimeOverlay(),
-                      },
-                    );
-                  },
-                ),
+              child: Selector<V, (Color, Color?)>(
+                selector: (p0, p1) => (p1.overlayTextColor, p1.overlayBgColor),
+                builder: (context, data, _) {
+                  // Only the text overlay takes a picked color; the rest carry
+                  // the fixed palette the moment API draws them with.
+                  final custom = type == OverlayType.standard ? data.$2 : null;
+                  final textColor = custom == null
+                      ? (type == OverlayType.weather
+                            ? OverlayStyle.weatherText
+                            : OverlayStyle.text)
+                      : data.$1;
+                  return _overlayBadge(
+                    background: custom,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: type == OverlayType.review ? 4 : 9,
+                    ),
+                    textColor: textColor,
+                    child: switch (type) {
+                      OverlayType.standard => _buildCaptionOverlay(textColor),
+                      OverlayType.review => _buildReviewOverlay(),
+                      // OverlayType.music =>
+                      OverlayType.location => _buildLocationOverlay(),
+                      OverlayType.weather => _buildWeatherOverlay(),
+                      OverlayType.time => _buildTimeOverlay(),
+                    },
+                  );
+                },
               ),
             );
           }).toList(),
@@ -88,6 +81,70 @@ Widget _buildOverlays<V extends MyLifeViewModel>(
     ),
   );
 }
+
+/// The pill a caption overlay is drawn in.
+///
+/// With no color picked this is what the moment API calls a `material_blur`
+/// surface: the photo behind it, blurred and darkened, with light text on top.
+/// A picked [background] replaces the blur with a solid fill - it arrives
+/// already paired with a [textColor] that can be read on it.
+Widget _overlayBadge({
+  required Color? background,
+  required Color textColor,
+  required EdgeInsets padding,
+  required Widget child,
+}) {
+  final radius = BorderRadius.circular(Dimens.radiusPanel);
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: Dimens.pagePadding),
+    // The shadow is what separates the badge from a bright photo; the blur
+    // alone disappears against an overexposed sky.
+    decoration: BoxDecoration(
+      borderRadius: radius,
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x33000000),
+          blurRadius: 12,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: OverlayStyle.blurSigma,
+          sigmaY: OverlayStyle.blurSigma,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: background ?? OverlayStyle.blurTint,
+            borderRadius: radius,
+            border: Border.all(color: OverlayStyle.edge),
+          ),
+          child: Padding(
+            padding: padding,
+            // Every overlay's text and icons inherit from here, so a picked
+            // color reaches all of them without being threaded through each.
+            child: IconTheme.merge(
+              data: IconThemeData(color: textColor, size: 20),
+              child: DefaultTextStyle.merge(
+                style: TextStyle(color: textColor).bold,
+                textAlign: TextAlign.center,
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Overlay content keeps the app's type scale but takes its color from the
+/// badge it sits in, so a picked color reaches every overlay alike.
+TextStyle _overlayText(BuildContext context) => context.textTheme.primary.bold
+    .textColor(DefaultTextStyle.of(context).style.color ?? OverlayStyle.text);
 
 Widget _buildCaptionOverlay<V extends MyLifeViewModel>(Color textColor) {
   return Selector<V, String>(
@@ -160,6 +217,7 @@ Widget _buildReviewOverlay<V extends MyLifeViewModel>() {
               onChanged: context.read<V>().onReviewCaptionChanged,
               maxLength: 40,
               textInputAction: TextInputAction.done,
+              textColor: DefaultTextStyle.of(context).style.color,
             ),
         ],
       );
@@ -178,11 +236,12 @@ Widget _buildTimeOverlay<V extends MyLifeViewModel>() {
             SFIcons.sf_clock,
             fontSize: 20,
             fontWeight: FontWeight.bold,
+            color: OverlayStyle.timeIcon,
           ), //
-          SizedBox(width: 4),
+          SizedBox(width: 6),
           Text(
             currentTime.toStringFormat(DateTimeConst.HHmma),
-            style: context.textTheme.primary.bold, //
+            style: _overlayText(context), //
           ),
         ],
       );
@@ -203,11 +262,12 @@ Widget _buildWeatherOverlay<V extends MyLifeViewModel>() {
               wmoWeatherInfos[data.weatherCode].getIcon(data.isDaylight),
               fontSize: 20,
               fontWeight: FontWeight.bold, //
+              color: OverlayStyle.weatherIcon,
             ),
-            SizedBox(width: 4),
+            SizedBox(width: 6),
             Text(
               (data.temperatureText).toDashIfNull,
-              style: context.textTheme.primary.bold, //
+              style: _overlayText(context), //
             ),
           ],
         ],
@@ -223,14 +283,14 @@ Widget _buildLocationOverlay<V extends MyLifeViewModel>() {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.location_on), //
-          SizedBox(width: 4),
+          Icon(Icons.location_on, color: OverlayStyle.locationIcon), //
+          SizedBox(width: 6),
           currentLocation == null
               ? Loading(size: 20)
               : Flexible(
                   child: Text(
                     currentLocation,
-                    style: context.textTheme.primary.bold, //
+                    style: _overlayText(context), //
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
                   ),
