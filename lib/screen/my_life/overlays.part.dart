@@ -176,9 +176,23 @@ Widget _buildCaptionInput(
       style: TextStyle(color: textColor).bold,
       decoration: InputDecoration(
         isDense: true, // Remove the default content padding.
+        // The app's inputDecorationTheme fills a field with an opaque sunken
+        // panel. Inside the badge that paints a second surface over the blur,
+        // so the field goes transparent and the badge stays the only one.
+        filled: false,
         contentPadding: EdgeInsets.symmetric(horizontal: 5),
         hintText: caption.isNullOrEmpty ? hintText : null, //
+        // Every state is cleared, not just the resting one: `border` is the
+        // fallback alone and never overrides the theme's per-state borders, so
+        // focus still drew its primary-colored outline - and that outline's
+        // radius, on a box only as tall as the text, rounded into a lozenge
+        // sitting inside the badge.
         border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
         counterText: "",
         hintStyle: TextStyle(color: textColor?.withValues(alpha: 0.55)).regular,
       ),

@@ -93,6 +93,12 @@ class Dimens {
   /// `BorderRadius.circular` clamps to a half-height capsule at any size.
   static const radiusPill = 999.0;
 
+  /// The moment photo is a rounded square, and it is sized off the viewport
+  /// rather than fixed - so its corner is a share of its own side, holding the
+  /// same shape from a phone to the widest the content cap allows. A fixed
+  /// radius reads as a circle at one width and a sharp box at another.
+  static const momentImageRadiusRatio = 0.18;
+
   /// A sheet never grows past this share of the screen height, so the page
   /// behind it stays visible — landscape especially, where the screen is short.
   static const sheetMaxHeightFactor = 0.85;

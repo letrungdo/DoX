@@ -107,8 +107,10 @@ class _HomeScreenState<V extends MyLifeViewModel>
                     Container(
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
+                        // Not [Dimens.radiusPill]: the frame is square, and a
+                        // capsule radius on a square is a circle.
                         borderRadius: BorderRadius.circular(
-                          Dimens.radiusPill,
+                          height * Dimens.momentImageRadiusRatio,
                         ), //
                         color: context.theme.scaffoldBackgroundColor,
                       ),
