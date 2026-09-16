@@ -1064,10 +1064,12 @@ class ChickenViewModel extends CoreViewModel {
             _batches,
             compare: (a, b) => b.incubationDate.compareTo(a.incubationDate),
           );
+          notifyListenersSafe();
         },
       );
-      // Clean up the pending guard after a successful server deletion commitment
-      _pendingDeletedBatchIds.remove(id);
+      // The guard is left in place until a successful server fetch confirms the
+      // batch is truly gone. Removing it here would allow a ghost record to
+      // reappear if a fetch happened before the server delete settled.
       _saveCache();
     } catch (e) {
       // Errors are handled inside _commit rollback, rethrow for UI notification if any
