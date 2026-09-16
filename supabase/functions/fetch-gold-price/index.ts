@@ -23,7 +23,7 @@ interface PnjResponse {
  * Example: "145.300" -> 145.3
  */
 const parsePrice = (s: string): number => {
-  return parseFloat(s.replace(",", "."));
+  return parseFloat(s.replace(",", ".")) * 1000000;
 };
 
 Deno.serve(async () => {
