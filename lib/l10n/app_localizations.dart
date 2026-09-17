@@ -3791,8 +3791,25 @@ abstract class AppLocalizations {
   /// No description provided for @assetEstimatedReturn.
   ///
   /// In en, this message translates to:
-  /// **'Est. {perYear}/yr · {perMonth}/mo'**
-  String assetEstimatedReturn(String perYear, String perMonth);
+  /// **'≈ {yearAmount}/yr ({yearPercent}) · {monthAmount}/mo ({monthPercent})'**
+  String assetEstimatedReturn(
+    String yearAmount,
+    String yearPercent,
+    String monthAmount,
+    String monthPercent,
+  );
+
+  /// No description provided for @assetGoldEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No gold recorded yet.'**
+  String get assetGoldEmpty;
+
+  /// No description provided for @assetInvestmentEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No investments recorded yet.'**
+  String get assetInvestmentEmpty;
 
   /// No description provided for @assetLoadFailed.
   ///

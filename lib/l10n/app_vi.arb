@@ -1182,13 +1182,17 @@
   "assetBuyPriceUsd": "Giá mua (USD)",
   "assetValueInVnd": "≈ {amount}",
   "@assetValueInVnd": {"placeholders": {"amount": {"type": "String"}}},
-  "assetEstimatedReturn": "Ước tính {perYear}/năm · {perMonth}/tháng",
+  "assetEstimatedReturn": "≈ {yearAmount}/năm ({yearPercent}) · {monthAmount}/tháng ({monthPercent})",
   "@assetEstimatedReturn": {
     "placeholders": {
-      "perYear": {"type": "String"},
-      "perMonth": {"type": "String"}
+      "yearAmount": {"type": "String"},
+      "yearPercent": {"type": "String"},
+      "monthAmount": {"type": "String"},
+      "monthPercent": {"type": "String"}
     }
   },
+  "assetGoldEmpty": "Chưa có ghi chép mua vàng nào.",
+  "assetInvestmentEmpty": "Chưa có khoản đầu tư nào.",
   "assetLoadFailed": "Không tải được dữ liệu tài sản",
   "assetSaveFailed": "Không lưu được thay đổi",
   "assetBuyPrice": "Giá mua",

@@ -2074,9 +2074,20 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String assetEstimatedReturn(String perYear, String perMonth) {
-    return 'Ước tính $perYear/năm · $perMonth/tháng';
+  String assetEstimatedReturn(
+    String yearAmount,
+    String yearPercent,
+    String monthAmount,
+    String monthPercent,
+  ) {
+    return '≈ $yearAmount/năm ($yearPercent) · $monthAmount/tháng ($monthPercent)';
   }
+
+  @override
+  String get assetGoldEmpty => 'Chưa có ghi chép mua vàng nào.';
+
+  @override
+  String get assetInvestmentEmpty => 'Chưa có khoản đầu tư nào.';
 
   @override
   String get assetLoadFailed => 'Không tải được dữ liệu tài sản';

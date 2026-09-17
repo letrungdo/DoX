@@ -73,13 +73,6 @@ void main() {
       expect(prices.findPrice(GoldAssetType.ring9999), 143500000);
     });
 
-    test('a private ring is valued at the plain PNJ ring price', () {
-      expect(
-        prices.findPrice(GoldAssetType.privateRing),
-        prices.findPrice(GoldAssetType.ring9999),
-      );
-    });
-
     test('a quote that is missing yields null rather than a stale price', () {
       expect(<GoldSymbol>[].findPrice(GoldAssetType.sjcPiece), isNull);
     });

@@ -13,6 +13,21 @@ import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
+/// A gold holding's gain averaged over how long it has been held.
+class GoldReturnEstimate {
+  const GoldReturnEstimate({
+    required this.perYear,
+    required this.perMonth,
+    required this.perYearPercent,
+    required this.perMonthPercent,
+  });
+
+  final double perYear;
+  final double perMonth;
+  final double perYearPercent;
+  final double perMonthPercent;
+}
+
 class AssetViewModel extends CoreViewModel {
   final AssetRepository _repository = AssetRepository();
   final FxRateService _fxService = FxRateService();
@@ -82,17 +97,25 @@ class AssetViewModel extends CoreViewModel {
     return (totalReturn / (days / 365.0)) * 100;
   }
 
-  /// What a gold holding has made, spread over the time it has been held:
-  /// (per year, per month) in VND. Null until it is old enough for the figure
-  /// to mean anything — see [_minDaysToAnnualize].
-  ({double perYear, double perMonth})? getGoldEstimatedReturn(AssetGold gold) {
+  /// What a gold holding has made, spread over the time it has been held: an
+  /// amount in VND and the same figure as a rate on what was paid. Null until
+  /// the holding is old enough for either to mean anything — see
+  /// [_minDaysToAnnualize].
+  GoldReturnEstimate? getGoldEstimatedReturn(AssetGold gold) {
     final days = DateTime.now().difference(gold.buyDate).inDays;
     if (days < _minDaysToAnnualize) return null;
 
+    final buyValue = gold.quantity * gold.buyPrice;
     final profit = gold.quantity * (getCurrentGoldPrice(gold) - gold.buyPrice);
     final perYear = profit / (days / 365.0);
+    final perYearPercent = buyValue > 0 ? (perYear / buyValue) * 100 : 0.0;
 
-    return (perYear: perYear, perMonth: perYear / 12);
+    return GoldReturnEstimate(
+      perYear: perYear,
+      perMonth: perYear / 12,
+      perYearPercent: perYearPercent,
+      perMonthPercent: perYearPercent / 12,
+    );
   }
 
   double getCurrentGoldPrice(AssetGold gold) {

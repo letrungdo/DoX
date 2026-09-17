@@ -2083,9 +2083,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String assetEstimatedReturn(String perYear, String perMonth) {
-    return 'Est. $perYear/yr · $perMonth/mo';
+  String assetEstimatedReturn(
+    String yearAmount,
+    String yearPercent,
+    String monthAmount,
+    String monthPercent,
+  ) {
+    return '≈ $yearAmount/yr ($yearPercent) · $monthAmount/mo ($monthPercent)';
   }
+
+  @override
+  String get assetGoldEmpty => 'No gold recorded yet.';
+
+  @override
+  String get assetInvestmentEmpty => 'No investments recorded yet.';
 
   @override
   String get assetLoadFailed => 'Could not load your assets';

@@ -1224,13 +1224,17 @@
   "assetBuyPriceUsd": "Buy price (USD)",
   "assetValueInVnd": "≈ {amount}",
   "@assetValueInVnd": {"placeholders": {"amount": {"type": "String"}}},
-  "assetEstimatedReturn": "Est. {perYear}/yr · {perMonth}/mo",
+  "assetEstimatedReturn": "≈ {yearAmount}/yr ({yearPercent}) · {monthAmount}/mo ({monthPercent})",
   "@assetEstimatedReturn": {
     "placeholders": {
-      "perYear": {"type": "String"},
-      "perMonth": {"type": "String"}
+      "yearAmount": {"type": "String"},
+      "yearPercent": {"type": "String"},
+      "monthAmount": {"type": "String"},
+      "monthPercent": {"type": "String"}
     }
   },
+  "assetGoldEmpty": "No gold recorded yet.",
+  "assetInvestmentEmpty": "No investments recorded yet.",
   "assetLoadFailed": "Could not load your assets",
   "assetSaveFailed": "Could not save the change",
   "assetBuyPrice": "Buy price",

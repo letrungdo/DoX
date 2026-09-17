@@ -1,12 +1,12 @@
 import 'package:do_x/model/fx/gold_model.dart';
 
 /// The kinds of gold a record can hold, each pinned to the `gold_prices.code`
-/// that quotes it. A private jeweller's plain ring has no published quote of
-/// its own and tracks the PNJ plain ring closely, so the two share a code.
+/// that quotes it. A plain ring from a private jeweller is recorded as a plain
+/// ring: it tracks the PNJ quote closely enough that a separate type only made
+/// the picker longer.
 enum GoldAssetType {
   sjcPiece("Vàng miếng SJC", "SJC_HCM"),
-  ring9999("Vàng nhẫn 9999", "PNJ_RING_9999"),
-  privateRing("Vàng nhẫn 9999 (Tư nhân)", "PNJ_RING_9999");
+  ring9999("Vàng nhẫn 9999", "PNJ_RING_9999");
 
   const GoldAssetType(this.label, this.code);
   final String label;
