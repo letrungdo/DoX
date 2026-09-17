@@ -4,6 +4,7 @@ import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:do_x/screen/asset/widgets/asset_refreshable_list.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
+import 'package:do_x/screen/asset/widgets/asset_total_bar.dart';
 import 'package:do_x/screen/asset/widgets/bank_logo.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:flutter/material.dart';
@@ -38,8 +39,19 @@ class SavingList extends StatelessWidget {
     return AssetRefreshableList(
       onRefresh: onRefresh,
       emptyMessage: emptyMessage ?? context.l10n.assetSavingEmpty,
-      itemCount: savings.length,
-      itemBuilder: (context, index) => _buildItem(context, savings[index]),
+      // One extra row at the top: what the deposits below add up to.
+      itemCount: savings.isEmpty ? 0 : savings.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return AssetTotalBar(
+            value: savings.fold(0, (sum, e) => sum + e.currentValue),
+            cost: savings.fold(0, (sum, e) => sum + e.amount),
+            profitCaption: context.l10n.assetInterest,
+          );
+        }
+
+        return _buildItem(context, savings[index - 1]);
+      },
     );
   }
 

@@ -3704,6 +3704,12 @@ abstract class AppLocalizations {
   /// **'Monthly Interest'**
   String get assetMonthlyInterest;
 
+  /// No description provided for @assetInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest'**
+  String get assetInterest;
+
   /// No description provided for @assetProfitLoss.
   ///
   /// In en, this message translates to:

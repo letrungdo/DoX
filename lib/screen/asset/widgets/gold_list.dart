@@ -4,6 +4,7 @@ import 'package:do_x/model/asset/asset_gold.dart';
 import 'package:do_x/screen/asset/widgets/asset_refreshable_list.dart';
 import 'package:do_x/screen/asset/widgets/asset_sell_price_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
+import 'package:do_x/screen/asset/widgets/asset_total_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:flutter/material.dart';
@@ -40,9 +41,20 @@ class GoldList extends StatelessWidget {
       itemCount: gold.isEmpty ? 0 : gold.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          return AssetSellPriceBar(
-            prices: _sellPrices(vm),
-            onChanged: vm.setGoldSellPrice,
+          return Column(
+            children: [
+              AssetTotalBar(
+                value: gold.fold(
+                  0,
+                  (sum, e) => sum + e.quantity * vm.getCurrentGoldPrice(e),
+                ),
+                cost: gold.fold(0, (sum, e) => sum + e.quantity * e.buyPrice),
+              ),
+              AssetSellPriceBar(
+                prices: _sellPrices(vm),
+                onChanged: vm.setGoldSellPrice,
+              ),
+            ],
           );
         }
 

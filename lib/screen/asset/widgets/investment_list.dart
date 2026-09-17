@@ -4,6 +4,7 @@ import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/screen/asset/widgets/asset_refreshable_list.dart';
 import 'package:do_x/screen/asset/widgets/asset_sell_price_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
+import 'package:do_x/screen/asset/widgets/asset_total_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/screen/asset/widgets/coin_logo.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
@@ -41,9 +42,24 @@ class InvestmentList extends StatelessWidget {
       itemCount: investments.isEmpty ? 0 : investments.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          return AssetSellPriceBar(
-            prices: _sellPrices(context, vm),
-            onChanged: (_, rate) => vm.setUsdRate(rate),
+          return Column(
+            children: [
+              AssetTotalBar(
+                value: investments.fold(
+                  0,
+                  (sum, e) =>
+                      sum + e.quantity * vm.getCurrentInvestmentPrice(e),
+                ),
+                cost: investments.fold(
+                  0,
+                  (sum, e) => sum + e.quantity * vm.getBuyPriceInVnd(e),
+                ),
+              ),
+              AssetSellPriceBar(
+                prices: _sellPrices(context, vm),
+                onChanged: (_, rate) => vm.setUsdRate(rate),
+              ),
+            ],
           );
         }
 

@@ -153,6 +153,8 @@ void main() {
 
   _bankLogoTests();
 
+  _totalBarTests();
+
   group('crypto tile', () {
     testWidgets('a coin holding fits on a narrow phone', (tester) async {
       final investment = AssetInvestment(
@@ -219,6 +221,46 @@ void _bankLogoTests() {
 
       expect(find.byType(AssetTileBadge), findsOneWidget);
       expect(tester.getSize(find.byType(BankLogo)), const Size.square(44));
+    });
+  });
+}
+
+void _totalBarTests() {
+  group('tab total', () {
+    AssetSaving deposit(String id, double amount) {
+      return AssetSaving(
+        id: id,
+        bankName: 'Vietcombank',
+        amount: amount,
+        interestRate: 6,
+        // Opened today, so nothing has accrued and the total is the principal.
+        startDate: DateTime.now(),
+      );
+    }
+
+    testWidgets('adds up the deposits shown', (tester) async {
+      await _pump(
+        tester,
+        SavingList(
+          savings: [deposit('s1', 100000000), deposit('s2', 50000000)],
+        ),
+        size: const Size(400, 800),
+      );
+
+      expect(find.text('150,000,000đ'), findsOneWidget);
+    });
+
+    testWidgets('follows the list when it is narrowed', (tester) async {
+      // What a year filter leaves behind: the total has to answer the same
+      // question the rows do.
+      await _pump(
+        tester,
+        SavingList(savings: [deposit('s1', 100000000)]),
+        size: const Size(400, 800),
+      );
+
+      expect(find.text('100,000,000đ'), findsWidgets);
+      expect(find.text('150,000,000đ'), findsNothing);
     });
   });
 }

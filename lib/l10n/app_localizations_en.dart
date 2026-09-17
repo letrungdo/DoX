@@ -2039,6 +2039,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetMonthlyInterest => 'Monthly Interest';
 
   @override
+  String get assetInterest => 'Interest';
+
+  @override
   String get assetProfitLoss => 'Profit/Loss';
 
   @override

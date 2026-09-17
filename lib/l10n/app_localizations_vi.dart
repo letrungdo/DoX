@@ -2030,6 +2030,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetMonthlyInterest => 'Lãi tháng';
 
   @override
+  String get assetInterest => 'Tiền lãi';
+
+  @override
   String get assetProfitLoss => 'Lợi nhuận/Lỗ';
 
   @override

@@ -1209,6 +1209,7 @@
   "assetSummary": "Asset Summary",
   "assetTotal": "Total Assets",
   "assetMonthlyInterest": "Monthly Interest",
+  "assetInterest": "Interest",
   "assetProfitLoss": "Profit/Loss",
   "assetAdd": "Add Asset",
   "assetDeleteConfirm": "Delete this asset record?",
