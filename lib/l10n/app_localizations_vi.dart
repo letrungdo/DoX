@@ -2245,6 +2245,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetSellPriceUsd => 'Giá bán (USDT)';
 
   @override
+  String get assetUsdRate => 'Tỷ giá USDT/VND';
+
+  @override
   String get assetSellPriceMarket => 'Giá thị trường';
 
   @override

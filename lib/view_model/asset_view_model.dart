@@ -88,28 +88,21 @@ class AssetViewModel extends CoreViewModel {
 
   /// USDT/VND, refreshed from `fx_rates`. The fallback only covers the frames
   /// before that call lands, or a feed that is down.
-  double _usdRate = _fallbackUsdRate;
+  double _marketUsdRate = _fallbackUsdRate;
   static const _fallbackUsdRate = 25800.0;
 
   /// Sell prices typed by hand, standing in for the feed's quote.
   ///
-  /// Keyed the way the quotes themselves are — gold by its type, an investment
-  /// by its symbol — so a price is entered once and every holding of that kind
-  /// is valued at it. Deliberately not persisted: it is a "what would I get for
+  /// Keyed the way the quotes themselves are — by the kind of gold — so a price
+  /// is entered once and every holding of that kind is valued at it. Deliberately not persisted: it is a "what would I get for
   /// this today" figure to compare against, not a fact about the holding, so it
   /// lives as long as the screen does and never overwrites what was paid.
   final Map<String, double> _goldSellPrices = {};
-  final Map<String, double> _investmentSellPrices = {};
 
   double? goldSellPrice(String goldType) => _goldSellPrices[goldType];
-  double? investmentSellPrice(String symbol) => _investmentSellPrices[symbol];
 
   void setGoldSellPrice(String goldType, double? price) {
     _setSellPrice(_goldSellPrices, goldType, price);
-  }
-
-  void setInvestmentSellPrice(String symbol, double? price) {
-    _setSellPrice(_investmentSellPrices, symbol, price);
   }
 
   void _setSellPrice(Map<String, double> store, String key, double? price) {
@@ -130,8 +123,25 @@ class AssetViewModel extends CoreViewModel {
   AssetSummary? _summary;
   AssetSummary? get summary => _summary;
 
-  /// The rate a dollar converts at today, for the UI to label its own figures.
-  double get usdRate => _usdRate;
+  /// The rate a dollar converts at today, for the UI to label its own figures:
+  /// the one typed by hand if there is one, else the feed's.
+  double get usdRate => _customUsdRate ?? _marketUsdRate;
+
+  /// What the feed says, whether or not it is the rate being used.
+  double get marketUsdRate => _marketUsdRate;
+
+  /// A rate typed by hand. Every crypto figure is priced through it, so it is
+  /// the one number worth overriding on that tab — a coin's own price comes
+  /// from Binance and needs no second opinion. Session-only, like the gold
+  /// sell prices.
+  double? get customUsdRate => _customUsdRate;
+  double? _customUsdRate;
+
+  void setUsdRate(double? rate) {
+    _customUsdRate = rate;
+    _calculateSummary();
+    notifyListenersSafe();
+  }
 
   /// The year every list is filtered to, or null for all of them. Shared by the
   /// three tabs so switching tab keeps answering the same question.
@@ -185,11 +195,9 @@ class AssetViewModel extends CoreViewModel {
   /// as "no gain yet" rather than as a holding worth nothing.
   double getCurrentInvestmentPrice(AssetInvestment investment) {
     final price =
-        _investmentSellPrices[investment.symbol] ??
-        marketInvestmentPrice(investment.symbol) ??
-        investment.buyPrice;
+        marketInvestmentPrice(investment.symbol) ?? investment.buyPrice;
 
-    return price * _usdRate;
+    return price * usdRate;
   }
 
   /// What was paid per coin, in VND: the USDT price at the rate of the day it
@@ -201,7 +209,7 @@ class AssetViewModel extends CoreViewModel {
   /// made before the rate was kept falls back to today's, which is the figure
   /// it has always shown.
   double getBuyPriceInVnd(AssetInvestment investment) {
-    return investment.buyPrice * (investment.buyFxRate ?? _usdRate);
+    return investment.buyPrice * (investment.buyFxRate ?? usdRate);
   }
 
   /// A holding has to be held this long before its return says anything about
@@ -375,7 +383,7 @@ class AssetViewModel extends CoreViewModel {
     if (marketResults[1].data is Map<String, double>) {
       final rates = marketResults[1].data as Map<String, double>;
       // Try common codes for USD/VND
-      _usdRate = rates['usdt_vnd'] ?? _fallbackUsdRate;
+      _marketUsdRate = rates['usdt_vnd'] ?? _fallbackUsdRate;
     }
   }
 

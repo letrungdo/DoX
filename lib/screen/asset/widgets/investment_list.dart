@@ -42,8 +42,8 @@ class InvestmentList extends StatelessWidget {
       itemBuilder: (context, index) {
         if (index == 0) {
           return AssetSellPriceBar(
-            prices: _sellPrices(vm),
-            onChanged: vm.setInvestmentSellPrice,
+            prices: _sellPrices(context, vm),
+            onChanged: (_, rate) => vm.setUsdRate(rate),
           );
         }
 
@@ -52,20 +52,19 @@ class InvestmentList extends StatelessWidget {
     );
   }
 
-  /// One row per coin actually held: a price belongs to a coin, and two coins
-  /// never share one.
-  List<AssetSellPrice> _sellPrices(AssetViewModel vm) {
-    final symbols = <String>{for (final item in investments) item.symbol};
-
+  /// One row, and it is the exchange rate. Each coin's price comes from
+  /// Binance and is not worth arguing with; the rate those prices are counted
+  /// in is the one figure a person might want to set themselves — to value the
+  /// portfolio at the rate their own exchange pays, say.
+  List<AssetSellPrice> _sellPrices(BuildContext context, AssetViewModel vm) {
     return [
-      for (final symbol in symbols)
-        AssetSellPrice(
-          key: symbol,
-          label: AssetViewModel.baseOf(symbol),
-          marketPrice: vm.marketInvestmentPrice(symbol),
-          customPrice: vm.investmentSellPrice(symbol),
-          isUsdt: true,
-        ),
+      AssetSellPrice(
+        key: 'usdt_vnd',
+        label: 'USDT/VND',
+        caption: context.l10n.assetUsdRate,
+        marketPrice: vm.marketUsdRate,
+        customPrice: vm.customUsdRate,
+      ),
     ];
   }
 

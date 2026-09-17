@@ -1267,6 +1267,7 @@
   "assetNote": "Ghi chú",
   "assetSellPrice": "Giá bán",
   "assetSellPriceUsd": "Giá bán (USDT)",
+  "assetUsdRate": "Tỷ giá USDT/VND",
   "assetSellPriceMarket": "Giá thị trường",
   "assetSellPriceEntered": "Tự nhập",
   "assetSellPriceNoQuote": "Chưa có giá thị trường, đang dùng giá mua",

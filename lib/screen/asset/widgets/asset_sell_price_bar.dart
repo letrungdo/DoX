@@ -16,6 +16,7 @@ class AssetSellPrice {
     required this.label,
     required this.marketPrice,
     required this.customPrice,
+    this.caption,
     this.isUsdt = false,
   });
 
@@ -28,6 +29,10 @@ class AssetSellPrice {
 
   /// The price typed by hand, which stands in for the quote while it is set.
   final double? customPrice;
+
+  /// What the row is called, when "Sell price · X" is not what it is — the
+  /// crypto tab's one row is an exchange rate, not a coin's price.
+  final String? caption;
 
   /// Whether the price is quoted in USDT — every crypto holding is, while gold
   /// is in đồng.
@@ -103,7 +108,7 @@ class _Row extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.assetSellPriceOf(price.label),
+                    price.caption ?? l10n.assetSellPriceOf(price.label),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.textTheme.secondary.size11,
@@ -215,7 +220,7 @@ class _SellPriceDialogState extends State<_SellPriceDialog> {
     final l10n = context.l10n;
 
     return CuteDialog(
-      title: l10n.assetSellPriceOf(widget.price.label),
+      title: widget.price.caption ?? l10n.assetSellPriceOf(widget.price.label),
       confirmText: l10n.save,
       onConfirm: () {
         final value = _controller.text.toMoney() ?? 0;
@@ -228,9 +233,11 @@ class _SellPriceDialogState extends State<_SellPriceDialog> {
       children: [
         CuteMoneyField(
           controller: _controller,
-          label: widget.price.isUsdt
-              ? l10n.assetSellPriceUsd
-              : l10n.assetSellPrice,
+          label:
+              widget.price.caption ??
+              (widget.price.isUsdt
+                  ? l10n.assetSellPriceUsd
+                  : l10n.assetSellPrice),
           maxSuggestion: AppConst.moneySuggestionHigh,
           suffixText: widget.price.isUsdt ? AssetFormat.usdtUnit : "đ",
           errorText: _error,

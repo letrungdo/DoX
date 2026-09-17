@@ -2256,6 +2256,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetSellPriceUsd => 'Sell price (USDT)';
 
   @override
+  String get assetUsdRate => 'USDT/VND rate';
+
+  @override
   String get assetSellPriceMarket => 'Market price';
 
   @override

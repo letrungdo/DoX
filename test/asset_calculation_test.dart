@@ -291,16 +291,36 @@ void main() {
       expect(vm.getCurrentInvestmentPrice(coin()), 100 * rate);
     });
 
-    test('a hand-typed sell price is read in USDT too', () {
-      final vm = AssetViewModel()..setInvestmentSellPrice('BTCUSDT', 150);
+    test('a hand-typed rate is what every coin is counted in', () {
+      final vm = AssetViewModel();
+      final market = vm.marketUsdRate;
+      vm.setUsdRate(market + 1000);
 
-      expect(vm.getCurrentInvestmentPrice(coin()), 150 * vm.usdRate);
-      // 2 coins bought a year ago at 100, now worth 150: 100 USDT of gain over
-      // the year, half of what was paid.
-      final estimate = vm.getInvestmentEstimatedReturn(coin());
-      expect(estimate, isNotNull);
-      expect(estimate!.perYear, closeTo(100 * vm.usdRate, vm.usdRate));
-      expect(estimate.perYearPercent, closeTo(50, 0.5));
+      expect(vm.usdRate, market + 1000);
+      expect(vm.customUsdRate, market + 1000);
+      // The coin's own price is untouched — only what a USDT is worth moved.
+      expect(vm.getCurrentInvestmentPrice(coin()), 100 * (market + 1000));
+
+      vm.setUsdRate(null);
+      expect(vm.usdRate, market);
+      expect(vm.customUsdRate, isNull);
+    });
+
+    test('a rate typed by hand does not rewrite what a holding cost', () {
+      final vm = AssetViewModel();
+      final bought = AssetInvestment(
+        id: 'i4',
+        symbol: 'BTCUSDT',
+        type: InvestmentType.crypto,
+        quantity: 2,
+        buyPrice: 100,
+        buyFxRate: 24000,
+        buyDate: DateTime.now(),
+      );
+      vm.setUsdRate(27000);
+
+      expect(vm.getBuyPriceInVnd(bought), 100 * 24000);
+      expect(vm.getCurrentInvestmentPrice(bought), 100 * 27000);
     });
   });
 

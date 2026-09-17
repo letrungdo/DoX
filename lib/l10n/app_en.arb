@@ -1309,6 +1309,7 @@
   "assetNote": "Note",
   "assetSellPrice": "Sell price",
   "assetSellPriceUsd": "Sell price (USDT)",
+  "assetUsdRate": "USDT/VND rate",
   "assetSellPriceMarket": "Market price",
   "assetSellPriceEntered": "Entered",
   "assetSellPriceNoQuote": "No market price yet, using the buy price",

@@ -4069,6 +4069,12 @@ abstract class AppLocalizations {
   /// **'Sell price (USDT)'**
   String get assetSellPriceUsd;
 
+  /// No description provided for @assetUsdRate.
+  ///
+  /// In en, this message translates to:
+  /// **'USDT/VND rate'**
+  String get assetUsdRate;
+
   /// No description provided for @assetSellPriceMarket.
   ///
   /// In en, this message translates to:
