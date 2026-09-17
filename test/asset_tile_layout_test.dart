@@ -6,6 +6,7 @@ import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/gold_type.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
+import 'package:do_x/screen/asset/widgets/bank_logo.dart';
 import 'package:do_x/screen/asset/widgets/gold_list.dart';
 import 'package:do_x/screen/asset/widgets/investment_list.dart';
 import 'package:do_x/screen/asset/widgets/saving_list.dart';
@@ -150,6 +151,8 @@ void main() {
     });
   });
 
+  _bankLogoTests();
+
   group('investment tile', () {
     testWidgets('a dollar-quoted holding fits on a narrow phone', (
       tester,
@@ -183,6 +186,37 @@ void main() {
       await _pump(tester, InvestmentList(investments: [investment]));
 
       expect(tester.takeException(), isNull);
+    });
+  });
+}
+
+void _bankLogoTests() {
+  group('bank logo', () {
+    Future<void> pump(WidgetTester tester, String? logo) {
+      return tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Center(child: BankLogo(logo: logo)),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('a wordmark gets a chip wider than it is tall', (tester) async {
+      await pump(tester, 'https://api.vietqr.io/img/VCB.png');
+
+      final size = tester.getSize(find.byType(BankLogo));
+      expect(size.height, 44);
+      // Room for a 3:1 wordmark to be read, which a 44px circle never gives it.
+      expect(size.width, greaterThan(size.height));
+    });
+
+    testWidgets('a bank with no logo keeps the round badge', (tester) async {
+      await pump(tester, null);
+
+      expect(find.byType(AssetTileBadge), findsOneWidget);
+      expect(tester.getSize(find.byType(BankLogo)), const Size.square(44));
     });
   });
 }

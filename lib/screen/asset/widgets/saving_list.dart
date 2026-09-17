@@ -1,11 +1,14 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
+import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:do_x/screen/asset/widgets/asset_refreshable_list.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
+import 'package:do_x/screen/asset/widgets/bank_logo.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class SavingList extends StatelessWidget {
   const SavingList({
@@ -28,6 +31,10 @@ class SavingList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Watched, not read: the directory that backs the logos lands a moment
+    // after the deposits do.
+    context.watch<AssetViewModel>();
+
     return AssetRefreshableList(
       onRefresh: onRefresh,
       emptyMessage: emptyMessage ?? context.l10n.assetSavingEmpty,
@@ -37,6 +44,7 @@ class SavingList extends StatelessWidget {
   }
 
   Widget _buildItem(BuildContext context, AssetSaving item) {
+    final vm = context.read<AssetViewModel>();
     final l10n = context.l10n;
     final format = AssetFormat();
     final dateFormat = DateFormat('dd/MM/yy');
@@ -46,6 +54,7 @@ class SavingList extends StatelessWidget {
         ? (accruedInterest / item.amount) * 100
         : 0.0;
     final maturity = item.maturityDate;
+    final logo = vm.bankOf(item.bankName)?.logo;
     final sizeGroup = AutoSizeGroup();
 
     // A matured deposit is no longer earning, so its figures keep the row's
@@ -56,12 +65,10 @@ class SavingList extends StatelessWidget {
     return AssetTileCard(
       onTap: () => onEdit?.call(item),
       onLongPress: () => onDelete?.call(item.id),
-      leading: AssetTileBadge(
-        color: context.colors.infoSoft,
-        child: Icon(Icons.account_balance_rounded, color: context.colors.info),
-      ),
       title: AssetTileHeader(
         name: item.bankName,
+        // A logo is read at a glance where a name has to be read word by word.
+        nameChild: logo == null ? null : BankLogo(logo: logo, size: 22),
         value: format.money(item.currentValue),
       ),
       subtitle: Column(

@@ -17,14 +17,16 @@ class AssetTileCard extends StatelessWidget {
 
   const AssetTileCard({
     super.key,
-    required this.leading,
+    this.leading,
     required this.title,
     required this.subtitle,
     this.onTap,
     this.onLongPress,
   });
 
-  final Widget leading;
+  /// Left off by a tile whose title already says what it is — a deposit
+  /// wearing its bank's logo needs no badge repeating the point.
+  final Widget? leading;
   final Widget title;
   final Widget subtitle;
   final VoidCallback? onTap;
@@ -45,16 +47,22 @@ class AssetTileCard extends StatelessWidget {
 
 /// A round badge in the tile's leading slot.
 class AssetTileBadge extends StatelessWidget {
-  const AssetTileBadge({super.key, required this.color, required this.child});
+  const AssetTileBadge({
+    super.key,
+    required this.color,
+    required this.child,
+    this.size = 44,
+  });
 
   final Color color;
   final Widget child;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: child,
@@ -64,9 +72,19 @@ class AssetTileBadge extends StatelessWidget {
 
 /// The tile's headline: what it is on the left, what it is worth on the right.
 class AssetTileHeader extends StatelessWidget {
-  const AssetTileHeader({super.key, required this.name, required this.value});
+  const AssetTileHeader({
+    super.key,
+    required this.name,
+    required this.value,
+    this.nameChild,
+  });
 
   final String name;
+
+  /// Drawn in place of [name] when the thing has a mark of its own — a bank's
+  /// logo says which bank it is faster than its name does. [name] is still
+  /// required, as the fallback and as the semantics of what is shown.
+  final Widget? nameChild;
   final String value;
 
   @override
@@ -76,12 +94,20 @@ class AssetTileHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.primary.bold,
-          ),
+          child: nameChild == null
+              ? Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.primary.bold,
+                )
+              : Semantics(
+                  label: name,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: nameChild,
+                  ),
+                ),
         ),
         const SizedBox(width: 8),
         // Expanded, not Flexible: a Flexible shrink-wraps the figure, and text

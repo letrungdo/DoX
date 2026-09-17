@@ -4,10 +4,12 @@ import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/asset_summary.dart';
 import 'package:do_x/model/asset/gold_type.dart';
+import 'package:do_x/model/bank/bank.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/repository/asset_repository.dart';
 import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/services/bank_service.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -31,6 +33,7 @@ class AssetReturnEstimate {
 class AssetViewModel extends CoreViewModel {
   final AssetRepository _repository = AssetRepository();
   final FxRateService _fxService = FxRateService();
+  final BankService _bankService = BankService();
 
   List<AssetSaving> _savings = [];
   List<AssetInvestment> _investments = [];
@@ -39,6 +42,25 @@ class AssetViewModel extends CoreViewModel {
   List<AssetSaving> get savings => _savings;
   List<AssetInvestment> get investments => _investments;
   List<AssetGold> get gold => _gold;
+
+  /// The VietQR directory, keyed by the lower-cased short name a savings
+  /// record stores, so a tile can show the bank's logo. Empty until it loads,
+  /// and it stays empty offline — the tiles fall back to their icon.
+  Map<String, Bank> _banks = {};
+
+  /// The directory entry behind a typed bank name, or null when nothing
+  /// matches. A name is matched loosely because the field is free text: the
+  /// picker fills in "Vietcombank", but someone can type "VCB" by hand.
+  Bank? bankOf(String name) {
+    if (_banks.isEmpty) return null;
+    final key = name.trim().toLowerCase();
+    final exact = _banks[key];
+    if (exact != null) return exact;
+
+    return _banks.values
+        .where((bank) => bank.searchIndex.contains(key))
+        .firstOrNull;
+  }
 
   Map<MarketCode, MarketOverview> _marketOverviews = {};
   List<GoldSymbol> _goldPrices = [];
@@ -260,7 +282,7 @@ class AssetViewModel extends CoreViewModel {
       _investments = results[1] as List<AssetInvestment>;
       _gold = results[2] as List<AssetGold>;
 
-      await _fetchMarketData();
+      await Future.wait([_fetchMarketData(), _fetchBanks()]);
       _calculateSummary();
       _loadFailed = false;
     } catch (e) {
@@ -275,6 +297,18 @@ class AssetViewModel extends CoreViewModel {
       setBusy(false);
       notifyListenersSafe();
     }
+  }
+
+  /// The directory is only worth a request once there is a deposit to label,
+  /// and [BankService] keeps the first answer for the session, so this costs
+  /// one call per app run rather than one per refresh.
+  Future<void> _fetchBanks() async {
+    if (_savings.isEmpty || _banks.isNotEmpty) return;
+
+    final banks = (await _bankService.getBanks()).data;
+    if (banks == null) return;
+
+    _banks = {for (final bank in banks) bank.shortName.toLowerCase(): bank};
   }
 
   Future<void> _fetchMarketData() async {

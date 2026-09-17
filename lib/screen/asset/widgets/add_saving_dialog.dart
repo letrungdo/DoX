@@ -4,6 +4,7 @@ import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/bank/bank.dart';
+import 'package:do_x/screen/asset/widgets/bank_logo.dart';
 import 'package:do_x/services/bank_service.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
@@ -127,6 +128,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
       selected: banks.where((b) => b.shortName == typed).firstOrNull,
       labelBuilder: (b) => b.shortName,
       subtitleBuilder: (b) => b.name,
+      leadingBuilder: (b) => BankLogo(logo: b.logo, size: 32),
       searchIndex: (b) => b.searchIndex,
       searchHint: l10n.assetBankSearchHint,
     );
