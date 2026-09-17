@@ -4,7 +4,8 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Money input: "đ" unit on the right, thousands separators added while typing.
+/// Money input: a currency unit on the right, thousands separators added
+/// while typing.
 ///
 /// When [showSuggestions] is true, a bar above the keyboard offers one-tap
 /// amounts while the field is focused, capped at 50 million:
@@ -29,6 +30,11 @@ class CuteMoneyField extends StatefulWidget {
   /// Maximum amount offered in the suggestion bar. Defaults to 50 million.
   final int maxSuggestion;
 
+  /// The unit shown at the right edge. Defaults to đồng; pass "$" for a field
+  /// that holds dollars, which also turns the suggestion bar off — its amounts
+  /// are scaled for đồng and mean nothing next to a dollar price.
+  final String suffixText;
+
   const CuteMoneyField({
     super.key,
     required this.controller,
@@ -40,6 +46,7 @@ class CuteMoneyField extends StatefulWidget {
     this.showSuggestions = true,
     this.presetSuggestions,
     this.maxSuggestion = AppConst.moneySuggestionDefault,
+    this.suffixText = "đ",
   });
 
   @override
@@ -69,8 +76,11 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
     super.dispose();
   }
 
+  bool get _suggestionsEnabled =>
+      widget.showSuggestions && widget.suffixText == "đ";
+
   void _onFocusChanged() {
-    if (_focusNode.hasFocus && widget.showSuggestions) {
+    if (_focusNode.hasFocus && _suggestionsEnabled) {
       _showOverlay();
     } else {
       _removeOverlay();
@@ -188,7 +198,7 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
       label: widget.label,
       hint: widget.hint,
       errorText: widget.errorText,
-      suffixText: "đ",
+      suffixText: widget.suffixText,
       keyboardType: TextInputType.number,
       inputFormatters: [ThousandsSeparatorInputFormatter()],
       onChanged: widget.onChanged,

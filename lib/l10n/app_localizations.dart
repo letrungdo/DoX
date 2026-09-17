@@ -3764,6 +3764,48 @@ abstract class AppLocalizations {
   /// **'Quantity'**
   String get assetQuantity;
 
+  /// No description provided for @assetQuantityTael.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity (tael)'**
+  String get assetQuantityTael;
+
+  /// No description provided for @assetUnitTael.
+  ///
+  /// In en, this message translates to:
+  /// **'tael'**
+  String get assetUnitTael;
+
+  /// No description provided for @assetBuyPriceUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy price (USD)'**
+  String get assetBuyPriceUsd;
+
+  /// No description provided for @assetValueInVnd.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {amount}'**
+  String assetValueInVnd(String amount);
+
+  /// No description provided for @assetEstimatedReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Est. {perYear}/yr · {perMonth}/mo'**
+  String assetEstimatedReturn(String perYear, String perMonth);
+
+  /// No description provided for @assetLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your assets'**
+  String get assetLoadFailed;
+
+  /// No description provided for @assetSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the change'**
+  String get assetSaveFailed;
+
   /// No description provided for @assetBuyPrice.
   ///
   /// In en, this message translates to:

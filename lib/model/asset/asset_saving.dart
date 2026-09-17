@@ -35,11 +35,36 @@ class AssetSaving {
 
   Map<String, dynamic> toJson() => _$AssetSavingToJson(this);
 
-  double get monthlyInterest => (amount * (interestRate / 100)) / 12;
+  /// The day the term ends, or null for an open-ended deposit.
+  DateTime? get maturityDate {
+    final months = termMonths;
+    if (months == null || months <= 0) return null;
 
+    return DateTime(startDate.year, startDate.month + months, startDate.day);
+  }
+
+  bool get isMatured {
+    final maturity = maturityDate;
+
+    return maturity != null && DateTime.now().isAfter(maturity);
+  }
+
+  double get monthlyInterest {
+    if (isMatured) return 0;
+
+    return (amount * (interestRate / 100)) / 12;
+  }
+
+  /// Interest stops at maturity. Past that date the bank pays the demand rate
+  /// on the balance until it is rolled over, and a rollover is a new deposit
+  /// with its own start date — a new record, not more interest on this one.
   double get accruedInterest {
-    final days = DateTime.now().difference(startDate).inDays;
+    final maturity = maturityDate;
+    final now = DateTime.now();
+    final until = maturity != null && now.isAfter(maturity) ? maturity : now;
+    final days = until.difference(startDate).inDays;
     if (days <= 0) return 0;
+
     return (amount * (interestRate / 100)) * (days / 365.0);
   }
 

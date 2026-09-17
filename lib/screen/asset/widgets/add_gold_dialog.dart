@@ -72,18 +72,21 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
       return;
     }
 
-    final gold = (widget.gold ?? AssetGold(
-      id: const Uuid().v4(),
-      goldType: _selectedType!.label,
-      quantity: quantity,
-      buyPrice: price,
-      buyDate: _buyDate,
-    )).copyWith(
-      goldType: _selectedType!.label,
-      quantity: quantity,
-      buyPrice: price,
-      buyDate: _buyDate,
-    );
+    final gold =
+        (widget.gold ??
+                AssetGold(
+                  id: const Uuid().v4(),
+                  goldType: _selectedType!.label,
+                  quantity: quantity,
+                  buyPrice: price,
+                  buyDate: _buyDate,
+                ))
+            .copyWith(
+              goldType: _selectedType!.label,
+              quantity: quantity,
+              buyPrice: price,
+              buyDate: _buyDate,
+            );
     Navigator.pop(context, gold);
   }
 
@@ -134,8 +137,10 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
         TextField(
           controller: _quantityController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: cuteInputDecoration(context, l10n.assetQuantity)
-              .copyWith(errorText: _quantityError),
+          decoration: cuteInputDecoration(
+            context,
+            l10n.assetQuantityTael,
+          ).copyWith(errorText: _quantityError),
           onChanged: (_) {
             if (_quantityError != null) setState(() => _quantityError = null);
           },

@@ -1219,6 +1219,20 @@
   "assetBuyDate": "Buy date",
   "assetSymbol": "Symbol",
   "assetQuantity": "Quantity",
+  "assetQuantityTael": "Quantity (tael)",
+  "assetUnitTael": "tael",
+  "assetBuyPriceUsd": "Buy price (USD)",
+  "assetValueInVnd": "≈ {amount}",
+  "@assetValueInVnd": {"placeholders": {"amount": {"type": "String"}}},
+  "assetEstimatedReturn": "Est. {perYear}/yr · {perMonth}/mo",
+  "@assetEstimatedReturn": {
+    "placeholders": {
+      "perYear": {"type": "String"},
+      "perMonth": {"type": "String"}
+    }
+  },
+  "assetLoadFailed": "Could not load your assets",
+  "assetSaveFailed": "Could not save the change",
   "assetBuyPrice": "Buy price",
   "assetGoldType": "Gold type",
   "assetErrorRequired": "This field is required",

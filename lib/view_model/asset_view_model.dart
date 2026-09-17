@@ -8,7 +8,9 @@ import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/repository/asset_repository.dart';
 import 'package:do_x/repository/client/error_handler.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/services/fx_rate_service.dart';
+import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
 class AssetViewModel extends CoreViewModel {
@@ -25,24 +27,72 @@ class AssetViewModel extends CoreViewModel {
 
   Map<MarketCode, MarketOverview> _marketOverviews = {};
   List<GoldSymbol> _goldPrices = [];
-  double _usdRate = 25450; // Default fallback
+
+  /// USDT/VND, refreshed from `fx_rates`. The fallback only covers the frames
+  /// before that call lands, or a feed that is down.
+  double _usdRate = _fallbackUsdRate;
+  static const _fallbackUsdRate = 25800.0;
+
+  bool _loadFailed = false;
+  bool get loadFailed => _loadFailed;
 
   AssetSummary? _summary;
   AssetSummary? get summary => _summary;
 
+  /// The rate a dollar converts at today, for the UI to label its own figures.
+  double get usdRate => _usdRate;
+
+  /// Today's price of one unit, in VND. A market that quotes in dollars — and
+  /// whose buy price is therefore recorded in dollars — is converted here, so
+  /// both sides of every comparison are in the same currency.
   double getCurrentInvestmentPrice(AssetInvestment investment) {
     final marketCode = MarketCode.from(investment.symbol);
-    double price = _marketOverviews[marketCode]?.price ?? investment.buyPrice;
-    
-    // If it's a crypto, US stock, world index or international commodity (priced in USD), convert to VND
-    if (marketCode != null && 
-        (marketCode.group == MarketGroup.crypto || 
-         marketCode.group == MarketGroup.usStock ||
-         marketCode.group == MarketGroup.worldIndex ||
-         (marketCode.group == MarketGroup.commodity && marketCode.code.endsWith("USD")))) {
-      price *= _usdRate;
-    }
-    return price;
+    final price = _marketOverviews[marketCode]?.price ?? investment.buyPrice;
+
+    return _toVnd(price, marketCode);
+  }
+
+  /// What was paid per unit, in VND.
+  double getBuyPriceInVnd(AssetInvestment investment) {
+    return _toVnd(investment.buyPrice, MarketCode.from(investment.symbol));
+  }
+
+  double _toVnd(double price, MarketCode? marketCode) {
+    return marketCode?.isUsdQuoted == true ? price * _usdRate : price;
+  }
+
+  /// A holding has to be held this long before its return says anything about
+  /// a year. Annualising a few days of movement yields four-digit percentages,
+  /// and a holding bought yesterday is left out of the average entirely rather
+  /// than counted as a 0% year, which would drag the whole portfolio down.
+  static const _minDaysToAnnualize = 30;
+
+  /// The holding's gain restated as a yearly rate in %, or null when it is too
+  /// young to annualise.
+  double? _annualizedReturn(
+    double buyValue,
+    double currentValue,
+    DateTime buyDate,
+  ) {
+    final days = DateTime.now().difference(buyDate).inDays;
+    if (buyValue <= 0 || days < _minDaysToAnnualize) return null;
+
+    final totalReturn = (currentValue - buyValue) / buyValue;
+
+    return (totalReturn / (days / 365.0)) * 100;
+  }
+
+  /// What a gold holding has made, spread over the time it has been held:
+  /// (per year, per month) in VND. Null until it is old enough for the figure
+  /// to mean anything — see [_minDaysToAnnualize].
+  ({double perYear, double perMonth})? getGoldEstimatedReturn(AssetGold gold) {
+    final days = DateTime.now().difference(gold.buyDate).inDays;
+    if (days < _minDaysToAnnualize) return null;
+
+    final profit = gold.quantity * (getCurrentGoldPrice(gold) - gold.buyPrice);
+    final perYear = profit / (days / 365.0);
+
+    return (perYear: perYear, perMonth: perYear / 12);
   }
 
   double getCurrentGoldPrice(AssetGold gold) {
@@ -74,8 +124,15 @@ class AssetViewModel extends CoreViewModel {
 
       await _fetchMarketData();
       _calculateSummary();
+      _loadFailed = false;
     } catch (e) {
-      // Handle error
+      // Without this the screen simply stayed empty: no list, no message, no
+      // way to tell an account with no assets from a request that never landed.
+      logger.e('load assets failed', error: e);
+      _loadFailed = true;
+      if (context.mounted) {
+        context.showToast(context.l10n.assetLoadFailed, isError: true);
+      }
     } finally {
       setBusy(false);
       notifyListenersSafe();
@@ -98,7 +155,8 @@ class AssetViewModel extends CoreViewModel {
     ]);
 
     if (marketResults[0].data is Map<MarketCode, MarketOverview>) {
-      _marketOverviews = marketResults[0].data as Map<MarketCode, MarketOverview>;
+      _marketOverviews =
+          marketResults[0].data as Map<MarketCode, MarketOverview>;
     }
     if (marketResults[1].data is List<GoldSymbol>?) {
       _goldPrices = (marketResults[1].data as List<GoldSymbol>?) ?? [];
@@ -106,9 +164,7 @@ class AssetViewModel extends CoreViewModel {
     if (marketResults[2].data is Map<String, double>) {
       final rates = marketResults[2].data as Map<String, double>;
       // Try common codes for USD/VND
-      _usdRate = rates['google_usd_vnd'] ?? 
-                 rates['vcb_usd_vnd'] ?? 
-                 25450;
+      _usdRate = rates['usdt_vnd'] ?? _fallbackUsdRate;
     }
   }
 
@@ -123,8 +179,12 @@ class AssetViewModel extends CoreViewModel {
       totalSavingsPrincipal += s.amount;
       totalSavingsInterest += s.accruedInterest;
       monthlyInterest += s.monthlyInterest;
-      weightedReturnSum += s.amount * s.interestRate;
-      totalAssetsForReturn += s.amount;
+      // A matured deposit no longer earns its rate, so it stops counting
+      // towards the portfolio's yearly return.
+      if (!s.isMatured) {
+        weightedReturnSum += s.amount * s.interestRate;
+        totalAssetsForReturn += s.amount;
+      }
     }
 
     double totalInvestmentsCurrent = 0;
@@ -132,17 +192,19 @@ class AssetViewModel extends CoreViewModel {
     for (final inv in _investments) {
       final currentPrice = getCurrentInvestmentPrice(inv);
       final currentValue = inv.quantity * currentPrice;
-      final buyValue = inv.quantity * inv.buyPrice;
+      final buyValue = inv.quantity * getBuyPriceInVnd(inv);
       totalInvestmentsCurrent += currentValue;
       totalInvestmentsProfitLoss += currentValue - buyValue;
 
-      // Annualized return
-      final years = DateTime.now().difference(inv.buyDate).inDays / 365.0;
-      final totalReturn = buyValue > 0 ? (currentValue - buyValue) / buyValue : 0.0;
-      final annualReturn = years > 0.01 ? (totalReturn / years) * 100 : 0.0;
-      
-      weightedReturnSum += buyValue * (annualReturn == 0 ? 0 : annualReturn);
-      totalAssetsForReturn += buyValue;
+      final annualReturn = _annualizedReturn(
+        buyValue,
+        currentValue,
+        inv.buyDate,
+      );
+      if (annualReturn != null) {
+        weightedReturnSum += buyValue * annualReturn;
+        totalAssetsForReturn += buyValue;
+      }
     }
 
     double totalGoldCurrent = 0;
@@ -154,17 +216,15 @@ class AssetViewModel extends CoreViewModel {
       totalGoldCurrent += currentValue;
       totalGoldProfitLoss += currentValue - buyValue;
 
-      // Annualized return
-      final years = DateTime.now().difference(g.buyDate).inDays / 365.0;
-      final totalReturn = buyValue > 0 ? (currentValue - buyValue) / buyValue : 0.0;
-      final annualReturn = years > 0.01 ? (totalReturn / years) * 100 : 0.0;
-
-      weightedReturnSum += buyValue * (annualReturn == 0 ? 0 : annualReturn);
-      totalAssetsForReturn += buyValue;
+      final annualReturn = _annualizedReturn(buyValue, currentValue, g.buyDate);
+      if (annualReturn != null) {
+        weightedReturnSum += buyValue * annualReturn;
+        totalAssetsForReturn += buyValue;
+      }
     }
 
-    final avgAnnualReturn = totalAssetsForReturn > 0 
-        ? weightedReturnSum / totalAssetsForReturn 
+    final avgAnnualReturn = totalAssetsForReturn > 0
+        ? weightedReturnSum / totalAssetsForReturn
         : 0.0;
 
     _summary = AssetSummary(
@@ -172,39 +232,53 @@ class AssetViewModel extends CoreViewModel {
       totalInvestments: totalInvestmentsCurrent,
       totalGold: totalGoldCurrent,
       monthlyInterest: monthlyInterest,
-      totalProfitLoss: totalSavingsInterest + totalInvestmentsProfitLoss + totalGoldProfitLoss,
+      totalProfitLoss:
+          totalSavingsInterest +
+          totalInvestmentsProfitLoss +
+          totalGoldProfitLoss,
       averageAnnualReturn: avgAnnualReturn,
     );
   }
 
-  // CRUD Operations with refresh
-  Future<void> upsertSaving(AssetSaving saving) async {
-    await _repository.upsertSaving(saving);
+  /// Runs a write and reloads. A write that throws used to escape as an
+  /// unhandled async error, leaving the dialog closed and the list unchanged
+  /// with nothing said; now it is reported and the list still resyncs.
+  Future<void> _write(String what, Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      logger.e('$what failed', error: e);
+      if (context.mounted) {
+        context.showToast(context.l10n.assetSaveFailed, isError: true);
+      }
+    }
     await refresh();
   }
 
-  Future<void> deleteSaving(String id) async {
-    await _repository.deleteSaving(id);
-    await refresh();
+  Future<void> upsertSaving(AssetSaving saving) {
+    return _write('upsert saving', () => _repository.upsertSaving(saving));
   }
 
-  Future<void> upsertInvestment(AssetInvestment investment) async {
-    await _repository.upsertInvestment(investment);
-    await refresh();
+  Future<void> deleteSaving(String id) {
+    return _write('delete saving', () => _repository.deleteSaving(id));
   }
 
-  Future<void> deleteInvestment(String id) async {
-    await _repository.deleteInvestment(id);
-    await refresh();
+  Future<void> upsertInvestment(AssetInvestment investment) {
+    return _write(
+      'upsert investment',
+      () => _repository.upsertInvestment(investment),
+    );
   }
 
-  Future<void> upsertGold(AssetGold gold) async {
-    await _repository.upsertGold(gold);
-    await refresh();
+  Future<void> deleteInvestment(String id) {
+    return _write('delete investment', () => _repository.deleteInvestment(id));
   }
 
-  Future<void> deleteGold(String id) async {
-    await _repository.deleteGold(id);
-    await refresh();
+  Future<void> upsertGold(AssetGold gold) {
+    return _write('upsert gold', () => _repository.upsertGold(gold));
+  }
+
+  Future<void> deleteGold(String id) {
+    return _write('delete gold', () => _repository.deleteGold(id));
   }
 }

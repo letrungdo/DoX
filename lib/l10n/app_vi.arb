@@ -1177,6 +1177,20 @@
   "assetBuyDate": "Ngày mua",
   "assetSymbol": "Mã",
   "assetQuantity": "Số lượng",
+  "assetQuantityTael": "Số lượng (cây)",
+  "assetUnitTael": "cây",
+  "assetBuyPriceUsd": "Giá mua (USD)",
+  "assetValueInVnd": "≈ {amount}",
+  "@assetValueInVnd": {"placeholders": {"amount": {"type": "String"}}},
+  "assetEstimatedReturn": "Ước tính {perYear}/năm · {perMonth}/tháng",
+  "@assetEstimatedReturn": {
+    "placeholders": {
+      "perYear": {"type": "String"},
+      "perMonth": {"type": "String"}
+    }
+  },
+  "assetLoadFailed": "Không tải được dữ liệu tài sản",
+  "assetSaveFailed": "Không lưu được thay đổi",
   "assetBuyPrice": "Giá mua",
   "assetGoldType": "Loại vàng",
   "assetErrorRequired": "Vui lòng nhập thông tin này",

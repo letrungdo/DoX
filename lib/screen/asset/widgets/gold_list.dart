@@ -10,6 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+/// "+1,2tr" / "-800.000" — the sign is what the reader looks for first.
+String _signed(NumberFormat format, double value) {
+  return "${value >= 0 ? '+' : ''}${format.format(value)}";
+}
+
 class GoldList extends StatelessWidget {
   const GoldList({super.key, required this.gold, this.onEdit, this.onDelete});
 
@@ -38,11 +43,16 @@ class GoldList extends StatelessWidget {
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
     final textTheme = context.textTheme;
 
+    final l10n = context.l10n;
     final currentPrice = vm.getCurrentGoldPrice(item);
     final currentValue = item.quantity * currentPrice;
     final buyValue = item.quantity * item.buyPrice;
     final profitLoss = currentValue - buyValue;
     final profitPercent = buyValue > 0 ? (profitLoss / buyValue) * 100 : 0.0;
+    final estimate = vm.getGoldEstimatedReturn(item);
+    final profitColor = profitLoss >= 0
+        ? context.colors.success
+        : context.colors.danger;
 
     return ChickenListTileCard(
       onTap: () => onEdit?.call(item),
@@ -62,9 +72,7 @@ class GoldList extends StatelessWidget {
           Expanded(child: Text(item.goldType, style: textTheme.primary.bold)),
           Text(
             currencyFormat.format(currentValue),
-            style: textTheme.primary.bold.textColor(
-              profitLoss >= 0 ? context.colors.success : context.colors.danger,
-            ),
+            style: textTheme.primary.bold.textColor(profitColor),
           ),
         ],
       ),
@@ -75,7 +83,7 @@ class GoldList extends StatelessWidget {
             children: [
               Expanded(
                 child: AutoSizeText(
-                  "SL: ${item.quantity} - Mua: ${currencyFormat.format(item.buyPrice)}",
+                  "SL: ${item.quantity} ${l10n.assetUnitTael} - Mua: ${currencyFormat.format(item.buyPrice)}",
                   style: textTheme.secondary.copyWith(fontSize: 12),
                   maxLines: 1,
                   minFontSize: 9,
@@ -84,17 +92,35 @@ class GoldList extends StatelessWidget {
               const SizedBox(width: 4),
               AutoSizeText(
                 "${profitLoss >= 0 ? '+' : ''}${currencyFormat.format(profitLoss)} (${profitPercent.toStringAsFixed(2)}%)",
-                style: textTheme.secondary.copyWith(fontSize: 11).textColor(
-                  profitLoss >= 0 ? context.colors.success : context.colors.danger,
-                ),
+                style: textTheme.secondary
+                    .copyWith(fontSize: 11)
+                    .textColor(profitColor),
                 maxLines: 1,
                 minFontSize: 8,
               ),
             ],
           ),
-          Text(
-            "Ngày mua: ${DateFormat('dd/MM/yyyy').format(item.buyDate)}",
-            style: textTheme.secondary.copyWith(fontSize: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Ngày mua: ${DateFormat('dd/MM/yyyy').format(item.buyDate)}",
+                  style: textTheme.secondary.copyWith(fontSize: 10),
+                ),
+              ),
+              if (estimate != null)
+                AutoSizeText(
+                  l10n.assetEstimatedReturn(
+                    _signed(currencyFormat, estimate.perYear),
+                    _signed(currencyFormat, estimate.perMonth),
+                  ),
+                  style: textTheme.secondary
+                      .copyWith(fontSize: 10)
+                      .textColor(profitColor),
+                  maxLines: 1,
+                  minFontSize: 8,
+                ),
+            ],
           ),
         ],
       ),

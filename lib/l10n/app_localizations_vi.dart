@@ -2060,6 +2060,31 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetQuantity => 'Số lượng';
 
   @override
+  String get assetQuantityTael => 'Số lượng (cây)';
+
+  @override
+  String get assetUnitTael => 'cây';
+
+  @override
+  String get assetBuyPriceUsd => 'Giá mua (USD)';
+
+  @override
+  String assetValueInVnd(String amount) {
+    return '≈ $amount';
+  }
+
+  @override
+  String assetEstimatedReturn(String perYear, String perMonth) {
+    return 'Ước tính $perYear/năm · $perMonth/tháng';
+  }
+
+  @override
+  String get assetLoadFailed => 'Không tải được dữ liệu tài sản';
+
+  @override
+  String get assetSaveFailed => 'Không lưu được thay đổi';
+
+  @override
   String get assetBuyPrice => 'Giá mua';
 
   @override

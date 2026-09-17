@@ -2069,6 +2069,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetQuantity => 'Quantity';
 
   @override
+  String get assetQuantityTael => 'Quantity (tael)';
+
+  @override
+  String get assetUnitTael => 'tael';
+
+  @override
+  String get assetBuyPriceUsd => 'Buy price (USD)';
+
+  @override
+  String assetValueInVnd(String amount) {
+    return '≈ $amount';
+  }
+
+  @override
+  String assetEstimatedReturn(String perYear, String perMonth) {
+    return 'Est. $perYear/yr · $perMonth/mo';
+  }
+
+  @override
+  String get assetLoadFailed => 'Could not load your assets';
+
+  @override
+  String get assetSaveFailed => 'Could not save the change';
+
+  @override
   String get assetBuyPrice => 'Buy price';
 
   @override

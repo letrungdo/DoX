@@ -34,6 +34,11 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
 
   bool get _isEditing => widget.investment != null;
 
+  /// These markets quote in dollars, so the price is recorded in dollars too
+  /// and converted for display. Mixing the two currencies in one column made
+  /// every comparison meaningless.
+  bool get _isUsdQuoted => _selectedCode?.isUsdQuoted ?? false;
+
   @override
   void initState() {
     super.initState();
@@ -72,24 +77,27 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
       return;
     }
 
-    final investment = (widget.investment ?? AssetInvestment(
-      id: const Uuid().v4(),
-      symbol: _selectedCode!.code,
-      type: _selectedCode!.group == MarketGroup.crypto
-          ? InvestmentType.crypto
-          : InvestmentType.stock,
-      quantity: quantity,
-      buyPrice: price,
-      buyDate: _buyDate,
-    )).copyWith(
-      symbol: _selectedCode!.code,
-      type: _selectedCode!.group == MarketGroup.crypto
-          ? InvestmentType.crypto
-          : InvestmentType.stock,
-      quantity: quantity,
-      buyPrice: price,
-      buyDate: _buyDate,
-    );
+    final investment =
+        (widget.investment ??
+                AssetInvestment(
+                  id: const Uuid().v4(),
+                  symbol: _selectedCode!.code,
+                  type: _selectedCode!.group == MarketGroup.crypto
+                      ? InvestmentType.crypto
+                      : InvestmentType.stock,
+                  quantity: quantity,
+                  buyPrice: price,
+                  buyDate: _buyDate,
+                ))
+            .copyWith(
+              symbol: _selectedCode!.code,
+              type: _selectedCode!.group == MarketGroup.crypto
+                  ? InvestmentType.crypto
+                  : InvestmentType.stock,
+              quantity: quantity,
+              buyPrice: price,
+              buyDate: _buyDate,
+            );
     Navigator.pop(context, investment);
   }
 
@@ -131,6 +139,11 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
             );
             if (picked != null) {
               setState(() {
+                // The price already typed was in the previous market's
+                // currency; keeping it would silently change what it means.
+                if (picked.isUsdQuoted != _isUsdQuoted) {
+                  _priceController.clear();
+                }
                 _selectedCode = picked;
                 _codeError = null;
               });
@@ -140,16 +153,19 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
         TextField(
           controller: _quantityController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: cuteInputDecoration(context, l10n.assetQuantity)
-              .copyWith(errorText: _quantityError),
+          decoration: cuteInputDecoration(
+            context,
+            l10n.assetQuantity,
+          ).copyWith(errorText: _quantityError),
           onChanged: (_) {
             if (_quantityError != null) setState(() => _quantityError = null);
           },
         ),
         CuteMoneyField(
           controller: _priceController,
-          label: l10n.assetBuyPrice,
+          label: _isUsdQuoted ? l10n.assetBuyPriceUsd : l10n.assetBuyPrice,
           maxSuggestion: AppConst.moneySuggestionHigh,
+          suffixText: _isUsdQuoted ? r"$" : "đ",
           errorText: _priceError,
           onChanged: (_) {
             if (_priceError != null) setState(() => _priceError = null);

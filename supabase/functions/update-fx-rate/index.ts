@@ -10,6 +10,9 @@ const MONEYGRAM_URL =
 const SMILE_URL =
   "https://ewm.digitalwalletcorp.com/EWA/WalletEx/ExchangeRate?TenantID=1&RegionCode=JP&CurrencyCode=JPY";
 const DCOM_URL = "https://sendmoney.co.jp/en/fx-rate";
+const BINANCE_P2P_URL =
+  "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search";
+const ER_API_URL = "https://open.er-api.com/v6/latest/USD";
 
 const num = (v: unknown): number | null => {
   const n = Number(v);
@@ -71,11 +74,48 @@ async function fetchDcom(): Promise<number | null> {
   return null;
 }
 
+/**
+ * USDT/VND off the Binance P2P book — the rate a dollar-denominated holding
+ * actually converts at in Vietnam, which runs a little under the bank rate.
+ * Takes the median of the top adverts so one outlier cannot move it, and falls
+ * back to the official USD/VND when the book cannot be read.
+ */
+async function fetchUsdtVnd(): Promise<number | null> {
+  try {
+    const res = await fetch(BINANCE_P2P_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        asset: "USDT",
+        fiat: "VND",
+        tradeType: "SELL",
+        page: 1,
+        rows: 10,
+        payTypes: [],
+      }),
+    });
+    const d = await res.json();
+    const prices = (d?.data ?? [])
+      .map((a: { adv?: { price?: string } }) => num(a?.adv?.price))
+      .filter((v: number | null): v is number => v != null)
+      .sort((a: number, b: number) => a - b);
+
+    if (prices.length > 0) return prices[Math.floor(prices.length / 2)];
+  } catch {
+    // Fall through to the official rate below.
+  }
+
+  const d = await fetch(ER_API_URL).then((r) => r.json());
+
+  return num(d?.rates?.VND);
+}
+
 const SOURCES: { code: string; fetch: () => Promise<number | null> }[] = [
   { code: "google_jpy_vnd", fetch: fetchGoogle },
   { code: "moneygram_jpy_vnd", fetch: fetchMoneyGram },
   { code: "smile_jpy_vnd", fetch: fetchSmile },
   { code: "dcom_jpy_vnd", fetch: fetchDcom },
+  { code: "usdt_vnd", fetch: fetchUsdtVnd },
 ];
 
 Deno.serve(async () => {

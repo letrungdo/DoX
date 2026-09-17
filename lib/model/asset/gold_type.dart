@@ -1,9 +1,12 @@
 import 'package:do_x/model/fx/gold_model.dart';
 
+/// The kinds of gold a record can hold, each pinned to the `gold_prices.code`
+/// that quotes it. A private jeweller's plain ring has no published quote of
+/// its own and tracks the PNJ plain ring closely, so the two share a code.
 enum GoldAssetType {
-  sjcPiece("Vàng miếng SJC", "SJCSJCHCM"),
-  sjcRing("Vàng nhẫn 9999 SJC", "RING9999SJCHCM"),
-  privateRing("Vàng nhẫn 9999 (Tư nhân)", "PRIVATE");
+  sjcPiece("Vàng miếng SJC", "SJC_HCM"),
+  ring9999("Vàng nhẫn 9999", "PNJ_RING_9999"),
+  privateRing("Vàng nhẫn 9999 (Tư nhân)", "PNJ_RING_9999");
 
   const GoldAssetType(this.label, this.code);
   final String label;
@@ -15,16 +18,10 @@ enum GoldAssetType {
 }
 
 extension GoldPriceExtension on List<GoldSymbol> {
+  /// What the holding is worth today: the price a shop buys back at (`bid`),
+  /// not the one it sells at.
   double? findPrice(GoldAssetType type) {
-    if (type == GoldAssetType.privateRing) {
-      // Private ring is usually ~10m cheaper than SJC Ring (per tael)
-      final sjcRingPrice = findPrice(GoldAssetType.sjcRing);
-      return sjcRingPrice != null ? sjcRingPrice - 10000000 : null;
-    }
-
-    // Try to find by exact code match first
-    final byCode = firstWhereOrNull((s) => s.code == type.code);
-    return byCode?.bid;
+    return firstWhereOrNull((s) => s.code == type.code)?.bid;
   }
 }
 

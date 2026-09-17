@@ -3,6 +3,8 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/constants/enum/market_code.dart';
+import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
@@ -11,7 +13,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class InvestmentList extends StatelessWidget {
-  const InvestmentList({super.key, required this.investments, this.onEdit, this.onDelete});
+  const InvestmentList({
+    super.key,
+    required this.investments,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final List<AssetInvestment> investments;
   final void Function(AssetInvestment item)? onEdit;
@@ -37,12 +44,22 @@ class InvestmentList extends StatelessWidget {
     final vm = context.read<AssetViewModel>();
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
     final textTheme = context.textTheme;
-    
+
+    final l10n = context.l10n;
+    final marketCode = MarketCode.from(item.symbol);
+    final isUsdQuoted = marketCode?.isUsdQuoted ?? false;
     final currentPrice = vm.getCurrentInvestmentPrice(item);
     final currentValue = item.quantity * currentPrice;
-    final buyValue = item.quantity * item.buyPrice;
+    // The buy price of a dollar-quoted market is stored in dollars; every
+    // figure below is in đồng, so it is converted before it is compared.
+    final buyPriceVnd = vm.getBuyPriceInVnd(item);
+    final buyValue = item.quantity * buyPriceVnd;
     final profitLoss = currentValue - buyValue;
     final profitPercent = buyValue > 0 ? (profitLoss / buyValue) * 100 : 0.0;
+    final buyPriceLabel = isUsdQuoted
+        ? "\$${item.buyPrice.toCurrency()} "
+              "${l10n.assetValueInVnd(currencyFormat.format(buyPriceVnd))}"
+        : currencyFormat.format(item.buyPrice);
 
     return ChickenListTileCard(
       onTap: () => onEdit?.call(item),
@@ -52,15 +69,17 @@ class InvestmentList extends StatelessWidget {
         height: 44,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: item.type == InvestmentType.crypto 
-            ? Colors.orange.withValues(alpha: 0.1) 
-            : Colors.blue.withValues(alpha: 0.1),
+          color: item.type == InvestmentType.crypto
+              ? Colors.orange.withValues(alpha: 0.1)
+              : Colors.blue.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Text(
           item.type == InvestmentType.crypto ? 'C' : 'S',
           style: TextStyle(
-            color: item.type == InvestmentType.crypto ? Colors.orange : Colors.blue,
+            color: item.type == InvestmentType.crypto
+                ? Colors.orange
+                : Colors.blue,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -83,7 +102,7 @@ class InvestmentList extends StatelessWidget {
             children: [
               Expanded(
                 child: AutoSizeText(
-                  "SL: ${item.quantity} - Giá: ${currencyFormat.format(item.buyPrice)}",
+                  "SL: ${item.quantity} - Giá: $buyPriceLabel",
                   style: textTheme.secondary.copyWith(fontSize: 12),
                   maxLines: 1,
                   minFontSize: 9,
@@ -92,9 +111,13 @@ class InvestmentList extends StatelessWidget {
               const SizedBox(width: 4),
               AutoSizeText(
                 "${profitLoss >= 0 ? '+' : ''}${currencyFormat.format(profitLoss)} (${profitPercent.toStringAsFixed(2)}%)",
-                style: textTheme.secondary.copyWith(fontSize: 11).textColor(
-                  profitLoss >= 0 ? context.colors.success : context.colors.danger,
-                ),
+                style: textTheme.secondary
+                    .copyWith(fontSize: 11)
+                    .textColor(
+                      profitLoss >= 0
+                          ? context.colors.success
+                          : context.colors.danger,
+                    ),
                 maxLines: 1,
                 minFontSize: 8,
               ),

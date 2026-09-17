@@ -64,6 +64,19 @@ enum MarketCode {
 
   final MarketGroup group;
 
+  /// Whether the market quotes in US dollars. Crypto, US stocks, the world
+  /// indices and the international commodities all do; the Vietnamese indices
+  /// are the exception, and so is any commodity not paired against USD.
+  bool get isUsdQuoted {
+    return switch (group) {
+      MarketGroup.crypto ||
+      MarketGroup.usStock ||
+      MarketGroup.worldIndex => true,
+      MarketGroup.commodity => code.endsWith("USD"),
+      MarketGroup.vnIndex => false,
+    };
+  }
+
   /// What a fresh install shows, before the user picks their own set.
   static const defaults = [xauUSD, xagUSD, btcUSDT, bnbUSDT, ethUSDT, vnIndex];
 
