@@ -2217,6 +2217,44 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetNotAvailable => 'Chưa có';
 
   @override
+  String get assetNote => 'Ghi chú';
+
+  @override
+  String get assetSellPrice => 'Giá bán';
+
+  @override
+  String get assetSellPriceUsd => 'Giá bán (USD)';
+
+  @override
+  String get assetSellPriceMarket => 'Giá thị trường';
+
+  @override
+  String get assetSellPriceEntered => 'Tự nhập';
+
+  @override
+  String get assetSellPriceNoQuote =>
+      'Chưa có giá thị trường, đang dùng giá mua';
+
+  @override
+  String get assetSellPriceEdit => 'Sửa giá bán';
+
+  @override
+  String get assetSellPriceReset => 'Dùng lại giá thị trường';
+
+  @override
+  String assetSellPriceOf(String name) {
+    return 'Giá bán · $name';
+  }
+
+  @override
+  String get assetYearAll => 'Tất cả';
+
+  @override
+  String assetYearEmpty(String year) {
+    return 'Không có ghi chép nào trong năm $year.';
+  }
+
+  @override
   String get tabRepeater => 'Repeater';
 
   @override

@@ -13,9 +13,9 @@ import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
-/// A gold holding's gain averaged over how long it has been held.
-class GoldReturnEstimate {
-  const GoldReturnEstimate({
+/// A holding's gain averaged over how long it has been held.
+class AssetReturnEstimate {
+  const AssetReturnEstimate({
     required this.perYear,
     required this.perMonth,
     required this.perYearPercent,
@@ -48,6 +48,39 @@ class AssetViewModel extends CoreViewModel {
   double _usdRate = _fallbackUsdRate;
   static const _fallbackUsdRate = 25800.0;
 
+  /// Sell prices typed by hand, standing in for the feed's quote.
+  ///
+  /// Keyed the way the quotes themselves are — gold by its type, an investment
+  /// by its symbol — so a price is entered once and every holding of that kind
+  /// is valued at it. Deliberately not persisted: it is a "what would I get for
+  /// this today" figure to compare against, not a fact about the holding, so it
+  /// lives as long as the screen does and never overwrites what was paid.
+  final Map<String, double> _goldSellPrices = {};
+  final Map<String, double> _investmentSellPrices = {};
+
+  double? goldSellPrice(String goldType) => _goldSellPrices[goldType];
+  double? investmentSellPrice(String symbol) => _investmentSellPrices[symbol];
+
+  void setGoldSellPrice(String goldType, double? price) {
+    _setSellPrice(_goldSellPrices, goldType, price);
+  }
+
+  void setInvestmentSellPrice(String symbol, double? price) {
+    _setSellPrice(_investmentSellPrices, symbol, price);
+  }
+
+  void _setSellPrice(Map<String, double> store, String key, double? price) {
+    if (price == null) {
+      store.remove(key);
+    } else {
+      store[key] = price;
+    }
+    // Every total on the summary screen is priced off these, so they are
+    // recomputed here rather than waiting for the next refresh.
+    _calculateSummary();
+    notifyListenersSafe();
+  }
+
   bool _loadFailed = false;
   bool get loadFailed => _loadFailed;
 
@@ -57,12 +90,60 @@ class AssetViewModel extends CoreViewModel {
   /// The rate a dollar converts at today, for the UI to label its own figures.
   double get usdRate => _usdRate;
 
+  /// The year every list is filtered to, or null for all of them. Shared by the
+  /// three tabs so switching tab keeps answering the same question.
+  int? _selectedYear;
+  int? get selectedYear => _selectedYear;
+
+  /// Every year any holding was opened in, newest first. Built from all three
+  /// lists so the same chips show on every tab.
+  List<int> get availableYears {
+    final years = <int>{
+      ..._savings.map((e) => e.startDate.year),
+      ..._investments.map((e) => e.buyDate.year),
+      ..._gold.map((e) => e.buyDate.year),
+    }.toList();
+    years.sort((a, b) => b.compareTo(a));
+
+    return years;
+  }
+
+  void selectYear(int? year) {
+    if (_selectedYear == year) return;
+    _selectedYear = year;
+    notifyListenersSafe();
+  }
+
+  List<AssetSaving> get filteredSavings {
+    return _filterByYear(_savings, (e) => e.startDate);
+  }
+
+  List<AssetInvestment> get filteredInvestments {
+    return _filterByYear(_investments, (e) => e.buyDate);
+  }
+
+  List<AssetGold> get filteredGold {
+    return _filterByYear(_gold, (e) => e.buyDate);
+  }
+
+  List<T> _filterByYear<T>(List<T> items, DateTime Function(T item) dateOf) {
+    final year = _selectedYear;
+    if (year == null) return items;
+
+    return items.where((e) => dateOf(e).year == year).toList();
+  }
+
   /// Today's price of one unit, in VND. A market that quotes in dollars — and
   /// whose buy price is therefore recorded in dollars — is converted here, so
   /// both sides of every comparison are in the same currency.
+  /// A hand-typed sell price wins over the feed. It is typed in the same
+  /// currency as the buy price, so it converts the same way.
   double getCurrentInvestmentPrice(AssetInvestment investment) {
     final marketCode = MarketCode.from(investment.symbol);
-    final price = _marketOverviews[marketCode]?.price ?? investment.buyPrice;
+    final price =
+        _investmentSellPrices[investment.symbol] ??
+        marketInvestmentPrice(marketCode) ??
+        investment.buyPrice;
 
     return _toVnd(price, marketCode);
   }
@@ -101,16 +182,35 @@ class AssetViewModel extends CoreViewModel {
   /// amount in VND and the same figure as a rate on what was paid. Null until
   /// the holding is old enough for either to mean anything — see
   /// [_minDaysToAnnualize].
-  GoldReturnEstimate? getGoldEstimatedReturn(AssetGold gold) {
-    final days = DateTime.now().difference(gold.buyDate).inDays;
+  AssetReturnEstimate? getGoldEstimatedReturn(AssetGold gold) {
+    return _estimatedReturn(
+      buyValue: gold.quantity * gold.buyPrice,
+      currentValue: gold.quantity * getCurrentGoldPrice(gold),
+      buyDate: gold.buyDate,
+    );
+  }
+
+  /// The same figure for an investment, both sides already in VND.
+  AssetReturnEstimate? getInvestmentEstimatedReturn(AssetInvestment inv) {
+    return _estimatedReturn(
+      buyValue: inv.quantity * getBuyPriceInVnd(inv),
+      currentValue: inv.quantity * getCurrentInvestmentPrice(inv),
+      buyDate: inv.buyDate,
+    );
+  }
+
+  AssetReturnEstimate? _estimatedReturn({
+    required double buyValue,
+    required double currentValue,
+    required DateTime buyDate,
+  }) {
+    final days = DateTime.now().difference(buyDate).inDays;
     if (days < _minDaysToAnnualize) return null;
 
-    final buyValue = gold.quantity * gold.buyPrice;
-    final profit = gold.quantity * (getCurrentGoldPrice(gold) - gold.buyPrice);
-    final perYear = profit / (days / 365.0);
+    final perYear = (currentValue - buyValue) / (days / 365.0);
     final perYearPercent = buyValue > 0 ? (perYear / buyValue) * 100 : 0.0;
 
-    return GoldReturnEstimate(
+    return AssetReturnEstimate(
       perYear: perYear,
       perMonth: perYear / 12,
       perYearPercent: perYearPercent,
@@ -118,12 +218,27 @@ class AssetViewModel extends CoreViewModel {
     );
   }
 
+  /// Today's price of one unit of gold, in VND: the price typed in by hand if
+  /// there is one, else the feed's quote, else what was paid — which reads as
+  /// "no gain yet" rather than as a holding worth nothing.
   double getCurrentGoldPrice(AssetGold gold) {
-    final type = GoldAssetType.fromLabel(gold.goldType);
-    if (type != null) {
-      return _goldPrices.findPrice(type) ?? gold.buyPrice;
-    }
-    return gold.buyPrice;
+    return _goldSellPrices[gold.goldType] ??
+        marketGoldPrice(gold.goldType) ??
+        gold.buyPrice;
+  }
+
+  /// What the feed quotes for a kind of gold today, or null when it quotes
+  /// nothing for it. The dialogs use it to show the price a manual entry would
+  /// replace.
+  double? marketGoldPrice(String? goldType) {
+    final type = GoldAssetType.fromLabel(goldType);
+
+    return type == null ? null : _goldPrices.findPrice(type);
+  }
+
+  /// What the feed quotes for a market today, in the market's own currency.
+  double? marketInvestmentPrice(MarketCode? code) {
+    return code == null ? null : _marketOverviews[code]?.price;
   }
 
   @override

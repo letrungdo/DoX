@@ -2228,6 +2228,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetNotAvailable => 'Not yet';
 
   @override
+  String get assetNote => 'Note';
+
+  @override
+  String get assetSellPrice => 'Sell price';
+
+  @override
+  String get assetSellPriceUsd => 'Sell price (USD)';
+
+  @override
+  String get assetSellPriceMarket => 'Market price';
+
+  @override
+  String get assetSellPriceEntered => 'Entered';
+
+  @override
+  String get assetSellPriceNoQuote =>
+      'No market price yet, using the buy price';
+
+  @override
+  String get assetSellPriceEdit => 'Edit the sell price';
+
+  @override
+  String get assetSellPriceReset => 'Use the market price again';
+
+  @override
+  String assetSellPriceOf(String name) {
+    return 'Sell price · $name';
+  }
+
+  @override
+  String get assetYearAll => 'All';
+
+  @override
+  String assetYearEmpty(String year) {
+    return 'Nothing recorded in $year.';
+  }
+
+  @override
   String get tabRepeater => 'Repeater';
 
   @override

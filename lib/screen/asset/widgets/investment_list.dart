@@ -4,6 +4,7 @@ import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/asset/asset_investment.dart';
+import 'package:do_x/screen/asset/widgets/asset_sell_price_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
@@ -15,28 +16,62 @@ class InvestmentList extends StatelessWidget {
   const InvestmentList({
     super.key,
     required this.investments,
+    this.emptyMessage,
     this.onEdit,
     this.onDelete,
   });
 
   final List<AssetInvestment> investments;
+
+  /// Shown instead of the stock "nothing recorded yet" line when the list is
+  /// empty only because a filter narrowed it.
+  final String? emptyMessage;
   final void Function(AssetInvestment item)? onEdit;
   final void Function(String id)? onDelete;
 
   @override
   Widget build(BuildContext context) {
     if (investments.isEmpty) {
-      return Center(child: Text(context.l10n.assetInvestmentEmpty));
+      return Center(
+        child: Text(emptyMessage ?? context.l10n.assetInvestmentEmpty),
+      );
     }
+
+    final vm = context.watch<AssetViewModel>();
 
     return ListView.builder(
       padding: Dimens.screenPadding,
-      itemCount: investments.length,
+      // One extra row at the top: the prices everything below is valued at.
+      itemCount: investments.length + 1,
       itemBuilder: (context, index) {
-        final item = investments[index];
+        if (index == 0) {
+          return AssetSellPriceBar(
+            prices: _sellPrices(vm),
+            onChanged: vm.setInvestmentSellPrice,
+          ).contentConstrainedBox();
+        }
+        final item = investments[index - 1];
+
         return _buildItem(context, item).contentConstrainedBox();
       },
     );
+  }
+
+  /// One row per symbol actually held: a price belongs to a market, and two
+  /// markets never share one.
+  List<AssetSellPrice> _sellPrices(AssetViewModel vm) {
+    final symbols = <String>{for (final item in investments) item.symbol};
+
+    return [
+      for (final symbol in symbols)
+        AssetSellPrice(
+          key: symbol,
+          label: symbol,
+          marketPrice: vm.marketInvestmentPrice(MarketCode.from(symbol)),
+          customPrice: vm.investmentSellPrice(symbol),
+          isUsd: MarketCode.from(symbol)?.isUsdQuoted ?? false,
+        ),
+    ];
   }
 
   Widget _buildItem(BuildContext context, AssetInvestment item) {
@@ -55,6 +90,9 @@ class InvestmentList extends StatelessWidget {
     final profitColor = profitLoss >= 0
         ? context.colors.success
         : context.colors.danger;
+
+    final estimate = vm.getInvestmentEstimatedReturn(item);
+    final note = item.note?.trim();
 
     final isCrypto = item.type == InvestmentType.crypto;
     final badgeColor = isCrypto ? Colors.orange : Colors.blue;
@@ -94,6 +132,17 @@ class InvestmentList extends StatelessWidget {
             AssetTileNote(
               text: l10n.assetValueInVnd(format.compact(buyPriceVnd)),
             ),
+          if (estimate != null)
+            AssetTileNote(
+              text: l10n.assetEstimatedReturn(
+                format.signedCompact(estimate.perYear),
+                format.signedPercent(estimate.perYearPercent),
+                format.signedCompact(estimate.perMonth),
+                format.signedPercent(estimate.perMonthPercent),
+              ),
+              color: profitColor,
+            ),
+          if (note != null && note.isNotEmpty) AssetTileNote(text: note),
         ],
       ),
     );

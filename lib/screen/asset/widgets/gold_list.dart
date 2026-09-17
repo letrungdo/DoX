@@ -3,6 +3,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/asset/asset_gold.dart';
+import 'package:do_x/screen/asset/widgets/asset_sell_price_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
@@ -11,26 +12,61 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class GoldList extends StatelessWidget {
-  const GoldList({super.key, required this.gold, this.onEdit, this.onDelete});
+  const GoldList({
+    super.key,
+    required this.gold,
+    this.emptyMessage,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final List<AssetGold> gold;
+
+  /// Shown instead of the stock "nothing recorded yet" line when the list is
+  /// empty only because a filter narrowed it.
+  final String? emptyMessage;
   final void Function(AssetGold item)? onEdit;
   final void Function(String id)? onDelete;
 
   @override
   Widget build(BuildContext context) {
     if (gold.isEmpty) {
-      return Center(child: Text(context.l10n.assetGoldEmpty));
+      return Center(child: Text(emptyMessage ?? context.l10n.assetGoldEmpty));
     }
+
+    final vm = context.watch<AssetViewModel>();
 
     return ListView.builder(
       padding: Dimens.screenPadding,
-      itemCount: gold.length,
+      // One extra row at the top: the prices everything below is valued at.
+      itemCount: gold.length + 1,
       itemBuilder: (context, index) {
-        final item = gold[index];
+        if (index == 0) {
+          return AssetSellPriceBar(
+            prices: _sellPrices(vm),
+            onChanged: vm.setGoldSellPrice,
+          ).contentConstrainedBox();
+        }
+        final item = gold[index - 1];
+
         return _buildItem(context, item).contentConstrainedBox();
       },
     );
+  }
+
+  /// One row per kind of gold actually held, in the order it first appears.
+  List<AssetSellPrice> _sellPrices(AssetViewModel vm) {
+    final types = <String>{for (final item in gold) item.goldType};
+
+    return [
+      for (final type in types)
+        AssetSellPrice(
+          key: type,
+          label: type,
+          marketPrice: vm.marketGoldPrice(type),
+          customPrice: vm.goldSellPrice(type),
+        ),
+    ];
   }
 
   Widget _buildItem(BuildContext context, AssetGold item) {
@@ -43,6 +79,7 @@ class GoldList extends StatelessWidget {
     final profitLoss = currentValue - buyValue;
     final profitPercent = buyValue > 0 ? (profitLoss / buyValue) * 100 : 0.0;
     final estimate = vm.getGoldEstimatedReturn(item);
+    final note = item.note?.trim();
     final profitColor = profitLoss >= 0
         ? context.colors.success
         : context.colors.danger;
@@ -86,6 +123,7 @@ class GoldList extends StatelessWidget {
               ),
               color: profitColor,
             ),
+          if (note != null && note.isNotEmpty) AssetTileNote(text: note),
         ],
       ),
     );

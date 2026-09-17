@@ -6,7 +6,7 @@ import 'package:do_x/model/asset/gold_type.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/constants/app_const.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +26,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
   GoldAssetType? _selectedType;
   late final TextEditingController _quantityController;
   late final TextEditingController _priceController;
+  late final TextEditingController _noteController;
   late DateTime _buyDate;
 
   String? _typeError;
@@ -45,6 +46,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
     _priceController = TextEditingController(
       text: gold?.buyPrice.toCurrency() ?? '',
     );
+    _noteController = TextEditingController(text: gold?.note ?? '');
     _buyDate = gold?.buyDate ?? DateTime.now();
   }
 
@@ -52,6 +54,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
   void dispose() {
     _quantityController.dispose();
     _priceController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -59,6 +62,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
     final quantityText = _quantityController.text;
     final quantity = double.tryParse(quantityText) ?? 0;
     final price = _priceController.text.toMoney() ?? 0;
+    final note = _noteController.text.trim();
 
     setState(() {
       _typeError = _selectedType == null ? l10n.assetErrorRequired : null;
@@ -86,6 +90,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
               quantity: quantity,
               buyPrice: price,
               buyDate: _buyDate,
+              note: note.isEmpty ? null : note,
             );
     Navigator.pop(context, gold);
   }
@@ -121,7 +126,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
           onTap: () async {
             final picked = await showAppOptionSheet<GoldAssetType>(
               context,
-              title: "Chọn loại vàng",
+              title: l10n.assetGoldType,
               options: GoldAssetType.values,
               selected: _selectedType,
               labelBuilder: (t) => t.label,
@@ -134,13 +139,14 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
             }
           },
         ),
-        TextField(
+        // The unit sits inside the field, the way the đồng does on a money
+        // field, rather than in the label where it scrolls away while typing.
+        CuteTextField(
           controller: _quantityController,
+          label: l10n.assetQuantity,
+          suffixText: l10n.assetUnitTael,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: cuteInputDecoration(
-            context,
-            l10n.assetQuantityTael,
-          ).copyWith(errorText: _quantityError),
+          errorText: _quantityError,
           onChanged: (_) {
             if (_quantityError != null) setState(() => _quantityError = null);
           },
@@ -158,6 +164,12 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
           label: l10n.assetBuyDate,
           value: _buyDate,
           onChanged: (d) => setState(() => _buyDate = d),
+        ),
+        CuteTextField(
+          controller: _noteController,
+          label: l10n.assetNote,
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
         ),
       ],
     );

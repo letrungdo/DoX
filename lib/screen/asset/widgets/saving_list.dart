@@ -12,18 +12,23 @@ class SavingList extends StatelessWidget {
   const SavingList({
     super.key,
     required this.savings,
+    this.emptyMessage,
     this.onEdit,
     this.onDelete,
   });
 
   final List<AssetSaving> savings;
+
+  /// Shown instead of the stock "nothing recorded yet" line when the list is
+  /// empty only because a filter narrowed it.
+  final String? emptyMessage;
   final void Function(AssetSaving item)? onEdit;
   final void Function(String id)? onDelete;
 
   @override
   Widget build(BuildContext context) {
     if (savings.isEmpty) {
-      return Center(child: Text(context.l10n.assetSavingEmpty));
+      return Center(child: Text(emptyMessage ?? context.l10n.assetSavingEmpty));
     }
 
     return ListView.builder(
@@ -51,6 +56,7 @@ class SavingList extends StatelessWidget {
     // A matured deposit is no longer earning, so its figures keep the row's
     // default ink: green here would claim a return it is not making.
     final interestColor = item.isMatured ? null : context.colors.success;
+    final note = item.note?.trim();
 
     return AssetTileCard(
       onTap: () => onEdit?.call(item),
@@ -85,6 +91,7 @@ class SavingList extends StatelessWidget {
                   ),
             color: interestColor,
           ),
+          if (note != null && note.isNotEmpty) AssetTileNote(text: note),
         ],
       ),
     );

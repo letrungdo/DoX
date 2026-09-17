@@ -8,6 +8,7 @@ import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -26,6 +27,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
   MarketCode? _selectedCode;
   late final TextEditingController _quantityController;
   late final TextEditingController _priceController;
+  late final TextEditingController _noteController;
   late DateTime _buyDate;
 
   String? _codeError;
@@ -50,6 +52,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
     _priceController = TextEditingController(
       text: inv?.buyPrice.toCurrency() ?? '',
     );
+    _noteController = TextEditingController(text: inv?.note ?? '');
     _buyDate = inv?.buyDate ?? DateTime.now();
   }
 
@@ -57,6 +60,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
   void dispose() {
     _quantityController.dispose();
     _priceController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -64,6 +68,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
     final quantityText = _quantityController.text;
     final quantity = double.tryParse(quantityText) ?? 0;
     final price = _priceController.text.toMoney() ?? 0;
+    final note = _noteController.text.trim();
 
     setState(() {
       _codeError = _selectedCode == null ? l10n.assetErrorRequired : null;
@@ -97,6 +102,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
               quantity: quantity,
               buyPrice: price,
               buyDate: _buyDate,
+              note: note.isEmpty ? null : note,
             );
     Navigator.pop(context, investment);
   }
@@ -175,6 +181,12 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
           label: l10n.assetBuyDate,
           value: _buyDate,
           onChanged: (d) => setState(() => _buyDate = d),
+        ),
+        CuteTextField(
+          controller: _noteController,
+          label: l10n.assetNote,
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
         ),
       ],
     );

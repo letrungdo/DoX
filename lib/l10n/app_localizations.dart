@@ -4015,6 +4015,72 @@ abstract class AppLocalizations {
   /// **'Not yet'**
   String get assetNotAvailable;
 
+  /// No description provided for @assetNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get assetNote;
+
+  /// No description provided for @assetSellPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell price'**
+  String get assetSellPrice;
+
+  /// No description provided for @assetSellPriceUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell price (USD)'**
+  String get assetSellPriceUsd;
+
+  /// No description provided for @assetSellPriceMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Market price'**
+  String get assetSellPriceMarket;
+
+  /// No description provided for @assetSellPriceEntered.
+  ///
+  /// In en, this message translates to:
+  /// **'Entered'**
+  String get assetSellPriceEntered;
+
+  /// No description provided for @assetSellPriceNoQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'No market price yet, using the buy price'**
+  String get assetSellPriceNoQuote;
+
+  /// No description provided for @assetSellPriceEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the sell price'**
+  String get assetSellPriceEdit;
+
+  /// No description provided for @assetSellPriceReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the market price again'**
+  String get assetSellPriceReset;
+
+  /// No description provided for @assetSellPriceOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell price · {name}'**
+  String assetSellPriceOf(String name);
+
+  /// No description provided for @assetYearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get assetYearAll;
+
+  /// No description provided for @assetYearEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded in {year}.'**
+  String assetYearEmpty(String year);
+
   /// No description provided for @tabRepeater.
   ///
   /// In en, this message translates to:

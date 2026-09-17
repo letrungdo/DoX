@@ -19,6 +19,7 @@ class CuteTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool autofocus;
   final bool obscureText;
+  final TextCapitalization textCapitalization;
 
   const CuteTextField({
     super.key,
@@ -37,6 +38,7 @@ class CuteTextField extends StatelessWidget {
     this.onChanged,
     this.autofocus = false,
     this.obscureText = false,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -51,6 +53,7 @@ class CuteTextField extends StatelessWidget {
       onChanged: onChanged,
       autofocus: autofocus,
       obscureText: obscureText,
+      textCapitalization: textCapitalization,
       decoration: cuteInputDecoration(
         context,
         label,

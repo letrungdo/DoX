@@ -1,7 +1,9 @@
 import 'package:do_x/constants/enum/market_code.dart';
+import 'package:do_x/model/asset/asset_gold.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/gold_type.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 AssetSaving _saving({
@@ -21,6 +23,9 @@ AssetSaving _saving({
 }
 
 void main() {
+  // The view model notifies through the scheduler, which needs a binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('savings interest', () {
     test('an open-ended deposit accrues for as long as it is held', () {
       final saving = _saving(
@@ -94,6 +99,117 @@ void main() {
         expect(GoldAssetType.fromLabel(type.label), type);
       }
       expect(GoldAssetType.fromLabel('Vàng chưa từng có'), isNull);
+    });
+  });
+
+  group('sell price override', () {
+    AssetGold gold() => AssetGold(
+      id: 'g1',
+      goldType: GoldAssetType.sjcPiece.label,
+      quantity: 2,
+      buyPrice: 100000000,
+      buyDate: DateTime.now().subtract(const Duration(days: 365)),
+    );
+
+    test('without one, a holding falls back to what was paid', () {
+      // Nothing has been fetched in this view model, so there is no quote to
+      // price it at.
+      expect(AssetViewModel().getCurrentGoldPrice(gold()), 100000000);
+    });
+
+    test('a hand-typed price values every holding of that kind', () {
+      final vm = AssetViewModel()
+        ..setGoldSellPrice(GoldAssetType.sjcPiece.label, 143500000);
+
+      expect(vm.goldSellPrice(GoldAssetType.sjcPiece.label), 143500000);
+      expect(vm.getCurrentGoldPrice(gold()), 143500000);
+      // A second holding of the same kind, bought at a different price on a
+      // different day, is valued at the same price today.
+      expect(
+        vm.getCurrentGoldPrice(
+          AssetGold(
+            id: 'g2',
+            goldType: GoldAssetType.sjcPiece.label,
+            quantity: 1,
+            buyPrice: 80000000,
+            buyDate: DateTime.now(),
+          ),
+        ),
+        143500000,
+      );
+    });
+
+    test('another kind of gold keeps its own price', () {
+      final vm = AssetViewModel()
+        ..setGoldSellPrice(GoldAssetType.sjcPiece.label, 143500000);
+      final ring = AssetGold(
+        id: 'g3',
+        goldType: GoldAssetType.ring9999.label,
+        quantity: 1,
+        buyPrice: 100000000,
+        buyDate: DateTime.now(),
+      );
+
+      expect(vm.goldSellPrice(GoldAssetType.ring9999.label), isNull);
+      expect(vm.getCurrentGoldPrice(ring), 100000000);
+    });
+
+    test('clearing it hands the holding back to the feed', () {
+      final vm = AssetViewModel()
+        ..setGoldSellPrice(GoldAssetType.sjcPiece.label, 143500000);
+      vm.setGoldSellPrice(GoldAssetType.sjcPiece.label, null);
+
+      expect(vm.goldSellPrice(GoldAssetType.sjcPiece.label), isNull);
+      expect(vm.getCurrentGoldPrice(gold()), 100000000);
+    });
+
+    test('the gain it implies is spread over how long it was held', () {
+      final vm = AssetViewModel()
+        ..setGoldSellPrice(GoldAssetType.sjcPiece.label, 150000000);
+      final estimate = vm.getGoldEstimatedReturn(gold());
+
+      // 2 taels bought a year ago at 100tr, now worth 150tr each: 100tr over
+      // the year, a twelfth of it a month.
+      expect(estimate, isNotNull);
+      expect(estimate!.perYear, closeTo(100000000, 500000));
+      expect(estimate.perMonth, closeTo(estimate.perYear / 12, 1));
+      expect(estimate.perYearPercent, closeTo(50, 0.5));
+      expect(
+        estimate.perMonthPercent,
+        closeTo(estimate.perYearPercent / 12, 1),
+      );
+    });
+
+    test('a holding bought days ago is too young to annualise', () {
+      final vm = AssetViewModel()
+        ..setGoldSellPrice(GoldAssetType.sjcPiece.label, 150000000);
+      final young = AssetGold(
+        id: 'g1',
+        goldType: GoldAssetType.sjcPiece.label,
+        quantity: 2,
+        buyPrice: 100000000,
+        buyDate: DateTime.now().subtract(const Duration(days: 3)),
+      );
+
+      expect(vm.getGoldEstimatedReturn(young), isNull);
+    });
+  });
+
+  group('year filter', () {
+    test('an empty portfolio offers no years and filters to nothing', () {
+      final vm = AssetViewModel();
+
+      expect(vm.availableYears, isEmpty);
+      expect(vm.selectedYear, isNull);
+
+      vm.selectYear(2025);
+      expect(vm.selectedYear, 2025);
+      expect(vm.filteredGold, isEmpty);
+      expect(vm.filteredSavings, isEmpty);
+      expect(vm.filteredInvestments, isEmpty);
+
+      vm.selectYear(null);
+      expect(vm.selectedYear, isNull);
     });
   });
 

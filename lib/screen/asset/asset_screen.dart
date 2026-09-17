@@ -7,6 +7,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/asset/widgets/add_gold_dialog.dart';
 import 'package:do_x/screen/asset/widgets/add_investment_dialog.dart';
 import 'package:do_x/screen/asset/widgets/add_saving_dialog.dart';
+import 'package:do_x/screen/asset/widgets/asset_year_filter.dart';
 import 'package:do_x/screen/asset/widgets/gold_list.dart';
 import 'package:do_x/screen/asset/widgets/investment_list.dart';
 import 'package:do_x/screen/asset/widgets/saving_list.dart';
@@ -29,10 +30,7 @@ class AssetScreen extends StatefulScreen implements AutoRouteWrapper {
 
   @override
   Widget wrappedRoute(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AssetViewModel(),
-      child: this,
-    );
+    return ChangeNotifierProvider(create: (_) => AssetViewModel(), child: this);
   }
 }
 
@@ -88,23 +86,45 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
             return const Center(child: CircularProgressIndicator());
           }
 
-          return TabBarView(
-            controller: _tabController,
+          final year = vm.selectedYear;
+          // A list emptied by the filter is not an account with nothing in it,
+          // and saying so is what tells the user to widen the year again.
+          final filteredEmpty = year == null
+              ? null
+              : l10n.assetYearEmpty('$year');
+
+          return Column(
             children: [
-              SavingList(
-                savings: vm.savings,
-                onEdit: (item) => _onAddAsset(saving: item),
-                onDelete: (id) => _onDeleteAsset(l10n.assetSavings, id),
+              AssetYearFilter(
+                years: vm.availableYears,
+                selected: year,
+                onChanged: vm.selectYear,
               ),
-              InvestmentList(
-                investments: vm.investments,
-                onEdit: (item) => _onAddAsset(investment: item),
-                onDelete: (id) => _onDeleteAsset(l10n.assetInvestments, id),
-              ),
-              GoldList(
-                gold: vm.gold,
-                onEdit: (item) => _onAddAsset(gold: item),
-                onDelete: (id) => _onDeleteAsset(l10n.assetGold, id),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    SavingList(
+                      savings: vm.filteredSavings,
+                      emptyMessage: filteredEmpty,
+                      onEdit: (item) => _onAddAsset(saving: item),
+                      onDelete: (id) => _onDeleteAsset(l10n.assetSavings, id),
+                    ),
+                    InvestmentList(
+                      investments: vm.filteredInvestments,
+                      emptyMessage: filteredEmpty,
+                      onEdit: (item) => _onAddAsset(investment: item),
+                      onDelete: (id) =>
+                          _onDeleteAsset(l10n.assetInvestments, id),
+                    ),
+                    GoldList(
+                      gold: vm.filteredGold,
+                      emptyMessage: filteredEmpty,
+                      onEdit: (item) => _onAddAsset(gold: item),
+                      onDelete: (id) => _onDeleteAsset(l10n.assetGold, id),
+                    ),
+                  ],
+                ),
               ),
             ],
           );

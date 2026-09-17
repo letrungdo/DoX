@@ -10,6 +10,7 @@ import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -27,6 +28,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
   late final TextEditingController _bankController;
   late final TextEditingController _amountController;
   late final TextEditingController _rateController;
+  late final TextEditingController _noteController;
   late DateTime _startDate;
 
   final _bankService = BankService();
@@ -49,6 +51,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
     _rateController = TextEditingController(
       text: saving?.interestRate.toString() ?? '',
     );
+    _noteController = TextEditingController(text: saving?.note ?? '');
     _startDate = saving?.startDate ?? DateTime.now();
   }
 
@@ -57,6 +60,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
     _bankController.dispose();
     _amountController.dispose();
     _rateController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -65,6 +69,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
     final amount = _amountController.text.toMoney() ?? 0;
     final rateText = _rateController.text;
     final rate = double.tryParse(rateText) ?? 0;
+    final note = _noteController.text.trim();
 
     setState(() {
       _bankError = bank.isEmpty ? l10n.assetErrorRequired : null;
@@ -92,6 +97,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
               amount: amount,
               interestRate: rate,
               startDate: _startDate,
+              note: note.isEmpty ? null : note,
             );
     Navigator.pop(context, saving);
   }
@@ -192,6 +198,12 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
           label: l10n.assetStartDate,
           value: _startDate,
           onChanged: (d) => setState(() => _startDate = d),
+        ),
+        CuteTextField(
+          controller: _noteController,
+          label: l10n.assetNote,
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
         ),
       ],
     );
