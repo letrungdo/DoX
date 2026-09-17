@@ -2156,6 +2156,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetErrorInvalidPrice => 'Please enter a valid price';
 
   @override
+  String get assetAverageAnnualReturn => 'Average return per year';
+
+  @override
+  String get assetAverageAnnualReturnHint =>
+      'Weighted by what each holding cost, across all three classes';
+
+  @override
+  String assetPerYear(String amount) {
+    return '≈ $amount/yr';
+  }
+
+  @override
+  String get assetCostBasis => 'Cost basis';
+
+  @override
+  String get assetCurrentValue => 'Current value';
+
+  @override
+  String get assetAllocation => 'Allocation';
+
+  @override
+  String assetShareOfPortfolio(String percent) {
+    return '$percent% of portfolio';
+  }
+
+  @override
+  String assetHoldingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count holdings',
+      one: '1 holding',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get assetStatistics => 'Statistics';
+
+  @override
+  String get assetYearlyInterest => 'Savings interest/yr';
+
+  @override
+  String get assetMaturedSavings => 'Matured deposits';
+
+  @override
+  String get assetNextMaturity => 'Next maturity';
+
+  @override
+  String assetDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days left',
+      one: '1 day left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get assetPerformance => 'Per-holding performance';
+
+  @override
+  String get assetBestPerformer => 'Best';
+
+  @override
+  String get assetWorstPerformer => 'Weakest';
+
+  @override
+  String get assetNotAvailable => 'Not yet';
+
+  @override
   String get tabRepeater => 'Repeater';
 
   @override

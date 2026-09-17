@@ -1213,6 +1213,51 @@
   "assetErrorInvalidRate": "Vui lòng nhập lãi suất hợp lệ",
   "assetErrorInvalidQuantity": "Vui lòng nhập số lượng hợp lệ",
   "assetErrorInvalidPrice": "Vui lòng nhập giá hợp lệ",
+  "assetAverageAnnualReturn": "Lợi nhuận trung bình/năm",
+  "assetAverageAnnualReturnHint": "Tính theo vốn của từng khoản, gộp cả ba loại tài sản",
+  "assetPerYear": "≈ {amount}/năm",
+  "@assetPerYear": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "assetCostBasis": "Vốn gốc",
+  "assetCurrentValue": "Giá trị hiện tại",
+  "assetAllocation": "Phân bổ danh mục",
+  "assetShareOfPortfolio": "{percent}% danh mục",
+  "@assetShareOfPortfolio": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "assetHoldingCount": "{count, plural, other{{count} khoản}}",
+  "@assetHoldingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assetStatistics": "Thống kê",
+  "assetYearlyInterest": "Lãi tiết kiệm/năm",
+  "assetMaturedSavings": "Sổ đã đáo hạn",
+  "assetNextMaturity": "Đáo hạn gần nhất",
+  "assetDaysLeft": "{count, plural, other{còn {count} ngày}}",
+  "@assetDaysLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assetPerformance": "Hiệu suất từng khoản",
+  "assetBestPerformer": "Lãi nhất",
+  "assetWorstPerformer": "Lỗ nhất",
+  "assetNotAvailable": "Chưa có",
   "tabRepeater": "Repeater",
   "repeaterConnect": "Đăng nhập router",
   "repeaterReload": "Tải lại",

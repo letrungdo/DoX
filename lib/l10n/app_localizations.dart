@@ -3913,6 +3913,108 @@ abstract class AppLocalizations {
   /// **'Please enter a valid price'**
   String get assetErrorInvalidPrice;
 
+  /// No description provided for @assetAverageAnnualReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Average return per year'**
+  String get assetAverageAnnualReturn;
+
+  /// No description provided for @assetAverageAnnualReturnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Weighted by what each holding cost, across all three classes'**
+  String get assetAverageAnnualReturnHint;
+
+  /// No description provided for @assetPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {amount}/yr'**
+  String assetPerYear(String amount);
+
+  /// No description provided for @assetCostBasis.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost basis'**
+  String get assetCostBasis;
+
+  /// No description provided for @assetCurrentValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Current value'**
+  String get assetCurrentValue;
+
+  /// No description provided for @assetAllocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Allocation'**
+  String get assetAllocation;
+
+  /// No description provided for @assetShareOfPortfolio.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of portfolio'**
+  String assetShareOfPortfolio(String percent);
+
+  /// No description provided for @assetHoldingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 holding} other{{count} holdings}}'**
+  String assetHoldingCount(int count);
+
+  /// No description provided for @assetStatistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get assetStatistics;
+
+  /// No description provided for @assetYearlyInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings interest/yr'**
+  String get assetYearlyInterest;
+
+  /// No description provided for @assetMaturedSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Matured deposits'**
+  String get assetMaturedSavings;
+
+  /// No description provided for @assetNextMaturity.
+  ///
+  /// In en, this message translates to:
+  /// **'Next maturity'**
+  String get assetNextMaturity;
+
+  /// No description provided for @assetDaysLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day left} other{{count} days left}}'**
+  String assetDaysLeft(int count);
+
+  /// No description provided for @assetPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-holding performance'**
+  String get assetPerformance;
+
+  /// No description provided for @assetBestPerformer.
+  ///
+  /// In en, this message translates to:
+  /// **'Best'**
+  String get assetBestPerformer;
+
+  /// No description provided for @assetWorstPerformer.
+  ///
+  /// In en, this message translates to:
+  /// **'Weakest'**
+  String get assetWorstPerformer;
+
+  /// No description provided for @assetNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get assetNotAvailable;
+
   /// No description provided for @tabRepeater.
   ///
   /// In en, this message translates to:

@@ -1,10 +1,11 @@
-import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/model/asset/asset_summary.dart';
+import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+/// The page's headline: everything held, what it cost, and what it has made.
 class AssetSummaryCard extends StatelessWidget {
   const AssetSummaryCard({super.key, required this.summary});
 
@@ -12,69 +13,83 @@ class AssetSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final colors = context.colors;
     final textTheme = context.textTheme;
-    final scheme = context.theme.colorScheme;
-    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+    final format = AssetFormat();
+    final profit = summary.totalProfitLoss;
+    final profitColor = profit >= 0 ? colors.success : colors.danger;
 
-    return Card(
-      elevation: 0,
-      color: scheme.primaryContainer.withValues(alpha: 0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Dimens.radiusCard),
-        side: BorderSide(color: scheme.primaryContainer.withValues(alpha: 0.2)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text(
-              "Tổng tài sản",
-              style: textTheme.secondary.size13,
+    return NeuCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Text(l10n.assetTotal, style: textTheme.secondary.size13),
+          const SizedBox(height: 4),
+          FittedBox(
+            child: Text(
+              format.money(summary.totalAssets),
+              style: textTheme.primary.bold.size24.textColor(colors.money),
             ),
-            const SizedBox(height: 4),
-            Text(
-              currencyFormat.format(summary.totalAssets),
-              style: textTheme.primary.bold.size20.textColor(scheme.primary),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMinorStat(
-                  context,
-                  "Lãi tháng",
-                  currencyFormat.format(summary.monthlyInterest),
-                  colors.success,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "${format.signedCompact(profit)}"
+            " (${format.signedPercent(summary.totalProfitLossPercent)})",
+            style: textTheme.primary.bold.size13.textColor(profitColor),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _MinorStat(
+                  label: l10n.assetCostBasis,
+                  value: format.money(summary.totalCost),
                 ),
-                _buildMinorStat(
-                  context,
-                  "Lợi nhuận/Lỗ",
-                  currencyFormat.format(summary.totalProfitLoss),
-                  summary.totalProfitLoss >= 0 ? colors.success : colors.danger,
+              ),
+              Expanded(
+                child: _MinorStat(
+                  label: l10n.assetMonthlyInterest,
+                  value: format.money(summary.monthlyInterest),
+                  valueColor: summary.monthlyInterest > 0
+                      ? colors.success
+                      : null,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildMinorStat(
-    BuildContext context,
-    String label,
-    String value,
-    Color valueColor,
-  ) {
+class _MinorStat extends StatelessWidget {
+  const _MinorStat({required this.label, required this.value, this.valueColor});
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
     final textTheme = context.textTheme;
+    final style = textTheme.primary.bold.size15;
+
     return Column(
       children: [
-        Text(label, style: textTheme.secondary.size13),
-        const SizedBox(height: 2),
         Text(
-          value,
-          style: textTheme.primary.bold.textColor(valueColor),
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.secondary.size13,
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          child: Text(
+            value,
+            style: valueColor == null ? style : style.textColor(valueColor!),
+          ),
         ),
       ],
     );

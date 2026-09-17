@@ -2147,6 +2147,76 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetErrorInvalidPrice => 'Vui lòng nhập giá hợp lệ';
 
   @override
+  String get assetAverageAnnualReturn => 'Lợi nhuận trung bình/năm';
+
+  @override
+  String get assetAverageAnnualReturnHint =>
+      'Tính theo vốn của từng khoản, gộp cả ba loại tài sản';
+
+  @override
+  String assetPerYear(String amount) {
+    return '≈ $amount/năm';
+  }
+
+  @override
+  String get assetCostBasis => 'Vốn gốc';
+
+  @override
+  String get assetCurrentValue => 'Giá trị hiện tại';
+
+  @override
+  String get assetAllocation => 'Phân bổ danh mục';
+
+  @override
+  String assetShareOfPortfolio(String percent) {
+    return '$percent% danh mục';
+  }
+
+  @override
+  String assetHoldingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count khoản',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get assetStatistics => 'Thống kê';
+
+  @override
+  String get assetYearlyInterest => 'Lãi tiết kiệm/năm';
+
+  @override
+  String get assetMaturedSavings => 'Sổ đã đáo hạn';
+
+  @override
+  String get assetNextMaturity => 'Đáo hạn gần nhất';
+
+  @override
+  String assetDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'còn $count ngày',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get assetPerformance => 'Hiệu suất từng khoản';
+
+  @override
+  String get assetBestPerformer => 'Lãi nhất';
+
+  @override
+  String get assetWorstPerformer => 'Lỗ nhất';
+
+  @override
+  String get assetNotAvailable => 'Chưa có';
+
+  @override
   String get tabRepeater => 'Repeater';
 
   @override

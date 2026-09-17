@@ -192,32 +192,53 @@ class AssetViewModel extends CoreViewModel {
   }
 
   void _calculateSummary() {
-    double totalSavingsPrincipal = 0;
-    double totalSavingsInterest = 0;
+    double savingsPrincipal = 0;
+    double savingsInterest = 0;
     double monthlyInterest = 0;
     double weightedReturnSum = 0;
     double totalAssetsForReturn = 0;
+    int maturedSavingsCount = 0;
+    DateTime? nextMaturityDate;
+    String? nextMaturityBank;
+    final now = DateTime.now();
 
     for (final s in _savings) {
-      totalSavingsPrincipal += s.amount;
-      totalSavingsInterest += s.accruedInterest;
+      savingsPrincipal += s.amount;
+      savingsInterest += s.accruedInterest;
       monthlyInterest += s.monthlyInterest;
       // A matured deposit no longer earns its rate, so it stops counting
       // towards the portfolio's yearly return.
-      if (!s.isMatured) {
+      if (s.isMatured) {
+        maturedSavingsCount++;
+      } else {
         weightedReturnSum += s.amount * s.interestRate;
         totalAssetsForReturn += s.amount;
+
+        final maturity = s.maturityDate;
+        // The soonest term still to run: what the next decision is about.
+        if (maturity != null &&
+            maturity.isAfter(now) &&
+            (nextMaturityDate == null || maturity.isBefore(nextMaturityDate))) {
+          nextMaturityDate = maturity;
+          nextMaturityBank = s.bankName;
+        }
       }
     }
 
-    double totalInvestmentsCurrent = 0;
-    double totalInvestmentsProfitLoss = 0;
+    // Best and worst are ranked on the holdings that can move: a deposit only
+    // ever accrues, so it would take the "best" slot on day one and say
+    // nothing.
+    final performers = <AssetPerformer>[];
+
+    double investmentsCost = 0;
+    double investmentsValue = 0;
     for (final inv in _investments) {
       final currentPrice = getCurrentInvestmentPrice(inv);
       final currentValue = inv.quantity * currentPrice;
       final buyValue = inv.quantity * getBuyPriceInVnd(inv);
-      totalInvestmentsCurrent += currentValue;
-      totalInvestmentsProfitLoss += currentValue - buyValue;
+      investmentsValue += currentValue;
+      investmentsCost += buyValue;
+      performers.add(_performer(inv.symbol, buyValue, currentValue));
 
       final annualReturn = _annualizedReturn(
         buyValue,
@@ -230,14 +251,15 @@ class AssetViewModel extends CoreViewModel {
       }
     }
 
-    double totalGoldCurrent = 0;
-    double totalGoldProfitLoss = 0;
+    double goldCost = 0;
+    double goldValue = 0;
     for (final g in _gold) {
       final currentPrice = getCurrentGoldPrice(g);
       final currentValue = g.quantity * currentPrice;
       final buyValue = g.quantity * g.buyPrice;
-      totalGoldCurrent += currentValue;
-      totalGoldProfitLoss += currentValue - buyValue;
+      goldValue += currentValue;
+      goldCost += buyValue;
+      performers.add(_performer(g.goldType, buyValue, currentValue));
 
       final annualReturn = _annualizedReturn(buyValue, currentValue, g.buyDate);
       if (annualReturn != null) {
@@ -250,16 +272,45 @@ class AssetViewModel extends CoreViewModel {
         ? weightedReturnSum / totalAssetsForReturn
         : 0.0;
 
+    performers.sort(
+      (a, b) => b.profitLossPercent.compareTo(a.profitLossPercent),
+    );
+
     _summary = AssetSummary(
-      totalSavings: totalSavingsPrincipal + totalSavingsInterest,
-      totalInvestments: totalInvestmentsCurrent,
-      totalGold: totalGoldCurrent,
+      savings: AssetClassStat(
+        cost: savingsPrincipal,
+        value: savingsPrincipal + savingsInterest,
+        count: _savings.length,
+      ),
+      investments: AssetClassStat(
+        cost: investmentsCost,
+        value: investmentsValue,
+        count: _investments.length,
+      ),
+      gold: AssetClassStat(
+        cost: goldCost,
+        value: goldValue,
+        count: _gold.length,
+      ),
       monthlyInterest: monthlyInterest,
-      totalProfitLoss:
-          totalSavingsInterest +
-          totalInvestmentsProfitLoss +
-          totalGoldProfitLoss,
       averageAnnualReturn: avgAnnualReturn,
+      maturedSavingsCount: maturedSavingsCount,
+      nextMaturityDate: nextMaturityDate,
+      nextMaturityBank: nextMaturityBank,
+      best: performers.isEmpty ? null : performers.first,
+      // With a single holding there is no worst to contrast it with — the same
+      // card twice reads as a bug.
+      worst: performers.length > 1 ? performers.last : null,
+    );
+  }
+
+  AssetPerformer _performer(String name, double cost, double value) {
+    final profit = value - cost;
+
+    return AssetPerformer(
+      name: name,
+      profitLoss: profit,
+      profitLossPercent: cost > 0 ? (profit / cost) * 100 : 0,
     );
   }
 

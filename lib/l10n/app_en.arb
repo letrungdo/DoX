@@ -1255,6 +1255,51 @@
   "assetErrorInvalidRate": "Please enter a valid interest rate",
   "assetErrorInvalidQuantity": "Please enter a valid quantity",
   "assetErrorInvalidPrice": "Please enter a valid price",
+  "assetAverageAnnualReturn": "Average return per year",
+  "assetAverageAnnualReturnHint": "Weighted by what each holding cost, across all three classes",
+  "assetPerYear": "≈ {amount}/yr",
+  "@assetPerYear": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "assetCostBasis": "Cost basis",
+  "assetCurrentValue": "Current value",
+  "assetAllocation": "Allocation",
+  "assetShareOfPortfolio": "{percent}% of portfolio",
+  "@assetShareOfPortfolio": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "assetHoldingCount": "{count, plural, =1{1 holding} other{{count} holdings}}",
+  "@assetHoldingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assetStatistics": "Statistics",
+  "assetYearlyInterest": "Savings interest/yr",
+  "assetMaturedSavings": "Matured deposits",
+  "assetNextMaturity": "Next maturity",
+  "assetDaysLeft": "{count, plural, =1{1 day left} other{{count} days left}}",
+  "@assetDaysLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assetPerformance": "Per-holding performance",
+  "assetBestPerformer": "Best",
+  "assetWorstPerformer": "Weakest",
+  "assetNotAvailable": "Not yet",
   "tabRepeater": "Repeater",
   "repeaterConnect": "Log in to router",
   "repeaterReload": "Reload",
