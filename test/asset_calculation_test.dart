@@ -3,7 +3,9 @@ import 'package:do_x/model/asset/asset_gold.dart';
 import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/gold_type.dart';
+import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/model/fx/gold_model.dart';
+import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -214,6 +216,8 @@ void main() {
     });
   });
 
+  _priceInputTests();
+
   group('crypto pricing', () {
     AssetInvestment coin({double buyPrice = 100, double quantity = 2}) {
       return AssetInvestment(
@@ -316,6 +320,30 @@ void main() {
     test('a commodity not paired against USD is not converted', () {
       expect(MarketCode.rice.isUsdQuoted, isFalse);
       expect(MarketCode.usOil.isUsdQuoted, isFalse);
+    });
+  });
+}
+
+/// A price written into an input field has to survive the round trip: the
+/// field parses it back by stripping commas, and a coin can be worth a
+/// millionth of a dollar.
+void _priceInputTests() {
+  group('price input', () {
+    final format = AssetFormat();
+
+    test('a six-figure price keeps its grouping', () {
+      expect(format.priceInput(76559.94), '76,559.94');
+      expect('76,559.94'.toMoney(), 76559.94);
+    });
+
+    test('a price below a cent keeps every digit', () {
+      expect(format.priceInput(0.00000812), '0.00000812');
+      expect('0.00000812'.toMoney(), 0.00000812);
+    });
+
+    test('a whole number carries no decimals', () {
+      expect(format.priceInput(1), '1');
+      expect(format.priceInput(26000), '26,000');
     });
   });
 }

@@ -196,8 +196,11 @@ class _SellPriceDialogState extends State<_SellPriceDialog> {
     // Starts from the price already in use, so the common edit — nudging the
     // feed's quote to what a shop actually pays — is a couple of digits rather
     // than a whole number typed from scratch.
+    final price = widget.price.price;
+    // Not toCurrency(): rounded to two decimals a coin worth 0.00000812 comes
+    // back as 0, and confirming the dialog would save it that way.
     _controller = TextEditingController(
-      text: widget.price.price?.toCurrency() ?? '',
+      text: price == null ? '' : AssetFormat().priceInput(price),
     );
   }
 

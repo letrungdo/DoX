@@ -84,7 +84,9 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
       text: inv?.quantity.toString() ?? '',
     );
     _priceController = TextEditingController(
-      text: inv?.buyPrice.toCurrency() ?? '',
+      // Not toCurrency(): that rounds to two decimals, which reads a coin
+      // bought at 0.00000812 back as 0 and would save it that way.
+      text: inv == null ? '' : AssetFormat().priceInput(inv.buyPrice),
     );
     _rateController = TextEditingController(
       text: (inv?.buyFxRate ?? widget.usdRate).toCurrency(),
@@ -136,6 +138,17 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
     if (picked == null) return;
 
     setState(() {
+      // A price typed for another coin means nothing for this one, so picking a
+      // different coin fills the field with what that coin costs today — which
+      // is the right answer for a holding bought today and a starting point for
+      // any other. Re-picking the same coin leaves what was recorded alone.
+      if (picked.symbol != _symbol) {
+        final price = picked.price;
+        _priceController.text = price == null
+            ? ''
+            : AssetFormat().priceInput(price);
+        _priceError = null;
+      }
       _picked = picked;
       _symbol = picked.symbol;
       _symbolError = null;

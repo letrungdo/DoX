@@ -20,6 +20,7 @@ class AssetFormat {
   static final _grouped = NumberFormat('#,##0', 'en');
   static final _decimal = NumberFormat('#,##0.##', 'en');
   static final _tiny = NumberFormat('0.########', 'en');
+  static final _input = NumberFormat('#,##0.########', 'en');
 
   /// The headline figure: "200,920,548đ".
   String money(double value) => '${_grouped.format(value)}đ';
@@ -41,6 +42,12 @@ class AssetFormat {
   String signedPercent(double value) {
     return '${_sign(value)}${_decimal.format(value)}%';
   }
+
+  /// A price written back into an input field: grouped the way the field
+  /// types it, and keeping every decimal a coin can be worth. The fields parse
+  /// it back by stripping the commas, so the grouping is fixed to "en" rather
+  /// than following the app's language.
+  String priceInput(double value) => _input.format(value);
 
   /// An interest rate as typed, without a trailing ".0": "7", "6.8".
   String rate(double value) => _decimal.format(value);
