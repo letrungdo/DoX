@@ -303,7 +303,8 @@ class ChickenViewModel extends CoreViewModel {
         Expense.fromJson,
         (value) => _globalExpenses = value,
       );
-      _lastLoadedOwnerId = _auth.userId; // Mark that we are now holding this user's cached data
+      _lastLoadedOwnerId =
+          _auth.userId; // Mark that we are now holding this user's cached data
       notifyListenersSafe();
     } catch (e) {
       logger.e('restore chicken cache failed', error: e);
@@ -732,13 +733,34 @@ class ChickenViewModel extends CoreViewModel {
       // If the owner has changed while the request was in flight, or if we are
       // switching between shared and private data, the current memory is
       // irrelevant and dangerous (it contains records from a different owner).
-      final ownerChanged = activeOwnerId != _lastLoadedOwnerId;
-      if (ownerChanged || year == null) {
+      // A *first* load is not such a switch: nothing has been loaded for
+      // another owner, so what is in memory is this user's own — a record just
+      // saved locally, or the cache, which is keyed by user id — and survives.
+      final ownerChanged =
+          _lastLoadedOwnerId != null && activeOwnerId != _lastLoadedOwnerId;
+      if (ownerChanged) {
         _batches = [];
         _globalCockSales = [];
         _globalExpenses = [];
-        _lastLoadedOwnerId = activeOwnerId;
+      } else if (year == null) {
+        // A year-less read replaces what it asked for, but only that: a section
+        // this load never requested keeps what it had, and one a local write
+        // has moved on from keeps the newer copy — the fetched rows for it are
+        // dropped below, so wiping it here would lose the record entirely.
+        if (sections.contains(ChickenSection.batches) &&
+            isCurrent(ChickenSection.batches)) {
+          _batches = [];
+        }
+        if (sections.contains(ChickenSection.globalCockSales) &&
+            isCurrent(ChickenSection.globalCockSales)) {
+          _globalCockSales = [];
+        }
+        if (sections.contains(ChickenSection.globalExpenses) &&
+            isCurrent(ChickenSection.globalExpenses)) {
+          _globalExpenses = [];
+        }
       }
+      _lastLoadedOwnerId = activeOwnerId;
 
       final batches = data.batches;
       if (batches != null && isCurrent(ChickenSection.batches)) {
@@ -751,7 +773,7 @@ class ChickenViewModel extends CoreViewModel {
           batches
               .where((b) => !_pendingDeletedBatchIds.contains(b.id))
               .toList(),
-          (ownerChanged || year == null) ? [] : _batches,
+          _batches,
           serverYear,
           (b) => b.incubationDate.year,
           (b) => b.id,
@@ -765,7 +787,7 @@ class ChickenViewModel extends CoreViewModel {
           isCurrent(ChickenSection.globalCockSales)) {
         _globalCockSales = _mergeYearWindow(
           data.globalCockSales!,
-          (ownerChanged || year == null) ? [] : _globalCockSales,
+          _globalCockSales,
           serverYear,
           (s) => s.date.year,
           (s) => s.id,
@@ -779,7 +801,7 @@ class ChickenViewModel extends CoreViewModel {
           isCurrent(ChickenSection.globalExpenses)) {
         _globalExpenses = _mergeYearWindow(
           data.globalExpenses!,
-          (ownerChanged || year == null) ? [] : _globalExpenses,
+          _globalExpenses,
           serverYear,
           (e) => e.date.year,
           (e) => e.id,
@@ -855,7 +877,7 @@ class ChickenViewModel extends CoreViewModel {
     _activeOwnerEmail = source.email;
     await _saveDataSourceSelection(source);
     _clearLoadedData();
-    
+
     // Crucial: Only restore from cache if switching back to the current user's OWN private data!
     // Shared data (isReadOnly) should NEVER load private local cache.
     if (!isReadOnly) {
@@ -915,7 +937,7 @@ class ChickenViewModel extends CoreViewModel {
     _loadTaskSections = const {};
     _loadTaskYear = null;
     _cacheRestored = false;
-    _lastLoadedOwnerId = null; 
+    _lastLoadedOwnerId = null;
   }
 
   /// Sends a change that was already applied to the local lists to the server.
