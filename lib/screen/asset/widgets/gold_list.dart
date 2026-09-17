@@ -1,8 +1,7 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/asset/asset_gold.dart';
+import 'package:do_x/screen/asset/widgets/asset_refreshable_list.dart';
 import 'package:do_x/screen/asset/widgets/asset_sell_price_bar.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
@@ -16,6 +15,7 @@ class GoldList extends StatelessWidget {
     super.key,
     required this.gold,
     this.emptyMessage,
+    this.onRefresh,
     this.onEdit,
     this.onDelete,
   });
@@ -25,31 +25,28 @@ class GoldList extends StatelessWidget {
   /// Shown instead of the stock "nothing recorded yet" line when the list is
   /// empty only because a filter narrowed it.
   final String? emptyMessage;
+  final Future<void> Function()? onRefresh;
   final void Function(AssetGold item)? onEdit;
   final void Function(String id)? onDelete;
 
   @override
   Widget build(BuildContext context) {
-    if (gold.isEmpty) {
-      return Center(child: Text(emptyMessage ?? context.l10n.assetGoldEmpty));
-    }
-
     final vm = context.watch<AssetViewModel>();
 
-    return ListView.builder(
-      padding: Dimens.screenPadding,
+    return AssetRefreshableList(
+      onRefresh: onRefresh,
+      emptyMessage: emptyMessage ?? context.l10n.assetGoldEmpty,
       // One extra row at the top: the prices everything below is valued at.
-      itemCount: gold.length + 1,
+      itemCount: gold.isEmpty ? 0 : gold.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
           return AssetSellPriceBar(
             prices: _sellPrices(vm),
             onChanged: vm.setGoldSellPrice,
-          ).contentConstrainedBox();
+          );
         }
-        final item = gold[index - 1];
 
-        return _buildItem(context, item).contentConstrainedBox();
+        return _buildItem(context, gold[index - 1]);
       },
     );
   }

@@ -15,6 +15,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
@@ -63,6 +64,9 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
     return AppScaffold(
       appBar: DoAppBar(
         title: l10n.assetTitle,
+        titleSuffix: AppBarSyncIcon<AssetViewModel>(
+          selector: (vm) => vm.isBusy,
+        ),
         actions: [
           NeuIconButton(
             icon: Icons.account_balance_wallet_rounded,
@@ -107,12 +111,14 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
                     SavingList(
                       savings: vm.filteredSavings,
                       emptyMessage: filteredEmpty,
+                      onRefresh: vm.refresh,
                       onEdit: (item) => _onAddAsset(saving: item),
                       onDelete: (id) => _onDeleteAsset(l10n.assetSavings, id),
                     ),
                     InvestmentList(
                       investments: vm.filteredInvestments,
                       emptyMessage: filteredEmpty,
+                      onRefresh: vm.refresh,
                       onEdit: (item) => _onAddAsset(investment: item),
                       onDelete: (id) =>
                           _onDeleteAsset(l10n.assetInvestments, id),
@@ -120,6 +126,7 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
                     GoldList(
                       gold: vm.filteredGold,
                       emptyMessage: filteredEmpty,
+                      onRefresh: vm.refresh,
                       onEdit: (item) => _onAddAsset(gold: item),
                       onDelete: (id) => _onDeleteAsset(l10n.assetGold, id),
                     ),
@@ -143,7 +150,9 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
     AssetGold? gold,
   }) async {
     final l10n = context.l10n;
-    String? type;
+    // Adding from the button means adding to the tab being looked at, so the
+    // sheet that used to ask which kind only stood between the two.
+    final String type;
 
     if (saving != null) {
       type = l10n.assetSavings;
@@ -152,15 +161,12 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
     } else if (gold != null) {
       type = l10n.assetGold;
     } else {
-      type = await showAppOptionSheet<String>(
-        context,
-        title: l10n.assetAdd,
-        options: [l10n.assetSavings, l10n.assetInvestments, l10n.assetGold],
-        selected: null,
-      );
+      type = switch (_tabController.index) {
+        1 => l10n.assetInvestments,
+        2 => l10n.assetGold,
+        _ => l10n.assetSavings,
+      };
     }
-
-    if (type == null || !mounted) return;
 
     if (type == l10n.assetSavings) {
       final result = await showAppModal<AssetSaving>(

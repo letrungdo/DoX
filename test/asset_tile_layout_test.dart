@@ -108,7 +108,11 @@ void main() {
       await _pump(tester, const GoldList(gold: []));
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(ListView), findsNothing);
+      expect(find.byType(AssetTileCard), findsNothing);
+      // The empty state is a scroll view, not a bare label: that is what lets
+      // it be pulled down to refresh.
+      expect(find.text('Chưa có ghi chép mua vàng nào.'), findsOneWidget);
+      expect(find.byType(Scrollable), findsOneWidget);
     });
   });
 
