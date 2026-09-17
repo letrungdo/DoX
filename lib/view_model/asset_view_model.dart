@@ -179,6 +179,29 @@ class AssetViewModel extends CoreViewModel {
     return _filterByYear(_gold, (e) => e.buyDate);
   }
 
+  /// Newest first. Two holdings bought on the same day fall back to the order
+  /// they were recorded in, newest first as well, so the list never shuffles
+  /// between refreshes.
+  static List<T> sortByDateDesc<T>(
+    List<T> items,
+    DateTime Function(T item) dateOf,
+    DateTime? Function(T item) createdAtOf,
+  ) {
+    final sorted = [...items];
+    sorted.sort((a, b) {
+      final byDate = dateOf(b).compareTo(dateOf(a));
+      if (byDate != 0) return byDate;
+
+      final createdA = createdAtOf(a);
+      final createdB = createdAtOf(b);
+      if (createdA == null || createdB == null) return 0;
+
+      return createdB.compareTo(createdA);
+    });
+
+    return sorted;
+  }
+
   List<T> _filterByYear<T>(List<T> items, DateTime Function(T item) dateOf) {
     final year = _selectedYear;
     if (year == null) return items;
@@ -313,9 +336,24 @@ class AssetViewModel extends CoreViewModel {
         _repository.getGold(),
       ]);
 
-      _savings = results[0] as List<AssetSaving>;
-      _investments = results[1] as List<AssetInvestment>;
-      _gold = results[2] as List<AssetGold>;
+      // Newest first, by the day the money was put in rather than the day the
+      // record was typed: a deposit entered late still belongs where it was
+      // opened.
+      _savings = sortByDateDesc(
+        results[0] as List<AssetSaving>,
+        (e) => e.startDate,
+        (e) => e.createdAt,
+      );
+      _investments = sortByDateDesc(
+        results[1] as List<AssetInvestment>,
+        (e) => e.buyDate,
+        (e) => e.createdAt,
+      );
+      _gold = sortByDateDesc(
+        results[2] as List<AssetGold>,
+        (e) => e.buyDate,
+        (e) => e.createdAt,
+      );
 
       await Future.wait([_fetchMarketData(), _fetchBanks(), _fetchCrypto()]);
       _calculateSummary();

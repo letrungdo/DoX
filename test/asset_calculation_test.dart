@@ -198,6 +198,57 @@ void main() {
     });
   });
 
+  group('ordering', () {
+    AssetGold bought(String id, DateTime date, {DateTime? createdAt}) {
+      return AssetGold(
+        id: id,
+        goldType: GoldAssetType.sjcPiece.label,
+        quantity: 1,
+        buyPrice: 100000000,
+        buyDate: date,
+        createdAt: createdAt,
+      );
+    }
+
+    List<String> idsOf(List<AssetGold> items) {
+      return AssetViewModel.sortByDateDesc(
+        items,
+        (e) => e.buyDate,
+        (e) => e.createdAt,
+      ).map((e) => e.id).toList();
+    }
+
+    test('the newest purchase comes first', () {
+      final items = [
+        bought('old', DateTime(2024, 3, 1)),
+        bought('new', DateTime(2026, 9, 1)),
+        bought('middle', DateTime(2025, 6, 1)),
+      ];
+
+      expect(idsOf(items), ['new', 'middle', 'old']);
+    });
+
+    test('two bought the same day fall back to when they were recorded', () {
+      final day = DateTime(2026, 9, 1);
+      final items = [
+        bought('first', day, createdAt: DateTime(2026, 9, 1, 8)),
+        bought('second', day, createdAt: DateTime(2026, 9, 1, 9)),
+      ];
+
+      expect(idsOf(items), ['second', 'first']);
+    });
+
+    test('sorting leaves the list it was given alone', () {
+      final items = [
+        bought('old', DateTime(2024, 3, 1)),
+        bought('new', DateTime(2026, 9, 1)),
+      ];
+      idsOf(items);
+
+      expect(items.map((e) => e.id), ['old', 'new']);
+    });
+  });
+
   group('year filter', () {
     test('an empty portfolio offers no years and filters to nothing', () {
       final vm = AssetViewModel();
