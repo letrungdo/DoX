@@ -19,6 +19,8 @@ abstract class _$AssetInvestmentCWProxy {
 
   AssetInvestment buyDate(DateTime buyDate);
 
+  AssetInvestment buyFxRate(double? buyFxRate);
+
   AssetInvestment note(String? note);
 
   AssetInvestment createdAt(DateTime? createdAt);
@@ -39,6 +41,7 @@ abstract class _$AssetInvestmentCWProxy {
     double quantity,
     double buyPrice,
     DateTime buyDate,
+    double? buyFxRate,
     String? note,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -71,6 +74,9 @@ class _$AssetInvestmentCWProxyImpl implements _$AssetInvestmentCWProxy {
   AssetInvestment buyDate(DateTime buyDate) => call(buyDate: buyDate);
 
   @override
+  AssetInvestment buyFxRate(double? buyFxRate) => call(buyFxRate: buyFxRate);
+
+  @override
   AssetInvestment note(String? note) => call(note: note);
 
   @override
@@ -94,6 +100,7 @@ class _$AssetInvestmentCWProxyImpl implements _$AssetInvestmentCWProxy {
     Object? quantity = const $CopyWithPlaceholder(),
     Object? buyPrice = const $CopyWithPlaceholder(),
     Object? buyDate = const $CopyWithPlaceholder(),
+    Object? buyFxRate = const $CopyWithPlaceholder(),
     Object? note = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? updatedAt = const $CopyWithPlaceholder(),
@@ -123,6 +130,10 @@ class _$AssetInvestmentCWProxyImpl implements _$AssetInvestmentCWProxy {
           ? _value.buyDate
           // ignore: cast_nullable_to_non_nullable
           : buyDate as DateTime,
+      buyFxRate: buyFxRate == const $CopyWithPlaceholder()
+          ? _value.buyFxRate
+          // ignore: cast_nullable_to_non_nullable
+          : buyFxRate as double?,
       note: note == const $CopyWithPlaceholder()
           ? _value.note
           // ignore: cast_nullable_to_non_nullable
@@ -158,6 +169,7 @@ AssetInvestment _$AssetInvestmentFromJson(Map<String, dynamic> json) =>
       quantity: (json['quantity'] as num).toDouble(),
       buyPrice: (json['buy_price'] as num).toDouble(),
       buyDate: DateTime.parse(json['buy_date'] as String),
+      buyFxRate: (json['buy_fx_rate'] as num?)?.toDouble(),
       note: json['note'] as String?,
       createdAt: json['created_at'] == null
           ? null
@@ -175,6 +187,7 @@ Map<String, dynamic> _$AssetInvestmentToJson(AssetInvestment instance) =>
       'quantity': instance.quantity,
       'buy_price': instance.buyPrice,
       'buy_date': instance.buyDate.toIso8601String(),
+      'buy_fx_rate': instance.buyFxRate,
       'note': instance.note,
       'created_at': ?instance.createdAt?.toIso8601String(),
       'updated_at': ?instance.updatedAt?.toIso8601String(),

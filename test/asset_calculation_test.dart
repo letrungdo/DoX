@@ -1,5 +1,6 @@
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/model/asset/asset_gold.dart';
+import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/gold_type.dart';
 import 'package:do_x/model/fx/gold_model.dart';
@@ -210,6 +211,92 @@ void main() {
 
       vm.selectYear(null);
       expect(vm.selectedYear, isNull);
+    });
+  });
+
+  group('crypto pricing', () {
+    AssetInvestment coin({double buyPrice = 100, double quantity = 2}) {
+      return AssetInvestment(
+        id: 'i1',
+        symbol: 'BTCUSDT',
+        type: InvestmentType.crypto,
+        quantity: quantity,
+        buyPrice: buyPrice,
+        buyDate: DateTime.now().subtract(const Duration(days: 365)),
+      );
+    }
+
+    test('a pair is read as the coin inside it', () {
+      expect(AssetViewModel.baseOf('BTCUSDT'), 'BTC');
+      expect(AssetViewModel.baseOf('1000PEPEUSDT'), '1000PEPE');
+      // Not a USDT pair: nothing to strip, so it is left as it is.
+      expect(AssetViewModel.baseOf('BTC'), 'BTC');
+      // USDT itself is the coin, not an empty pair quoted in itself.
+      expect(AssetViewModel.baseOf('USDT'), 'USDT');
+    });
+
+    test('USDT is worth one of itself without asking a feed', () {
+      final vm = AssetViewModel();
+      final usdt = AssetInvestment(
+        id: 'i2',
+        symbol: 'USDT',
+        type: InvestmentType.crypto,
+        quantity: 500,
+        buyPrice: 1,
+        buyDate: DateTime.now(),
+      );
+
+      expect(vm.marketInvestmentPrice('USDT'), 1);
+      expect(vm.getCurrentInvestmentPrice(usdt), vm.usdRate);
+    });
+
+    test('a balance bought at a lower rate has gained on the rate alone', () {
+      final vm = AssetViewModel();
+      // Every USDT figure is unchanged — one USDT is one USDT — so the only
+      // thing that can have moved is the đồng, and it must show up.
+      final usdt = AssetInvestment(
+        id: 'i3',
+        symbol: 'USDT',
+        type: InvestmentType.crypto,
+        quantity: 500,
+        buyPrice: 1,
+        buyFxRate: vm.usdRate - 1800,
+        buyDate: DateTime.now().subtract(const Duration(days: 365)),
+      );
+
+      expect(vm.getBuyPriceInVnd(usdt), vm.usdRate - 1800);
+      final profit =
+          usdt.quantity *
+          (vm.getCurrentInvestmentPrice(usdt) - vm.getBuyPriceInVnd(usdt));
+      expect(profit, closeTo(500 * 1800, 1));
+    });
+
+    test('a record made before the rate was kept uses today\'s', () {
+      final vm = AssetViewModel();
+
+      expect(vm.getBuyPriceInVnd(coin()), 100 * vm.usdRate);
+    });
+
+    test('a price in USDT is counted in đồng', () {
+      final vm = AssetViewModel();
+      // Nothing has been fetched, so the holding is priced at what was paid —
+      // converted at the rate the view model falls back to.
+      final rate = vm.usdRate;
+
+      expect(vm.getBuyPriceInVnd(coin()), 100 * rate);
+      expect(vm.getCurrentInvestmentPrice(coin()), 100 * rate);
+    });
+
+    test('a hand-typed sell price is read in USDT too', () {
+      final vm = AssetViewModel()..setInvestmentSellPrice('BTCUSDT', 150);
+
+      expect(vm.getCurrentInvestmentPrice(coin()), 150 * vm.usdRate);
+      // 2 coins bought a year ago at 100, now worth 150: 100 USDT of gain over
+      // the year, half of what was paid.
+      final estimate = vm.getInvestmentEstimatedReturn(coin());
+      expect(estimate, isNotNull);
+      expect(estimate!.perYear, closeTo(100 * vm.usdRate, vm.usdRate));
+      expect(estimate.perYearPercent, closeTo(50, 0.5));
     });
   });
 

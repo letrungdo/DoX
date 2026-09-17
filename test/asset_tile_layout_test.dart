@@ -153,39 +153,41 @@ void main() {
 
   _bankLogoTests();
 
-  group('investment tile', () {
-    testWidgets('a dollar-quoted holding fits on a narrow phone', (
-      tester,
-    ) async {
+  group('crypto tile', () {
+    testWidgets('a coin holding fits on a narrow phone', (tester) async {
       final investment = AssetInvestment(
         id: 'i1',
-        symbol: 'XAUUSD',
-        type: InvestmentType.stock,
-        quantity: 2,
-        buyPrice: 3600,
+        symbol: 'BTCUSDT',
+        type: InvestmentType.crypto,
+        quantity: 0.25,
+        buyPrice: 76559.94,
         buyDate: DateTime.now().subtract(const Duration(days: 389)),
       );
 
       await _pump(tester, InvestmentList(investments: [investment]));
 
       expect(tester.takeException(), isNull);
-      expect(find.text('XAUUSD'), findsOneWidget);
+      // The tile is headed by the coin, not by the pair it trades in.
+      expect(find.text('BTC'), findsWidgets);
+      expect(find.text('BTCUSDT'), findsNothing);
       _expectAmountsFlushRight(tester);
     });
 
-    testWidgets('a đồng-quoted holding fits too', (tester) async {
+    testWidgets('a coin worth a fraction of a cent fits too', (tester) async {
       final investment = AssetInvestment(
         id: 'i2',
-        symbol: 'VNIndex',
-        type: InvestmentType.stock,
-        quantity: 1000,
-        buyPrice: 1250000,
+        symbol: 'PEPEUSDT',
+        type: InvestmentType.crypto,
+        quantity: 120000000,
+        buyPrice: 0.00000812,
         buyDate: DateTime.now().subtract(const Duration(days: 40)),
       );
 
       await _pump(tester, InvestmentList(investments: [investment]));
 
       expect(tester.takeException(), isNull);
+      // Rounded to two decimals this price reads as "0.00 USDT".
+      expect(find.textContaining('0.00000812'), findsOneWidget);
     });
   });
 }

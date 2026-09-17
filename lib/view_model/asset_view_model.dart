@@ -1,15 +1,15 @@
-import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/model/asset/asset_gold.dart';
 import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/asset_summary.dart';
 import 'package:do_x/model/asset/gold_type.dart';
 import 'package:do_x/model/bank/bank.dart';
+import 'package:do_x/model/crypto/crypto_symbol.dart';
 import 'package:do_x/model/fx/gold_model.dart';
-import 'package:do_x/model/market/market_overview.dart';
 import 'package:do_x/repository/asset_repository.dart';
 import 'package:do_x/repository/client/error_handler.dart';
 import 'package:do_x/services/bank_service.dart';
+import 'package:do_x/services/binance_service.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/services/fx_rate_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -34,6 +34,7 @@ class AssetViewModel extends CoreViewModel {
   final AssetRepository _repository = AssetRepository();
   final FxRateService _fxService = FxRateService();
   final BankService _bankService = BankService();
+  final BinanceService _binanceService = BinanceService();
 
   List<AssetSaving> _savings = [];
   List<AssetInvestment> _investments = [];
@@ -62,7 +63,27 @@ class AssetViewModel extends CoreViewModel {
         .firstOrNull;
   }
 
-  Map<MarketCode, MarketOverview> _marketOverviews = {};
+  /// The last traded price of each pair held, in USDT, keyed by the pair a
+  /// record stores ("BTCUSDT").
+  Map<String, double> _cryptoPrices = {};
+
+  /// The name and logo of each coin, keyed by the coin's own code ("BTC").
+  Map<String, CryptoAsset> _cryptoAssets = {};
+
+  /// The directory entry behind a pair, for a tile that wants to wear the
+  /// coin's logo rather than its ticker.
+  CryptoAsset? cryptoAssetOf(String symbol) => _cryptoAssets[baseOf(symbol)];
+
+  /// The coin inside a pair: "BTCUSDT" is BTC quoted in USDT. "USDT" on its
+  /// own is the coin, not an empty pair.
+  static String baseOf(String symbol) {
+    return symbol.length > _quote.length && symbol.endsWith(_quote)
+        ? symbol.substring(0, symbol.length - _quote.length)
+        : symbol;
+  }
+
+  /// Every price this app records a crypto holding in.
+  static const _quote = 'USDT';
   List<GoldSymbol> _goldPrices = [];
 
   /// USDT/VND, refreshed from `fx_rates`. The fallback only covers the frames
@@ -155,28 +176,32 @@ class AssetViewModel extends CoreViewModel {
     return items.where((e) => dateOf(e).year == year).toList();
   }
 
-  /// Today's price of one unit, in VND. A market that quotes in dollars — and
-  /// whose buy price is therefore recorded in dollars — is converted here, so
-  /// both sides of every comparison are in the same currency.
-  /// A hand-typed sell price wins over the feed. It is typed in the same
-  /// currency as the buy price, so it converts the same way.
+  /// Today's price of one coin, in VND.
+  ///
+  /// Every crypto price — what was paid, what Binance quotes, what was typed by
+  /// hand — is in USDT, and the portfolio is counted in đồng, so the conversion
+  /// happens here and nowhere else. A hand-typed sell price wins over Binance;
+  /// a pair Binance no longer quotes falls back to what was paid, which reads
+  /// as "no gain yet" rather than as a holding worth nothing.
   double getCurrentInvestmentPrice(AssetInvestment investment) {
-    final marketCode = MarketCode.from(investment.symbol);
     final price =
         _investmentSellPrices[investment.symbol] ??
-        marketInvestmentPrice(marketCode) ??
+        marketInvestmentPrice(investment.symbol) ??
         investment.buyPrice;
 
-    return _toVnd(price, marketCode);
+    return price * _usdRate;
   }
 
-  /// What was paid per unit, in VND.
+  /// What was paid per coin, in VND: the USDT price at the rate of the day it
+  /// was bought.
+  ///
+  /// Using today's rate on both sides would cancel the currency out — a USDT
+  /// balance bought at 24,000 and worth 27,000 today would report no gain at
+  /// all, when the rate is the only thing that ever moves for it. A record
+  /// made before the rate was kept falls back to today's, which is the figure
+  /// it has always shown.
   double getBuyPriceInVnd(AssetInvestment investment) {
-    return _toVnd(investment.buyPrice, MarketCode.from(investment.symbol));
-  }
-
-  double _toVnd(double price, MarketCode? marketCode) {
-    return marketCode?.isUsdQuoted == true ? price * _usdRate : price;
+    return investment.buyPrice * (investment.buyFxRate ?? _usdRate);
   }
 
   /// A holding has to be held this long before its return says anything about
@@ -258,9 +283,11 @@ class AssetViewModel extends CoreViewModel {
     return type == null ? null : _goldPrices.findPrice(type);
   }
 
-  /// What the feed quotes for a market today, in the market's own currency.
-  double? marketInvestmentPrice(MarketCode? code) {
-    return code == null ? null : _marketOverviews[code]?.price;
+  /// What Binance last traded a pair at, in USDT, or null when it quotes none.
+  /// USDT is the unit the others are quoted in, so it is worth one of itself
+  /// and no feed is asked.
+  double? marketInvestmentPrice(String symbol) {
+    return symbol == _quote ? 1 : _cryptoPrices[symbol];
   }
 
   @override
@@ -282,7 +309,7 @@ class AssetViewModel extends CoreViewModel {
       _investments = results[1] as List<AssetInvestment>;
       _gold = results[2] as List<AssetGold>;
 
-      await Future.wait([_fetchMarketData(), _fetchBanks()]);
+      await Future.wait([_fetchMarketData(), _fetchBanks(), _fetchCrypto()]);
       _calculateSummary();
       _loadFailed = false;
     } catch (e) {
@@ -311,30 +338,42 @@ class AssetViewModel extends CoreViewModel {
     _banks = {for (final bank in banks) bank.shortName.toLowerCase(): bank};
   }
 
-  Future<void> _fetchMarketData() async {
-    final investmentCodes = _investments
-        .map((e) => MarketCode.from(e.symbol))
-        .whereType<MarketCode>()
-        .toList();
+  /// Binance prices for the pairs held, and the directory the logos come from.
+  /// Asking for the held pairs by name keeps this to a few hundred bytes; the
+  /// directory is fetched once per session, and only when there is a coin to
+  /// label with it.
+  Future<void> _fetchCrypto() async {
+    if (_investments.isEmpty) return;
 
+    final symbols = _investments
+        .map((e) => e.symbol)
+        .where((symbol) => symbol != _quote)
+        .toSet()
+        .toList();
+    final results = await Future.wait([
+      _binanceService.getPrices(symbols),
+      _binanceService.getAssets(),
+    ]);
+
+    if (results[0] case Result(data: final Map<String, double> prices)) {
+      _cryptoPrices = prices;
+    }
+    if (results[1] case final Map<String, CryptoAsset> assets) {
+      _cryptoAssets = assets;
+    }
+  }
+
+  Future<void> _fetchMarketData() async {
     final marketResults = await Future.wait([
-      if (investmentCodes.isNotEmpty)
-        _fxService.getMarketOverviews(markets: investmentCodes)
-      else
-        Future.value(const Result(data: <MarketCode, MarketOverview>{})),
       _fxService.getGoldPrice(),
       _fxService.getFxRates(),
     ]);
 
-    if (marketResults[0].data is Map<MarketCode, MarketOverview>) {
-      _marketOverviews =
-          marketResults[0].data as Map<MarketCode, MarketOverview>;
+    if (marketResults[0].data is List<GoldSymbol>?) {
+      _goldPrices = (marketResults[0].data as List<GoldSymbol>?) ?? [];
     }
-    if (marketResults[1].data is List<GoldSymbol>?) {
-      _goldPrices = (marketResults[1].data as List<GoldSymbol>?) ?? [];
-    }
-    if (marketResults[2].data is Map<String, double>) {
-      final rates = marketResults[2].data as Map<String, double>;
+    if (marketResults[1].data is Map<String, double>) {
+      final rates = marketResults[1].data as Map<String, double>;
       // Try common codes for USD/VND
       _usdRate = rates['usdt_vnd'] ?? _fallbackUsdRate;
     }

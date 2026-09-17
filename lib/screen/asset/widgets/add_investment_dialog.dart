@@ -1,9 +1,13 @@
 import 'package:do_x/constants/app_const.dart';
-import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/asset/asset_investment.dart';
+import 'package:do_x/model/crypto/crypto_symbol.dart';
+import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
+import 'package:do_x/screen/asset/widgets/coin_logo.dart';
+import 'package:do_x/services/binance_service.dart';
+import 'package:do_x/view_model/asset_view_model.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
@@ -14,9 +18,23 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 class AddInvestmentDialog extends StatefulWidget {
-  const AddInvestmentDialog({super.key, this.investment, this.onDelete});
+  const AddInvestmentDialog({
+    super.key,
+    this.investment,
+    this.logo,
+    required this.usdRate,
+    this.onDelete,
+  });
 
   final AssetInvestment? investment;
+
+  /// The logo of the coin being edited, from the directory the list already
+  /// loaded. Without it an edit opens showing the ticker while the picker
+  /// right next to it shows the logo.
+  final String? logo;
+
+  /// Today's VND per USDT, offered as the rate of a holding bought today.
+  final double usdRate;
   final VoidCallback? onDelete;
 
   @override
@@ -24,33 +42,52 @@ class AddInvestmentDialog extends StatefulWidget {
 }
 
 class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
-  MarketCode? _selectedCode;
+  /// The pair as Binance writes it, e.g. "BTCUSDT" — what the record stores.
+  String? _symbol;
+
+  /// The catalogue row behind [_symbol], when it came from the picker. Null
+  /// while editing a record, where all that was kept is the pair itself.
+  CryptoSymbol? _picked;
+
   late final TextEditingController _quantityController;
   late final TextEditingController _priceController;
+  late final TextEditingController _rateController;
   late final TextEditingController _noteController;
   late DateTime _buyDate;
 
-  String? _codeError;
+  final _binanceService = BinanceService();
+  bool _loadingCoins = false;
+
+  String? _symbolError;
   String? _quantityError;
   String? _priceError;
+  String? _rateError;
 
   bool get _isEditing => widget.investment != null;
 
-  /// These markets quote in dollars, so the price is recorded in dollars too
-  /// and converted for display. Mixing the two currencies in one column made
-  /// every comparison meaningless.
-  bool get _isUsdQuoted => _selectedCode?.isUsdQuoted ?? false;
+  /// USDT is the unit every other price is quoted in, so one of it costs one of
+  /// it. Asking for that price only invites the balance to be typed twice.
+  bool get _isStablecoin => _symbol == AssetFormat.usdtUnit;
+
+  String? get _base {
+    final symbol = _symbol;
+
+    return symbol == null ? null : AssetViewModel.baseOf(symbol);
+  }
 
   @override
   void initState() {
     super.initState();
     final inv = widget.investment;
-    _selectedCode = MarketCode.from(inv?.symbol);
+    _symbol = inv?.symbol;
     _quantityController = TextEditingController(
       text: inv?.quantity.toString() ?? '',
     );
     _priceController = TextEditingController(
       text: inv?.buyPrice.toCurrency() ?? '',
+    );
+    _rateController = TextEditingController(
+      text: (inv?.buyFxRate ?? widget.usdRate).toCurrency(),
     );
     _noteController = TextEditingController(text: inv?.note ?? '');
     _buyDate = inv?.buyDate ?? DateTime.now();
@@ -60,25 +97,72 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
   void dispose() {
     _quantityController.dispose();
     _priceController.dispose();
+    _rateController.dispose();
     _noteController.dispose();
     super.dispose();
   }
 
+  /// Opens Binance's USDT catalogue as a searchable list: every pair it trades,
+  /// with today's price and the coin's logo.
+  Future<void> _pickCoin(AppLocalizations l10n) async {
+    if (_loadingCoins) return;
+    setState(() => _loadingCoins = true);
+
+    final result = await _binanceService.getUsdtSymbols();
+    if (!mounted) return;
+    setState(() => _loadingCoins = false);
+
+    final coins = result.data;
+    if (coins == null || coins.isEmpty) {
+      context.showToast(l10n.assetCoinLoadFailed, isError: true);
+      return;
+    }
+
+    final format = AssetFormat();
+    final picked = await showAppSearchSheet<CryptoSymbol>(
+      context,
+      title: l10n.assetCoinPick,
+      options: coins,
+      selected: coins.where((c) => c.symbol == _symbol).firstOrNull,
+      labelBuilder: (c) => c.base,
+      subtitleBuilder: (c) => [
+        if (c.name != null) c.name!,
+        if (c.price != null) format.usdt(c.price!),
+      ].join(' · '),
+      leadingBuilder: (c) => CoinLogo(base: c.base, logo: c.logo, size: 32),
+      searchIndex: (c) => c.searchIndex,
+      searchHint: l10n.assetCoinSearchHint,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _picked = picked;
+      _symbol = picked.symbol;
+      _symbolError = null;
+    });
+  }
+
   void _submit(AppLocalizations l10n) {
+    final symbol = _symbol;
     final quantityText = _quantityController.text;
     final quantity = double.tryParse(quantityText) ?? 0;
-    final price = _priceController.text.toMoney() ?? 0;
+    final price = _isStablecoin ? 1.0 : _priceController.text.toMoney() ?? 0;
+    final rate = _rateController.text.toMoney() ?? 0;
     final note = _noteController.text.trim();
 
     setState(() {
-      _codeError = _selectedCode == null ? l10n.assetErrorRequired : null;
+      _symbolError = symbol == null ? l10n.assetErrorRequired : null;
       _quantityError = (quantityText.isEmpty || quantity <= 0)
           ? l10n.assetErrorInvalidQuantity
           : null;
       _priceError = price <= 0 ? l10n.assetErrorInvalidPrice : null;
+      _rateError = rate <= 0 ? l10n.assetErrorInvalidRate : null;
     });
 
-    if (_codeError != null || _quantityError != null || _priceError != null) {
+    if (symbol == null ||
+        _quantityError != null ||
+        _priceError != null ||
+        _rateError != null) {
       return;
     }
 
@@ -86,22 +170,19 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
         (widget.investment ??
                 AssetInvestment(
                   id: const Uuid().v4(),
-                  symbol: _selectedCode!.code,
-                  type: _selectedCode!.group == MarketGroup.crypto
-                      ? InvestmentType.crypto
-                      : InvestmentType.stock,
+                  symbol: symbol,
+                  type: InvestmentType.crypto,
                   quantity: quantity,
                   buyPrice: price,
                   buyDate: _buyDate,
                 ))
             .copyWith(
-              symbol: _selectedCode!.code,
-              type: _selectedCode!.group == MarketGroup.crypto
-                  ? InvestmentType.crypto
-                  : InvestmentType.stock,
+              symbol: symbol,
+              type: InvestmentType.crypto,
               quantity: quantity,
               buyPrice: price,
               buyDate: _buyDate,
+              buyFxRate: rate,
               note: note.isEmpty ? null : note,
             );
     Navigator.pop(context, investment);
@@ -110,6 +191,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final base = _base;
 
     return CuteDialog(
       title: _isEditing ? l10n.update : l10n.assetAdd,
@@ -125,36 +207,31 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
+          leading: base == null
+              ? null
+              : CoinLogo(
+                  base: base,
+                  logo: _picked?.logo ?? widget.logo,
+                  size: 36,
+                ),
           title: Text(l10n.assetSymbol),
           subtitle: Text(
-            _selectedCode?.name ?? l10n.assetErrorRequired,
+            base == null
+                ? l10n.assetErrorRequired
+                : [base, ?_picked?.name].join(' · '),
             style: TextStyle(
-              color: _codeError != null
+              color: _symbolError != null
                   ? context.theme.colorScheme.error
                   : null,
             ),
           ),
-          trailing: const Icon(Icons.arrow_drop_down),
-          onTap: () async {
-            final picked = await showAppOptionSheet<MarketCode>(
-              context,
-              title: l10n.marketPicker,
-              options: MarketCode.values,
-              selected: _selectedCode,
-              labelBuilder: (m) => "${m.name} (${m.code})",
-            );
-            if (picked != null) {
-              setState(() {
-                // The price already typed was in the previous market's
-                // currency; keeping it would silently change what it means.
-                if (picked.isUsdQuoted != _isUsdQuoted) {
-                  _priceController.clear();
-                }
-                _selectedCode = picked;
-                _codeError = null;
-              });
-            }
-          },
+          trailing: _loadingCoins
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.arrow_drop_down),
+          onTap: () => _pickCoin(l10n),
         ),
         TextField(
           controller: _quantityController,
@@ -167,14 +244,31 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
             if (_quantityError != null) setState(() => _quantityError = null);
           },
         ),
+        // Always USDT: every pair this tab records is quoted in it, so there is
+        // no currency to choose and nothing to re-read when the coin changes.
+        if (_isStablecoin)
+          Text(l10n.assetUsdtFixedPrice, style: context.textTheme.secondary)
+        else
+          CuteMoneyField(
+            controller: _priceController,
+            label: l10n.assetBuyPriceUsd,
+            maxSuggestion: AppConst.moneySuggestionHigh,
+            suffixText: AssetFormat.usdtUnit,
+            errorText: _priceError,
+            onChanged: (_) {
+              if (_priceError != null) setState(() => _priceError = null);
+            },
+          ),
+        // What the đồng cost: the coin's price alone says nothing about a gain
+        // made while the currency itself moved.
         CuteMoneyField(
-          controller: _priceController,
-          label: _isUsdQuoted ? l10n.assetBuyPriceUsd : l10n.assetBuyPrice,
+          controller: _rateController,
+          label: l10n.assetBuyFxRate,
+          hint: l10n.assetBuyFxRateHint,
           maxSuggestion: AppConst.moneySuggestionHigh,
-          suffixText: _isUsdQuoted ? r"$" : "đ",
-          errorText: _priceError,
+          errorText: _rateError,
           onChanged: (_) {
-            if (_priceError != null) setState(() => _priceError = null);
+            if (_rateError != null) setState(() => _rateError = null);
           },
         ),
         CuteDateField(

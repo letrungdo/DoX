@@ -3,10 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'asset_investment.g.dart';
 
-enum InvestmentType {
-  stock,
-  crypto,
-}
+enum InvestmentType { stock, crypto }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 @CopyWith()
@@ -18,6 +15,7 @@ class AssetInvestment {
     required this.quantity,
     required this.buyPrice,
     required this.buyDate,
+    this.buyFxRate,
     this.note,
     this.createdAt,
     this.updatedAt,
@@ -29,6 +27,11 @@ class AssetInvestment {
   final double quantity;
   final double buyPrice;
   final DateTime buyDate;
+
+  /// VND per USDT on the day it was bought. Null on a record made before the
+  /// rate was kept, which is then valued at today's rate — the same figure it
+  /// always showed.
+  final double? buyFxRate;
   final String? note;
   @JsonKey(includeIfNull: false)
   final DateTime? createdAt;

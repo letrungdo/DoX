@@ -184,6 +184,10 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
         context,
         builder: (_) => AddInvestmentDialog(
           investment: investment,
+          logo: investment == null
+              ? null
+              : vm.cryptoAssetOf(investment.symbol)?.logo,
+          usdRate: vm.usdRate,
           onDelete: investment == null
               ? null
               : () => _onDeleteAsset(l10n.assetInvestments, investment.id),

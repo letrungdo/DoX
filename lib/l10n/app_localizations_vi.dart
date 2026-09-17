@@ -2015,7 +2015,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetSavings => 'Tiết kiệm';
 
   @override
-  String get assetInvestments => 'Đầu tư';
+  String get assetInvestments => 'Crypto';
 
   @override
   String get assetGold => 'Vàng';
@@ -2054,7 +2054,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetBuyDate => 'Ngày mua';
 
   @override
-  String get assetSymbol => 'Mã';
+  String get assetSymbol => 'Coin';
+
+  @override
+  String get assetCoinPick => 'Chọn coin';
+
+  @override
+  String get assetCoinSearchHint => 'Tìm theo mã hoặc tên coin';
+
+  @override
+  String get assetCoinLoadFailed => 'Không tải được danh sách coin';
 
   @override
   String get assetQuantity => 'Số lượng';
@@ -2066,7 +2075,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetUnitTael => 'cây';
 
   @override
-  String get assetBuyPriceUsd => 'Giá mua (USD)';
+  String get assetBuyPriceUsd => 'Giá mua (USDT)';
+
+  @override
+  String get assetBuyFxRate => 'Tỷ giá lúc mua';
+
+  @override
+  String get assetBuyFxRateHint => 'VND cho 1 USDT';
+
+  @override
+  String get assetUsdtFixedPrice =>
+      'USDT luôn có giá 1 USDT, lãi/lỗ đến từ chênh lệch tỷ giá.';
 
   @override
   String assetValueInVnd(String amount) {
@@ -2117,7 +2136,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get assetInvestmentEmpty => 'Chưa có khoản đầu tư nào.';
+  String get assetInvestmentEmpty => 'Chưa có coin nào.';
 
   @override
   String get assetLoadFailed => 'Không tải được dữ liệu tài sản';
@@ -2223,7 +2242,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetSellPrice => 'Giá bán';
 
   @override
-  String get assetSellPriceUsd => 'Giá bán (USD)';
+  String get assetSellPriceUsd => 'Giá bán (USDT)';
 
   @override
   String get assetSellPriceMarket => 'Giá thị trường';

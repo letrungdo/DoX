@@ -16,7 +16,7 @@ class AssetSellPrice {
     required this.label,
     required this.marketPrice,
     required this.customPrice,
-    this.isUsd = false,
+    this.isUsdt = false,
   });
 
   /// What the price is keyed by: a gold type, or a market symbol.
@@ -28,7 +28,10 @@ class AssetSellPrice {
 
   /// The price typed by hand, which stands in for the quote while it is set.
   final double? customPrice;
-  final bool isUsd;
+
+  /// Whether the price is quoted in USDT — every crypto holding is, while gold
+  /// is in đồng.
+  final bool isUsdt;
 
   double? get price => customPrice ?? marketPrice;
   bool get isCustom => customPrice != null;
@@ -86,7 +89,7 @@ class _Row extends StatelessWidget {
     final value = price.price;
     final text = value == null
         ? l10n.assetSellPriceNoQuote
-        : (price.isUsd ? format.usd(value) : format.money(value));
+        : (price.isUsdt ? format.usdt(value) : format.money(value));
 
     return InkWell(
       borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
@@ -222,11 +225,11 @@ class _SellPriceDialogState extends State<_SellPriceDialog> {
       children: [
         CuteMoneyField(
           controller: _controller,
-          label: widget.price.isUsd
+          label: widget.price.isUsdt
               ? l10n.assetSellPriceUsd
               : l10n.assetSellPrice,
           maxSuggestion: AppConst.moneySuggestionHigh,
-          suffixText: widget.price.isUsd ? r"$" : "đ",
+          suffixText: widget.price.isUsdt ? AssetFormat.usdtUnit : "đ",
           errorText: _error,
           autofocus: true,
           onChanged: (_) {

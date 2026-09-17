@@ -19,6 +19,7 @@ class AssetFormat {
   /// Not localised, deliberately: see the note above.
   static final _grouped = NumberFormat('#,##0', 'en');
   static final _decimal = NumberFormat('#,##0.##', 'en');
+  static final _tiny = NumberFormat('0.########', 'en');
 
   /// The headline figure: "200,920,548đ".
   String money(double value) => '${_grouped.format(value)}đ';
@@ -47,8 +48,19 @@ class AssetFormat {
   /// A quantity as typed, without a trailing ".0": "2", "1.5".
   String quantity(double value) => _decimal.format(value);
 
-  /// Dollars, grouped the same way as đồng: "$3,600".
-  String usd(double value) => '\$${_decimal.format(value)}';
+  /// The unit every crypto price is recorded in.
+  static const usdtUnit = 'USDT';
+
+  /// A coin price: "76,559.94 USDT", "0.00001234 USDT".
+  ///
+  /// A coin worth a fraction of a cent is as ordinary as one worth six
+  /// figures, so the small ones keep eight decimals — two would round most of
+  /// the catalogue to "0.00 USDT" — while the large ones stay readable.
+  String usdt(double value) {
+    final format = value.abs() >= 1 ? _decimal : _tiny;
+
+    return '${format.format(value)} $usdtUnit';
+  }
 
   String _sign(double value) => value >= 0 ? '+' : '';
 }

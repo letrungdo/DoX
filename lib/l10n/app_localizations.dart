@@ -3677,7 +3677,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetInvestments.
   ///
   /// In en, this message translates to:
-  /// **'Investments'**
+  /// **'Crypto'**
   String get assetInvestments;
 
   /// No description provided for @assetGold.
@@ -3755,8 +3755,26 @@ abstract class AppLocalizations {
   /// No description provided for @assetSymbol.
   ///
   /// In en, this message translates to:
-  /// **'Symbol'**
+  /// **'Coin'**
   String get assetSymbol;
+
+  /// No description provided for @assetCoinPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a coin'**
+  String get assetCoinPick;
+
+  /// No description provided for @assetCoinSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by ticker or name'**
+  String get assetCoinSearchHint;
+
+  /// No description provided for @assetCoinLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the coin list'**
+  String get assetCoinLoadFailed;
 
   /// No description provided for @assetQuantity.
   ///
@@ -3779,8 +3797,26 @@ abstract class AppLocalizations {
   /// No description provided for @assetBuyPriceUsd.
   ///
   /// In en, this message translates to:
-  /// **'Buy price (USD)'**
+  /// **'Buy price (USDT)'**
   String get assetBuyPriceUsd;
+
+  /// No description provided for @assetBuyFxRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate when bought'**
+  String get assetBuyFxRate;
+
+  /// No description provided for @assetBuyFxRateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'VND per USDT'**
+  String get assetBuyFxRateHint;
+
+  /// No description provided for @assetUsdtFixedPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'USDT is always worth 1 USDT; the gain comes from the rate.'**
+  String get assetUsdtFixedPrice;
 
   /// No description provided for @assetValueInVnd.
   ///
@@ -3856,7 +3892,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetInvestmentEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No investments recorded yet.'**
+  /// **'No coins recorded yet.'**
   String get assetInvestmentEmpty;
 
   /// No description provided for @assetLoadFailed.
@@ -4030,7 +4066,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetSellPriceUsd.
   ///
   /// In en, this message translates to:
-  /// **'Sell price (USD)'**
+  /// **'Sell price (USDT)'**
   String get assetSellPriceUsd;
 
   /// No description provided for @assetSellPriceMarket.

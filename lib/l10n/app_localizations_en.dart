@@ -2024,7 +2024,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetSavings => 'Savings';
 
   @override
-  String get assetInvestments => 'Investments';
+  String get assetInvestments => 'Crypto';
 
   @override
   String get assetGold => 'Gold';
@@ -2063,7 +2063,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetBuyDate => 'Buy date';
 
   @override
-  String get assetSymbol => 'Symbol';
+  String get assetSymbol => 'Coin';
+
+  @override
+  String get assetCoinPick => 'Pick a coin';
+
+  @override
+  String get assetCoinSearchHint => 'Search by ticker or name';
+
+  @override
+  String get assetCoinLoadFailed => 'Could not load the coin list';
 
   @override
   String get assetQuantity => 'Quantity';
@@ -2075,7 +2084,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetUnitTael => 'tael';
 
   @override
-  String get assetBuyPriceUsd => 'Buy price (USD)';
+  String get assetBuyPriceUsd => 'Buy price (USDT)';
+
+  @override
+  String get assetBuyFxRate => 'Rate when bought';
+
+  @override
+  String get assetBuyFxRateHint => 'VND per USDT';
+
+  @override
+  String get assetUsdtFixedPrice =>
+      'USDT is always worth 1 USDT; the gain comes from the rate.';
 
   @override
   String assetValueInVnd(String amount) {
@@ -2126,7 +2145,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get assetInvestmentEmpty => 'No investments recorded yet.';
+  String get assetInvestmentEmpty => 'No coins recorded yet.';
 
   @override
   String get assetLoadFailed => 'Could not load your assets';
@@ -2234,7 +2253,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetSellPrice => 'Sell price';
 
   @override
-  String get assetSellPriceUsd => 'Sell price (USD)';
+  String get assetSellPriceUsd => 'Sell price (USDT)';
 
   @override
   String get assetSellPriceMarket => 'Market price';
