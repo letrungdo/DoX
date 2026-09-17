@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:do_x/extensions/double_extensions.dart';
+import 'package:do_x/model/fx/jpy_source.dart';
 import 'package:do_x/model/fx/gold_model.dart';
 import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/model/news/storm_news.dart';
@@ -40,6 +41,13 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   /// JPY sources, so it costs no extra request.
   String? _usdtRate;
   String? get usdtRate => _usdtRate;
+
+  /// The best of the four JPY→VND sources — the most đồng per yen, which is
+  /// what someone sending money home is shopping for. The card leads with this
+  /// and keeps the other three folded away, because the only question the row
+  /// usually has to answer is "who is paying most today".
+  ({String source, String rate})? _bestJpy;
+  ({String source, String rate})? get bestJpy => _bestJpy;
 
   bool _isFetching = false;
   bool get isFetching => _isFetching;
@@ -152,6 +160,10 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
       _moneyGramRate = rates['moneygram_jpy_vnd'].formatUnit();
       _dcomRate = rates['dcom_jpy_vnd'].formatUnit();
       _usdtRate = rates['usdt_vnd'].formatUnit(digit: 0);
+      final best = JpySource.best(rates);
+      _bestJpy = best == null
+          ? null
+          : (source: best.source.label, rate: best.rate.formatUnit());
       notifyListenersSafe();
     }
     if (res.isError) {

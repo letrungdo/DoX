@@ -4,6 +4,8 @@ import 'package:do_x/model/asset/asset_gold.dart';
 import 'package:do_x/model/asset/asset_investment.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
 import 'package:do_x/model/asset/gold_type.dart';
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:do_x/screen/asset/widgets/asset_tile.dart';
 import 'package:do_x/screen/asset/widgets/gold_list.dart';
 import 'package:do_x/screen/asset/widgets/investment_list.dart';
 import 'package:do_x/screen/asset/widgets/saving_list.dart';
@@ -49,6 +51,35 @@ AssetGold _gold({double quantity = 2, double buyPrice = 90000000}) {
   );
 }
 
+/// Every amount in a tile ends on one line down the right of the card — the
+/// headline figure and the figure in the row beneath it especially, which used
+/// to stop at different places and read as a misalignment.
+void _expectAmountsFlushRight(WidgetTester tester) {
+  final cardRight = tester.getRect(find.byType(AssetTileCard).first).right;
+  final expected = cardRight - AssetTileCard.sidePadding;
+  final rights = <String, double>{};
+
+  for (final text in tester.widgetList<AutoSizeText>(
+    find.byType(AutoSizeText),
+  )) {
+    final data = text.data ?? '';
+    // The right-hand column is the one carrying a figure.
+    if (!data.startsWith('+') && !data.startsWith('-') && !data.endsWith('đ')) {
+      continue;
+    }
+    rights[data] = tester.getRect(find.byWidget(text)).right;
+  }
+
+  expect(rights, isNotEmpty, reason: 'no amounts found to check');
+  for (final entry in rights.entries) {
+    expect(
+      entry.value,
+      expected,
+      reason: '"${entry.key}" should end on the tile\'s right-hand line',
+    );
+  }
+}
+
 void main() {
   group('gold tile', () {
     testWidgets('lays out on a narrow phone without overflowing', (
@@ -58,6 +89,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text(GoldAssetType.ring9999.label), findsOneWidget);
+      _expectAmountsFlushRight(tester);
     });
 
     testWidgets('the widest plausible figures still fit', (tester) async {
@@ -97,6 +129,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Vietcombank'), findsOneWidget);
+      _expectAmountsFlushRight(tester);
     });
 
     testWidgets('a matured deposit says so instead of a monthly figure', (
@@ -130,6 +163,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('XAUUSD'), findsOneWidget);
+      _expectAmountsFlushRight(tester);
     });
 
     testWidgets('a đồng-quoted holding fits too', (tester) async {

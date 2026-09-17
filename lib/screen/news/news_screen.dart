@@ -18,6 +18,7 @@ import 'package:do_x/model/news/gold_news.dart';
 import 'package:do_x/model/news/news_source.dart';
 import 'package:do_x/model/news/storm_news.dart';
 import 'package:do_x/router/app_router.gr.dart';
+import 'package:do_x/screen/news/widgets/fx_rate_row.dart';
 import 'package:do_x/screen/news/market_picker_sheet.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
@@ -73,6 +74,11 @@ class _NewsScreenState<V extends NewsViewModel>
   /// Same for the storm bulletin: the headline and the summary carry the alert,
   /// the per-source bullets wait behind the toggle.
   bool _isStormExpanded = false;
+
+  /// The exchange-rate card leads with the best JPY source and keeps the other
+  /// three folded away — four tiles of near-identical numbers took a quarter of
+  /// the page to answer a question the top line already answers.
+  bool _isFxExpanded = false;
 
   WebSocketService get _socketService => context.read<WebSocketService>();
 
@@ -218,10 +224,67 @@ class _NewsScreenState<V extends NewsViewModel>
     ];
   }
 
-  /// The four JPY→VND sources as a 2×2 grid of tinted tiles, with USDT/VND
-  /// across the bottom. A bordered table squeezed all four into one row, which
-  /// clipped the longer provider names.
+  /// The rates, compact: one line for JPY/VND showing whichever source pays
+  /// most today, one for USDT/VND, and the four JPY sources folded behind the
+  /// first line's chevron.
   Widget _buildFxCard() {
+    final colors = context.colors;
+
+    return Column(
+      spacing: 10,
+      children: [
+        // The row and the drawer it opens are one child, so the column's gap
+        // does not sit below a drawer that is currently zero-height.
+        Column(
+          children: [
+            Selector<V, ({String source, String rate})?>(
+              selector: (_, vm) => vm.bestJpy,
+              builder: (context, best, _) {
+                return FxRateRow(
+                  pair: "JPY/VND",
+                  color: colors.info,
+                  softColor: colors.infoSoft,
+                  // The winning source's name earns its place next to the
+                  // number: the rate alone does not say where to go for it.
+                  caption: best?.source,
+                  value: best?.rate,
+                  onTap: () => setState(() => _isFxExpanded = !_isFxExpanded),
+                  isExpanded: _isFxExpanded,
+                );
+              },
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 180),
+              sizeCurve: Curves.easeOutCubic,
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: _buildFxSources(),
+              ),
+              crossFadeState: _isFxExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+            ),
+          ],
+        ),
+        Selector<V, String?>(
+          selector: (_, vm) => vm.usdtRate,
+          builder: (context, rate, _) {
+            return FxRateRow(
+              pair: "USDT/VND",
+              color: colors.money,
+              softColor: colors.successSoft,
+              value: rate,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// The four JPY→VND sources as a 2×2 grid of tinted tiles. A bordered table
+  /// squeezed all four into one row, which clipped the longer provider names.
+  Widget _buildFxSources() {
     final colors = context.colors;
     final tiles = [
       _buildFxTile(
@@ -249,21 +312,14 @@ class _NewsScreenState<V extends NewsViewModel>
         (vm) => vm.dcomRate,
       ),
     ];
-    // 14, not 8: the tiles are raised panels now, and a gap narrower than their
+
+    // 14, not 8: the tiles are raised panels, and a gap narrower than their
     // shadow reach lets one tile's lit rim land on the next one's shade.
     return Column(
       spacing: 14,
       children: [
         Row(spacing: 14, children: [tiles[0].expaned(1), tiles[1].expaned(1)]),
         Row(spacing: 14, children: [tiles[2].expaned(1), tiles[3].expaned(1)]),
-        // Full width, not a fifth cell in the grid: it is a different pair to
-        // the four above it, and a lone tile in a 2-up row reads as a gap.
-        _buildFxTile(
-          "USDT/VND",
-          colors.money,
-          colors.successSoft,
-          (vm) => vm.usdtRate,
-        ),
       ],
     );
   }
@@ -294,8 +350,6 @@ class _NewsScreenState<V extends NewsViewModel>
           Selector<V, String?>(
             selector: (_, vm) => selector(vm),
             builder: (context, value, _) {
-              // Blank until the first value lands: a dash next to a spinning
-              // sync icon reads as "no data" rather than "still loading".
               return AutoSizeText(
                 value ?? "",
                 maxLines: 1,

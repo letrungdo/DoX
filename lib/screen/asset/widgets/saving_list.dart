@@ -1,12 +1,10 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
+import 'package:do_x/screen/asset/widgets/asset_tile.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
-import 'package:do_x/screen/asset/widgets/gold_list.dart';
-import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -40,8 +38,7 @@ class SavingList extends StatelessWidget {
 
   Widget _buildItem(BuildContext context, AssetSaving item) {
     final l10n = context.l10n;
-    final textTheme = context.textTheme;
-    final format = AssetFormat(Localizations.localeOf(context).toString());
+    final format = AssetFormat();
     final dateFormat = DateFormat('dd/MM/yy');
 
     final accruedInterest = item.accruedInterest;
@@ -55,17 +52,11 @@ class SavingList extends StatelessWidget {
     // default ink: green here would claim a return it is not making.
     final interestColor = item.isMatured ? null : context.colors.success;
 
-    return ChickenListTileCard(
+    return AssetTileCard(
       onTap: () => onEdit?.call(item),
       onLongPress: () => onDelete?.call(item.id),
-      leading: Container(
-        width: 44,
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: context.colors.infoSoft,
-          shape: BoxShape.circle,
-        ),
+      leading: AssetTileBadge(
+        color: context.colors.infoSoft,
         child: Icon(Icons.account_balance_rounded, color: context.colors.info),
       ),
       title: AssetTileHeader(
@@ -86,21 +77,13 @@ class SavingList extends StatelessWidget {
                 " (${format.signedPercent(accruedPercent)})",
             rightColor: interestColor,
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: AutoSizeText(
-              item.isMatured && maturity != null
-                  ? l10n.assetMaturedOn(dateFormat.format(maturity))
-                  : l10n.assetPerMonth(
-                      format.signedCompact(item.monthlyInterest),
-                    ),
-              maxLines: 1,
-              minFontSize: 8,
-              overflow: TextOverflow.ellipsis,
-              style: interestColor == null
-                  ? textTheme.secondary.size11
-                  : textTheme.secondary.size11.textColor(interestColor),
-            ),
+          AssetTileNote(
+            text: item.isMatured && maturity != null
+                ? l10n.assetMaturedOn(dateFormat.format(maturity))
+                : l10n.assetPerMonth(
+                    format.signedCompact(item.monthlyInterest),
+                  ),
+            color: interestColor,
           ),
         ],
       ),

@@ -247,9 +247,16 @@ class AppBottomSheet extends StatelessWidget {
     final title = this.title;
     final screenSize = MediaQuery.sizeOf(context);
     final viewPadding = MediaQuery.paddingOf(context);
+    // How far the keyboard reaches up the screen. The whole sheet is lifted
+    // clear of it below; without that, a sheet that shrink-wraps its content —
+    // a search list that has just filtered down to two rows — ends up entirely
+    // behind the keyboard, search field and all.
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     // Added under the content rather than around the sheet, so the surface
-    // still runs to the bottom of the screen.
-    final bottomInset = viewPadding.bottom;
+    // still runs to the bottom of the screen. The keyboard already covers the
+    // home indicator, so this drops away while it is up rather than stacking
+    // on top of the lift.
+    final bottomInset = keyboardInset > 0 ? 0.0 : viewPadding.bottom;
 
     // Full width on purpose. The column below centres its children, so a body
     // that shrink-wraps — a `Wrap` of chips, say — used to sit centred with a
@@ -282,71 +289,92 @@ class AppBottomSheet extends StatelessWidget {
         // list of tiles, and their ink has to land on the sheet's own surface.
         // Painted on a plain Container it would go to the Material behind the
         // sheet instead — invisible, and Flutter asserts about it.
-        return Material(
-          color: theme.colorScheme.surface,
-          clipBehavior: Clip.antiAlias,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(Dimens.sheetRadius),
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: screenSize.height * maxHeightFactor,
+        return Padding(
+          // Outside the Material, so the sheet's surface stops at the top of
+          // the keyboard instead of running behind it.
+          padding: EdgeInsets.only(bottom: keyboardInset),
+          child: Material(
+            color: theme.colorScheme.surface,
+            clipBehavior: Clip.antiAlias,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(Dimens.sheetRadius),
             ),
-            child: Padding(
-              padding: EdgeInsets.only(left: left, right: right),
-              child: Stack(
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                // Measured against what is still visible: the ceiling has to
+                // come down with the keyboard or the sheet is taller than the
+                // room left for it.
+                maxHeight:
+                    (screenSize.height - keyboardInset) * maxHeightFactor,
+              ),
+              // Anywhere on the sheet that is not itself a control dismisses
+              // the keyboard. On a sheet carrying a search field the keyboard
+              // covers most of what there is to look at, and the reflex is to
+              // tap the sheet rather than hunt for the keyboard's own dismiss
+              // key. Translucent, so a tile or button under the pointer still
+              // wins the tap.
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: Padding(
+                  padding: EdgeInsets.only(left: left, right: right),
+                  child: Stack(
                     children: [
-                      if (showDragHandle) const _SheetDragHandle(),
-                      if (title != null) ...[
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            16,
-                            showDragHandle ? 0 : 12,
-                            16,
-                            0,
-                          ),
-                          child: Row(
-                            children: [
-                              // Balances the button on the other side so the
-                              // title stays centred on the sheet rather than on
-                              // the space left beside it.
-                              if (showCloseButton)
-                                const SizedBox(width: _closeButtonSize),
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (showDragHandle) const _SheetDragHandle(),
+                          if (title != null) ...[
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                showDragHandle ? 0 : 12,
+                                16,
+                                0,
                               ),
-                              if (showCloseButton) const _SheetCloseButton(),
-                            ],
+                              child: Row(
+                                children: [
+                                  // Balances the button on the other side so the
+                                  // title stays centred on the sheet rather than on
+                                  // the space left beside it.
+                                  if (showCloseButton)
+                                    const SizedBox(width: _closeButtonSize),
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                  if (showCloseButton)
+                                    const _SheetCloseButton(),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 20),
+                          ],
+                          Flexible(
+                            child: scrollable
+                                ? SingleChildScrollView(child: body)
+                                : body,
                           ),
-                        ),
-                        const Divider(height: 20),
-                      ],
-                      Flexible(
-                        child: scrollable
-                            ? SingleChildScrollView(child: body)
-                            : body,
+                        ],
                       ),
+                      // A titleless sheet has no header row to sit the button in,
+                      // so there it is overlaid on the body's top-right corner
+                      // instead — the same corner either way.
+                      if (showCloseButton && title == null)
+                        const Positioned(
+                          top: 8,
+                          right: 16,
+                          child: _SheetCloseButton(),
+                        ),
                     ],
                   ),
-                  // A titleless sheet has no header row to sit the button in,
-                  // so there it is overlaid on the body's top-right corner
-                  // instead — the same corner either way.
-                  if (showCloseButton && title == null)
-                    const Positioned(
-                      top: 8,
-                      right: 16,
-                      child: _SheetCloseButton(),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
@@ -535,7 +563,11 @@ class _SearchSheetBodyState<T> extends State<_SearchSheetBody<T>> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    // The sheet is already lifted clear of the keyboard, and the keyboard
+    // covers the home indicator, so this inset only applies while it is down.
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom > 0
+        ? 0.0
+        : MediaQuery.paddingOf(context).bottom;
 
     return Material(
       type: MaterialType.transparency,
@@ -577,6 +609,10 @@ class _SearchSheetBodyState<T> extends State<_SearchSheetBody<T>> {
             Flexible(
               child: ListView.builder(
                 shrinkWrap: true,
+                // Scrolling the results is the other way a user signals they
+                // are done typing.
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 // The list owns the bottom inset so its viewport can run behind
                 // the home indicator instead of stopping short of it.
                 padding: EdgeInsets.only(bottom: 8 + bottomInset),
