@@ -449,3 +449,170 @@ Future<T?> showAppOptionSheet<T>(
     },
   );
 }
+
+/// A bottom sheet that picks one value out of a list too long to scan — a
+/// search field filters it as the user types.
+///
+/// [searchIndex] returns the text a row is matched against; whatever the caller
+/// wants searchable goes in there, so a bank can be found by its short name,
+/// its full name or its code alike.
+Future<T?> showAppSearchSheet<T>(
+  BuildContext context, {
+  String? title,
+  required List<T> options,
+  required T? selected,
+  required String Function(T value) labelBuilder,
+  required String Function(T value) searchIndex,
+  String Function(T value)? subtitleBuilder,
+  Widget Function(T value)? leadingBuilder,
+  String? searchHint,
+}) {
+  return showAppBottomSheet<T>(
+    context,
+    title: title,
+    scrollable: false,
+    useBottomSafeArea: false,
+    padding: EdgeInsets.zero,
+    builder: (sheetContext) {
+      return _SearchSheetBody<T>(
+        options: options,
+        selected: selected,
+        labelBuilder: labelBuilder,
+        searchIndex: searchIndex,
+        subtitleBuilder: subtitleBuilder,
+        leadingBuilder: leadingBuilder,
+        searchHint: searchHint,
+      );
+    },
+  );
+}
+
+class _SearchSheetBody<T> extends StatefulWidget {
+  const _SearchSheetBody({
+    required this.options,
+    required this.selected,
+    required this.labelBuilder,
+    required this.searchIndex,
+    this.subtitleBuilder,
+    this.leadingBuilder,
+    this.searchHint,
+  });
+
+  final List<T> options;
+  final T? selected;
+  final String Function(T value) labelBuilder;
+  final String Function(T value) searchIndex;
+  final String Function(T value)? subtitleBuilder;
+  final Widget Function(T value)? leadingBuilder;
+  final String? searchHint;
+
+  @override
+  State<_SearchSheetBody<T>> createState() => _SearchSheetBodyState<T>();
+}
+
+class _SearchSheetBodyState<T> extends State<_SearchSheetBody<T>> {
+  final _controller = TextEditingController();
+  late List<T> _visible = widget.options;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String query) {
+    final needle = query.trim().toLowerCase();
+    setState(() {
+      _visible = needle.isEmpty
+          ? widget.options
+          : widget.options
+                .where((o) => widget.searchIndex(o).contains(needle))
+                .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              onChanged: _onQueryChanged,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: widget.searchHint,
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                suffixIcon: _controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        onPressed: () {
+                          _controller.clear();
+                          _onQueryChanged('');
+                        },
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(Dimens.radiusCard),
+                ),
+              ),
+            ),
+          ),
+          if (_visible.isEmpty)
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 24, 16, 24 + bottomInset),
+              child: Text(l10n.searchNoResult),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                // The list owns the bottom inset so its viewport can run behind
+                // the home indicator instead of stopping short of it.
+                padding: EdgeInsets.only(bottom: 8 + bottomInset),
+                itemCount: _visible.length,
+                itemBuilder: (context, index) {
+                  final option = _visible[index];
+                  final isSelected = option == widget.selected;
+                  final subtitle = widget.subtitleBuilder?.call(option);
+
+                  return ListTile(
+                    leading: widget.leadingBuilder?.call(option),
+                    title: Text(
+                      widget.labelBuilder(option),
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : null,
+                        color: isSelected ? scheme.primary : null,
+                      ),
+                    ),
+                    subtitle: subtitle == null
+                        ? null
+                        : Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                    selected: isSelected,
+                    trailing: isSelected
+                        ? Icon(Icons.check, color: scheme.primary)
+                        : null,
+                    onTap: () => Navigator.pop(context, option),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

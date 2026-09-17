@@ -1233,7 +1233,18 @@
       "monthPercent": {"type": "String"}
     }
   },
+  "searchNoResult": "No matches",
   "assetGoldEmpty": "No gold recorded yet.",
+  "assetSavingEmpty": "No deposits recorded yet.",
+  "assetBankPick": "Pick a bank",
+  "assetBankSearchHint": "Search by name or code",
+  "assetBankLoadFailed": "Could not load the bank list",
+  "assetRatePerYear": "{rate}%/yr",
+  "@assetRatePerYear": {"placeholders": {"rate": {"type": "String"}}},
+  "assetPerMonth": "≈ {amount}/mo",
+  "@assetPerMonth": {"placeholders": {"amount": {"type": "String"}}},
+  "assetMaturedOn": "Matured {date}",
+  "@assetMaturedOn": {"placeholders": {"date": {"type": "String"}}},
   "assetInvestmentEmpty": "No investments recorded yet.",
   "assetLoadFailed": "Could not load your assets",
   "assetSaveFailed": "Could not save the change",

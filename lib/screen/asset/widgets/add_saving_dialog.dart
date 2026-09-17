@@ -3,6 +3,9 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/asset/asset_saving.dart';
+import 'package:do_x/model/bank/bank.dart';
+import 'package:do_x/services/bank_service.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/input/cute_date_field.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
@@ -25,6 +28,9 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
   late final TextEditingController _amountController;
   late final TextEditingController _rateController;
   late DateTime _startDate;
+
+  final _bankService = BankService();
+  bool _loadingBanks = false;
 
   String? _bankError;
   String? _amountError;
@@ -72,19 +78,58 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
       return;
     }
 
-    final saving = (widget.saving ?? AssetSaving(
-      id: const Uuid().v4(),
-      bankName: bank,
-      amount: amount,
-      interestRate: rate,
-      startDate: _startDate,
-    )).copyWith(
-      bankName: bank,
-      amount: amount,
-      interestRate: rate,
-      startDate: _startDate,
-    );
+    final saving =
+        (widget.saving ??
+                AssetSaving(
+                  id: const Uuid().v4(),
+                  bankName: bank,
+                  amount: amount,
+                  interestRate: rate,
+                  startDate: _startDate,
+                ))
+            .copyWith(
+              bankName: bank,
+              amount: amount,
+              interestRate: rate,
+              startDate: _startDate,
+            );
     Navigator.pop(context, saving);
+  }
+
+  /// Opens the VietQR directory as a searchable list. The field stays a plain
+  /// text field underneath: a bank the directory has not heard of, or a load
+  /// that fails offline, must still be enterable by hand.
+  Future<void> _pickBank(AppLocalizations l10n) async {
+    if (_loadingBanks) return;
+    setState(() => _loadingBanks = true);
+
+    final result = await _bankService.getBanks();
+    if (!mounted) return;
+    setState(() => _loadingBanks = false);
+
+    final banks = result.data;
+    if (banks == null || banks.isEmpty) {
+      context.showToast(l10n.assetBankLoadFailed, isError: true);
+      return;
+    }
+
+    final typed = _bankController.text.trim();
+    final picked = await showAppSearchSheet<Bank>(
+      context,
+      title: l10n.assetBankPick,
+      options: banks,
+      selected: banks.where((b) => b.shortName == typed).firstOrNull,
+      labelBuilder: (b) => b.shortName,
+      subtitleBuilder: (b) => b.name,
+      searchIndex: (b) => b.searchIndex,
+      searchHint: l10n.assetBankSearchHint,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _bankController.text = picked.shortName;
+      _bankError = null;
+    });
   }
 
   @override
@@ -106,8 +151,19 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
         TextField(
           controller: _bankController,
           textCapitalization: TextCapitalization.words,
-          decoration: cuteInputDecoration(context, l10n.assetBankName)
-              .copyWith(errorText: _bankError),
+          decoration: cuteInputDecoration(context, l10n.assetBankName).copyWith(
+            errorText: _bankError,
+            suffixIcon: IconButton(
+              tooltip: l10n.assetBankPick,
+              onPressed: () => _pickBank(l10n),
+              icon: _loadingBanks
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.account_balance_rounded),
+            ),
+          ),
           onChanged: (_) {
             if (_bankError != null) setState(() => _bankError = null);
           },
@@ -124,8 +180,10 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
         TextField(
           controller: _rateController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: cuteInputDecoration(context, l10n.assetInterestRate)
-              .copyWith(errorText: _rateError),
+          decoration: cuteInputDecoration(
+            context,
+            l10n.assetInterestRate,
+          ).copyWith(errorText: _rateError),
           onChanged: (_) {
             if (_rateError != null) setState(() => _rateError = null);
           },

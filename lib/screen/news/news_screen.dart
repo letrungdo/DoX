@@ -179,7 +179,7 @@ class _NewsScreenState<V extends NewsViewModel>
         icon: Icons.currency_exchange_rounded, //
         color: colors.info,
         title: l10n.exchangeRate,
-        badge: "JPY/VND",
+        badge: "JPY · USDT",
       ),
       const SizedBox(height: 10),
       _buildFxCard(),
@@ -218,8 +218,9 @@ class _NewsScreenState<V extends NewsViewModel>
     ];
   }
 
-  /// The four JPY→VND sources as a 2×2 grid of tinted tiles. A bordered table
-  /// squeezed all four into one row, which clipped the longer provider names.
+  /// The four JPY→VND sources as a 2×2 grid of tinted tiles, with USDT/VND
+  /// across the bottom. A bordered table squeezed all four into one row, which
+  /// clipped the longer provider names.
   Widget _buildFxCard() {
     final colors = context.colors;
     final tiles = [
@@ -255,6 +256,14 @@ class _NewsScreenState<V extends NewsViewModel>
       children: [
         Row(spacing: 14, children: [tiles[0].expaned(1), tiles[1].expaned(1)]),
         Row(spacing: 14, children: [tiles[2].expaned(1), tiles[3].expaned(1)]),
+        // Full width, not a fifth cell in the grid: it is a different pair to
+        // the four above it, and a lone tile in a 2-up row reads as a gap.
+        _buildFxTile(
+          "USDT/VND",
+          colors.money,
+          colors.successSoft,
+          (vm) => vm.usdtRate,
+        ),
       ],
     );
   }

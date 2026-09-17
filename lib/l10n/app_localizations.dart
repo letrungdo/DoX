@@ -3799,11 +3799,59 @@ abstract class AppLocalizations {
     String monthPercent,
   );
 
+  /// No description provided for @searchNoResult.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get searchNoResult;
+
   /// No description provided for @assetGoldEmpty.
   ///
   /// In en, this message translates to:
   /// **'No gold recorded yet.'**
   String get assetGoldEmpty;
+
+  /// No description provided for @assetSavingEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No deposits recorded yet.'**
+  String get assetSavingEmpty;
+
+  /// No description provided for @assetBankPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a bank'**
+  String get assetBankPick;
+
+  /// No description provided for @assetBankSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or code'**
+  String get assetBankSearchHint;
+
+  /// No description provided for @assetBankLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the bank list'**
+  String get assetBankLoadFailed;
+
+  /// No description provided for @assetRatePerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}%/yr'**
+  String assetRatePerYear(String rate);
+
+  /// No description provided for @assetPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {amount}/mo'**
+  String assetPerMonth(String amount);
+
+  /// No description provided for @assetMaturedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Matured {date}'**
+  String assetMaturedOn(String date);
 
   /// No description provided for @assetInvestmentEmpty.
   ///

@@ -1191,7 +1191,18 @@
       "monthPercent": {"type": "String"}
     }
   },
+  "searchNoResult": "Không tìm thấy kết quả nào",
   "assetGoldEmpty": "Chưa có ghi chép mua vàng nào.",
+  "assetSavingEmpty": "Chưa có sổ tiết kiệm nào.",
+  "assetBankPick": "Chọn ngân hàng",
+  "assetBankSearchHint": "Tìm theo tên hoặc mã ngân hàng",
+  "assetBankLoadFailed": "Không tải được danh sách ngân hàng",
+  "assetRatePerYear": "{rate}%/năm",
+  "@assetRatePerYear": {"placeholders": {"rate": {"type": "String"}}},
+  "assetPerMonth": "≈ {amount}/tháng",
+  "@assetPerMonth": {"placeholders": {"amount": {"type": "String"}}},
+  "assetMaturedOn": "Đã đáo hạn {date}",
+  "@assetMaturedOn": {"placeholders": {"date": {"type": "String"}}},
   "assetInvestmentEmpty": "Chưa có khoản đầu tư nào.",
   "assetLoadFailed": "Không tải được dữ liệu tài sản",
   "assetSaveFailed": "Không lưu được thay đổi",

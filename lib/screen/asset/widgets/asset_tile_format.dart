@@ -34,6 +34,9 @@ class AssetFormat {
     return '${_sign(value)}${_decimal.format(value)}%';
   }
 
+  /// An interest rate as typed, without a trailing ".0": "7", "6,8".
+  String rate(double value) => _decimal.format(value);
+
   /// A quantity as typed, without a trailing ".0": "2", "1,5".
   String quantity(double value) => _decimal.format(value);
 

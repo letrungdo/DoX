@@ -2084,7 +2084,37 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get searchNoResult => 'Không tìm thấy kết quả nào';
+
+  @override
   String get assetGoldEmpty => 'Chưa có ghi chép mua vàng nào.';
+
+  @override
+  String get assetSavingEmpty => 'Chưa có sổ tiết kiệm nào.';
+
+  @override
+  String get assetBankPick => 'Chọn ngân hàng';
+
+  @override
+  String get assetBankSearchHint => 'Tìm theo tên hoặc mã ngân hàng';
+
+  @override
+  String get assetBankLoadFailed => 'Không tải được danh sách ngân hàng';
+
+  @override
+  String assetRatePerYear(String rate) {
+    return '$rate%/năm';
+  }
+
+  @override
+  String assetPerMonth(String amount) {
+    return '≈ $amount/tháng';
+  }
+
+  @override
+  String assetMaturedOn(String date) {
+    return 'Đã đáo hạn $date';
+  }
 
   @override
   String get assetInvestmentEmpty => 'Chưa có khoản đầu tư nào.';

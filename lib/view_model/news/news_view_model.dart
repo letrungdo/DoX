@@ -35,6 +35,12 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
   String? _dcomRate;
   String? get dcomRate => _dcomRate;
 
+  /// USDT/VND off the Binance P2P book, the rate a dollar-denominated holding
+  /// actually converts at here. It rides in the same `fx_rates` table as the
+  /// JPY sources, so it costs no extra request.
+  String? _usdtRate;
+  String? get usdtRate => _usdtRate;
+
   bool _isFetching = false;
   bool get isFetching => _isFetching;
 
@@ -129,8 +135,8 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
     notifyListenersSafe();
   }
 
-  // All JPY→VND rates are stored in one Supabase table, so a single query
-  // fetches every source at once instead of one request per source.
+  // Every rate the page shows lives in one Supabase table, so a single query
+  // fetches them all at once instead of one request per source.
   //
   // The rates already on screen are kept until the new ones arrive — a reload
   // shouldn't blank out values that are still perfectly readable.
@@ -145,6 +151,7 @@ class NewsViewModel extends CoreViewModel with CoinChartMixin {
       _smileRate = rates['smile_jpy_vnd'].formatUnit();
       _moneyGramRate = rates['moneygram_jpy_vnd'].formatUnit();
       _dcomRate = rates['dcom_jpy_vnd'].formatUnit();
+      _usdtRate = rates['usdt_vnd'].formatUnit(digit: 0);
       notifyListenersSafe();
     }
     if (res.isError) {

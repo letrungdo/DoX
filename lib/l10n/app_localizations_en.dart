@@ -2093,7 +2093,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get searchNoResult => 'No matches';
+
+  @override
   String get assetGoldEmpty => 'No gold recorded yet.';
+
+  @override
+  String get assetSavingEmpty => 'No deposits recorded yet.';
+
+  @override
+  String get assetBankPick => 'Pick a bank';
+
+  @override
+  String get assetBankSearchHint => 'Search by name or code';
+
+  @override
+  String get assetBankLoadFailed => 'Could not load the bank list';
+
+  @override
+  String assetRatePerYear(String rate) {
+    return '$rate%/yr';
+  }
+
+  @override
+  String assetPerMonth(String amount) {
+    return '≈ $amount/mo';
+  }
+
+  @override
+  String assetMaturedOn(String date) {
+    return 'Matured $date';
+  }
 
   @override
   String get assetInvestmentEmpty => 'No investments recorded yet.';
