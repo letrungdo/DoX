@@ -28,6 +28,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
   final _urlController = TextEditingController();
   String? _editingUrl;
   bool _isAdding = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -63,10 +64,14 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
   }
 
   Future<void> _handleSave() async {
-    // `https://` is optional in the field; the service fills it in.
+    if (_isSaving) return;
+    // `https://` is optional in the field; the service fills it in. What is
+    // saved is what the user typed — a server that has moved answers with a
+    // redirect, and that is resolved on every launch rather than baked in here.
     final url = movieService.normalizeServerUrl(_urlController.text);
     if (url.isEmpty) return;
 
+    setState(() => _isSaving = true);
     if (_isAdding) {
       await movieService.updateBaseUrl(url);
     } else if (_editingUrl != null) {
@@ -76,7 +81,8 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
 
       if (index != -1) {
         servers[index] = url;
-        await storageService.setMovieServers(servers);
+        // The edit can rename a server onto one already in the list.
+        await storageService.setMovieServers(servers.toSet().toList());
         if (isPrimary) {
           await storageService.setPrimaryMovieServer(url);
         }
@@ -86,7 +92,9 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
       }
     }
 
+    if (!mounted) return;
     setState(() {
+      _isSaving = false;
       _isAdding = false;
       _editingUrl = null;
       _urlController.clear();
@@ -149,10 +157,20 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     hintText: l10n.serverUrlHint,
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.check_circle_outline_rounded),
-                      onPressed: _handleSave,
-                    ),
+                    suffixIcon: _isSaving
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : IconButton(
+                            icon: const Icon(
+                              Icons.check_circle_outline_rounded,
+                            ),
+                            onPressed: _handleSave,
+                          ),
                   ),
                   onSubmitted: (_) => _handleSave(),
                 ),
@@ -282,7 +300,11 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
             onPressed: () => Navigator.pop(context),
           ),
         if (isInputMode)
-          DialogActionButton(text: l10n.save, onPressed: _handleSave),
+          DialogActionButton(
+            text: l10n.save,
+            loading: _isSaving,
+            onPressed: _handleSave,
+          ),
       ],
     );
   }

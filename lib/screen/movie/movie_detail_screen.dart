@@ -342,7 +342,7 @@ class _MovieDetailScreenState
 
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
-      httpHeaders: {'Referer': '${movieService.baseUrl}/'},
+      httpHeaders: {'Referer': '${movieService.effectiveBaseUrl}/'},
     );
 
     try {
@@ -1792,7 +1792,7 @@ class _MovieDetailScreenState
                                                   cue: _hoverThumbnailCue,
                                                   width: previewWidth,
                                                   referer:
-                                                      '${movieService.baseUrl}/',
+                                                      '${movieService.effectiveBaseUrl}/',
                                                   fallback: VideoPlayer(
                                                     controller,
                                                   ),

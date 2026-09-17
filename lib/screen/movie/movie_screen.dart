@@ -165,6 +165,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   @override
   void onResume() {
     super.onResume();
+    // The saved server may have redirected somewhere else since the app was
+    // last used; the check runs behind the refresh and reloads if it moved.
+    unawaited(vm.refreshServerAddress());
     vm.loadMovies(refresh: true, silent: true);
   }
 

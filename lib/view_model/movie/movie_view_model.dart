@@ -80,6 +80,15 @@ class MovieViewModel extends CoreViewModel {
     try {
       _isLoading = true;
       notifyListenersSafe();
+      // The saved server is a fixed address that redirects to wherever the site
+      // lives today, and that changes without warning — so re-check it on every
+      // open. When the last known address is still cached the page starts on it
+      // and the check runs behind the load; only a first open has to wait.
+      if (movieService.hasResolvedBaseUrl) {
+        unawaited(refreshServerAddress());
+      } else {
+        await movieService.refreshBaseUrl();
+      }
       await movieService.discoverConfig();
       _categories = movieService.getCategories();
       _selectedCategory = mainCategories.firstOrNull ?? _categories.firstOrNull;
@@ -90,6 +99,27 @@ class MovieViewModel extends CoreViewModel {
       logger.e('MovieViewModel _initData failed', error: e, stackTrace: st);
       _isLoading = false;
       notifyListenersSafe();
+    }
+  }
+
+  /// Re-checks where the saved server redirects to while the page is already
+  /// loading from the last known address, and reloads it if the site moved.
+  Future<void> refreshServerAddress() async {
+    try {
+      final moved = await movieService.refreshBaseUrl();
+      if (!moved || isDispose) return;
+      await movieService.discoverConfig();
+      if (isDispose) return;
+      _categories = movieService.getCategories();
+      _selectedCategory = mainCategories.firstOrNull ?? _categories.firstOrNull;
+      await loadMovies(refresh: true, silent: true);
+    } catch (e, st) {
+      // The page keeps whatever the old address served; nothing to undo.
+      logger.e(
+        'MovieViewModel server refresh failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

@@ -142,6 +142,20 @@ class _StorageService {
     return prefs.setString(StorageKey.movieServerLabels, value);
   }
 
+  /// Where each saved server currently redirects to, as a JSON object keyed by
+  /// the address the user typed.
+  String? getMovieResolvedServers() {
+    try {
+      return prefs.getString(StorageKey.movieResolvedServers);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> setMovieResolvedServers(String value) {
+    return prefs.setString(StorageKey.movieResolvedServers, value);
+  }
+
   String? getMovieCategories() {
     return prefs.getString(StorageKey.movieCategories);
   }

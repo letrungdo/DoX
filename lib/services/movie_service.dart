@@ -14,11 +14,26 @@ class MovieService {
     _initDio();
   }
 
+  /// The address the user typed and the app stores: the fixed entry point.
+  /// Requests do not necessarily go here — see [effectiveBaseUrl].
   late String? baseUrl;
+
+  /// Where [baseUrl] currently redirects to, and therefore where the requests
+  /// actually go. Equal to [baseUrl] until a redirect has been resolved.
+  String? get effectiveBaseUrl => _resolvedFor(baseUrl) ?? baseUrl;
+
   late MovieSiteType _siteType;
   late Dio _dio;
 
   final Map<String, MovieDetail> _detailCache = {};
+
+  /// Sent by every request the service makes, including the redirect probe:
+  /// some servers answer differently when they do not recognise the client.
+  static const _defaultHeaders = {
+    'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+  };
 
   void _initDio() {
     baseUrl = storageService.getMovieBaseUrl();
@@ -27,14 +42,10 @@ class MovieService {
 
     _dio = Dio(
       BaseOptions(
-        baseUrl: baseUrl ?? '',
+        baseUrl: effectiveBaseUrl ?? '',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
-        headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-        },
+        headers: _defaultHeaders,
       ),
     );
   }
@@ -63,7 +74,150 @@ class MovieService {
     return url;
   }
 
-  /// Update base URL manually, re-initialize Dio, and discover config
+  /// How many `Location` hops a server may send us on before we give up.
+  static const _maxServerRedirects = 5;
+
+  /// Follows the redirects [rawUrl] goes through and returns the address the
+  /// server settles on. Movie sites move domain often and leave the old one
+  /// answering `301` with the new address; storing what the user typed would
+  /// make every later request pay for that hop, and break outright once the
+  /// old domain stops answering.
+  ///
+  /// The hops are walked by hand — `Location` header by `Location` header,
+  /// relative targets resolved against the URL that sent them — because the
+  /// HTTP client only auto-follows on its own terms and hands back nothing
+  /// useful when it stops early.
+  ///
+  /// Falls back to the normalized input when the request fails or nothing
+  /// redirects, so a user with no connection can still save a server by hand.
+  Future<String> _resolveServerUrl(String rawUrl) async {
+    final formattedUrl = normalizeServerUrl(rawUrl);
+    if (formattedUrl.isEmpty) return '';
+
+    final probe = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+        headers: _defaultHeaders,
+        // We read `Location` ourselves, so the client must hand the redirect
+        // back instead of quietly consuming it — and a 3xx is not an error.
+        followRedirects: false,
+        validateStatus: (_) => true,
+      ),
+    );
+
+    var current = Uri.parse(formattedUrl);
+    // Guards against a pair of servers pointing at each other forever.
+    final visited = <String>{current.toString()};
+
+    try {
+      for (var hop = 0; hop < _maxServerRedirects; hop++) {
+        final response = await probe.getUri<dynamic>(current);
+        final status = response.statusCode ?? 0;
+        if (status < 300 || status >= 400) break;
+
+        final location = response.headers.value('location');
+        if (location == null || location.trim().isEmpty) break;
+
+        // A `Location` may be relative (`/home`), so resolve it against the
+        // URL that answered.
+        final next = current.resolve(location.trim());
+        if (_originOf(next) == null) break;
+        if (!visited.add(next.toString())) break;
+        current = next;
+      }
+    } catch (e) {
+      logger.e('MovieService resolveServerUrl failed', error: e);
+      // Whatever we reached before the failure is still better than nothing.
+    }
+
+    return _originOf(current) ?? formattedUrl;
+  }
+
+  /// Re-resolves the active server's fixed address and points the requests at
+  /// wherever it leads today.
+  ///
+  /// Returns true when that address moved: the site is then a different host
+  /// from the one the screen was filled from, so the caller has to reload.
+  Future<bool> refreshBaseUrl() async {
+    final source = baseUrl;
+    if (source == null || source.isEmpty) return false;
+
+    final before = effectiveBaseUrl;
+    final resolved = await _resolveServerUrl(source);
+    if (resolved.isEmpty || resolved == before) return false;
+
+    await _storeResolvedServer(source, resolved);
+    _initDio();
+    logger.d('MovieService server moved: $before -> $resolved');
+    return true;
+  }
+
+  /// Whether the active server's redirect is already known, so the app can
+  /// start on it and re-check in the background instead of waiting for a
+  /// request to come back.
+  bool get hasResolvedBaseUrl => _resolvedFor(baseUrl) != null;
+
+  /// Where [sourceUrl] was last seen redirecting to; null when it redirects
+  /// nowhere, or has never been resolved.
+  String? _resolvedFor(String? sourceUrl) {
+    if (sourceUrl == null || sourceUrl.isEmpty) return null;
+    final resolved = _resolvedServers()[sourceUrl];
+    return (resolved == null || resolved.isEmpty) ? null : resolved;
+  }
+
+  Map<String, String> _resolvedServers() {
+    final raw = storageService.getMovieResolvedServers();
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return {
+        for (final entry in decoded.entries)
+          if (entry.value is String) entry.key: entry.value as String,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Drops cached redirects belonging to servers that are no longer saved.
+  Future<void> _pruneResolvedServers() async {
+    final map = _resolvedServers();
+    final known = storageService.getMovieServers().toSet();
+    if (map.keys.every(known.contains)) return;
+    map.removeWhere((key, _) => !known.contains(key));
+    await storageService.setMovieResolvedServers(jsonEncode(map));
+  }
+
+  Future<void> _storeResolvedServer(
+    String sourceUrl,
+    String resolvedUrl,
+  ) async {
+    final map = _resolvedServers();
+    // A server that stopped redirecting drops out of the map rather than
+    // mapping to itself.
+    if (resolvedUrl == sourceUrl) {
+      if (map.remove(sourceUrl) == null) return;
+    } else {
+      map[sourceUrl] = resolvedUrl;
+    }
+    await storageService.setMovieResolvedServers(jsonEncode(map));
+  }
+
+  /// Scheme + host (+ port) of [uri] — a server is stored as an origin, so the
+  /// path the redirect happens to land on is dropped.
+  String? _originOf(Uri uri) {
+    if (!uri.hasAuthority) return null;
+    if (uri.scheme != 'http' && uri.scheme != 'https') return null;
+    return uri.origin;
+  }
+
+  /// Makes [newUrl] the active server, re-initializes Dio and discovers the
+  /// config.
+  ///
+  /// What is stored is the address the user typed, never where it redirects
+  /// to: that entry point is the stable one, and the redirect is resolved
+  /// again on every launch.
   Future<void> updateBaseUrl(String newUrl) async {
     final formattedUrl = normalizeServerUrl(newUrl);
     if (formattedUrl.isEmpty) return;
@@ -80,6 +234,7 @@ class MovieService {
 
     await storageService.setMovieBaseUrl(formattedUrl);
     _initDio();
+    await refreshBaseUrl();
     await discoverConfig();
   }
 
@@ -97,6 +252,8 @@ class MovieService {
         _initDio();
       }
     }
+
+    await _pruneResolvedServers();
 
     if (wasPrimary) {
       await storageService.setPrimaryMovieServer(
@@ -184,7 +341,7 @@ class MovieService {
         final path = link.attributes['href'] ?? '';
 
         if (name.isEmpty || path.isEmpty) continue;
-        if (path == '/' || path == baseUrl) continue;
+        if (path == '/' || path == effectiveBaseUrl) continue;
 
         // Filter for interesting paths
         final isCategory =
@@ -202,7 +359,7 @@ class MovieService {
               id: id,
               name: name,
               path: path.startsWith('http')
-                  ? path.replaceFirst(baseUrl!, '')
+                  ? path.replaceFirst(effectiveBaseUrl!, '')
                   : path,
             ),
           );
@@ -351,7 +508,9 @@ class MovieService {
   String _fixUrl(String? url) {
     if (url == null || url.isEmpty) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    final base = baseUrl ?? '';
+    // Relative links come from the page the live host served, so they are
+    // completed against that host, not the entry point that redirected to it.
+    final base = effectiveBaseUrl ?? '';
     if (url.startsWith('/')) return '$base$url';
     return '$base/$url';
   }
@@ -758,8 +917,8 @@ class MovieService {
         options: Options(
           headers: {
             'Content-Type': 'application/json',
-            'Referer': movieUrl ?? '$baseUrl/',
-            'Origin': baseUrl ?? '',
+            'Referer': movieUrl ?? '$effectiveBaseUrl/',
+            'Origin': effectiveBaseUrl ?? '',
             'X-Requested-With': 'XMLHttpRequest',
           },
         ),
@@ -796,7 +955,7 @@ class MovieService {
         masterUrl,
         options: Options(
           responseType: ResponseType.plain,
-          headers: {'Referer': '${baseUrl ?? ''}/'},
+          headers: {'Referer': '${effectiveBaseUrl ?? ''}/'},
         ),
         cancelToken: cancelToken,
       );

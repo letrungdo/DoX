@@ -35,6 +35,7 @@ class StorageKey {
   static const primaryMovieServer = "primaryMovieServer";
   static const movieServers = "movieServers";
   static const movieServerLabels = "movieServerLabels";
+  static const movieResolvedServers = "movieResolvedServers";
   static const movieCategories = "movieCategories";
   static const movieLabel = "movieLabel";
   static const movieSiteType = "movieSiteType";

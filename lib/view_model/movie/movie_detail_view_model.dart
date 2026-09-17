@@ -223,7 +223,7 @@ class MovieDetailViewModel extends CoreViewModel {
         options: Options(
           responseType: ResponseType.plain,
           headers: {
-            'Referer': '${movieService.baseUrl}/',
+            'Referer': '${movieService.effectiveBaseUrl}/',
             'User-Agent':
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
                 'AppleWebKit/537.36 Chrome/120 Safari/537.36',
@@ -245,7 +245,7 @@ class MovieDetailViewModel extends CoreViewModel {
           precacheImage(
             NetworkImage(
               track.spriteUrl,
-              headers: {'Referer': '${movieService.baseUrl}/'},
+              headers: {'Referer': '${movieService.effectiveBaseUrl}/'},
             ),
             context,
           ).catchError((_) {}),
