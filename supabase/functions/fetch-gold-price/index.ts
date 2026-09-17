@@ -35,6 +35,28 @@ const parsePrice = (s: string): number => {
  */
 const MIN_PLAUSIBLE_PRICE = 1000000;
 
+/**
+ * The rows the app shows. PNJ quotes the plain ring under the nationwide
+ * "Giá vàng nữ trang" section rather than under a city, so each target names
+ * the location it lives in.
+ */
+const TARGETS = [
+  {
+    location: "Giá vàng nữ trang",
+    goldType: "Nhẫn Trơn PNJ 999.9",
+    code: "PNJ_RING_9999",
+    name: "Vàng nhẫn 9999",
+    desc: "PNJ Hồ Chí Minh",
+  },
+  {
+    location: "TPHCM",
+    goldType: "SJC",
+    code: "SJC_HCM",
+    name: "Vàng miếng SJC",
+    desc: "SJC Hồ Chí Minh",
+  },
+];
+
 Deno.serve(async () => {
   try {
     const response = await fetch(PNJ_API_URL, {
@@ -50,20 +72,11 @@ Deno.serve(async () => {
 
     const data: PnjResponse = await response.json();
 
-    // Filter for TPHCM location
-    const hcm = data.locations.find((l) => l.name === "TPHCM");
-
-    if (!hcm) {
-      throw new Error("HCM location not found in PNJ response");
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Filter for PNJ and SJC gold types only
-    const wanted = ["PNJ", "SJC"];
     const now = new Date();
     const nowIso = now.toISOString();
 
@@ -77,10 +90,17 @@ Deno.serve(async () => {
     const results = [];
     const historyRows = [];
 
-    for (const t of hcm.gold_type) {
-      if (!wanted.includes(t.name)) continue;
+    for (const target of TARGETS) {
+      const location = data.locations.find((l) => l.name === target.location);
+      const t = location?.gold_type.find((g) => g.name === target.goldType);
 
-      const code = `${t.name}_HCM`.toUpperCase();
+      if (!t) {
+        throw new Error(
+          `${target.goldType} not found in PNJ location ${target.location}`,
+        );
+      }
+
+      const code = target.code;
       const currentBid = parsePrice(t.gia_mua);
       const currentAsk = parsePrice(t.gia_ban);
 
@@ -101,8 +121,8 @@ Deno.serve(async () => {
 
       results.push({
         code,
-        name: t.name,
-        desc: "TP. Hồ Chí Minh",
+        name: target.name,
+        desc: target.desc,
         bid: currentBid,
         ask: currentAsk,
         bid_change: bidChange,
@@ -116,10 +136,6 @@ Deno.serve(async () => {
         ask: currentAsk,
         created_at: nowIso,
       });
-    }
-
-    if (results.length === 0) {
-      return new Response("No target gold types found", { status: 404 });
     }
 
     // Update main prices table with calculated changes
