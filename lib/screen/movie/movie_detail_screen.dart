@@ -131,8 +131,20 @@ class _MovieDetailScreenState
   ThumbnailCue? _hoverThumbnailCue;
 
   bool _isRotationLocked = false;
-  bool _isSpacePressed = false;
-  Timer? _spaceLongPressTimer;
+  bool _isPlayPauseKeyDown = false;
+  Timer? _playPauseLongPressTimer;
+
+  /// Every key that means "play/pause" on the hardware the player runs on: the
+  /// space bar on a desktop keyboard, the OK button of a TV remote (which
+  /// arrives as `select`, or as a game-pad button on some boxes), and the
+  /// dedicated transport key when the remote has one.
+  static final _playPauseKeys = <LogicalKeyboardKey>{
+    LogicalKeyboardKey.space,
+    LogicalKeyboardKey.select,
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.gameButtonA,
+    LogicalKeyboardKey.mediaPlayPause,
+  };
   Timer? _volumeHideTimer;
 
   /// Full screen only: `true` crops the video to cover the whole screen,
@@ -257,6 +269,7 @@ class _MovieDetailScreenState
       unawaited(controller.dispose());
     }
     _controlsTimer?.cancel();
+    _playPauseLongPressTimer?.cancel();
     _volumeHideTimer?.cancel();
     _orientationSubscription?.cancel();
     _videoFocusNode.dispose();
@@ -747,15 +760,18 @@ class _MovieDetailScreenState
 
   KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.space) {
-        if (!_isSpacePressed) {
-          _isSpacePressed = true;
-          _spaceLongPressTimer?.cancel();
-          _spaceLongPressTimer = Timer(const Duration(milliseconds: 500), () {
-            if (_isSpacePressed && mounted) {
-              _start2xSpeed();
-            }
-          });
+      if (_playPauseKeys.contains(event.logicalKey)) {
+        if (!_isPlayPauseKeyDown) {
+          _isPlayPauseKeyDown = true;
+          _playPauseLongPressTimer?.cancel();
+          _playPauseLongPressTimer = Timer(
+            const Duration(milliseconds: 500),
+            () {
+              if (_isPlayPauseKeyDown && mounted) {
+                _start2xSpeed();
+              }
+            },
+          );
         }
         return KeyEventResult.handled;
       }
@@ -771,20 +787,31 @@ class _MovieDetailScreenState
         _seekBy(const Duration(seconds: 10));
         return KeyEventResult.handled;
       }
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        // Left unhandled on purpose: up and down are how the D-pad walks off
+        // the video and onto the transport buttons. They are only reachable
+        // once the bar is on screen, so reveal it on the way past.
+        if (!_showControls) {
+          setState(() => _showControls = true);
+          _startControlsTimer();
+        }
+        return KeyEventResult.ignored;
+      }
     } else if (event is KeyRepeatEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.space) {
+      if (_playPauseKeys.contains(event.logicalKey)) {
         return KeyEventResult.handled;
       }
     } else if (event is KeyUpEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.space) {
-        _spaceLongPressTimer?.cancel();
-        if (_isSpacePressed) {
+      if (_playPauseKeys.contains(event.logicalKey)) {
+        _playPauseLongPressTimer?.cancel();
+        if (_isPlayPauseKeyDown) {
           if (_isSpeedBoosted) {
             _stop2xSpeed();
           } else {
             _togglePlayback();
           }
-          _isSpacePressed = false;
+          _isPlayPauseKeyDown = false;
         }
         return KeyEventResult.handled;
       }

@@ -108,4 +108,16 @@ class Dimens {
 
   /// Narrow threshold for the movie player layout.
   static const playerNarrowThreshold = 330.0;
+
+  /// Thickness of the outline drawn around whatever the TV remote's D-pad is
+  /// pointing at. Heavier than a desktop focus ring on purpose: it is read
+  /// from across a room, and it is the only cue a television gets.
+  static const focusRingWidth = 2.5;
+
+  /// Margin a television keeps free along every edge, because the panel may
+  /// crop the outer band of the picture (overscan). Google's leanback guidance
+  /// puts it at 5% of the screen, which on the 960x540dp a 1080p TV reports is
+  /// 48dp across and 27dp down. Injected into the media query by `TvShell`, so
+  /// every `SafeArea` in the app honours it without knowing why.
+  static const tvOverscan = EdgeInsets.symmetric(horizontal: 48, vertical: 27);
 }

@@ -70,6 +70,7 @@ class _NeuButtonState extends State<NeuButton> {
     );
 
     final button = NeuPress(
+      focusRadius: widget.radius,
       onTap: widget.onPressed,
       builder: (context, pressed) => AnimatedContainer(
         duration: NeuPress.duration,

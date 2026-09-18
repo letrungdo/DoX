@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:dio/dio.dart';
 import 'package:do_x/utils/app_info.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
@@ -41,9 +42,7 @@ class UpdateService {
       if (!_isNewerThanCurrent(latest)) return null;
 
       final assets = (res.data['assets'] as List?) ?? [];
-      final apk = assets.firstWhereOrNull(
-        (a) => (a['name'] as String? ?? '').endsWith('.apk'),
-      );
+      final apk = pickApkForThisDevice(assets);
       if (apk == null) return null;
 
       return AppUpdateInfo(
@@ -55,6 +54,33 @@ class UpdateService {
       logger.e("check update failed", error: e);
       return null;
     }
+  }
+
+  /// The APK asset built for this device's CPU.
+  ///
+  /// A release carries one APK per ABI — a phone's `arm64-v8a` and the
+  /// `armeabi-v7a` one that 32-bit TV boxes need — and handing the wrong one to
+  /// the installer either fails outright or silently drops the device onto a
+  /// 32-bit build. `deviceType.supportedAbis` is already ordered by preference,
+  /// so the first asset name mentioning one of them is the right file.
+  ///
+  /// Falls back to the first APK in the release: that is what older releases
+  /// (a single, unsuffixed `app-release.apk`) and any unrecognised ABI get.
+  @visibleForTesting
+  Map<String, dynamic>? pickApkForThisDevice(List<dynamic> assets) {
+    final apks = assets
+        .cast<Map<String, dynamic>>()
+        .where((a) => (a['name'] as String? ?? '').endsWith('.apk'))
+        .toList();
+    if (apks.isEmpty) return null;
+
+    for (final abi in deviceType.supportedAbis) {
+      final match = apks.firstWhereOrNull(
+        (a) => (a['name'] as String? ?? '').contains(abi),
+      );
+      if (match != null) return match;
+    }
+    return apks.first;
   }
 
   /// Deterministic temp-dir path where the given update's APK is downloaded.

@@ -75,21 +75,73 @@ jobs:
       - name: Setup FlutterFire
         run: dart pub global activate flutterfire_cli
 
-      # Build Android APK
-      - name: Build APK
+      # Build Android APK. One APK per ABI rather than a fat one: the arm64
+      # build is what every phone and tablet installs, and armeabi-v7a is there
+      # for the 32-bit ARM hardware most Google TV / Android TV boxes still
+      # ship, which cannot install the arm64 APK at all.
+      #
+      # Two passes rather than `--split-per-abi`, which offsets the versionCode
+      # per ABI: the arm64 artifact keeps the exact versionCode and asset name
+      # it has always had, so nothing already installed sees a surprise.
+      - name: Build APK (arm64-v8a)
         run: |
           flutter build apk --release \
             --target-platform android-arm64 \
             --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
-            --obfuscate --split-debug-info=build/obfuscate
+            --obfuscate --split-debug-info=build/obfuscate/arm64-v8a
+          mkdir -p build/release-apks
+          mv build/app/outputs/flutter-apk/app-release.apk \
+            build/release-apks/app-release-arm64-v8a.apk
 
-      # Upload APK as release asset
+      - name: Build APK (armeabi-v7a)
+        run: |
+          flutter build apk --release \
+            --target-platform android-arm \
+            --dart-define-from-file envs/${{ env.BUILD_ENV }}/dart-define.env \
+            --obfuscate --split-debug-info=build/obfuscate/armeabi-v7a
+          mv build/app/outputs/flutter-apk/app-release.apk \
+            build/release-apks/app-tv-armeabi-v7a.apk
+
+      # Three assets from two files.
+      #
+      # Versions of the app already installed out there update themselves by
+      # downloading the *first* asset whose name ends in `.apk`, with no idea
+      # ABIs exist — and the GitHub API orders a release's assets by name, which
+      # it documents nowhere. So the names are chosen to make every ordering
+      # safe: `app-release*.apk` is always the arm64 build, and the 32-bit one
+      # is `app-tv-...`, which sorts behind both of them. Whatever an old phone
+      # reaches for first, it reaches for arm64.
+      #
+      # `app-release.apk` keeps the exact name those older versions have always
+      # found; the suffixed pair is what the current updater chooses between.
       - name: Upload APK to Release
         uses: svenstaro/upload-release-action@2.11.5
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/app/outputs/flutter-apk/app-release.apk
+          file: build/release-apks/app-release-arm64-v8a.apk
           asset_name: app-release.apk
+          tag: ${{ steps.get_version.outputs.version }}
+          release_name: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
+          overwrite: true
+
+      - name: Upload arm64-v8a APK to Release
+        uses: svenstaro/upload-release-action@2.11.5
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/release-apks/app-release-arm64-v8a.apk
+          asset_name: app-release-arm64-v8a.apk
+          tag: ${{ steps.get_version.outputs.version }}
+          release_name: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
+          overwrite: true
+
+      - name: Upload armeabi-v7a (TV) APK to Release
+        uses: svenstaro/upload-release-action@2.11.5
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/release-apks/app-tv-armeabi-v7a.apk
+          asset_name: app-tv-armeabi-v7a.apk
           tag: ${{ steps.get_version.outputs.version }}
           release_name: ${{ steps.get_version.outputs.version }}
           target_commit: ${{ github.sha }}

@@ -1,3 +1,4 @@
+import 'package:do_x/widgets/focus_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +8,10 @@ import 'package:flutter/services.dart';
 /// neumorphic surface the press is meant to read as the panel sinking into the
 /// page, not as a tint washing over it. [builder] gets the pressed flag and
 /// draws that sink itself — usually inset shadows.
+///
+/// It is also the app's single focus target. Cards, buttons and chips all end
+/// up here, so giving this one widget a focus node is what makes the whole
+/// neumorphic surface family reachable with a TV remote's D-pad.
 class NeuPress extends StatefulWidget {
   const NeuPress({
     super.key,
@@ -14,6 +19,8 @@ class NeuPress extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.pressedScale = 0.97,
+    this.focusRadius = 18,
+    this.autofocus = false,
   });
 
   /// Draws the surface. `pressed` is true from the moment the finger lands
@@ -28,6 +35,14 @@ class NeuPress extends StatefulWidget {
   /// it nearer 1 for a large panel, where 3% is a visible lurch.
   final double pressedScale;
 
+  /// Corner the focus ring follows. Defaults to the [NeuCard] radius, which is
+  /// what most surfaces reaching this widget are drawn with.
+  final double focusRadius;
+
+  /// Takes the D-pad on the way into a page. Set it on the first control of a
+  /// screen so the remote lands somewhere useful instead of nowhere.
+  final bool autofocus;
+
   /// Long enough for the sink to be seen, short enough not to feel laggy.
   static const duration = Duration(milliseconds: 130);
 
@@ -39,6 +54,7 @@ class _NeuPressState extends State<NeuPress> {
   bool _pressed = false;
   bool _fingerDown = false;
   bool _sinkFinished = true;
+  bool _focused = false;
 
   bool get _enabled => widget.onTap != null || widget.onLongPress != null;
 
@@ -69,10 +85,35 @@ class _NeuPressState extends State<NeuPress> {
     setState(() => _pressed = false);
   }
 
+  /// The remote's OK button. A key press has no down/up the way a finger does,
+  /// so the sink is played out in full first and the tap fires on the way back
+  /// up — otherwise the surface would never visibly move on a TV.
+  Future<void> _activate() async {
+    await _sink();
+    _release();
+    if (!mounted) return;
+    widget.onTap?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    return FocusableActionDetector(
+      enabled: _enabled,
+      autofocus: widget.autofocus,
+      mouseCursor: _enabled
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onShowFocusHighlight: (value) {
+        if (_focused != value) setState(() => _focused = value);
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            _activate();
+            return null;
+          },
+        ),
+      },
       child: GestureDetector(
         onTapDown: _enabled ? (_) => _sink() : null,
         onTapUp: _enabled ? (_) => _release() : null,
@@ -83,7 +124,13 @@ class _NeuPressState extends State<NeuPress> {
           scale: _pressed ? widget.pressedScale : 1,
           duration: NeuPress.duration,
           curve: Curves.easeOut,
-          child: widget.builder(context, _pressed),
+          // Inside the scale, so the ring shrinks with the surface it outlines
+          // instead of hanging in place while the panel sinks away from it.
+          child: FocusRing(
+            focused: _focused,
+            radius: widget.focusRadius,
+            child: widget.builder(context, _pressed),
+          ),
         ),
       ),
     );

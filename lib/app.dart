@@ -12,6 +12,7 @@ import 'package:do_x/services/web_socket/web_socket_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -86,14 +87,21 @@ class _MyAppState extends State<MyApp> {
             builder: (context, child) {
               final style = Theme.of(context).appBarTheme.systemOverlayStyle;
               if (child == null || style == null) {
-                return ToastificationWrapper(
-                  child: child ?? const SizedBox.shrink(),
+                return TvShell(
+                  child: ToastificationWrapper(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 );
               }
-              return ToastificationWrapper(
-                child: AnnotatedRegion<SystemUiOverlayStyle>(
-                  value: style,
-                  child: child,
+              // Outside the toast wrapper: a toast is laid out against the
+              // media query too, so it should clear the TV's overscan band as
+              // well.
+              return TvShell(
+                child: ToastificationWrapper(
+                  child: AnnotatedRegion<SystemUiOverlayStyle>(
+                    value: style,
+                    child: child,
+                  ),
                 ),
               );
             },

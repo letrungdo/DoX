@@ -88,6 +88,12 @@ class AppTheme {
       textTheme: textTheme,
       splashFactory: InkSparkle.splashFactory,
       visualDensity: VisualDensity.standard,
+      // What an `InkWell` paints when the focus lands on it. Material's default
+      // is a faint `onSurface` wash, which disappears on a neumorphic panel —
+      // the panel is already the same colour as the page. Tinted with the
+      // primary instead, so it matches the ring `FocusRing` draws and is still
+      // legible across a room, which is where a TV remote is used from.
+      focusColor: scheme.primary.withValues(alpha: isDark ? 0.34 : 0.24),
       appBarTheme: AppBarTheme(
         backgroundColor: background,
         foregroundColor: scheme.onSurface,

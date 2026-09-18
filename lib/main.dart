@@ -9,6 +9,7 @@ import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/app_info.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -56,6 +57,9 @@ Future<void> _initializeApp() async {
   final initializers = <Future<void>>[
     storageService.init(),
     appInfo.init(),
+    // Resolved before the first frame: whether this is a television decides
+    // how focus is drawn, and a widget cannot await that while building.
+    deviceType.init(),
     secureStorage.getAccount(),
     initSupabase(),
   ];
@@ -71,6 +75,16 @@ Future<void> _initializeApp() async {
   }
 
   await Future.wait(initializers);
+
+  if (deviceType.isTv) {
+    // Flutter only paints focus highlights once it has decided the user is on
+    // a keyboard, which it infers from the last input it saw. A remote's D-pad
+    // does not flip that switch on its own, so without this the selected
+    // control on a TV is drawn exactly like every other one and the user has
+    // no idea what the OK button will press.
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+  }
 
   // Listen before MyApp builds so auth links received during Supabase startup
   // can still route to the right screen.

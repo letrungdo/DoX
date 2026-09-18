@@ -87,6 +87,7 @@ class NeuCard extends StatelessWidget {
     // same 3% here reads as the whole panel lurching.
     return NeuPress(
       pressedScale: 0.99,
+      focusRadius: radius,
       onTap: onTap,
       onLongPress: onLongPress,
       builder: (context, pressed) => panel(pressed),

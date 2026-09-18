@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
@@ -9,12 +10,39 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Android TV / Google TV. Every one of these is optional so a set-top
+         box, which has no touchscreen, no GPS and no camera, is still a
+         supported device: an omitted `uses-feature` that a permission implies
+         (ACCESS_FINE_LOCATION implies location.gps, the camera plugin implies
+         hardware.camera) is *required* by default, and Play would filter the
+         app off every TV. Sideloading ignores these, but the manifest should
+         still say the truth about what the app needs. -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.faketouch" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- `tools:replace`, unlike every line around it: the camera plugin's own
+         manifest declares this feature as required, and the merger ORs the two
+         together — so without an explicit override the app stays filtered off
+         every camera-less device however this line is written. -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false"
+        tools:replace="android:required" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
         android:enableOnBackInvokedCallback="false"
         android:usesCleartextTraffic="true"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/tv_banner">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -34,6 +62,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+                <!-- The Android TV launcher only lists activities carrying
+                     LEANBACK_LAUNCHER; with LAUNCHER alone the app installs on a
+                     Google TV but never appears on the home screen, and can only
+                     be started from a sideload launcher. -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
             <!-- App Link on the auth pages of the website: with Do X installed,
                  the link in a confirmation / password-reset email opens the app

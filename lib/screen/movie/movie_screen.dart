@@ -28,6 +28,7 @@ import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:do_x/widgets/neu/neu_press.dart';
+import 'package:do_x/widgets/focus_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -98,6 +99,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// True from the moment a drag starts on the mini bar until it ends, so the
   /// recognizer is not torn down the instant the bar stops being mini.
   bool _isDraggingMiniBar = false;
+
+  /// Whether the D-pad is resting on the minimised player bar.
+  bool _miniBarFocused = false;
   final _detailController = MovieDetailController();
 
   bool _isSelectionMode = false;
@@ -1161,6 +1165,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     final foreground = isSelected ? Colors.white : scheme.onSurfaceVariant;
 
     return NeuPress(
+      focusRadius: 12,
       onTap: () => _showFilterSheet(
         title: fallbackLabel,
         options: options,
@@ -1229,72 +1234,96 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(14 * (1 - t)),
             clipBehavior: Clip.antiAlias,
-            child: GestureDetector(
-              // Opaque so the browser list underneath never receives taps that
-              // land on a gap of the overlay.
-              behavior: HitTestBehavior.opaque,
-              // Only the collapsed bar reacts to a tap; expanded, its own
-              // widgets handle everything.
-              onTap: isMini ? _expandOverlay : null,
-              // Keeps working past the mini threshold once the drag has begun,
-              // otherwise the recognizer would vanish mid-gesture.
-              onVerticalDragStart: isMini || _isDraggingMiniBar
-                  ? (_) => _isDraggingMiniBar = true
-                  : null,
-              onVerticalDragUpdate: isMini || _isDraggingMiniBar
-                  ? (details) => _onOverlayDragUpdate(details, travel)
-                  : null,
-              onVerticalDragEnd: isMini || _isDraggingMiniBar
-                  ? (details) {
-                      _isDraggingMiniBar = false;
-                      _onOverlayDragEnd(details);
-                    }
-                  : null,
-              onVerticalDragCancel: isMini || _isDraggingMiniBar
-                  ? () => _isDraggingMiniBar = false
-                  : null,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ChangeNotifierProvider(
-                    create: (_) => MovieDetailViewModel(),
-                    child: MovieDetailScreen(
-                      movieUrl: movie.url,
-                      movieId: movie.id,
-                      initialMovie: movie,
-                      embedded: true,
-                      minimizeProgress: t,
-                      controller: _detailController,
-                      onFullScreenChanged: (isFullScreen) {
-                        if (!mounted) return;
-                        // Full-screen video has to cover the bottom tab bar too
-                        // when this page is one of the tabs.
-                        immersiveMode.value = isFullScreen;
-                        setState(() => _isDetailFullScreen = isFullScreen);
-                      },
-                      onRelatedMovieTap: (related) =>
-                          setState(() => _playingMovie = related),
-                      onClose: () => unawaited(_closeOverlay()),
-                      onMinimize: _minimizeOverlay,
-                      onPlayerDragUpdate: (details) =>
-                          _onOverlayDragUpdate(details, travel),
-                      onPlayerDragEnd: _onOverlayDragEnd,
-                    ),
-                  ),
-                  // The tapped poster, fading out over the page it grew from.
-                  if (_entryRect != null && t < 1)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Opacity(
-                          opacity: 1 - t,
-                          child: CachedNetworkImage(
-                            imageUrl: movie.poster,
-                            fit: BoxFit.cover,
-                          ),
+            // The mini bar is a control, so a remote has to be able to land on
+            // it. Focus lives outside the detector rather than replacing it:
+            // the drag recognizers below are what a finger uses to fling the
+            // player back up, and they have no keyboard equivalent to fold in.
+            child: FocusableActionDetector(
+              enabled: isMini,
+              onShowFocusHighlight: (value) {
+                if (_miniBarFocused != value) {
+                  setState(() => _miniBarFocused = value);
+                }
+              },
+              actions: {
+                ActivateIntent: CallbackAction<ActivateIntent>(
+                  onInvoke: (_) {
+                    if (isMini) _expandOverlay();
+                    return null;
+                  },
+                ),
+              },
+              child: GestureDetector(
+                // Opaque so the browser list underneath never receives taps that
+                // land on a gap of the overlay.
+                behavior: HitTestBehavior.opaque,
+                // Only the collapsed bar reacts to a tap; expanded, its own
+                // widgets handle everything.
+                onTap: isMini ? _expandOverlay : null,
+                // Keeps working past the mini threshold once the drag has begun,
+                // otherwise the recognizer would vanish mid-gesture.
+                onVerticalDragStart: isMini || _isDraggingMiniBar
+                    ? (_) => _isDraggingMiniBar = true
+                    : null,
+                onVerticalDragUpdate: isMini || _isDraggingMiniBar
+                    ? (details) => _onOverlayDragUpdate(details, travel)
+                    : null,
+                onVerticalDragEnd: isMini || _isDraggingMiniBar
+                    ? (details) {
+                        _isDraggingMiniBar = false;
+                        _onOverlayDragEnd(details);
+                      }
+                    : null,
+                onVerticalDragCancel: isMini || _isDraggingMiniBar
+                    ? () => _isDraggingMiniBar = false
+                    : null,
+                child: FocusRing(
+                  focused: _miniBarFocused,
+                  radius: Dimens.radiusControl,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ChangeNotifierProvider(
+                        create: (_) => MovieDetailViewModel(),
+                        child: MovieDetailScreen(
+                          movieUrl: movie.url,
+                          movieId: movie.id,
+                          initialMovie: movie,
+                          embedded: true,
+                          minimizeProgress: t,
+                          controller: _detailController,
+                          onFullScreenChanged: (isFullScreen) {
+                            if (!mounted) return;
+                            // Full-screen video has to cover the bottom tab bar too
+                            // when this page is one of the tabs.
+                            immersiveMode.value = isFullScreen;
+                            setState(() => _isDetailFullScreen = isFullScreen);
+                          },
+                          onRelatedMovieTap: (related) =>
+                              setState(() => _playingMovie = related),
+                          onClose: () => unawaited(_closeOverlay()),
+                          onMinimize: _minimizeOverlay,
+                          onPlayerDragUpdate: (details) =>
+                              _onOverlayDragUpdate(details, travel),
+                          onPlayerDragEnd: _onOverlayDragEnd,
                         ),
                       ),
-                    ),
-                ],
+                      // The tapped poster, fading out over the page it grew from.
+                      if (_entryRect != null && t < 1)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Opacity(
+                              opacity: 1 - t,
+                              child: CachedNetworkImage(
+                                imageUrl: movie.poster,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
