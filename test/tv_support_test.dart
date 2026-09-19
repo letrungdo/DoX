@@ -1,6 +1,7 @@
 import 'package:do_x/services/update_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/focus_ring.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/tv_shell.dart';
@@ -115,6 +116,113 @@ void main() {
   });
 
   group('reaching a control with a remote', () {
+    testWidgets('one press of left reaches the tab rail from deep in a list', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      var selected = -1;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: AppScaffold(
+              bodyHorizontal: false,
+              body: Row(
+                children: [
+                  NavigationRail(
+                    selectedIndex: 0,
+                    onDestinationSelected: (index) => selected = index,
+                    labelType: NavigationRailLabelType.all,
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.home),
+                        label: Text('Tin'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.list),
+                        label: Text('Phim'),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: 200,
+                      itemBuilder: (_, index) =>
+                          NeuCard(onTap: () {}, child: Text('row $index')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Walk a little way into the feed — far enough that a bar *below* the
+      // content would now be a couple of hundred presses away.
+      for (var i = 0; i < 8; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+      }
+      final inList = primaryFocus!.rect;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+
+      // Beside the content, so it is one press away whatever the scroll
+      // position — that is the whole reason a television gets a rail.
+      expect(primaryFocus!.rect.left, lessThan(inList.left));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(selected, isNot(-1));
+    });
+
+    testWidgets('the D-pad can leave a text field it has walked into', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final below = FocusNode(debugLabel: 'below');
+      addTearDown(below.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: Column(
+                children: [
+                  const TextField(),
+                  Focus(focusNode: below, child: const SizedBox(height: 40)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<EditableText>(find.byType(EditableText))
+            .focusNode
+            .hasFocus,
+        isTrue,
+      );
+
+      // `EditableText` binds an action that drops every arrow key carrying
+      // `ignoreTextFields`, which is how Flutter frees the arrows to move the
+      // caret. On a remote that leaves no way out of the field at all.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(below.hasFocus, isTrue);
+    });
+
     testWidgets('the OK button presses a card the D-pad is resting on', (
       tester,
     ) async {

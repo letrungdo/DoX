@@ -346,6 +346,26 @@ class AppTheme {
           ),
         ),
       ),
+      // The television's tab switcher. Same colours as the bottom bar it
+      // replaces, so the two read as one component moved rather than as two
+      // different navigations.
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: background,
+        elevation: 0,
+        useIndicator: true,
+        indicatorColor: scheme.primary.withValues(alpha: 0.12),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
+        ),
+        selectedLabelTextStyle: textTheme.labelMedium?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelTextStyle: textTheme.labelMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: background,
         selectedItemColor: scheme.primary,

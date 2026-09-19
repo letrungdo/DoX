@@ -9,6 +9,7 @@ import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -16,6 +17,11 @@ import 'package:do_x/widgets/update_download_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+/// The icon pair and label one tab is drawn with, shared by the phone's bottom
+/// bar and the television's side rail so a tab cannot end up looking like two
+/// different tabs on two devices.
+typedef _NavVisuals = ({Widget icon, Widget activeIcon, String label});
 
 @RoutePage()
 class MainScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -61,28 +67,24 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
 
   /// Selected tabs keep full color; inactive SVGs become dark grayscale while
   /// preserving the original light and dark details.
-  BottomNavigationBarItem _navItem(SvgGenImage asset, String label) {
-    return BottomNavigationBarItem(
-      icon: asset.svg(width: 26, height: 26, colorFilter: _inactiveIconFilter),
-      activeIcon: asset.svg(width: 26, height: 26),
-      label: label,
-    );
-  }
+  _NavVisuals _navItem(SvgGenImage asset, String label) => (
+    icon: asset.svg(width: 26, height: 26, colorFilter: _inactiveIconFilter),
+    activeIcon: asset.svg(width: 26, height: 26),
+    label: label,
+  );
 
   /// Nav item backed by a Material [IconData] for tabs without a cute SVG.
-  BottomNavigationBarItem _navItemIcon(IconData icon, String label) {
-    return BottomNavigationBarItem(
-      icon: Icon(icon, size: 26, color: Colors.grey),
-      activeIcon: Icon(
-        icon,
-        size: 26,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      label: label,
-    );
-  }
+  _NavVisuals _navItemIcon(IconData icon, String label) => (
+    icon: Icon(icon, size: 26, color: Colors.grey),
+    activeIcon: Icon(
+      icon,
+      size: 26,
+      color: Theme.of(context).colorScheme.primary,
+    ),
+    label: label,
+  );
 
-  BottomNavigationBarItem _navItemOf(AppPage page, AppLocalizations l10n) {
+  _NavVisuals _navVisualsOf(AppPage page, AppLocalizations l10n) {
     final label = page.tabLabel(l10n);
     return switch (page) {
       AppPage.news => _navItem(Assets.images.newsCute, label),
@@ -92,6 +94,28 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       AppPage.menu => _navItem(Assets.images.menuCute, label),
       _ => _navItemIcon(page.icon, label),
     };
+  }
+
+  BottomNavigationBarItem _navItemOf(AppPage page, AppLocalizations l10n) {
+    final visuals = _navVisualsOf(page, l10n);
+    return BottomNavigationBarItem(
+      icon: visuals.icon,
+      activeIcon: visuals.activeIcon,
+      label: visuals.label,
+    );
+  }
+
+  /// The same tab, drawn for the rail a television navigates with.
+  NavigationRailDestination _railDestinationOf(
+    AppPage page,
+    AppLocalizations l10n,
+  ) {
+    final visuals = _navVisualsOf(page, l10n);
+    return NavigationRailDestination(
+      icon: visuals.icon,
+      selectedIcon: visuals.activeIcon,
+      label: Text(visuals.label),
+    );
   }
 
   /// [BottomNavigationBar] reserves the whole home-indicator inset below its
@@ -147,6 +171,79 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     });
   }
 
+  Future<void> _onTabSelected(
+    BuildContext context, {
+    required TabsRouter tabsRouter,
+    required List<AppPage> tabs,
+    required List<PageRouteInfo> routes,
+    required int value,
+  }) async {
+    final page = tabs[value];
+    if (page.requiresSupabaseAuth && supabase.auth.currentSession == null) {
+      await context.pushRoute(const AppLoginRoute());
+      if (supabase.auth.currentSession == null) return;
+    }
+    if (value == tabsRouter.activeIndex) {
+      // If the tab has a detail screen pushed on its nested stack, re-tapping
+      // goes back one level instead of reloading the tab's root.
+      final innerRouter = tabsRouter.stackRouterOfIndex(value);
+      if (innerRouter != null && innerRouter.canPop()) {
+        await innerRouter.maybePop();
+        return;
+      }
+      await vm.handleTabReselect(routes[value].routeName);
+      return;
+    }
+    tabsRouter.setActiveIndex(value);
+    storageService.setActiveTabPage(page.name);
+    // Switching to another tab re-fetches that tab's data, wherever the user
+    // had scrolled it to.
+    await vm.handleTabSwitch(routes[value].routeName);
+  }
+
+  /// The tab switcher a television gets, down the left edge instead of along
+  /// the bottom.
+  ///
+  /// Not a style choice — it is the only placement a remote can actually use. A
+  /// bar under the content is only reachable by walking the D-pad *past* every
+  /// row of the page, which on a feed of a few hundred articles means it is not
+  /// reachable at all. Beside the content it sits level with whatever row is
+  /// focused, so one press of LEFT lands on it from anywhere in the list.
+  Widget _buildTabRail(
+    BuildContext context, {
+    required TabsRouter tabsRouter,
+    required List<AppPage> tabs,
+    required List<PageRouteInfo> routes,
+    required AppLocalizations l10n,
+  }) {
+    return ColoredBox(
+      color: context.neu.base,
+      // The tab host does not inset its own body (each tab is a full page that
+      // insets itself), so the rail has to clear the TV's overscan band on the
+      // left itself. Not on the right: that edge is the seam with the content.
+      child: SafeArea(
+        right: false,
+        child: NavigationRail(
+          selectedIndex: tabsRouter.activeIndex.clamp(0, routes.length - 1),
+          onDestinationSelected: (value) => _onTabSelected(
+            context,
+            tabsRouter: tabsRouter,
+            tabs: tabs,
+            routes: routes,
+            value: value,
+          ),
+          // Every label on show: a television is read from across a room, and
+          // there is no hovering or long-pressing an icon to find out what it
+          // is.
+          labelType: NavigationRailLabelType.all,
+          destinations: tabs
+              .map((tab) => _railDestinationOf(tab, l10n))
+              .toList(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -166,65 +263,76 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             final tabsRouter = AutoTabsRouter.of(context);
             _requireLoginForInitialTab(context, tabsRouter, tabs);
 
+            final isTv = deviceType.isTv;
+            final content = Stack(
+              children: [
+                child,
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: 8,
+                  child: const UpdateDownloadToast(),
+                ),
+              ],
+            );
+
             return AppScaffold(
               // Each tab is a full page with its own app bar, so it applies its
               // own side insets; consuming them here would inset it twice.
               bodyHorizontal: false,
               // Flush with the scaffold, no shade: an upward shadow here read as
               // a seam across the whole screen instead of a lifted bar.
-              bottomNavigationBar: _hideWhileImmersive(
-                _tightenSafeArea(
-                  context,
-                  ColoredBox(
-                    color: context.neu.base,
-                    child: BottomNavigationBar(
-                      currentIndex: tabsRouter.activeIndex.clamp(
-                        0,
-                        routes.length - 1,
+              bottomNavigationBar: isTv
+                  ? null
+                  : _hideWhileImmersive(
+                      _tightenSafeArea(
+                        context,
+                        ColoredBox(
+                          color: context.neu.base,
+                          child: BottomNavigationBar(
+                            currentIndex: tabsRouter.activeIndex.clamp(
+                              0,
+                              routes.length - 1,
+                            ),
+                            onTap: (value) => _onTabSelected(
+                              context,
+                              tabsRouter: tabsRouter,
+                              tabs: tabs,
+                              routes: routes,
+                              value: value,
+                            ),
+                            items: tabs
+                                .map((tab) => _navItemOf(tab, l10n))
+                                .toList(),
+                          ),
+                        ),
                       ),
-                      onTap: (value) async {
-                        final page = tabs[value];
-                        if (page.requiresSupabaseAuth &&
-                            supabase.auth.currentSession == null) {
-                          await context.pushRoute(const AppLoginRoute());
-                          if (supabase.auth.currentSession == null) return;
-                        }
-                        if (value == tabsRouter.activeIndex) {
-                          // If the tab has a detail screen pushed on its nested
-                          // stack, re-tapping goes back one level instead of
-                          // reloading the tab's root.
-                          final innerRouter = tabsRouter.stackRouterOfIndex(
-                            value,
-                          );
-                          if (innerRouter != null && innerRouter.canPop()) {
-                            await innerRouter.maybePop();
-                            return;
-                          }
-                          await vm.handleTabReselect(routes[value].routeName);
-                          return;
-                        }
-                        tabsRouter.setActiveIndex(value);
-                        storageService.setActiveTabPage(page.name);
-                        // Switching to another tab re-fetches that tab's data,
-                        // wherever the user had scrolled it to.
-                        await vm.handleTabSwitch(routes[value].routeName);
-                      },
-                      items: tabs.map((tab) => _navItemOf(tab, l10n)).toList(),
                     ),
-                  ),
-                ),
-              ),
-              body: Stack(
-                children: [
-                  child,
-                  Positioned(
-                    left: 8,
-                    right: 8,
-                    bottom: 8,
-                    child: const UpdateDownloadToast(),
-                  ),
-                ],
-              ),
+              body: !isTv
+                  ? content
+                  : Row(
+                      children: [
+                        _hideWhileImmersive(
+                          _buildTabRail(
+                            context,
+                            tabsRouter: tabsRouter,
+                            tabs: tabs,
+                            routes: routes,
+                            l10n: l10n,
+                          ),
+                        ),
+                        // The rail has already spent the left inset; leaving it
+                        // in the media query would inset the page a second time
+                        // against the rail's own edge.
+                        Expanded(
+                          child: MediaQuery.removePadding(
+                            context: context,
+                            removeLeft: true,
+                            child: content,
+                          ),
+                        ),
+                      ],
+                    ),
             );
           },
         );
