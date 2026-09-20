@@ -249,6 +249,48 @@ void main() {
     });
   });
 
+  group('what the remote is allowed to stop on', () {
+    testWidgets('a row that does nothing is skipped for the control inside it', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      var opened = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: ListView(
+                children: [
+                  // The shape of every settings row: an untappable tile whose
+                  // whole point is the control it carries.
+                  ListTile(
+                    title: const Text('Ngôn ngữ'),
+                    trailing: TextButton(
+                      onPressed: () => opened++,
+                      child: const Text('Tiếng Việt'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+
+      // `NavigationMode.directional` would have parked the remote on the tile,
+      // which has no `onTap`, leaving OK to do nothing at all.
+      expect(opened, 1);
+    });
+  });
+
   group('losing the control the remote was on', () {
     testWidgets('the remote is put back on the page, not left dead', (
       tester,

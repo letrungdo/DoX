@@ -31,7 +31,9 @@ class SettingsScreen extends StatelessWidget {
             title: Text(l10n.language),
             trailing: DropdownButtonHideUnderline(
               child: DropdownButton<Locale>(
-                value: appVm.locale ?? AppLocalizations.supportedLocales.first,
+                // The same fallback the app itself renders with, or the row
+                // reports English while everything around it is in Vietnamese.
+                value: appVm.locale ?? AppViewModel.defaultLocale,
                 isDense: true,
                 borderRadius: BorderRadius.circular(Dimens.radiusControl),
                 onChanged: (newLocale) {

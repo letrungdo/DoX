@@ -35,10 +35,15 @@ import 'package:flutter/services.dart';
 ///
 /// This sits below `WidgetsApp`'s own `Shortcuts`, and a key walks up from the
 /// focused node, so these bindings are found first and anything not listed
-/// still falls through to Flutter's defaults. `NavigationMode.directional`
-/// comes along for the ride: it is what Flutter documents for a television,
-/// and it lets focus rest on a disabled control so the remote can read past it
-/// instead of skipping it silently.
+/// still falls through to Flutter's defaults.
+///
+/// Deliberately *not* `NavigationMode.directional`, whatever the framework
+/// documentation suggests for a television. It does not free the arrows from a
+/// text field — that is the flag on the intent, above — and the one thing it
+/// does do is make every `InkWell` focusable whether or not it has an `onTap`.
+/// A settings row is a `ListTile` with no tap handler wrapping a dropdown, so
+/// the remote stopped on the whole row and OK did nothing, with the control it
+/// was meant to reach sitting inside.
 class TvShell extends StatelessWidget {
   const TvShell({super.key, required this.child});
 
@@ -53,7 +58,6 @@ class TvShell extends StatelessWidget {
       data: media.copyWith(
         padding: media.padding + Dimens.tvOverscan,
         viewPadding: media.viewPadding + Dimens.tvOverscan,
-        navigationMode: NavigationMode.directional,
       ),
       child: _FocusOutline(
         child: Shortcuts(
