@@ -179,6 +179,81 @@ class _StackedHarnessState extends State<_StackedHarness> {
   }
 }
 
+/// The inline player of the movie page: a picture with its transport bar, and
+/// the page it sits on carrying on underneath — the episode list.
+class _InlineHarness extends StatefulWidget {
+  const _InlineHarness({super.key});
+
+  @override
+  State<_InlineHarness> createState() => _InlineHarnessState();
+}
+
+class _InlineHarnessState extends State<_InlineHarness> {
+  final videoNode = FocusNode(debugLabel: 'video');
+  final controlsScope = FocusScopeNode(debugLabel: 'controls');
+  final playNode = FocusNode(debugLabel: 'play');
+  final episodeNode = FocusNode(debugLabel: 'episode');
+
+  @override
+  void dispose() {
+    videoNode.dispose();
+    controlsScope.dispose();
+    playNode.dispose();
+    episodeNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onVideoKey(FocusNode node, KeyEvent event) {
+    if (!node.hasPrimaryFocus || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      focusPlayerControls(controlsScope, preferred: playNode);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: Focus(
+            focusNode: videoNode,
+            autofocus: true,
+            onKeyEvent: _onVideoKey,
+            child: Stack(
+              children: [
+                const Positioned.fill(child: ColoredBox(color: Colors.black)),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: PlayerControlsFocus(
+                    node: controlsScope,
+                    exit: TraversalDirection.up,
+                    onExit: videoNode.requestFocus,
+                    child: IconButton(
+                      focusNode: playNode,
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      onPressed: () {},
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        IconButton(
+          focusNode: episodeNode,
+          icon: const Icon(Icons.list_rounded),
+          onPressed: () {},
+        ),
+      ],
+    );
+  }
+}
+
 void main() {
   Future<_HarnessState> pump(WidgetTester tester) async {
     final key = GlobalKey<_HarnessState>();
@@ -320,6 +395,31 @@ void main() {
 
       expect(state.playNode.hasPrimaryFocus, isTrue);
     });
+  });
+
+  testWidgets('the press away from the player reaches the page below it', (
+    tester,
+  ) async {
+    final key = GlobalKey<_InlineHarnessState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: _InlineHarness(key: key)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final state = key.currentState!;
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(state.playNode.hasPrimaryFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+
+    // A scope holds directional focus inside itself unless it is told not to,
+    // which left the remote stuck on the transport bar with the episode list
+    // one press away underneath it.
+    expect(state.episodeNode.hasPrimaryFocus, isTrue);
   });
 
   testWidgets('a hidden bar holds no focus, so the outline marks nothing', (

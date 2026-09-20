@@ -16,7 +16,13 @@ import 'package:flutter/services.dart';
 /// to the bar first: a bar with a control stacked above another has somewhere
 /// to go in that direction, and only the control at its edge leaves. Every
 /// other key is left alone, so moving along the bar stays ordinary traversal.
-class PlayerControlsFocus extends StatelessWidget {
+///
+/// The other way out is left to traversal, which needs help of its own: a
+/// scope stops directional focus at its edge by default, so an inline player
+/// would trap the remote in the transport bar with the episode list right
+/// underneath it. The scope is told to carry the search on into the scope
+/// around it instead.
+class PlayerControlsFocus extends StatefulWidget {
   const PlayerControlsFocus({
     super.key,
     required this.node,
@@ -30,6 +36,28 @@ class PlayerControlsFocus extends StatelessWidget {
   final VoidCallback onExit;
   final Widget child;
 
+  @override
+  State<PlayerControlsFocus> createState() => _PlayerControlsFocusState();
+}
+
+class _PlayerControlsFocusState extends State<PlayerControlsFocus> {
+  @override
+  void initState() {
+    super.initState();
+    _letTheSearchOut();
+  }
+
+  @override
+  void didUpdateWidget(PlayerControlsFocus oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.node != widget.node) _letTheSearchOut();
+  }
+
+  void _letTheSearchOut() {
+    widget.node.directionalTraversalEdgeBehavior =
+        TraversalEdgeBehavior.parentScope;
+  }
+
   static LogicalKeyboardKey _keyFor(TraversalDirection direction) =>
       switch (direction) {
         TraversalDirection.up => LogicalKeyboardKey.arrowUp,
@@ -39,8 +67,11 @@ class PlayerControlsFocus extends StatelessWidget {
       };
 
   KeyEventResult _onKeyEvent(FocusNode _, KeyEvent event) {
+    final node = widget.node;
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (event.logicalKey != _keyFor(exit)) return KeyEventResult.ignored;
+    if (event.logicalKey != _keyFor(widget.exit)) {
+      return KeyEventResult.ignored;
+    }
     if (!node.hasFocus) return KeyEventResult.ignored;
 
     // Inside the bar first. Traversal from a control only ever considers the
@@ -48,11 +79,13 @@ class PlayerControlsFocus extends StatelessWidget {
     // somewhere to go and answers false at its edge — which is the press that
     // means "leave".
     final focused = FocusManager.instance.primaryFocus;
-    if (focused != null && focused != node && focused.focusInDirection(exit)) {
+    if (focused != null &&
+        focused != node &&
+        focused.focusInDirection(widget.exit)) {
       return KeyEventResult.handled;
     }
 
-    onExit();
+    widget.onExit();
     return KeyEventResult.handled;
   }
 
@@ -64,7 +97,7 @@ class PlayerControlsFocus extends StatelessWidget {
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _onKeyEvent,
-      child: FocusScope(node: node, child: child),
+      child: FocusScope(node: widget.node, child: widget.child),
     );
   }
 }
