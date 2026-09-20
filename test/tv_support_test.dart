@@ -1,3 +1,4 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/services/update_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
@@ -112,6 +113,97 @@ void main() {
 
     testWidgets('leaves a phone exactly as it was', (tester) async {
       expect(await paddingSeenByPages(tester), const EdgeInsets.only(top: 24));
+    });
+  });
+
+  group('seeing where the remote is', () {
+    /// The rect of the outline `TvShell` paints, or null when it paints none.
+    Rect? outline() {
+      final found = find
+          .byType(Positioned)
+          .evaluate()
+          .where(
+            (element) => (element.widget as Positioned).child is IgnorePointer,
+          );
+      if (found.isEmpty) return null;
+      final positioned = found.first.widget as Positioned;
+      return Rect.fromLTWH(
+        positioned.left!,
+        positioned.top!,
+        positioned.width!,
+        positioned.height!,
+      );
+    }
+
+    testWidgets('an outline follows the focus onto any widget, control or not', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final first = FocusNode(debugLabel: 'first');
+      final second = FocusNode(debugLabel: 'second');
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: Column(
+                children: [
+                  // Deliberately not a button: a page made of plain rows has to
+                  // show the remote's position too.
+                  Focus(
+                    focusNode: first,
+                    child: const SizedBox(height: 50, width: 200),
+                  ),
+                  Focus(
+                    focusNode: second,
+                    child: const SizedBox(height: 50, width: 200),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(outline(), isNull, reason: 'nothing focused yet');
+
+      first.requestFocus();
+      await tester.pumpAndSettle();
+      final onFirst = outline();
+      expect(onFirst, isNotNull);
+      expect(onFirst!.inflate(-Dimens.focusOutlineGap), first.rect);
+
+      second.requestFocus();
+      await tester.pumpAndSettle();
+      expect(outline(), isNot(onFirst));
+    });
+
+    testWidgets('a phone is left without one', (tester) async {
+      final node = FocusNode(debugLabel: 'only');
+      addTearDown(node.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: Focus(
+                focusNode: node,
+                child: const SizedBox(height: 50, width: 200),
+              ),
+            ),
+          ),
+        ),
+      );
+      node.requestFocus();
+      await tester.pumpAndSettle();
+
+      expect(node.hasPrimaryFocus, isTrue);
+      expect(outline(), isNull);
     });
   });
 

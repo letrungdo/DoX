@@ -19,6 +19,7 @@ class NeuButton extends StatefulWidget {
     this.radius = 16,
     this.depth = 0.85,
     this.expand = false,
+    this.focusNode,
   });
 
   final Widget child;
@@ -38,6 +39,9 @@ class NeuButton extends StatefulWidget {
 
   /// Stretch to the parent's width, for bottom-of-sheet actions.
   final bool expand;
+
+  /// Lets a caller put the TV remote on this button.
+  final FocusNode? focusNode;
 
   @override
   State<NeuButton> createState() => _NeuButtonState();
@@ -71,6 +75,7 @@ class _NeuButtonState extends State<NeuButton> {
 
     final button = NeuPress(
       focusRadius: widget.radius,
+      focusNode: widget.focusNode,
       onTap: widget.onPressed,
       builder: (context, pressed) => AnimatedContainer(
         duration: NeuPress.duration,

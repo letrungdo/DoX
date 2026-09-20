@@ -52,30 +52,128 @@ class TvShell extends StatelessWidget {
         viewPadding: media.viewPadding + Dimens.tvOverscan,
         navigationMode: NavigationMode.directional,
       ),
-      child: Shortcuts(
-        shortcuts: const <ShortcutActivator, Intent>{
-          SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(
-            TraversalDirection.up,
-            ignoreTextFields: false,
-          ),
-          SingleActivator(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(
-            TraversalDirection.down,
-            ignoreTextFields: false,
-          ),
-          SingleActivator(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(
-            TraversalDirection.left,
-            ignoreTextFields: false,
-          ),
-          SingleActivator(
-            LogicalKeyboardKey.arrowRight,
-          ): DirectionalFocusIntent(
-            TraversalDirection.right,
-            ignoreTextFields: false,
-          ),
-        },
-        child: child,
+      child: _FocusOutline(
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(
+              TraversalDirection.up,
+              ignoreTextFields: false,
+            ),
+            SingleActivator(
+              LogicalKeyboardKey.arrowDown,
+            ): DirectionalFocusIntent(
+              TraversalDirection.down,
+              ignoreTextFields: false,
+            ),
+            SingleActivator(
+              LogicalKeyboardKey.arrowLeft,
+            ): DirectionalFocusIntent(
+              TraversalDirection.left,
+              ignoreTextFields: false,
+            ),
+            SingleActivator(
+              LogicalKeyboardKey.arrowRight,
+            ): DirectionalFocusIntent(
+              TraversalDirection.right,
+              ignoreTextFields: false,
+            ),
+          },
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Draws one outline around whatever the remote is pointing at, over the whole
+/// app.
+///
+/// A television has no cursor and no finger, so seeing the control is the only
+/// way to know what OK will press — and a phone app has nothing that says so.
+/// Marking each widget in turn would mean touching every screen and would still
+/// miss the ones built out of plain text and images, so the outline is painted
+/// once at the root from [FocusManager] and works for controls nobody has
+/// thought about yet.
+class _FocusOutline extends StatefulWidget {
+  const _FocusOutline({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_FocusOutline> createState() => _FocusOutlineState();
+}
+
+class _FocusOutlineState extends State<_FocusOutline> {
+  Rect? _rect;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_scheduleMeasure);
+    _scheduleMeasure();
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_scheduleMeasure);
+    super.dispose();
+  }
+
+  /// Measured after the frame rather than during it: the widget that has just
+  /// taken focus is usually built by that very frame, so there is nothing laid
+  /// out to measure until it ends.
+  void _scheduleMeasure() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+  }
+
+  void _measure() {
+    if (!mounted) return;
+    final node = FocusManager.instance.primaryFocus;
+    final nodeContext = node?.context;
+    Rect? rect;
+    // A scope node spans its whole page; outlining that says nothing.
+    if (node != null && node is! FocusScopeNode && nodeContext != null) {
+      final box = nodeContext.findRenderObject();
+      if (box is RenderBox && box.attached && box.hasSize) {
+        rect = node.rect;
+      }
+    }
+    if (rect != _rect) setState(() => _rect = rect);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rect = _rect;
+    return NotificationListener<ScrollNotification>(
+      // Focus does not change while a list scrolls, but the row it rests on
+      // moves under it, so without this the outline is left behind.
+      onNotification: (_) {
+        _scheduleMeasure();
+        return false;
+      },
+      child: Stack(
+        textDirection: TextDirection.ltr,
+        fit: StackFit.expand,
+        children: [
+          widget.child,
+          if (rect != null && !rect.isEmpty)
+            Positioned.fromRect(
+              rect: rect.inflate(Dimens.focusOutlineGap),
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(Dimens.radiusControl),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: Dimens.focusRingWidth,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

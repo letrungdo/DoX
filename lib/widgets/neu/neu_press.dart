@@ -21,6 +21,7 @@ class NeuPress extends StatefulWidget {
     this.pressedScale = 0.97,
     this.focusRadius = 18,
     this.autofocus = false,
+    this.focusNode,
   });
 
   /// Draws the surface. `pressed` is true from the moment the finger lands
@@ -41,7 +42,14 @@ class NeuPress extends StatefulWidget {
 
   /// Takes the D-pad on the way into a page. Set it on the first control of a
   /// screen so the remote lands somewhere useful instead of nowhere.
+  ///
+  /// Only honoured when nothing in the scope holds focus yet — which on a TV is
+  /// almost never true, since the remote is always resting on something. Pass a
+  /// [focusNode] and call `requestFocus()` on it when the focus has to move.
   final bool autofocus;
+
+  /// Lets a caller move the remote onto this control. See [autofocus].
+  final FocusNode? focusNode;
 
   /// Long enough for the sink to be seen, short enough not to feel laggy.
   static const duration = Duration(milliseconds: 130);
@@ -100,6 +108,7 @@ class _NeuPressState extends State<NeuPress> {
     return FocusableActionDetector(
       enabled: _enabled,
       autofocus: widget.autofocus,
+      focusNode: widget.focusNode,
       mouseCursor: _enabled
           ? SystemMouseCursors.click
           : SystemMouseCursors.basic,
