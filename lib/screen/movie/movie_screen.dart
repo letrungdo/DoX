@@ -100,6 +100,10 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// recognizer is not torn down the instant the bar stops being mini.
   bool _isDraggingMiniBar = false;
 
+  /// Below this much of the way open, the player is the bar at the bottom of
+  /// the page rather than a sheet over it.
+  static const _miniThreshold = 0.02;
+
   /// Whether the D-pad is resting on the minimised player bar.
   bool _miniBarFocused = false;
   final _detailController = MovieDetailController();
@@ -424,6 +428,12 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     // stay up over the player. The background GestureDetector cannot do it
     // either — the card swallows the tap before it gets there.
     _searchFocusNode.unfocus();
+    // The poster still holds the remote's focus, and it is about to be shut out
+    // of the focus tree by the ExcludeFocus above. Dropping focus here leaves
+    // the scope empty, which is the one condition under which the player's own
+    // `autofocus` is honoured — otherwise the overlay opens with the D-pad
+    // pointing at nothing.
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _playingMovie = movie;
       _entryRect = cardRect;
@@ -562,16 +572,33 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             builder: (context, constraints) => Stack(
               fit: StackFit.expand,
               children: [
-                GestureDetector(
-                  onTap: _searchFocusNode.unfocus,
-                  child: _buildBrowser(
-                    context,
-                    vm: vm,
-                    emptyMessage: emptyMessage,
-                    movieLabel: movieLabel,
-                    baseUrl: baseUrl,
-                    l10n: l10n,
-                    constraints: constraints,
+                // The detail is an overlay in this Stack, not a pushed route,
+                // so nothing takes the browser out of the focus tree the way a
+                // route would: covered by the player, every poster behind it
+                // still answers the D-pad, and the remote wanders off into a
+                // grid it cannot see. Only the ExcludeFocus rebuilds as the
+                // overlay travels — the browser is handed through untouched.
+                AnimatedBuilder(
+                  animation: _overlayController,
+                  child: GestureDetector(
+                    onTap: _searchFocusNode.unfocus,
+                    child: _buildBrowser(
+                      context,
+                      vm: vm,
+                      emptyMessage: emptyMessage,
+                      movieLabel: movieLabel,
+                      baseUrl: baseUrl,
+                      l10n: l10n,
+                      constraints: constraints,
+                    ),
+                  ),
+                  builder: (context, child) => ExcludeFocus(
+                    // Minimised, the player is a bar at the bottom and the
+                    // browser is back in charge, so it takes the remote again.
+                    excluding:
+                        _playingMovie != null &&
+                        _overlayController.value > _miniThreshold,
+                    child: child!,
                   ),
                 ),
                 if (_playingMovie != null)
@@ -954,43 +981,57 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       curve: const Interval(0.75, 1),
     );
 
-    return SizeTransition(
-      sizeFactor: curved,
-      alignment: Alignment.topCenter,
-      child: FadeTransition(
-        opacity: curved,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            onChanged: _onSearchChanged,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: l10n.searchMoviesPlaceholder,
-              prefixIcon: FadeTransition(
-                opacity: prefixOpacity,
-                child: const Icon(Icons.search_rounded),
-              ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () {
-                        _searchController.clear();
-                        _onSearchChanged('');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              filled: true,
-              fillColor: scheme.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Dimens.radiusControl),
-                borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(Dimens.radiusControl),
-                borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
+    // Closed, the transitions leave the field at zero height and zero opacity
+    // but still in the tree — invisible to the eye and perfectly focusable to a
+    // D-pad, which lands in it and brings up the television's on-screen
+    // keyboard over a field nobody asked for. `_toggleSearch` flips this flag
+    // before it asks for focus, so opening still works.
+    return ExcludeFocus(
+      excluding: !_isSearchOpen,
+      child: SizeTransition(
+        sizeFactor: curved,
+        alignment: Alignment.topCenter,
+        child: FadeTransition(
+          opacity: curved,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              onChanged: _onSearchChanged,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: l10n.searchMoviesPlaceholder,
+                prefixIcon: FadeTransition(
+                  opacity: prefixOpacity,
+                  child: const Icon(Icons.search_rounded),
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                isDense: true,
+                filled: true,
+                fillColor: scheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(Dimens.radiusControl),
+                  borderSide: BorderSide(
+                    color: scheme.outlineVariant,
+                    width: 1,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(Dimens.radiusControl),
+                  borderSide: BorderSide(
+                    color: scheme.outlineVariant,
+                    width: 1,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1225,7 +1266,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
         final rect = _isDetailFullScreen
             ? fullRect
             : Rect.lerp(origin, fullRect, t)!;
-        final isMini = t < 0.02;
+        final isMini = t < _miniThreshold;
 
         return Positioned.fromRect(
           rect: rect,

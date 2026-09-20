@@ -789,13 +789,16 @@ class _MovieDetailScreenState
       }
       if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
           event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        // Left unhandled on purpose: up and down are how the D-pad walks off
-        // the video and onto the transport buttons. They are only reachable
-        // once the bar is on screen, so reveal it on the way past.
         if (!_showControls) {
+          // The transport bar is hidden, and hidden means out of the focus
+          // tree — so this press wakes it and nothing else, the way a set-top
+          // box behaves. Handled, or traversal would run now and carry the
+          // remote off the video to whatever sits under the player.
           setState(() => _showControls = true);
           _startControlsTimer();
+          return KeyEventResult.handled;
         }
+        // Bar already up: leave the key alone so traversal can walk onto it.
         return KeyEventResult.ignored;
       }
     } else if (event is KeyRepeatEvent) {
@@ -1634,473 +1637,502 @@ class _MovieDetailScreenState
                 // Video Controls Overlay
                 if (controller != null && controller.value.isInitialized)
                   Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: !_showControls,
-                      child: AnimatedOpacity(
-                        opacity: _showControls ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 300),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                // Tapping the video only shows and hides the
-                                // controls, never plays or pauses. Play/pause
-                                // is the centre button's job, so a tap meant to
-                                // dismiss the controls cannot stop the film.
-                                onTap: () {
-                                  _videoFocusNode.requestFocus();
-                                  _toggleControls();
-                                },
-                                onDoubleTapDown: (details) {
-                                  _doubleTapPosition = details.localPosition;
-                                },
-                                onDoubleTap: () {
-                                  if (_doubleTapPosition != null) {
-                                    final width = context.size?.width ?? 0;
-                                    if (width > 0) {
-                                      if (_doubleTapPosition!.dx < width / 2) {
-                                        _seekBy(const Duration(seconds: -10));
-                                        _triggerSkipIndicator(isForward: false);
-                                      } else {
-                                        _seekBy(const Duration(seconds: 10));
-                                        _triggerSkipIndicator(isForward: true);
+                    child: ExcludeFocus(
+                      // Hidden, the bar is only invisible and untappable —
+                      // it stays perfectly focusable, so the D-pad lands on
+                      // a play button nobody can see and OK presses it. The
+                      // first arrow brings the bar back; the next one walks
+                      // onto it.
+                      excluding: !_showControls,
+                      child: IgnorePointer(
+                        ignoring: !_showControls,
+                        child: AnimatedOpacity(
+                          opacity: _showControls ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 300),
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  // Tapping the video only shows and hides the
+                                  // controls, never plays or pauses. Play/pause
+                                  // is the centre button's job, so a tap meant to
+                                  // dismiss the controls cannot stop the film.
+                                  onTap: () {
+                                    _videoFocusNode.requestFocus();
+                                    _toggleControls();
+                                  },
+                                  onDoubleTapDown: (details) {
+                                    _doubleTapPosition = details.localPosition;
+                                  },
+                                  onDoubleTap: () {
+                                    if (_doubleTapPosition != null) {
+                                      final width = context.size?.width ?? 0;
+                                      if (width > 0) {
+                                        if (_doubleTapPosition!.dx <
+                                            width / 2) {
+                                          _seekBy(const Duration(seconds: -10));
+                                          _triggerSkipIndicator(
+                                            isForward: false,
+                                          );
+                                        } else {
+                                          _seekBy(const Duration(seconds: 10));
+                                          _triggerSkipIndicator(
+                                            isForward: true,
+                                          );
+                                        }
                                       }
                                     }
-                                  }
-                                },
-                                onLongPressStart: (_) => _start2xSpeed(),
-                                onLongPressEnd: (_) => _stop2xSpeed(),
+                                  },
+                                  onLongPressStart: (_) => _start2xSpeed(),
+                                  onLongPressEnd: (_) => _stop2xSpeed(),
+                                ),
                               ),
-                            ),
-                            // Bottom Gradient and Controls
-                            Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Container(
-                                padding: EdgeInsets.only(
-                                  bottom:
-                                      4 +
-                                      (isFullScreen
-                                          ? MediaQuery.paddingOf(context).bottom
-                                          : 0),
-                                  left: isFullScreen
-                                      ? MediaQuery.paddingOf(context).left
-                                      : 0,
-                                  right: isFullScreen
-                                      ? MediaQuery.paddingOf(context).right
-                                      : 0,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.7),
-                                    ],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
+                              // Bottom Gradient and Controls
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  padding: EdgeInsets.only(
+                                    bottom:
+                                        4 +
+                                        (isFullScreen
+                                            ? MediaQuery.paddingOf(
+                                                context,
+                                              ).bottom
+                                            : 0),
+                                    left: isFullScreen
+                                        ? MediaQuery.paddingOf(context).left
+                                        : 0,
+                                    right: isFullScreen
+                                        ? MediaQuery.paddingOf(context).right
+                                        : 0,
                                   ),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        const previewWidth = 160.0;
-                                        final maxPreviewLeft =
-                                            constraints.maxWidth > previewWidth
-                                            ? constraints.maxWidth -
-                                                  previewWidth
-                                            : 0.0;
-                                        final previewLeft =
-                                            (constraints.maxWidth *
-                                                        _dragFraction -
-                                                    previewWidth / 2)
-                                                .clamp(0.0, maxPreviewLeft);
-
-                                        return Stack(
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            MouseRegion(
-                                              cursor: SystemMouseCursors.click,
-                                              onEnter: (event) =>
-                                                  _updateHoverPreview(
-                                                    event.localPosition.dx,
-                                                    constraints.maxWidth,
-                                                  ),
-                                              onHover: (event) =>
-                                                  _updateHoverPreview(
-                                                    event.localPosition.dx,
-                                                    constraints.maxWidth,
-                                                  ),
-                                              onExit: (_) {
-                                                if (_isTimelineHovering) {
-                                                  setState(
-                                                    () => _isTimelineHovering =
-                                                        false,
-                                                  );
-                                                }
-                                                _startControlsTimer();
-                                              },
-                                              child: GestureDetector(
-                                                behavior:
-                                                    HitTestBehavior.opaque,
-                                                onHorizontalDragStart:
-                                                    (details) {
-                                                      _resumeAfterDrag =
-                                                          controller
-                                                              .value
-                                                              .isPlaying;
-                                                      unawaited(
-                                                        controller.pause(),
-                                                      );
-                                                      _controlsTimer?.cancel();
-                                                      setState(
-                                                        () =>
-                                                            _isDragging = true,
-                                                      );
-                                                      _updateDragPosition(
-                                                        controller,
-                                                        details
-                                                            .localPosition
-                                                            .dx,
-                                                        constraints.maxWidth,
-                                                      );
-                                                    },
-                                                onHorizontalDragUpdate:
-                                                    (details) {
-                                                      _updateDragPosition(
-                                                        controller,
-                                                        details
-                                                            .localPosition
-                                                            .dx,
-                                                        constraints.maxWidth,
-                                                      );
-                                                    },
-                                                onHorizontalDragEnd: (_) =>
-                                                    _finishDragging(controller),
-                                                onHorizontalDragCancel: () =>
-                                                    _finishDragging(controller),
-                                                onTapDown: (details) {
-                                                  _updateDragPosition(
-                                                    controller,
-                                                    details.localPosition.dx,
-                                                    constraints.maxWidth,
-                                                  );
-                                                },
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 14,
-                                                        bottom: 2,
-                                                      ),
-                                                  child: VideoProgressIndicator(
-                                                    controller,
-                                                    allowScrubbing: false,
-                                                    colors:
-                                                        const VideoProgressColors(
-                                                          playedColor:
-                                                              Colors.pinkAccent,
-                                                          bufferedColor:
-                                                              Colors.white30,
-                                                          backgroundColor:
-                                                              Colors.white12,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            if (_isDragging ||
-                                                _isTimelineHovering)
-                                              Positioned(
-                                                left: previewLeft,
-                                                bottom: 42,
-                                                child: PlayerScrubPreview(
-                                                  track: _vm.thumbnailTrack,
-                                                  cue: _hoverThumbnailCue,
-                                                  width: previewWidth,
-                                                  referer:
-                                                      '${movieService.effectiveBaseUrl}/',
-                                                  fallback: VideoPlayer(
-                                                    controller,
-                                                  ),
-                                                  position: _dragPosition,
-                                                ),
-                                              ),
-                                          ],
-                                        );
-                                      },
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.7),
+                                      ],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
                                     ),
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final isNarrow =
-                                            constraints.maxWidth <
-                                            Dimens.playerNarrowThreshold;
-                                        return Row(
-                                          children: [
-                                            const SizedBox(width: 8),
-                                            if (!isNarrow &&
-                                                _hasPreviousEpisode)
-                                              IconButton(
-                                                tooltip: l10n.previousEpisode,
-                                                icon: const Icon(
-                                                  Icons.skip_previous_rounded,
-                                                  color: Colors.white,
-                                                  size: 24,
-                                                ),
-                                                onPressed: _playPreviousEpisode,
-                                              ),
-                                            if (!isNarrow)
-                                              IconButton(
-                                                icon: Icon(
-                                                  _isPlaying
-                                                      ? Icons.pause_rounded
-                                                      : Icons
-                                                            .play_arrow_rounded,
-                                                  color: Colors.white,
-                                                  size: 28,
-                                                ),
-                                                onPressed: _togglePlayback,
-                                              ),
-                                            if (!isNarrow && _hasNextEpisode)
-                                              IconButton(
-                                                tooltip: l10n.nextEpisode,
-                                                icon: const Icon(
-                                                  Icons.skip_next_rounded,
-                                                  color: Colors.white,
-                                                  size: 24,
-                                                ),
-                                                onPressed: _playNextEpisode,
-                                              ),
-                                            const SizedBox(width: 4),
-                                            ValueListenableBuilder(
-                                              valueListenable: controller,
-                                              builder:
-                                                  (
-                                                    context,
-                                                    VideoPlayerValue value,
-                                                    child,
-                                                  ) {
-                                                    final currentPos =
-                                                        _isDragging
-                                                        ? _dragPosition
-                                                        : (_virtualSeekPosition ??
-                                                              value.position);
-                                                    return Text(
-                                                      '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 12,
-                                                      ),
-                                                    );
-                                                  },
-                                            ),
-                                            const Spacer(),
-                                            CompositedTransformTarget(
-                                              link: _volumeButtonLink,
-                                              child: PlayerVolumeButton(
-                                                icon: _volumeIcon,
-                                                muted: _volume == 0,
-                                                tooltip: _volume == 0
-                                                    ? l10n.unmute
-                                                    : l10n.volume,
-                                                onTap: _handleVolumeTap,
-                                                onLongPress: _toggleMute,
-                                                onHover: (hovering) {
-                                                  if (hovering) {
-                                                    if (!_showVolumeControl) {
-                                                      setState(
-                                                        () =>
-                                                            _showVolumeControl =
-                                                                true,
-                                                      );
-                                                      _controlsTimer?.cancel();
-                                                      _volumeHideTimer
-                                                          ?.cancel();
-                                                    }
-                                                  } else {
-                                                    _volumeHideTimer?.cancel();
-                                                    _volumeHideTimer = Timer(
-                                                      const Duration(
-                                                        milliseconds: 200,
-                                                      ),
-                                                      () {
-                                                        if (mounted) {
-                                                          setState(
-                                                            () =>
-                                                                _showVolumeControl =
-                                                                    false,
-                                                          );
-                                                        }
-                                                      },
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          const previewWidth = 160.0;
+                                          final maxPreviewLeft =
+                                              constraints.maxWidth >
+                                                  previewWidth
+                                              ? constraints.maxWidth -
+                                                    previewWidth
+                                              : 0.0;
+                                          final previewLeft =
+                                              (constraints.maxWidth *
+                                                          _dragFraction -
+                                                      previewWidth / 2)
+                                                  .clamp(0.0, maxPreviewLeft);
+
+                                          return Stack(
+                                            clipBehavior: Clip.none,
+                                            children: [
+                                              MouseRegion(
+                                                cursor:
+                                                    SystemMouseCursors.click,
+                                                onEnter: (event) =>
+                                                    _updateHoverPreview(
+                                                      event.localPosition.dx,
+                                                      constraints.maxWidth,
+                                                    ),
+                                                onHover: (event) =>
+                                                    _updateHoverPreview(
+                                                      event.localPosition.dx,
+                                                      constraints.maxWidth,
+                                                    ),
+                                                onExit: (_) {
+                                                  if (_isTimelineHovering) {
+                                                    setState(
+                                                      () =>
+                                                          _isTimelineHovering =
+                                                              false,
                                                     );
                                                   }
+                                                  _startControlsTimer();
                                                 },
-                                              ),
-                                            ),
-                                            // Fit / fill toggle, full screen only —
-                                            // inline there is nothing to crop to.
-                                            if (isFullScreen)
-                                              IconButton(
-                                                tooltip: _isVideoCover
-                                                    ? l10n.zoomToFit
-                                                    : l10n.zoomToFill,
-                                                icon: Icon(
-                                                  _isVideoCover
-                                                      ? Icons
-                                                            .zoom_in_map_rounded
-                                                      : Icons
-                                                            .zoom_out_map_rounded,
-                                                  color: Colors.white,
+                                                child: GestureDetector(
+                                                  behavior:
+                                                      HitTestBehavior.opaque,
+                                                  onHorizontalDragStart:
+                                                      (details) {
+                                                        _resumeAfterDrag =
+                                                            controller
+                                                                .value
+                                                                .isPlaying;
+                                                        unawaited(
+                                                          controller.pause(),
+                                                        );
+                                                        _controlsTimer
+                                                            ?.cancel();
+                                                        setState(
+                                                          () => _isDragging =
+                                                              true,
+                                                        );
+                                                        _updateDragPosition(
+                                                          controller,
+                                                          details
+                                                              .localPosition
+                                                              .dx,
+                                                          constraints.maxWidth,
+                                                        );
+                                                      },
+                                                  onHorizontalDragUpdate:
+                                                      (details) {
+                                                        _updateDragPosition(
+                                                          controller,
+                                                          details
+                                                              .localPosition
+                                                              .dx,
+                                                          constraints.maxWidth,
+                                                        );
+                                                      },
+                                                  onHorizontalDragEnd: (_) =>
+                                                      _finishDragging(
+                                                        controller,
+                                                      ),
+                                                  onHorizontalDragCancel: () =>
+                                                      _finishDragging(
+                                                        controller,
+                                                      ),
+                                                  onTapDown: (details) {
+                                                    _updateDragPosition(
+                                                      controller,
+                                                      details.localPosition.dx,
+                                                      constraints.maxWidth,
+                                                    );
+                                                  },
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 14,
+                                                          bottom: 2,
+                                                        ),
+                                                    child: VideoProgressIndicator(
+                                                      controller,
+                                                      allowScrubbing: false,
+                                                      colors:
+                                                          const VideoProgressColors(
+                                                            playedColor: Colors
+                                                                .pinkAccent,
+                                                            bufferedColor:
+                                                                Colors.white30,
+                                                            backgroundColor:
+                                                                Colors.white12,
+                                                          ),
+                                                    ),
+                                                  ),
                                                 ),
-                                                onPressed: () => _setVideoCover(
-                                                  !_isVideoCover,
+                                              ),
+                                              if (_isDragging ||
+                                                  _isTimelineHovering)
+                                                Positioned(
+                                                  left: previewLeft,
+                                                  bottom: 42,
+                                                  child: PlayerScrubPreview(
+                                                    track: _vm.thumbnailTrack,
+                                                    cue: _hoverThumbnailCue,
+                                                    width: previewWidth,
+                                                    referer:
+                                                        '${movieService.effectiveBaseUrl}/',
+                                                    fallback: VideoPlayer(
+                                                      controller,
+                                                    ),
+                                                    position: _dragPosition,
+                                                  ),
                                                 ),
-                                              ),
-                                            // Fullscreen button
-                                            IconButton(
-                                              icon: Icon(
-                                                isFullScreen
-                                                    ? Icons
-                                                          .fullscreen_exit_rounded
-                                                    : Icons.fullscreen_rounded,
-                                                color: Colors.white,
-                                              ),
-                                              onPressed: _toggleFullScreen,
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Center Controls (Play/Pause, Next/Prev)
-                            // Only shown if the bottom bar is too narrow to hold them
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                if (constraints.maxWidth >=
-                                        Dimens.playerNarrowThreshold ||
-                                    _isDragging) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Center(
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: _hasPreviousEpisode
-                                              ? PlayerCenterButton(
-                                                  icon: Icons
-                                                      .skip_previous_rounded,
-                                                  size: 44,
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final isNarrow =
+                                              constraints.maxWidth <
+                                              Dimens.playerNarrowThreshold;
+                                          return Row(
+                                            children: [
+                                              const SizedBox(width: 8),
+                                              if (!isNarrow &&
+                                                  _hasPreviousEpisode)
+                                                IconButton(
+                                                  tooltip: l10n.previousEpisode,
+                                                  icon: const Icon(
+                                                    Icons.skip_previous_rounded,
+                                                    color: Colors.white,
+                                                    size: 24,
+                                                  ),
                                                   onPressed:
                                                       _playPreviousEpisode,
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 32),
-                                      PlayerCenterButton(
-                                        icon: _isPlaying
-                                            ? Icons.pause_rounded
-                                            : Icons.play_arrow_rounded,
-                                        size: 64,
-                                        onPressed: _togglePlayback,
-                                      ),
-                                      const SizedBox(width: 32),
-                                      Expanded(
-                                        child: Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: _hasNextEpisode
-                                              ? PlayerCenterButton(
-                                                  icon: Icons.skip_next_rounded,
-                                                  size: 44,
+                                                ),
+                                              if (!isNarrow)
+                                                IconButton(
+                                                  icon: Icon(
+                                                    _isPlaying
+                                                        ? Icons.pause_rounded
+                                                        : Icons
+                                                              .play_arrow_rounded,
+                                                    color: Colors.white,
+                                                    size: 28,
+                                                  ),
+                                                  onPressed: _togglePlayback,
+                                                ),
+                                              if (!isNarrow && _hasNextEpisode)
+                                                IconButton(
+                                                  tooltip: l10n.nextEpisode,
+                                                  icon: const Icon(
+                                                    Icons.skip_next_rounded,
+                                                    color: Colors.white,
+                                                    size: 24,
+                                                  ),
                                                   onPressed: _playNextEpisode,
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
+                                                ),
+                                              const SizedBox(width: 4),
+                                              ValueListenableBuilder(
+                                                valueListenable: controller,
+                                                builder:
+                                                    (
+                                                      context,
+                                                      VideoPlayerValue value,
+                                                      child,
+                                                    ) {
+                                                      final currentPos =
+                                                          _isDragging
+                                                          ? _dragPosition
+                                                          : (_virtualSeekPosition ??
+                                                                value.position);
+                                                      return Text(
+                                                        '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                        ),
+                                                      );
+                                                    },
+                                              ),
+                                              const Spacer(),
+                                              CompositedTransformTarget(
+                                                link: _volumeButtonLink,
+                                                child: PlayerVolumeButton(
+                                                  icon: _volumeIcon,
+                                                  muted: _volume == 0,
+                                                  tooltip: _volume == 0
+                                                      ? l10n.unmute
+                                                      : l10n.volume,
+                                                  onTap: _handleVolumeTap,
+                                                  onLongPress: _toggleMute,
+                                                  onHover: (hovering) {
+                                                    if (hovering) {
+                                                      if (!_showVolumeControl) {
+                                                        setState(
+                                                          () =>
+                                                              _showVolumeControl =
+                                                                  true,
+                                                        );
+                                                        _controlsTimer
+                                                            ?.cancel();
+                                                        _volumeHideTimer
+                                                            ?.cancel();
+                                                      }
+                                                    } else {
+                                                      _volumeHideTimer
+                                                          ?.cancel();
+                                                      _volumeHideTimer = Timer(
+                                                        const Duration(
+                                                          milliseconds: 200,
+                                                        ),
+                                                        () {
+                                                          if (mounted) {
+                                                            setState(
+                                                              () =>
+                                                                  _showVolumeControl =
+                                                                      false,
+                                                            );
+                                                          }
+                                                        },
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                              // Fit / fill toggle, full screen only —
+                                              // inline there is nothing to crop to.
+                                              if (isFullScreen)
+                                                IconButton(
+                                                  tooltip: _isVideoCover
+                                                      ? l10n.zoomToFit
+                                                      : l10n.zoomToFill,
+                                                  icon: Icon(
+                                                    _isVideoCover
+                                                        ? Icons
+                                                              .zoom_in_map_rounded
+                                                        : Icons
+                                                              .zoom_out_map_rounded,
+                                                    color: Colors.white,
+                                                  ),
+                                                  onPressed: () =>
+                                                      _setVideoCover(
+                                                        !_isVideoCover,
+                                                      ),
+                                                ),
+                                              // Fullscreen button
+                                              IconButton(
+                                                icon: Icon(
+                                                  isFullScreen
+                                                      ? Icons
+                                                            .fullscreen_exit_rounded
+                                                      : Icons
+                                                            .fullscreen_rounded,
+                                                  color: Colors.white,
+                                                ),
+                                                onPressed: _toggleFullScreen,
+                                              ),
+                                            ],
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
-                                );
-                              },
-                            ),
-
-                            if (_showVolumeControl)
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                // Follows the button itself, so it stays centred
-                                // on it no matter how the bar is laid out.
-                                child: CompositedTransformFollower(
-                                  link: _volumeButtonLink,
-                                  showWhenUnlinked: false,
-                                  targetAnchor: Alignment.topCenter,
-                                  followerAnchor: Alignment.bottomCenter,
-                                  offset: const Offset(0, -4),
-                                  child: MouseRegion(
-                                    onEnter: (_) {
-                                      _controlsTimer?.cancel();
-                                      _volumeHideTimer?.cancel();
-                                    },
-                                    onExit: (_) {
-                                      setState(
-                                        () => _showVolumeControl = false,
-                                      );
-                                    },
-                                    child: PlayerVolumePopup(
-                                      volume: _volume,
-                                      onChanged: _setVolume,
-                                      onChangeStart: () =>
-                                          _controlsTimer?.cancel(),
-                                    ),
-                                  ),
                                 ),
                               ),
 
-                            // Top bar with back icon and settings
-                            Positioned(
-                              top:
-                                  12 +
-                                  (isFullScreen
-                                      ? MediaQuery.paddingOf(context).top
-                                      : 0),
-                              left:
-                                  12 +
-                                  (isFullScreen
-                                      ? MediaQuery.paddingOf(context).left
-                                      : 0),
-                              right:
-                                  12 +
-                                  (isFullScreen
-                                      ? MediaQuery.paddingOf(context).right
-                                      : 0),
-                              child: PlayerTopBar(
-                                showBack: isFullScreen,
-                                onBack: _toggleFullScreen,
-                                onSettings: _showSettingsBottomSheet,
-                                title: isFullScreen
-                                    ? splitMovieTitle(
-                                        _vm.detail?.title ?? '',
-                                      ).title
-                                    : null,
-                                subtitle: isFullScreen
-                                    ? [
-                                            splitMovieTitle(
-                                              _vm.detail?.title ?? '',
-                                            ).subtitle,
-                                            _vm.selectedEpisode?.name,
-                                          ]
-                                          .whereType<String>()
-                                          .where((s) => s.isNotEmpty)
-                                          .join(' • ')
-                                    : null,
+                              // Center Controls (Play/Pause, Next/Prev)
+                              // Only shown if the bottom bar is too narrow to hold them
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  if (constraints.maxWidth >=
+                                          Dimens.playerNarrowThreshold ||
+                                      _isDragging) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Center(
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: _hasPreviousEpisode
+                                                ? PlayerCenterButton(
+                                                    icon: Icons
+                                                        .skip_previous_rounded,
+                                                    size: 44,
+                                                    onPressed:
+                                                        _playPreviousEpisode,
+                                                  )
+                                                : const SizedBox.shrink(),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 32),
+                                        PlayerCenterButton(
+                                          icon: _isPlaying
+                                              ? Icons.pause_rounded
+                                              : Icons.play_arrow_rounded,
+                                          size: 64,
+                                          onPressed: _togglePlayback,
+                                        ),
+                                        const SizedBox(width: 32),
+                                        Expanded(
+                                          child: Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: _hasNextEpisode
+                                                ? PlayerCenterButton(
+                                                    icon:
+                                                        Icons.skip_next_rounded,
+                                                    size: 44,
+                                                    onPressed: _playNextEpisode,
+                                                  )
+                                                : const SizedBox.shrink(),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
-                            ),
-                          ],
+
+                              if (_showVolumeControl)
+                                Positioned(
+                                  left: 0,
+                                  top: 0,
+                                  // Follows the button itself, so it stays centred
+                                  // on it no matter how the bar is laid out.
+                                  child: CompositedTransformFollower(
+                                    link: _volumeButtonLink,
+                                    showWhenUnlinked: false,
+                                    targetAnchor: Alignment.topCenter,
+                                    followerAnchor: Alignment.bottomCenter,
+                                    offset: const Offset(0, -4),
+                                    child: MouseRegion(
+                                      onEnter: (_) {
+                                        _controlsTimer?.cancel();
+                                        _volumeHideTimer?.cancel();
+                                      },
+                                      onExit: (_) {
+                                        setState(
+                                          () => _showVolumeControl = false,
+                                        );
+                                      },
+                                      child: PlayerVolumePopup(
+                                        volume: _volume,
+                                        onChanged: _setVolume,
+                                        onChangeStart: () =>
+                                            _controlsTimer?.cancel(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              // Top bar with back icon and settings
+                              Positioned(
+                                top:
+                                    12 +
+                                    (isFullScreen
+                                        ? MediaQuery.paddingOf(context).top
+                                        : 0),
+                                left:
+                                    12 +
+                                    (isFullScreen
+                                        ? MediaQuery.paddingOf(context).left
+                                        : 0),
+                                right:
+                                    12 +
+                                    (isFullScreen
+                                        ? MediaQuery.paddingOf(context).right
+                                        : 0),
+                                child: PlayerTopBar(
+                                  showBack: isFullScreen,
+                                  onBack: _toggleFullScreen,
+                                  onSettings: _showSettingsBottomSheet,
+                                  title: isFullScreen
+                                      ? splitMovieTitle(
+                                          _vm.detail?.title ?? '',
+                                        ).title
+                                      : null,
+                                  subtitle: isFullScreen
+                                      ? [
+                                              splitMovieTitle(
+                                                _vm.detail?.title ?? '',
+                                              ).subtitle,
+                                              _vm.selectedEpisode?.name,
+                                            ]
+                                            .whereType<String>()
+                                            .where((s) => s.isNotEmpty)
+                                            .join(' • ')
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

@@ -26,6 +26,13 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
   late String? _primaryServer;
 
   final _urlController = TextEditingController();
+
+  /// Held explicitly rather than left to the field's `autofocus`: autofocus is
+  /// only honoured when nothing in the scope holds focus yet, and on a TV
+  /// something always does — the button the remote was resting on when it
+  /// opened the row. Without this the field appears with the focus still on
+  /// that button, two blind presses away, and the user has no way to tell.
+  final _urlFocusNode = FocusNode(debugLabel: 'movie-server-url');
   String? _editingUrl;
   bool _isAdding = false;
   bool _isSaving = false;
@@ -39,7 +46,19 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
   @override
   void dispose() {
     _urlController.dispose();
+    _urlFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Shows the URL field and puts the caret in it, whether the row was opened
+  /// to add a server or to edit one.
+  void _enterInputMode(VoidCallback mutate) {
+    setState(mutate);
+    // After the frame that builds the field: it does not exist yet, so its node
+    // has nothing to attach to until then.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _urlFocusNode.requestFocus();
+    });
   }
 
   void _loadServers() {
@@ -133,12 +152,10 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
               iconSize: 20,
               depth: 0.4,
               icon: Icons.add_rounded,
-              onPressed: () {
-                setState(() {
-                  _isAdding = true;
-                  _urlController.clear();
-                });
-              },
+              onPressed: () => _enterInputMode(() {
+                _isAdding = true;
+                _urlController.clear();
+              }),
             ),
         ],
       ),
@@ -153,6 +170,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: TextField(
                   controller: _urlController,
+                  focusNode: _urlFocusNode,
                   autofocus: true,
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
@@ -262,13 +280,11 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                                       iconSize: 20,
                                       depth: 0.4,
                                       icon: Icons.edit_outlined,
-                                      onPressed: () {
-                                        setState(() {
-                                          _editingUrl = url;
-                                          _urlController.text = url;
-                                          _isAdding = false;
-                                        });
-                                      },
+                                      onPressed: () => _enterInputMode(() {
+                                        _editingUrl = url;
+                                        _urlController.text = url;
+                                        _isAdding = false;
+                                      }),
                                     ),
                                   ],
                                 ),
