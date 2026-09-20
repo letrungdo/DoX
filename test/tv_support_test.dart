@@ -53,6 +53,22 @@ void main() {
     });
   });
 
+  group('driving the screen orientation', () {
+    test('a television is never turned', () {
+      deviceType.isTv = true;
+
+      // Exiting the movie player's full screen used to reset the orientation
+      // to portrait. A TV cannot rotate, so all that did was squeeze the whole
+      // app into a phone-shaped window on a landscape panel — and leave it
+      // there, because nothing else rotates it back.
+      expect(deviceType.canDriveOrientation, isFalse);
+    });
+
+    test('a phone still is', () {
+      expect(deviceType.canDriveOrientation, isTrue);
+    });
+  });
+
   tearDown(() {
     deviceType.isTv = false;
     deviceType.supportedAbis = const [];
@@ -222,6 +238,56 @@ void main() {
       second.requestFocus();
       await tester.pumpAndSettle();
       expect(outline(), isNot(onFirst));
+    });
+
+    testWidgets('the picture a player parks the remote on is not outlined', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final picture = FocusNode(debugLabel: 'picture');
+      final control = FocusNode(debugLabel: 'control');
+      addTearDown(picture.dispose);
+      addTearDown(control.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: TvFocusSurface(
+                node: picture,
+                child: Focus(
+                  focusNode: picture,
+                  // The controls of a player are built inside the picture they
+                  // float over, which is why the surface is matched by node
+                  // and not by ancestry.
+                  child: Focus(
+                    focusNode: control,
+                    child: const SizedBox(height: 50, width: 200),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      picture.requestFocus();
+      await tester.pumpAndSettle();
+      expect(
+        outline(),
+        isNull,
+        reason: 'a ring around the whole picture says nothing',
+      );
+
+      control.requestFocus();
+      await tester.pumpAndSettle();
+      expect(
+        outline(),
+        isNotNull,
+        reason: 'a control inside it is still marked',
+      );
     });
 
     testWidgets('a phone is left without one', (tester) async {

@@ -103,6 +103,27 @@ class TvShell extends StatelessWidget {
 /// miss the ones built out of plain text and images, so the outline is painted
 /// once at the root from [FocusManager] and works for controls nobody has
 /// thought about yet.
+/// Marks a focusable area that holds the remote without being a control: the
+/// picture a player parks it on while the transport bar is hidden.
+///
+/// [TvShell]'s outline skips exactly this node — a ring traced around the whole
+/// picture says nothing about where the remote is, and on a full-screen player
+/// it reads as a coloured border around the television itself. The controls
+/// inside the area are outlined as usual; only the node named here is passed
+/// over.
+class TvFocusSurface extends StatelessWidget {
+  const TvFocusSurface({super.key, required this.node, required this.child});
+
+  /// The focus node of the surface itself, so a control that happens to sit
+  /// inside it is still told apart from it.
+  final FocusNode node;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
 class _FocusOutline extends StatefulWidget {
   const _FocusOutline({required this.child});
 
@@ -151,7 +172,9 @@ class _FocusOutlineState extends State<_FocusOutline> {
       final box = nodeContext.findRenderObject();
       if (box is RenderBox && box.attached && box.hasSize) {
         onAControl = true;
-        if (!_marksItself(nodeContext)) rect = node.rect;
+        if (!_marksItself(nodeContext) && !_isSurface(node, nodeContext)) {
+          rect = node.rect;
+        }
       }
     }
     // The remote was on something and that something is gone — logging in
@@ -175,6 +198,16 @@ class _FocusOutlineState extends State<_FocusOutline> {
   /// two anyway, because it also fits the field's shape.
   bool _marksItself(BuildContext context) {
     return context.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  /// Whether the focus is on a [TvFocusSurface] rather than on a control.
+  ///
+  /// Matched by node, not by ancestry: a player's controls are built *inside*
+  /// the picture they float over, so anything looser would take the outline
+  /// off the buttons too — the one place a television needs it most.
+  bool _isSurface(FocusNode node, BuildContext context) {
+    final surface = context.findAncestorWidgetOfExactType<TvFocusSurface>();
+    return surface != null && identical(surface.node, node);
   }
 
   void _rescueOrphanedRemote() {

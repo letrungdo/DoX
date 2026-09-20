@@ -38,6 +38,20 @@ class _DeviceType {
     }
   }
 
+  /// Whether the screen's orientation is the app's to drive.
+  ///
+  /// A phone or tablet turns in the hand, so a video player may force it
+  /// landscape and hand it back afterwards. A television has one orientation
+  /// and no way to be turned: asking it for portrait does not rotate anything,
+  /// it squeezes the whole app into a phone-shaped window in the middle of the
+  /// panel and leaves it there. So on a TV nobody drives the orientation at
+  /// all. The web has no such control either.
+  bool get canDriveOrientation =>
+      !kIsWeb &&
+      !isTv &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
   @visibleForTesting
   set isTv(bool value) => _isTv = value;
 

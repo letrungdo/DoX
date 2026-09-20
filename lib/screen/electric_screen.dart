@@ -1291,6 +1291,11 @@ class _LoginFormState extends State<_LoginForm> {
               TextField(
                 controller: _usernameController,
                 autocorrect: false,
+                // Without this the keyboard's action button only closes the
+                // keyboard, leaving the password field to be reached by hand —
+                // which on a television means walking the D-pad back to a form
+                // the full-screen keyboard was covering.
+                textInputAction: TextInputAction.next,
                 decoration: cuteInputDecoration(context, l10n.username),
               ),
               const SizedBox(height: 16),
@@ -1298,6 +1303,7 @@ class _LoginFormState extends State<_LoginForm> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 autocorrect: false,
+                textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _submit(),
                 decoration: cuteInputDecoration(context, l10n.password)
                     .copyWith(
@@ -1406,6 +1412,7 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
             TextField(
               controller: _usernameController,
               autocorrect: false,
+              textInputAction: TextInputAction.next,
               decoration: cuteInputDecoration(context, l10n.username),
             ),
             const SizedBox(height: 14),
@@ -1413,6 +1420,7 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
               controller: _passwordController,
               obscureText: _obscurePassword,
               autocorrect: false,
+              textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
               decoration: cuteInputDecoration(context, l10n.password).copyWith(
                 suffixIcon: IconButton(

@@ -18,6 +18,7 @@ import 'package:do_x/screen/movie/movie_server_dialog.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/store/immersive_mode.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:do_x/view_model/movie/movie_view_model.dart';
@@ -444,6 +445,15 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     setState(() => _entryRect = null);
   }
 
+  /// Whether the player may be shrunk to the bar at the bottom of the page.
+  ///
+  /// It is a touch affordance through and through: it is reached by dragging
+  /// the player down, and left again by tapping the bar. A remote can do
+  /// neither, and what it leaves behind is a strip playing a film the D-pad
+  /// has no way to get back into. On a television back closes the player
+  /// instead.
+  bool get _canMinimize => !deviceType.isTv;
+
   void _minimizeOverlay() {
     _overlayController.animateTo(
       0,
@@ -544,11 +554,14 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       canPop: _playingMovie == null,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop || _playingMovie == null) return;
+        // Back out of full screen first, wherever the app is running: the
+        // film is still playing, and the page it came from is the next thing
+        // behind it, not the one after that.
         if (_isDetailFullScreen) {
           _detailController.exitFullScreen();
           return;
         }
-        if (_overlayController.value > 0) {
+        if (_canMinimize && _overlayController.value > 0) {
           _minimizeOverlay();
         } else {
           unawaited(_closeOverlay());
@@ -913,7 +926,11 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       16,
                       MediaQuery.paddingOf(context).bottom +
                           50 +
-                          (_playingMovie != null ? miniPlayerHeight + 16 : 0),
+                          // Room for the mini player to rest over the grid —
+                          // none needed where the player never shrinks.
+                          (_canMinimize && _playingMovie != null
+                              ? miniPlayerHeight + 16
+                              : 0),
                     ),
                     sliver: SliverGrid(
                       gridDelegate:
@@ -1296,16 +1313,19 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                 onVerticalDragStart: isMini || _isDraggingMiniBar
                     ? (_) => _isDraggingMiniBar = true
                     : null,
-                onVerticalDragUpdate: isMini || _isDraggingMiniBar
+                onVerticalDragUpdate:
+                    _canMinimize && (isMini || _isDraggingMiniBar)
                     ? (details) => _onOverlayDragUpdate(details, travel)
                     : null,
-                onVerticalDragEnd: isMini || _isDraggingMiniBar
+                onVerticalDragEnd:
+                    _canMinimize && (isMini || _isDraggingMiniBar)
                     ? (details) {
                         _isDraggingMiniBar = false;
                         _onOverlayDragEnd(details);
                       }
                     : null,
-                onVerticalDragCancel: isMini || _isDraggingMiniBar
+                onVerticalDragCancel:
+                    _canMinimize && (isMini || _isDraggingMiniBar)
                     ? () => _isDraggingMiniBar = false
                     : null,
                 child: Stack(
@@ -1330,10 +1350,16 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                         onRelatedMovieTap: (related) =>
                             setState(() => _playingMovie = related),
                         onClose: () => unawaited(_closeOverlay()),
-                        onMinimize: _minimizeOverlay,
-                        onPlayerDragUpdate: (details) =>
-                            _onOverlayDragUpdate(details, travel),
-                        onPlayerDragEnd: _onOverlayDragEnd,
+                        // Null takes the minimise button out of the header and
+                        // the drag off the player, so a television is not shown
+                        // a way in to something it cannot come back from.
+                        onMinimize: _canMinimize ? _minimizeOverlay : null,
+                        onPlayerDragUpdate: _canMinimize
+                            ? (details) => _onOverlayDragUpdate(details, travel)
+                            : null,
+                        onPlayerDragEnd: _canMinimize
+                            ? _onOverlayDragEnd
+                            : null,
                       ),
                     ),
                     // The tapped poster, fading out over the page it grew from.

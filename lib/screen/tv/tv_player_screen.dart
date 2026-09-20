@@ -4,9 +4,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/tv_channel.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
+import 'package:do_x/widgets/player_controls_focus.dart';
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -35,6 +38,27 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   bool _showControls = true;
   Timer? _hideControlsTimer;
 
+  /// Holds the remote while it is on the picture rather than on a control.
+  final FocusNode _videoFocusNode = FocusNode(debugLabel: 'tv-video');
+
+  /// The controls sit inside [_videoFocusNode]'s own rectangle, where
+  /// directional traversal cannot find them, so the overlay is one scope the
+  /// remote is handed by name. See [PlayerControlsFocus].
+  final FocusScopeNode _controlsScope = FocusScopeNode(
+    debugLabel: 'tv-controls',
+  );
+
+  /// Named so a press can aim at one: up reaches for the way out, down for the
+  /// thing that stops the picture.
+  final FocusNode _backFocusNode = FocusNode(debugLabel: 'tv-back');
+  final FocusNode _playFocusNode = FocusNode(debugLabel: 'tv-play');
+
+  /// The retry button of the error state, which the remote is put on as soon
+  /// as it appears.
+  final FocusNode _retryFocusNode = FocusNode(debugLabel: 'tv-retry');
+
+  bool get _controlsHaveFocus => _controlsScope.hasFocus;
+
   /// How long the controls stay up after a tap before they fade away again.
   static const _controlsTimeout = Duration(seconds: 4);
 
@@ -56,6 +80,11 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       controller.removeListener(listener);
     }
     unawaited(controller?.dispose());
+    _videoFocusNode.dispose();
+    _controlsScope.dispose();
+    _backFocusNode.dispose();
+    _playFocusNode.dispose();
+    _retryFocusNode.dispose();
     super.dispose();
   }
 
@@ -100,11 +129,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
             'TvPlayerScreen playback error: '
             '${controller.value.errorDescription}',
           );
-          setState(() {
-            _hasError = true;
-            _isLoading = false;
-            _showControls = true;
-          });
+          _showError();
           return;
         }
         setState(() {});
@@ -134,12 +159,27 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       );
       await controller.dispose();
       if (!mounted) return;
-      setState(() {
-        _hasError = true;
-        _isLoading = false;
-        _showControls = true;
-      });
+      _showError();
     }
+  }
+
+  /// Shows the channel as unplayable and puts the remote on the retry button.
+  ///
+  /// Explicitly, not by `autofocus`: that only takes effect while nothing in
+  /// the scope holds the focus, and the picture has held it since the page
+  /// opened. Without this the only control on screen is one the D-pad cannot
+  /// reach — it sits inside the picture's own rectangle, where directional
+  /// traversal never looks.
+  void _showError() {
+    setState(() {
+      _hasError = true;
+      _isLoading = false;
+      _showControls = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hasError) return;
+      _retryFocusNode.requestFocus();
+    });
   }
 
   Future<void> _retry() async {
@@ -153,22 +193,93 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       _controller = null;
       _listener = null;
     });
+    // The retry button is about to leave with the error state it belongs to.
+    _videoFocusNode.requestFocus();
     await _open();
   }
 
   void _toggleControls() {
     setState(() => _showControls = !_showControls);
-    if (_showControls) _scheduleHideControls();
+    if (_showControls) {
+      _scheduleHideControls();
+    } else {
+      _releaseControlsFocus();
+    }
   }
 
   void _scheduleHideControls() {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(_controlsTimeout, () {
       // While playback is broken the controls are the only way out of the
-      // page, so they stay put until something plays.
-      if (!mounted || _hasError || _isLoading) return;
+      // page, so they stay put until something plays — and so does a control
+      // the remote is resting on, which would otherwise be pulled out from
+      // under the user mid-choice.
+      if (!mounted || _hasError || _isLoading || _controlsHaveFocus) return;
       setState(() => _showControls = false);
     });
+  }
+
+  /// Puts the remote back on the picture. Hidden controls are held out of the
+  /// focus tree, so the focus they were holding has to go somewhere first.
+  void _releaseControlsFocus() {
+    if (!_controlsHaveFocus) return;
+    _videoFocusNode.requestFocus();
+  }
+
+  /// Takes the remote off a control and puts it back on the picture, keeping
+  /// the controls up for as long as they would have stayed anyway.
+  void _backToPicture() {
+    _videoFocusNode.requestFocus();
+    _scheduleHideControls();
+  }
+
+  /// Hands the remote to the controls, aiming at the back button for a press
+  /// towards the top of the picture ([top]) and at the play button for one
+  /// towards its middle. From there the two reach each other, and the press
+  /// that leaves the last of them goes back to the picture.
+  ///
+  /// [afterFrame] for controls that are only now being shown: hidden ones are
+  /// held out of the focus tree, so there is nothing to hand the remote to
+  /// until the frame carrying them exists.
+  void _enterControls(bool top, {required bool afterFrame}) {
+    void enter() {
+      focusPlayerControls(
+        _controlsScope,
+        preferred: top ? _backFocusNode : _playFocusNode,
+      );
+    }
+
+    if (!afterFrame) {
+      enter();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_showControls) return;
+      enter();
+    });
+  }
+
+  /// The remote, on the picture itself.
+  ///
+  /// Arrows wake the controls and then walk onto them; OK puts them up and
+  /// takes them down again. A live channel has no timeline, so there is
+  /// nothing here for the remote to seek with.
+  KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
+    // The controls are inside this node, so their keys walk up through here.
+    // Claiming them would swallow the OK meant for the focused button.
+    if (!node.hasPrimaryFocus || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final isUp = event.logicalKey == LogicalKeyboardKey.arrowUp;
+    if (isUp || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      final wasVisible = _showControls;
+      if (!wasVisible) setState(() => _showControls = true);
+      _scheduleHideControls();
+      if (deviceType.isTv) _enterControls(isUp, afterFrame: !wasVisible);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _togglePlayback() {
@@ -189,30 +300,44 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggleControls,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (controller != null && controller.value.isInitialized)
-              Center(
-                child: AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
-                  child: VideoPlayer(controller),
+      body: TvFocusSurface(
+        node: _videoFocusNode,
+        child: Focus(
+          focusNode: _videoFocusNode,
+          autofocus: true,
+          onKeyEvent: _handleVideoKeyEvent,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _toggleControls,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (controller != null && controller.value.isInitialized)
+                  Center(
+                    child: AspectRatio(
+                      aspectRatio: controller.value.aspectRatio,
+                      child: VideoPlayer(controller),
+                    ),
+                  ),
+                if (_isLoading) const Center(child: Loading()),
+                if (_hasError) _buildError(l10n),
+                ExcludeFocus(
+                  // Hidden, the controls are only invisible: left in the focus
+                  // tree the remote lands on a button nobody can see, and the TV
+                  // paints its outline around nothing at all.
+                  excluding: !_showControls,
+                  child: AnimatedOpacity(
+                    opacity: _showControls ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: IgnorePointer(
+                      ignoring: !_showControls,
+                      child: _buildControls(l10n, controller),
+                    ),
+                  ),
                 ),
-              ),
-            if (_isLoading) const Center(child: Loading()),
-            if (_hasError) _buildError(l10n),
-            AnimatedOpacity(
-              opacity: _showControls ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: _buildControls(l10n, controller),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -237,6 +362,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
               style: const TextStyle(color: Colors.white70),
             ),
             FilledButton.icon(
+              focusNode: _retryFocusNode,
               onPressed: _retry,
               icon: const Icon(Icons.refresh_rounded),
               label: Text(l10n.retry),
@@ -253,77 +379,87 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   ) {
     final isPlaying = controller?.value.isPlaying ?? false;
 
-    return Column(
-      children: [
-        // The gradients are what keep white controls readable over a bright
-        // frame; the picture underneath is not ours to dim any further.
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.black87, Colors.transparent],
+    // One scope for both controls, so up and down move between them; the press
+    // that leaves the topmost of them is the one that goes back to the picture.
+    return PlayerControlsFocus(
+      node: _controlsScope,
+      exit: TraversalDirection.up,
+      onExit: _backToPicture,
+      child: Column(
+        children: [
+          // The gradients are what keep white controls readable over a bright
+          // frame; the picture underneath is not ours to dim any further.
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black87, Colors.transparent],
+              ),
             ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 12, 12),
-              child: Row(
-                spacing: 8,
-                children: [
-                  FocusableTap(
-                    onTap: () => Navigator.of(context).maybePop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 12, 12),
+                child: Row(
+                  spacing: 8,
+                  children: [
+                    FocusableTap(
+                      focusNode: _backFocusNode,
+                      onTap: () => Navigator.of(context).maybePop(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.arrow_back_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      widget.channel.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                    Expanded(
+                      child: Text(
+                        widget.channel.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
-                  ),
-                  if (!_hasError && !_isLoading) _LiveBadge(label: l10n.tvLive),
-                ],
+                    if (!_hasError && !_isLoading)
+                      _LiveBadge(label: l10n.tvLive),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        Expanded(
-          child: Center(
-            child: controller == null
-                ? const SizedBox.shrink()
-                : FocusableTap(
-                    onTap: _togglePlayback,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 40,
+          Expanded(
+            child: Center(
+              child: controller == null
+                  ? const SizedBox.shrink()
+                  : FocusableTap(
+                      focusNode: _playFocusNode,
+                      onTap: _togglePlayback,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
                     ),
-                  ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
