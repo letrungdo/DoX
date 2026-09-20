@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
@@ -107,6 +110,7 @@ class _FocusOutline extends StatefulWidget {
 
 class _FocusOutlineState extends State<_FocusOutline> {
   Rect? _rect;
+  bool _hadControl = false;
 
   @override
   void initState() {
@@ -132,17 +136,29 @@ class _FocusOutlineState extends State<_FocusOutline> {
     if (!mounted) return;
     final node = FocusManager.instance.primaryFocus;
     final nodeContext = node?.context;
+    // Whether the remote is on a control at all, which is *not* the same as
+    // whether one is outlined: a text field is a control the outline stays off.
+    // Reading the outline instead of this left the field submitting from the
+    // on-screen keyboard — the one way a TV signs in — outside the rescue.
+    var onAControl = false;
     Rect? rect;
     // A scope node spans its whole page; outlining that says nothing.
     if (node != null && node is! FocusScopeNode && nodeContext != null) {
       final box = nodeContext.findRenderObject();
-      if (box is RenderBox &&
-          box.attached &&
-          box.hasSize &&
-          !_marksItself(nodeContext)) {
-        rect = node.rect;
+      if (box is RenderBox && box.attached && box.hasSize) {
+        onAControl = true;
+        if (!_marksItself(nodeContext)) rect = node.rect;
       }
     }
+    // The remote was on something and that something is gone — logging in
+    // replaces the page under it, switching tabs takes the old one out of the
+    // focus tree. Focus falls back to a scope, no arrow key finds anything from
+    // there, and the remote is dead for the rest of the session. Put it back on
+    // the page. Only when focus is *lost*, never at launch: forcing focus onto
+    // whatever a page happens to start with would open the on-screen keyboard
+    // on any page whose first control is a text field.
+    if (!onAControl && _hadControl) _rescueOrphanedRemote();
+    _hadControl = onAControl;
     if (rect != _rect) setState(() => _rect = rect);
   }
 
@@ -155,6 +171,29 @@ class _FocusOutlineState extends State<_FocusOutline> {
   /// two anyway, because it also fits the field's shape.
   bool _marksItself(BuildContext context) {
     return context.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  void _rescueOrphanedRemote() {
+    // Deliberately late, and deliberately *not* another post-frame callback:
+    // this runs from inside one, and a post-frame callback registered there
+    // waits for a frame that nothing is going to ask for. A microtask still
+    // runs after every other post-frame callback of this frame, which is what
+    // the delay is for — losing focus and wanting it somewhere are often the
+    // same event (opening the movie server's URL row removes the button that
+    // had the focus and asks the field to take it), and this is the last
+    // resort, so it has to let that happen first.
+    scheduleMicrotask(() {
+      if (!mounted) return;
+      final current = FocusManager.instance.primaryFocus;
+      if (current != null && current is! FocusScopeNode) return;
+
+      final scope = current is FocusScopeNode
+          ? current
+          : FocusManager.instance.rootScope;
+      // Routes that something covers are already excluded from this, so the
+      // first one is a control on the page actually in front of the user.
+      scope.traversalDescendants.firstOrNull?.requestFocus();
+    });
   }
 
   @override

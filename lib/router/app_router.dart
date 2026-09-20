@@ -240,8 +240,13 @@ class _AppRouter extends RootStackRouter {
   AppPage _initialTab() {
     final tabs = AppPage.tabsFromStorage();
     var tab = AppPage.byName(storageService.getActiveTabPage());
-    if (tab == null) {
-      // Upgrading from the index-based key: resolve it against today's bar.
+    // Upgrading from the index-based key: resolve it against today's bar. Only
+    // for an install that actually predates the layout editor — the index
+    // defaults to 1, and on a fresh install that is not a remembered choice but
+    // an accident of which page happens to sit second today. It used to land on
+    // the chickens; with Movies in the bar it would open the app on a login
+    // wall instead.
+    if (tab == null && storageService.getLegacyTabOrder() != null) {
       final legacyIndex = storageService.getLegacyTabIndex();
       if (legacyIndex >= 0 && legacyIndex < tabs.length) {
         tab = tabs[legacyIndex];

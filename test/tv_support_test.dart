@@ -20,6 +20,32 @@ void main() {
       expect(layout.menu, isNot(contains(AppPage.movie)));
     });
 
+    test('a television is not offered the pages it cannot run', () {
+      deviceType.isTv = true;
+      final layout = AppPage.sanitize(
+        // Even if a layout saved on a phone puts them front and centre.
+        [AppPage.myLife.name, AppPage.imageEditor.name],
+        [AppPage.fengShui.name],
+      );
+
+      final everywhere = [...layout.tabs, ...layout.menu];
+      expect(everywhere, isNot(contains(AppPage.myLife)));
+      expect(everywhere, isNot(contains(AppPage.fengShui)));
+      expect(everywhere, isNot(contains(AppPage.imageEditor)));
+      expect(everywhere, contains(AppPage.movie));
+    });
+
+    test('a phone keeps them', () {
+      final everywhere = [
+        ...AppPage.sanitize(null, null).tabs,
+        ...AppPage.sanitize(null, null).menu,
+      ];
+
+      expect(everywhere, contains(AppPage.myLife));
+      expect(everywhere, contains(AppPage.fengShui));
+      expect(everywhere, contains(AppPage.imageEditor));
+    });
+
     test('the app speaks Vietnamese', () {
       // `supportedLocales.first` is English only because the generator sorts
       // the locales by name, which is no reason to greet anyone in it.
@@ -220,6 +246,105 @@ void main() {
 
       expect(node.hasPrimaryFocus, isTrue);
       expect(outline(), isNull);
+    });
+  });
+
+  group('losing the control the remote was on', () {
+    testWidgets('the remote is put back on the page, not left dead', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final going = FocusNode(debugLabel: 'going');
+      final staying = FocusNode(debugLabel: 'staying');
+      addTearDown(going.dispose);
+      addTearDown(staying.dispose);
+      var showGoing = true;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: StatefulBuilder(
+              builder: (context, setState) => Scaffold(
+                body: Column(
+                  children: [
+                    Focus(
+                      focusNode: staying,
+                      child: const SizedBox(height: 40, width: 200),
+                    ),
+                    if (showGoing)
+                      Focus(
+                        focusNode: going,
+                        child: TextButton(
+                          onPressed: () => setState(() => showGoing = false),
+                          child: const Text('log in'),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      going.requestFocus();
+      await tester.pumpAndSettle();
+      expect(going.hasFocus, isTrue);
+
+      // Signing in replaces the page under the remote — the control it was
+      // resting on is simply gone, and focus falls back to a scope no arrow
+      // key can search from.
+      await tester.tap(find.text('log in'));
+      await tester.pumpAndSettle();
+
+      expect(staying.hasFocus, isTrue);
+    });
+
+    testWidgets('even when the remote was in a text field', (tester) async {
+      deviceType.isTv = true;
+      final staying = FocusNode(debugLabel: 'staying');
+      addTearDown(staying.dispose);
+      var signedIn = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: StatefulBuilder(
+              builder: (context, setState) => Scaffold(
+                body: Column(
+                  children: [
+                    Focus(
+                      focusNode: staying,
+                      child: const SizedBox(height: 40, width: 200),
+                    ),
+                    if (!signedIn)
+                      TextField(
+                        onSubmitted: (_) => setState(() => signedIn = true),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      // A field is a control the outline deliberately stays off, so "is an
+      // outline being drawn" is the wrong question to ask about whether the
+      // remote is somewhere. Signing in from the on-screen keyboard — the one
+      // way a television signs in anywhere — happens from right here.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(staying.hasFocus, isTrue);
     });
   });
 

@@ -1,4 +1,5 @@
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/utils/device_type.dart';
 
 /// Result of reading the user's page layout: the bottom-bar pages in order,
 /// and the menu pages in order. [AppPage.menu] is in neither — it is pinned.
@@ -25,9 +26,18 @@ enum AppPage {
   /// the limit as the always-pinned last tab.
   static const maxTabs = 5;
 
+  /// Pages a television has nothing to run them on: My Life is a photo diary
+  /// shot on the phone's camera, the compass needs a magnetometer, and the
+  /// image editor is built around cropping with two fingers. Listing them on a
+  /// set-top box only gives the remote somewhere useless to go.
+  static const _phoneOnly = <AppPage>[myLife, fengShui, imageEditor];
+
+  /// Whether this page is worth showing on the device the app is running on.
+  bool get isAvailable => !(deviceType.isTv && _phoneOnly.contains(this));
+
   /// Pages the user can move between the bottom bar and the menu.
   static List<AppPage> get movable =>
-      values.where((page) => page != AppPage.menu).toList();
+      values.where((page) => page != AppPage.menu && page.isAvailable).toList();
 
   /// The bottom bar a fresh install starts with, in the order it shows them.
   ///
@@ -41,7 +51,8 @@ enum AppPage {
 
   /// Pages needing the shared Supabase account. Route guards don't run for tab
   /// routes, so the tab bar has to enforce this itself.
-  bool get requiresSupabaseAuth => this == chicken || this == movie || this == asset;
+  bool get requiresSupabaseAuth =>
+      this == chicken || this == movie || this == asset;
 
   static AppPage? byName(String? name) =>
       values.where((page) => page.name == name).firstOrNull;
@@ -72,8 +83,10 @@ enum AppPage {
     void addAll(List<AppPage> target, List<String>? names) {
       for (final name in names ?? const <String>[]) {
         final page = byName(name);
-        // The menu tab is pinned, so it never appears in either list.
-        if (page == null || page == AppPage.menu) continue;
+        // The menu tab is pinned, so it never appears in either list. A page
+        // the device cannot run is dropped here too, so a layout saved on a
+        // phone does not put it back on a television.
+        if (page == null || page == AppPage.menu || !page.isAvailable) continue;
         if (tabs.contains(page) || menu.contains(page)) continue;
         target.add(page);
       }
@@ -87,6 +100,7 @@ enum AppPage {
     // rather than wherever the enum happens to declare it.
     for (final page in defaultTabs) {
       if (tabs.contains(page) || menu.contains(page)) continue;
+      if (!page.isAvailable) continue;
       if (tabs.length < maxTabs) tabs.add(page);
     }
     for (final page in movable) {

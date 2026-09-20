@@ -1,4 +1,5 @@
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
 
 class DoAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -97,8 +98,11 @@ class _DoAppBarState extends State<DoAppBar> {
       }
 
       if (widget.onTitleTap != null) {
-        titleWidget = GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        // Focusable, not a bare detector: on a page whose title *is* a control
+        // — the movie browser hangs its server picker off it — a detector
+        // leaves the remote no way to reach it at all, and the D-pad walks
+        // straight past the title from the body to the tab rail.
+        titleWidget = FocusableTap(
           onTap: widget.onTitleTap,
           child: titleWidget,
         );
