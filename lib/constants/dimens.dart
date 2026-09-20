@@ -120,4 +120,8 @@ class Dimens {
   /// 48dp across and 27dp down. Injected into the media query by `TvShell`, so
   /// every `SafeArea` in the app honours it without knowing why.
   static const tvOverscan = EdgeInsets.symmetric(horizontal: 48, vertical: 27);
+
+  /// How far the television's focus outline is drawn outside the control it
+  /// marks, so the control's own edge stays readable underneath it.
+  static const focusOutlineGap = 3.0;
 }

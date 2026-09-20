@@ -1,7 +1,7 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
-import 'package:do_x/widgets/focus_ring.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
 
 /// Round translucent button used for play/pause in the middle of the player.
@@ -193,7 +193,6 @@ class PlayerVolumeButton extends StatelessWidget {
         // reachable by walking the D-pad onto it, and a detector has no focus
         // node for the remote to land on.
         child: FocusableTap(
-          radius: Dimens.radiusControlSmall,
           onTap: onTap,
           onLongPress: onLongPress,
           child: SizedBox.square(

@@ -91,7 +91,7 @@ class AppTheme {
       // What an `InkWell` paints when the focus lands on it. Material's default
       // is a faint `onSurface` wash, which disappears on a neumorphic panel —
       // the panel is already the same colour as the page. Tinted with the
-      // primary instead, so it matches the ring `FocusRing` draws and is still
+      // primary instead, so it matches the outline `TvShell` draws and stays
       // legible across a room, which is where a TV remote is used from.
       focusColor: scheme.primary.withValues(alpha: isDark ? 0.34 : 0.24),
       appBarTheme: AppBarTheme(

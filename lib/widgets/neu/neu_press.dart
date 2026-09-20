@@ -1,4 +1,3 @@
-import 'package:do_x/widgets/focus_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,7 +10,10 @@ import 'package:flutter/services.dart';
 ///
 /// It is also the app's single focus target. Cards, buttons and chips all end
 /// up here, so giving this one widget a focus node is what makes the whole
-/// neumorphic surface family reachable with a TV remote's D-pad.
+/// neumorphic surface family reachable with a TV remote's D-pad. It draws no
+/// focus marker of its own — `TvShell` outlines whatever the remote is on, for
+/// every widget in the app, and a second marker here only read as a stray line
+/// inside the first.
 class NeuPress extends StatefulWidget {
   const NeuPress({
     super.key,
@@ -19,8 +21,8 @@ class NeuPress extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.pressedScale = 0.97,
-    this.focusRadius = 18,
     this.autofocus = false,
+    this.focusNode,
   });
 
   /// Draws the surface. `pressed` is true from the moment the finger lands
@@ -35,13 +37,16 @@ class NeuPress extends StatefulWidget {
   /// it nearer 1 for a large panel, where 3% is a visible lurch.
   final double pressedScale;
 
-  /// Corner the focus ring follows. Defaults to the [NeuCard] radius, which is
-  /// what most surfaces reaching this widget are drawn with.
-  final double focusRadius;
-
   /// Takes the D-pad on the way into a page. Set it on the first control of a
   /// screen so the remote lands somewhere useful instead of nowhere.
+  ///
+  /// Only honoured when nothing in the scope holds focus yet — which on a TV is
+  /// almost never true, since the remote is always resting on something. Pass a
+  /// [focusNode] and call `requestFocus()` on it when the focus has to move.
   final bool autofocus;
+
+  /// Lets a caller move the remote onto this control. See [autofocus].
+  final FocusNode? focusNode;
 
   /// Long enough for the sink to be seen, short enough not to feel laggy.
   static const duration = Duration(milliseconds: 130);
@@ -54,7 +59,6 @@ class _NeuPressState extends State<NeuPress> {
   bool _pressed = false;
   bool _fingerDown = false;
   bool _sinkFinished = true;
-  bool _focused = false;
 
   bool get _enabled => widget.onTap != null || widget.onLongPress != null;
 
@@ -100,12 +104,10 @@ class _NeuPressState extends State<NeuPress> {
     return FocusableActionDetector(
       enabled: _enabled,
       autofocus: widget.autofocus,
+      focusNode: widget.focusNode,
       mouseCursor: _enabled
           ? SystemMouseCursors.click
           : SystemMouseCursors.basic,
-      onShowFocusHighlight: (value) {
-        if (_focused != value) setState(() => _focused = value);
-      },
       actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {
@@ -124,13 +126,7 @@ class _NeuPressState extends State<NeuPress> {
           scale: _pressed ? widget.pressedScale : 1,
           duration: NeuPress.duration,
           curve: Curves.easeOut,
-          // Inside the scale, so the ring shrinks with the surface it outlines
-          // instead of hanging in place while the panel sinks away from it.
-          child: FocusRing(
-            focused: _focused,
-            radius: widget.focusRadius,
-            child: widget.builder(context, _pressed),
-          ),
+          child: widget.builder(context, _pressed),
         ),
       ),
     );

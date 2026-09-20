@@ -29,12 +29,15 @@ enum AppPage {
   static List<AppPage> get movable =>
       values.where((page) => page != AppPage.menu).toList();
 
+  /// The bottom bar a fresh install starts with, in the order it shows them.
+  ///
+  /// [menu] is absent because it is pinned as the last tab, so this is also the
+  /// list that has to stay within [maxTabs].
+  static const defaultTabs = <AppPage>[news, movie, chicken, electric, lunar];
+
   /// Where a page lands when the stored layout doesn't mention it — a fresh
   /// install, or a page added by a newer app version.
-  bool get isTabByDefault => switch (this) {
-    news || chicken || electric || lunar || menu => true,
-    _ => false,
-  };
+  bool get isTabByDefault => this == menu || defaultTabs.contains(this);
 
   /// Pages needing the shared Supabase account. Route guards don't run for tab
   /// routes, so the tab bar has to enforce this itself.
@@ -78,10 +81,17 @@ enum AppPage {
 
     addAll(tabs, storedTabs);
     addAll(menu, storedMenu);
+    // Anything the stored layout never mentioned, placed where it belongs by
+    // default. The default tabs go first and in their own order, so a page the
+    // user has never seen lands beside the ones it was meant to sit with
+    // rather than wherever the enum happens to declare it.
+    for (final page in defaultTabs) {
+      if (tabs.contains(page) || menu.contains(page)) continue;
+      if (tabs.length < maxTabs) tabs.add(page);
+    }
     for (final page in movable) {
       if (tabs.contains(page) || menu.contains(page)) continue;
-      final asTab = page.isTabByDefault && tabs.length < maxTabs;
-      (asTab ? tabs : menu).add(page);
+      menu.add(page);
     }
     if (tabs.length > maxTabs) {
       menu.insertAll(0, tabs.sublist(maxTabs));
@@ -110,7 +120,7 @@ enum AppPage {
       ((legacyVisible[page] ?? true) ? tabs : menu).add(name);
     }
     // Pages that only ever lived in the menu before this feature existed.
-    menu.addAll([wifi.name, fengShui.name, movie.name]);
+    menu.addAll([wifi.name, fengShui.name]);
     return sanitize(tabs, menu);
   }
 }

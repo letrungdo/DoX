@@ -9,6 +9,11 @@ class AppViewModel extends CoreViewModel {
   ThemeMode _themeMode = storageService.getThemeMode();
   ThemeMode get themeMode => _themeMode;
 
+  /// What the app speaks until the user picks otherwise. Vietnamese, because
+  /// that is who it is for — `supportedLocales.first` would hand a new install
+  /// English purely because the generator lists the locales alphabetically.
+  static const defaultLocale = Locale('vi');
+
   Locale? _locale = storageService.getLocale() != null
       ? Locale(storageService.getLocale()!)
       : null;

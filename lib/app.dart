@@ -75,7 +75,7 @@ class _MyAppState extends State<MyApp> {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: data.$1,
-            locale: data.$2 ?? AppLocalizations.supportedLocales.first,
+            locale: data.$2 ?? AppViewModel.defaultLocale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: appRouter.config(

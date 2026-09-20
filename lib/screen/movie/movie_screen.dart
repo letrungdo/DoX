@@ -28,7 +28,6 @@ import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:do_x/widgets/neu/neu_press.dart';
-import 'package:do_x/widgets/focus_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -103,9 +102,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// Below this much of the way open, the player is the bar at the bottom of
   /// the page rather than a sheet over it.
   static const _miniThreshold = 0.02;
-
-  /// Whether the D-pad is resting on the minimised player bar.
-  bool _miniBarFocused = false;
   final _detailController = MovieDetailController();
 
   bool _isSelectionMode = false;
@@ -1206,7 +1202,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     final foreground = isSelected ? Colors.white : scheme.onSurfaceVariant;
 
     return NeuPress(
-      focusRadius: 12,
       onTap: () => _showFilterSheet(
         title: fallbackLabel,
         options: options,
@@ -1281,11 +1276,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             // player back up, and they have no keyboard equivalent to fold in.
             child: FocusableActionDetector(
               enabled: isMini,
-              onShowFocusHighlight: (value) {
-                if (_miniBarFocused != value) {
-                  setState(() => _miniBarFocused = value);
-                }
-              },
               actions: {
                 ActivateIntent: CallbackAction<ActivateIntent>(
                   onInvoke: (_) {
@@ -1318,52 +1308,48 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                 onVerticalDragCancel: isMini || _isDraggingMiniBar
                     ? () => _isDraggingMiniBar = false
                     : null,
-                child: FocusRing(
-                  focused: _miniBarFocused,
-                  radius: Dimens.radiusControl,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ChangeNotifierProvider(
-                        create: (_) => MovieDetailViewModel(),
-                        child: MovieDetailScreen(
-                          movieUrl: movie.url,
-                          movieId: movie.id,
-                          initialMovie: movie,
-                          embedded: true,
-                          minimizeProgress: t,
-                          controller: _detailController,
-                          onFullScreenChanged: (isFullScreen) {
-                            if (!mounted) return;
-                            // Full-screen video has to cover the bottom tab bar too
-                            // when this page is one of the tabs.
-                            immersiveMode.value = isFullScreen;
-                            setState(() => _isDetailFullScreen = isFullScreen);
-                          },
-                          onRelatedMovieTap: (related) =>
-                              setState(() => _playingMovie = related),
-                          onClose: () => unawaited(_closeOverlay()),
-                          onMinimize: _minimizeOverlay,
-                          onPlayerDragUpdate: (details) =>
-                              _onOverlayDragUpdate(details, travel),
-                          onPlayerDragEnd: _onOverlayDragEnd,
-                        ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ChangeNotifierProvider(
+                      create: (_) => MovieDetailViewModel(),
+                      child: MovieDetailScreen(
+                        movieUrl: movie.url,
+                        movieId: movie.id,
+                        initialMovie: movie,
+                        embedded: true,
+                        minimizeProgress: t,
+                        controller: _detailController,
+                        onFullScreenChanged: (isFullScreen) {
+                          if (!mounted) return;
+                          // Full-screen video has to cover the bottom tab bar too
+                          // when this page is one of the tabs.
+                          immersiveMode.value = isFullScreen;
+                          setState(() => _isDetailFullScreen = isFullScreen);
+                        },
+                        onRelatedMovieTap: (related) =>
+                            setState(() => _playingMovie = related),
+                        onClose: () => unawaited(_closeOverlay()),
+                        onMinimize: _minimizeOverlay,
+                        onPlayerDragUpdate: (details) =>
+                            _onOverlayDragUpdate(details, travel),
+                        onPlayerDragEnd: _onOverlayDragEnd,
                       ),
-                      // The tapped poster, fading out over the page it grew from.
-                      if (_entryRect != null && t < 1)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Opacity(
-                              opacity: 1 - t,
-                              child: CachedNetworkImage(
-                                imageUrl: movie.poster,
-                                fit: BoxFit.cover,
-                              ),
+                    ),
+                    // The tapped poster, fading out over the page it grew from.
+                    if (_entryRect != null && t < 1)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Opacity(
+                            opacity: 1 - t,
+                            child: CachedNetworkImage(
+                              imageUrl: movie.poster,
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),

@@ -1,8 +1,10 @@
+import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/services/update_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/focus_ring.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('defaults a new install starts with', () {
+    test('Movies is a tab, right after the news', () {
+      final layout = AppPage.sanitize(null, null);
+
+      expect(layout.tabs.take(2), [AppPage.news, AppPage.movie]);
+      expect(layout.menu, isNot(contains(AppPage.movie)));
+    });
+
+    test('the app speaks Vietnamese', () {
+      // `supportedLocales.first` is English only because the generator sorts
+      // the locales by name, which is no reason to greet anyone in it.
+      expect(AppViewModel.defaultLocale, const Locale('vi'));
+    });
+  });
+
   tearDown(() {
     deviceType.isTv = false;
     deviceType.supportedAbis = const [];
@@ -112,6 +129,97 @@ void main() {
 
     testWidgets('leaves a phone exactly as it was', (tester) async {
       expect(await paddingSeenByPages(tester), const EdgeInsets.only(top: 24));
+    });
+  });
+
+  group('seeing where the remote is', () {
+    /// The rect of the outline `TvShell` paints, or null when it paints none.
+    Rect? outline() {
+      final found = find
+          .byType(Positioned)
+          .evaluate()
+          .where(
+            (element) => (element.widget as Positioned).child is IgnorePointer,
+          );
+      if (found.isEmpty) return null;
+      final positioned = found.first.widget as Positioned;
+      return Rect.fromLTWH(
+        positioned.left!,
+        positioned.top!,
+        positioned.width!,
+        positioned.height!,
+      );
+    }
+
+    testWidgets('an outline follows the focus onto any widget, control or not', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final first = FocusNode(debugLabel: 'first');
+      final second = FocusNode(debugLabel: 'second');
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: Column(
+                children: [
+                  // Deliberately not a button: a page made of plain rows has to
+                  // show the remote's position too.
+                  Focus(
+                    focusNode: first,
+                    child: const SizedBox(height: 50, width: 200),
+                  ),
+                  Focus(
+                    focusNode: second,
+                    child: const SizedBox(height: 50, width: 200),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(outline(), isNull, reason: 'nothing focused yet');
+
+      first.requestFocus();
+      await tester.pumpAndSettle();
+      final onFirst = outline();
+      expect(onFirst, isNotNull);
+      expect(onFirst!.inflate(-Dimens.focusOutlineGap), first.rect);
+
+      second.requestFocus();
+      await tester.pumpAndSettle();
+      expect(outline(), isNot(onFirst));
+    });
+
+    testWidgets('a phone is left without one', (tester) async {
+      final node = FocusNode(debugLabel: 'only');
+      addTearDown(node.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: Focus(
+                focusNode: node,
+                child: const SizedBox(height: 50, width: 200),
+              ),
+            ),
+          ),
+        ),
+      );
+      node.requestFocus();
+      await tester.pumpAndSettle();
+
+      expect(node.hasPrimaryFocus, isTrue);
+      expect(outline(), isNull);
     });
   });
 
@@ -251,12 +359,6 @@ void main() {
       // label is the one `NeuPress` installs.
       Focus.of(tester.element(find.text('Chi phí chung'))).requestFocus();
       await tester.pumpAndSettle();
-
-      // …which says so, because a TV has no pointer to show it any other way.
-      final ring = tester.widget<FocusRing>(find.byType(FocusRing));
-      expect(ring.focused, isTrue);
-      // Follows the card's own corner rather than cutting across it.
-      expect(ring.radius, 18);
 
       // KEYCODE_DPAD_CENTER arrives as `select`, which nothing in Flutter's
       // default shortcut map turns into an activation.

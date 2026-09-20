@@ -54,7 +54,6 @@ class NeuChip extends StatelessWidget {
     );
 
     return NeuPress(
-      focusRadius: radius,
       onTap: onTap,
       builder: (context, pressed) =>
           Center(widthFactor: 1, heightFactor: 1, child: chip(pressed)),
