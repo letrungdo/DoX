@@ -40,6 +40,11 @@ class StorageKey {
   static const movieLabel = "movieLabel";
   static const movieSiteType = "movieSiteType";
 
+  /// Last downloaded TV playlist (raw M3U) and when it was stored, so the
+  /// channel list is on screen before the network answers.
+  static const tvPlaylist = "tvPlaylist";
+  static const tvPlaylistSavedAt = "tvPlaylistSavedAt";
+
   static const electricReminder = "electricReminder";
 
   /// Market codes shown on the news page, in user order.

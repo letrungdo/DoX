@@ -180,6 +180,25 @@ class _StorageService {
     return prefs.setString(StorageKey.movieSiteType, value);
   }
 
+  String? getTvPlaylist() {
+    return prefs.getString(StorageKey.tvPlaylist);
+  }
+
+  /// Stores the playlist together with the moment it arrived, so its age can be
+  /// judged without parsing it.
+  Future<bool> setTvPlaylist(String value) async {
+    await prefs.setString(
+      StorageKey.tvPlaylistSavedAt,
+      DateTime.now().toIso8601String(),
+    );
+    return prefs.setString(StorageKey.tvPlaylist, value);
+  }
+
+  DateTime? getTvPlaylistSavedAt() {
+    final raw = prefs.getString(StorageKey.tvPlaylistSavedAt);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
   /// Bottom bar pages as `AppPage` names, in user order; null until the user
   /// changes the layout for the first time.
   List<String>? getTabPages() {

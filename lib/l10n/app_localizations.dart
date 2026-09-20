@@ -4302,6 +4302,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rescan every 20s'**
   String get repeaterAutoScan;
+
+  /// No description provided for @tvChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'TV Channels'**
+  String get tvChannels;
+
+  /// No description provided for @tvTab.
+  ///
+  /// In en, this message translates to:
+  /// **'TV'**
+  String get tvTab;
+
+  /// No description provided for @tvSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search channel'**
+  String get tvSearchHint;
+
+  /// No description provided for @tvNoChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'No channels available right now.'**
+  String get tvNoChannels;
+
+  /// No description provided for @tvNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No channel matches this search.'**
+  String get tvNoResults;
+
+  /// No description provided for @tvLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the channel list. Check your connection and try again.'**
+  String get tvLoadFailed;
+
+  /// No description provided for @tvPlaybackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This channel could not be played. It may be off air or restricted to another region.'**
+  String get tvPlaybackFailed;
+
+  /// No description provided for @tvGeoBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Only available inside Vietnam'**
+  String get tvGeoBlocked;
+
+  /// No description provided for @tvNotAllDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Does not broadcast 24/7'**
+  String get tvNotAllDay;
+
+  /// No description provided for @tvGroupOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get tvGroupOther;
+
+  /// No description provided for @tvLive.
+  ///
+  /// In en, this message translates to:
+  /// **'LIVE'**
+  String get tvLive;
+
+  /// No description provided for @tvCategoryAnimation.
+  ///
+  /// In en, this message translates to:
+  /// **'Animation'**
+  String get tvCategoryAnimation;
+
+  /// No description provided for @tvCategoryAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get tvCategoryAuto;
+
+  /// No description provided for @tvCategoryBusiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Business'**
+  String get tvCategoryBusiness;
+
+  /// No description provided for @tvCategoryClassic.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get tvCategoryClassic;
+
+  /// No description provided for @tvCategoryComedy.
+  ///
+  /// In en, this message translates to:
+  /// **'Comedy'**
+  String get tvCategoryComedy;
+
+  /// No description provided for @tvCategoryCooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking'**
+  String get tvCategoryCooking;
+
+  /// No description provided for @tvCategoryCulture.
+  ///
+  /// In en, this message translates to:
+  /// **'Culture'**
+  String get tvCategoryCulture;
+
+  /// No description provided for @tvCategoryDocumentary.
+  ///
+  /// In en, this message translates to:
+  /// **'Documentary'**
+  String get tvCategoryDocumentary;
+
+  /// No description provided for @tvCategoryEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Education'**
+  String get tvCategoryEducation;
+
+  /// No description provided for @tvCategoryEntertainment.
+  ///
+  /// In en, this message translates to:
+  /// **'Entertainment'**
+  String get tvCategoryEntertainment;
+
+  /// No description provided for @tvCategoryFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get tvCategoryFamily;
+
+  /// No description provided for @tvCategoryGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get tvCategoryGeneral;
+
+  /// No description provided for @tvCategoryKids.
+  ///
+  /// In en, this message translates to:
+  /// **'Kids'**
+  String get tvCategoryKids;
+
+  /// No description provided for @tvCategoryLegislative.
+  ///
+  /// In en, this message translates to:
+  /// **'Legislative'**
+  String get tvCategoryLegislative;
+
+  /// No description provided for @tvCategoryLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get tvCategoryLifestyle;
+
+  /// No description provided for @tvCategoryMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies'**
+  String get tvCategoryMovies;
+
+  /// No description provided for @tvCategoryMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get tvCategoryMusic;
+
+  /// No description provided for @tvCategoryNews.
+  ///
+  /// In en, this message translates to:
+  /// **'News'**
+  String get tvCategoryNews;
+
+  /// No description provided for @tvCategoryOutdoor.
+  ///
+  /// In en, this message translates to:
+  /// **'Outdoor'**
+  String get tvCategoryOutdoor;
+
+  /// No description provided for @tvCategoryRelax.
+  ///
+  /// In en, this message translates to:
+  /// **'Relax'**
+  String get tvCategoryRelax;
+
+  /// No description provided for @tvCategoryReligious.
+  ///
+  /// In en, this message translates to:
+  /// **'Religious'**
+  String get tvCategoryReligious;
+
+  /// No description provided for @tvCategoryScience.
+  ///
+  /// In en, this message translates to:
+  /// **'Science'**
+  String get tvCategoryScience;
+
+  /// No description provided for @tvCategorySeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get tvCategorySeries;
+
+  /// No description provided for @tvCategoryShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping'**
+  String get tvCategoryShop;
+
+  /// No description provided for @tvCategorySports.
+  ///
+  /// In en, this message translates to:
+  /// **'Sports'**
+  String get tvCategorySports;
+
+  /// No description provided for @tvCategoryTravel.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel'**
+  String get tvCategoryTravel;
+
+  /// No description provided for @tvCategoryWeather.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather'**
+  String get tvCategoryWeather;
 }
 
 class _AppLocalizationsDelegate

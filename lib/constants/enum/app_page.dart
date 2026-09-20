@@ -18,6 +18,7 @@ enum AppPage {
   wifi,
   fengShui,
   movie,
+  tv,
   imageEditor,
   asset,
   menu;
@@ -43,7 +44,7 @@ enum AppPage {
   ///
   /// [menu] is absent because it is pinned as the last tab, so this is also the
   /// list that has to stay within [maxTabs].
-  static const defaultTabs = <AppPage>[news, movie, chicken, electric, lunar];
+  static const defaultTabs = <AppPage>[news, movie, tv, electric, lunar];
 
   /// Where a page lands when the stored layout doesn't mention it — a fresh
   /// install, or a page added by a newer app version.

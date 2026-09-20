@@ -2389,4 +2389,120 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get repeaterAutoScan => 'Rescan every 20s';
+
+  @override
+  String get tvChannels => 'TV Channels';
+
+  @override
+  String get tvTab => 'TV';
+
+  @override
+  String get tvSearchHint => 'Search channel';
+
+  @override
+  String get tvNoChannels => 'No channels available right now.';
+
+  @override
+  String get tvNoResults => 'No channel matches this search.';
+
+  @override
+  String get tvLoadFailed =>
+      'Could not load the channel list. Check your connection and try again.';
+
+  @override
+  String get tvPlaybackFailed =>
+      'This channel could not be played. It may be off air or restricted to another region.';
+
+  @override
+  String get tvGeoBlocked => 'Only available inside Vietnam';
+
+  @override
+  String get tvNotAllDay => 'Does not broadcast 24/7';
+
+  @override
+  String get tvGroupOther => 'Other';
+
+  @override
+  String get tvLive => 'LIVE';
+
+  @override
+  String get tvCategoryAnimation => 'Animation';
+
+  @override
+  String get tvCategoryAuto => 'Auto';
+
+  @override
+  String get tvCategoryBusiness => 'Business';
+
+  @override
+  String get tvCategoryClassic => 'Classic';
+
+  @override
+  String get tvCategoryComedy => 'Comedy';
+
+  @override
+  String get tvCategoryCooking => 'Cooking';
+
+  @override
+  String get tvCategoryCulture => 'Culture';
+
+  @override
+  String get tvCategoryDocumentary => 'Documentary';
+
+  @override
+  String get tvCategoryEducation => 'Education';
+
+  @override
+  String get tvCategoryEntertainment => 'Entertainment';
+
+  @override
+  String get tvCategoryFamily => 'Family';
+
+  @override
+  String get tvCategoryGeneral => 'General';
+
+  @override
+  String get tvCategoryKids => 'Kids';
+
+  @override
+  String get tvCategoryLegislative => 'Legislative';
+
+  @override
+  String get tvCategoryLifestyle => 'Lifestyle';
+
+  @override
+  String get tvCategoryMovies => 'Movies';
+
+  @override
+  String get tvCategoryMusic => 'Music';
+
+  @override
+  String get tvCategoryNews => 'News';
+
+  @override
+  String get tvCategoryOutdoor => 'Outdoor';
+
+  @override
+  String get tvCategoryRelax => 'Relax';
+
+  @override
+  String get tvCategoryReligious => 'Religious';
+
+  @override
+  String get tvCategoryScience => 'Science';
+
+  @override
+  String get tvCategorySeries => 'Series';
+
+  @override
+  String get tvCategoryShop => 'Shopping';
+
+  @override
+  String get tvCategorySports => 'Sports';
+
+  @override
+  String get tvCategoryTravel => 'Travel';
+
+  @override
+  String get tvCategoryWeather => 'Weather';
 }

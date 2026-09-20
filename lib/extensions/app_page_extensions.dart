@@ -14,6 +14,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => l10n.compass,
     AppPage.lunar => l10n.lunarTab,
     AppPage.imageEditor => l10n.imageEditorTab,
+    AppPage.tv => l10n.tvTab,
     _ => label(l10n),
   };
 
@@ -27,6 +28,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => l10n.wifiManagement,
     AppPage.fengShui => l10n.fengShuiCompass,
     AppPage.movie => l10n.movie,
+    AppPage.tv => l10n.tvChannels,
     AppPage.imageEditor => l10n.imageEditor,
     AppPage.asset => l10n.asset,
     AppPage.menu => l10n.menu,
@@ -41,6 +43,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => Icons.wifi_rounded,
     AppPage.fengShui => Icons.explore_rounded,
     AppPage.movie => Icons.movie_rounded,
+    AppPage.tv => Icons.live_tv_rounded,
     AppPage.imageEditor => Icons.auto_fix_high_rounded,
     AppPage.asset => Icons.account_balance_wallet_rounded,
     AppPage.menu => Icons.menu_rounded,
@@ -58,6 +61,7 @@ extension AppPageX on AppPage {
     AppPage.wifi => const WifiManagementRoute(),
     AppPage.fengShui => const FengShuiCompassRoute(),
     AppPage.movie => const MovieRoute(),
+    AppPage.tv => const TvRoute(),
     AppPage.imageEditor => const ImageEditorRoute(),
     AppPage.asset => const AssetRoute(),
     AppPage.menu => const MenuRoute(),

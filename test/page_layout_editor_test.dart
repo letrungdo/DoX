@@ -61,6 +61,20 @@ Future<void> _dragPage(WidgetTester tester, AppPage page, double dy) async {
   await tester.pumpAndSettle();
 }
 
+/// Every movable page, with [first] at the head of the menu.
+///
+/// Spelled out rather than left to the backfill: a stored layout that does not
+/// mention a page has it fall back to its default placement, so a test that
+/// lists only a couple of pages would silently change shape — and change how
+/// far a row has to travel to cross the header — the next time the default
+/// bottom bar does.
+List<AppPage> _menuHolding(List<AppPage> tabs, List<AppPage> first) => [
+  ...first,
+  ...AppPage.movable.where(
+    (page) => !tabs.contains(page) && !first.contains(page),
+  ),
+];
+
 void main() {
   setUpAll(() async {
     // `storageService` holds a `late` prefs field, so it is initialised once
@@ -73,10 +87,11 @@ void main() {
   testWidgets('dragging a menu page up past the header makes it a tab', (
     tester,
   ) async {
+    const tabs = [AppPage.news, AppPage.chicken];
     final appVm = await _pump(
       tester,
-      tabs: [AppPage.news, AppPage.chicken],
-      menu: [AppPage.movie, AppPage.wifi],
+      tabs: tabs,
+      menu: _menuHolding(tabs, [AppPage.movie, AppPage.wifi]),
     );
 
     // Far enough up to clear both tab rows and the MENU header.
@@ -89,10 +104,11 @@ void main() {
   testWidgets('dragging a tab down past the header sends it to the menu', (
     tester,
   ) async {
+    const tabs = [AppPage.news, AppPage.chicken];
     final appVm = await _pump(
       tester,
-      tabs: [AppPage.news, AppPage.chicken],
-      menu: [AppPage.movie, AppPage.wifi],
+      tabs: tabs,
+      menu: _menuHolding(tabs, [AppPage.movie, AppPage.wifi]),
     );
 
     await _dragPage(tester, AppPage.news, 220);

@@ -123,6 +123,11 @@ class _AppRouter extends RootStackRouter {
             page: MovieRoute.page,
           ),
           AutoRoute(
+            initial: initialTab == AppPage.tv,
+            path: 'tv',
+            page: TvRoute.page,
+          ),
+          AutoRoute(
             initial: initialTab == AppPage.imageEditor,
             path: 'image-editor',
             page: ImageEditorRoute.page,
@@ -223,16 +228,17 @@ class _AppRouter extends RootStackRouter {
       page: MovieDetailRoute.page,
       guards: [_supabaseAuthGuard],
     ),
+    AutoRoute(path: '/tv', page: TvRoute.page),
+    // The player is only ever pushed on the root stack, so it covers the
+    // bottom bar the way a full-screen video should.
+    AutoRoute(path: '/tv/player', page: TvPlayerRoute.page),
     AutoRoute(path: '/image-editor', page: ImageEditorRoute.page),
     AutoRoute(
       path: '$_pushPrefix/asset',
       page: AssetRoute.page,
       guards: [_supabaseAuthGuard],
     ),
-    AutoRoute(
-      path: '$_pushPrefix/asset/summary',
-      page: AssetSummaryRoute.page,
-    ),
+    AutoRoute(path: '$_pushPrefix/asset/summary', page: AssetSummaryRoute.page),
   ];
 
   /// The tab to mark as initial: the one the user was last on, as long as it

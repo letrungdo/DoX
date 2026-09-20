@@ -1,0 +1,146 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/model/tv_channel.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:flutter/material.dart';
+
+/// One channel in the grid: its logo over its name.
+class TvChannelCard extends StatelessWidget {
+  const TvChannelCard({super.key, required this.channel, required this.onTap});
+
+  final TvChannel channel;
+  final VoidCallback onTap;
+
+  /// Channel logos are drawn for a white background — a station's black
+  /// wordmark on the page's own dark surface is an invisible card. So the logo
+  /// tile keeps a near-white plate in both themes.
+  static const _logoPlate = Color(0xFFF4F5F7);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return NeuCard(
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.zero,
+      radius: Dimens.radiusCard,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ColoredBox(
+              color: _logoPlate,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: _buildLogo(),
+                  ),
+                  if (channel.isGeoBlocked || channel.isIntermittent)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: _Badge(
+                        icon: channel.isGeoBlocked
+                            ? Icons.public_off_rounded
+                            : Icons.schedule_rounded,
+                        tooltip: channel.isGeoBlocked
+                            ? l10n.tvGeoBlocked
+                            : l10n.tvNotAllDay,
+                      ),
+                    ),
+                  if (channel.quality != null)
+                    Positioned(
+                      bottom: 4,
+                      left: 4,
+                      child: _QualityTag(quality: channel.quality!),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+            child: Text(
+              channel.name,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogo() {
+    if (!channel.hasLogo) return const _LogoFallback();
+    return CachedNetworkImage(
+      imageUrl: channel.logo!,
+      fit: BoxFit.contain,
+      placeholder: (context, url) => const _LogoFallback(),
+      errorWidget: (context, url, error) => const _LogoFallback(),
+    );
+  }
+}
+
+class _LogoFallback extends StatelessWidget {
+  const _LogoFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Icon(Icons.live_tv_rounded, size: 32, color: Colors.black26),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.icon, required this.tooltip});
+
+  final IconData icon;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(Dimens.radiusSmall),
+        ),
+        child: Icon(icon, size: 13, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _QualityTag extends StatelessWidget {
+  const _QualityTag({required this.quality});
+
+  final String quality;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(Dimens.radiusTiny),
+      ),
+      child: Text(
+        quality,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}

@@ -2378,4 +2378,120 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get repeaterAutoScan => 'Tự quét lại mỗi 20s';
+
+  @override
+  String get tvChannels => 'Kênh TV';
+
+  @override
+  String get tvTab => 'TV';
+
+  @override
+  String get tvSearchHint => 'Tìm kênh';
+
+  @override
+  String get tvNoChannels => 'Hiện chưa có kênh nào.';
+
+  @override
+  String get tvNoResults => 'Không có kênh nào khớp với tìm kiếm này.';
+
+  @override
+  String get tvLoadFailed =>
+      'Không tải được danh sách kênh. Kiểm tra kết nối rồi thử lại.';
+
+  @override
+  String get tvPlaybackFailed =>
+      'Không phát được kênh này. Có thể kênh đang ngừng phát hoặc chỉ xem được ở vùng khác.';
+
+  @override
+  String get tvGeoBlocked => 'Chỉ xem được trong Việt Nam';
+
+  @override
+  String get tvNotAllDay => 'Không phát 24/7';
+
+  @override
+  String get tvGroupOther => 'Khác';
+
+  @override
+  String get tvLive => 'TRỰC TIẾP';
+
+  @override
+  String get tvCategoryAnimation => 'Hoạt hình';
+
+  @override
+  String get tvCategoryAuto => 'Xe cộ';
+
+  @override
+  String get tvCategoryBusiness => 'Kinh doanh';
+
+  @override
+  String get tvCategoryClassic => 'Kinh điển';
+
+  @override
+  String get tvCategoryComedy => 'Hài';
+
+  @override
+  String get tvCategoryCooking => 'Nấu ăn';
+
+  @override
+  String get tvCategoryCulture => 'Văn hóa';
+
+  @override
+  String get tvCategoryDocumentary => 'Tài liệu';
+
+  @override
+  String get tvCategoryEducation => 'Giáo dục';
+
+  @override
+  String get tvCategoryEntertainment => 'Giải trí';
+
+  @override
+  String get tvCategoryFamily => 'Gia đình';
+
+  @override
+  String get tvCategoryGeneral => 'Tổng hợp';
+
+  @override
+  String get tvCategoryKids => 'Thiếu nhi';
+
+  @override
+  String get tvCategoryLegislative => 'Quốc hội';
+
+  @override
+  String get tvCategoryLifestyle => 'Đời sống';
+
+  @override
+  String get tvCategoryMovies => 'Phim';
+
+  @override
+  String get tvCategoryMusic => 'Âm nhạc';
+
+  @override
+  String get tvCategoryNews => 'Tin tức';
+
+  @override
+  String get tvCategoryOutdoor => 'Ngoài trời';
+
+  @override
+  String get tvCategoryRelax => 'Thư giãn';
+
+  @override
+  String get tvCategoryReligious => 'Tôn giáo';
+
+  @override
+  String get tvCategoryScience => 'Khoa học';
+
+  @override
+  String get tvCategorySeries => 'Phim bộ';
+
+  @override
+  String get tvCategoryShop => 'Mua sắm';
+
+  @override
+  String get tvCategorySports => 'Thể thao';
+
+  @override
+  String get tvCategoryTravel => 'Du lịch';
+
+  @override
+  String get tvCategoryWeather => 'Thời tiết';
 }
