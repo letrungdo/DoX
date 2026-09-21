@@ -60,8 +60,13 @@ void _expectAmountsFlushRight(WidgetTester tester) {
   final expected = cardRight - AssetTileCard.sidePadding;
   final rights = <String, double>{};
 
+  // Only the figures inside the tiles: the total bar above them is a panel of
+  // its own with its own inset, and it is not what this line is about.
   for (final text in tester.widgetList<AutoSizeText>(
-    find.byType(AutoSizeText),
+    find.descendant(
+      of: find.byType(AssetTileCard),
+      matching: find.byType(AutoSizeText),
+    ),
   )) {
     final data = text.data ?? '';
     // The right-hand column is the one carrying a figure.
@@ -147,7 +152,13 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.textContaining('Đã đáo hạn'), findsOneWidget);
-      expect(find.textContaining('/tháng'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(AssetTileCard),
+          matching: find.textContaining('/tháng'),
+        ),
+        findsNothing,
+      );
     });
   });
 

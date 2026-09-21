@@ -2208,6 +2208,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetStatistics => 'Thống kê';
 
   @override
+  String get assetAvgMonthlyInterest => 'Lãi TB/tháng';
+
+  @override
   String get assetYearlyInterest => 'Lãi tiết kiệm/năm';
 
   @override

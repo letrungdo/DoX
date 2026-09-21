@@ -2218,6 +2218,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetStatistics => 'Statistics';
 
   @override
+  String get assetAvgMonthlyInterest => 'Avg interest/mo';
+
+  @override
   String get assetYearlyInterest => 'Savings interest/yr';
 
   @override

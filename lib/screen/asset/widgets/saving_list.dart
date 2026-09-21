@@ -46,6 +46,9 @@ class SavingList extends StatelessWidget {
           return AssetTotalBar(
             value: savings.fold(0, (sum, e) => sum + e.currentValue),
             cost: savings.fold(0, (sum, e) => sum + e.amount),
+            monthlyProfit: context
+                .read<AssetViewModel>()
+                .savingsMonthlyInterest(savings),
             profitCaption: context.l10n.assetInterest,
           );
         }

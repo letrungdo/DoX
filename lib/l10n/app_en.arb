@@ -1292,6 +1292,7 @@
     }
   },
   "assetStatistics": "Statistics",
+  "assetAvgMonthlyInterest": "Avg interest/mo",
   "assetYearlyInterest": "Savings interest/yr",
   "assetMaturedSavings": "Matured deposits",
   "assetNextMaturity": "Next maturity",

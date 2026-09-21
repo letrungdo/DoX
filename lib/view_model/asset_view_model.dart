@@ -277,6 +277,30 @@ class AssetViewModel extends CoreViewModel {
     );
   }
 
+  /// What a set of deposits pays in an average month, in VND. A matured
+  /// deposit contributes nothing — it has stopped earning.
+  double savingsMonthlyInterest(Iterable<AssetSaving> items) {
+    return items.fold(0, (sum, e) => sum + e.monthlyInterest);
+  }
+
+  /// The same figure for investments: each holding's gain spread over how long
+  /// it has been held. A holding too young to annualise adds nothing rather
+  /// than a guess — see [_minDaysToAnnualize].
+  double investmentsMonthlyProfit(Iterable<AssetInvestment> items) {
+    return items.fold(
+      0,
+      (sum, e) => sum + (getInvestmentEstimatedReturn(e)?.perMonth ?? 0),
+    );
+  }
+
+  /// The same figure for gold.
+  double goldMonthlyProfit(Iterable<AssetGold> items) {
+    return items.fold(
+      0,
+      (sum, e) => sum + (getGoldEstimatedReturn(e)?.perMonth ?? 0),
+    );
+  }
+
   AssetReturnEstimate? _estimatedReturn({
     required double buyValue,
     required double currentValue,
@@ -527,6 +551,10 @@ class AssetViewModel extends CoreViewModel {
         count: _gold.length,
       ),
       monthlyInterest: monthlyInterest,
+      monthlyProfit:
+          monthlyInterest +
+          investmentsMonthlyProfit(_investments) +
+          goldMonthlyProfit(_gold),
       averageAnnualReturn: avgAnnualReturn,
       maturedSavingsCount: maturedSavingsCount,
       nextMaturityDate: nextMaturityDate,

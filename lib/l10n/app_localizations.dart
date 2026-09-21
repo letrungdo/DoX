@@ -4009,6 +4009,12 @@ abstract class AppLocalizations {
   /// **'Statistics'**
   String get assetStatistics;
 
+  /// No description provided for @assetAvgMonthlyInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg interest/mo'**
+  String get assetAvgMonthlyInterest;
+
   /// No description provided for @assetYearlyInterest.
   ///
   /// In en, this message translates to:

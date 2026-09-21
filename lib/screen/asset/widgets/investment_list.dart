@@ -54,6 +54,7 @@ class InvestmentList extends StatelessWidget {
                   0,
                   (sum, e) => sum + e.quantity * vm.getBuyPriceInVnd(e),
                 ),
+                monthlyProfit: vm.investmentsMonthlyProfit(investments),
               ),
               AssetSellPriceBar(
                 prices: _sellPrices(context, vm),

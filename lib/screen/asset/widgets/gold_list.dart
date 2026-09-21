@@ -49,6 +49,7 @@ class GoldList extends StatelessWidget {
                   (sum, e) => sum + e.quantity * vm.getCurrentGoldPrice(e),
                 ),
                 cost: gold.fold(0, (sum, e) => sum + e.quantity * e.buyPrice),
+                monthlyProfit: vm.goldMonthlyProfit(gold),
               ),
               AssetSellPriceBar(
                 prices: _sellPrices(vm),

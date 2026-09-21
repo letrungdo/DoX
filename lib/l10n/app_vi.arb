@@ -1250,6 +1250,7 @@
     }
   },
   "assetStatistics": "Thống kê",
+  "assetAvgMonthlyInterest": "Lãi TB/tháng",
   "assetYearlyInterest": "Lãi tiết kiệm/năm",
   "assetMaturedSavings": "Sổ đã đáo hạn",
   "assetNextMaturity": "Đáo hạn gần nhất",

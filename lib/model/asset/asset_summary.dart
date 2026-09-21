@@ -47,6 +47,7 @@ class AssetSummary {
     required this.investments,
     required this.gold,
     required this.monthlyInterest,
+    required this.monthlyProfit,
     required this.averageAnnualReturn,
     required this.maturedSavingsCount,
     this.nextMaturityDate,
@@ -61,6 +62,11 @@ class AssetSummary {
 
   /// Interest the live deposits pay over the coming month, in VND.
   final double monthlyInterest;
+
+  /// What the whole portfolio earns in an average month, in VND: the deposits'
+  /// interest plus every investment's and gold holding's gain spread over how
+  /// long it has been held.
+  final double monthlyProfit;
 
   /// The portfolio's return restated as a yearly rate in %, weighted by what
   /// each holding cost.

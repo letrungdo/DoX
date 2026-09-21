@@ -15,6 +15,7 @@ class AssetTotalBar extends StatelessWidget {
     super.key,
     required this.value,
     required this.cost,
+    this.monthlyProfit,
     this.profitCaption,
   });
 
@@ -24,6 +25,12 @@ class AssetTotalBar extends StatelessWidget {
   /// What they cost — for a deposit, the principal, so the "profit" line is
   /// the interest it has earned.
   final double cost;
+
+  /// What the holdings below earn in an average month, in VND — a deposit's
+  /// interest, or a holding's gain spread over how long it has been held.
+  /// Null on a list where no row is old enough for the figure to mean
+  /// anything.
+  final double? monthlyProfit;
   final String? profitCaption;
 
   @override
@@ -33,6 +40,10 @@ class AssetTotalBar extends StatelessWidget {
     final profit = value - cost;
     final percent = cost > 0 ? (profit / cost) * 100 : 0.0;
     final color = profit >= 0 ? context.colors.success : context.colors.danger;
+    final monthly = monthlyProfit;
+    final monthlyPercent = monthly != null && cost > 0
+        ? (monthly / cost) * 100
+        : 0.0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -58,6 +69,19 @@ class AssetTotalBar extends StatelessWidget {
                 " (${format.signedPercent(percent)})",
             style: context.textTheme.secondary.size12.textColor(color),
           ),
+          if (monthly != null) ...[
+            const SizedBox(height: 2),
+            _row(
+              context,
+              caption: l10n.assetAvgMonthlyInterest,
+              text:
+                  "${format.signedCompact(monthly)}"
+                  " (${format.signedPercent(monthlyPercent)})",
+              style: context.textTheme.secondary.size12.textColor(
+                monthly >= 0 ? context.colors.success : context.colors.danger,
+              ),
+            ),
+          ],
         ],
       ),
     );

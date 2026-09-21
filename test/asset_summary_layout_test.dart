@@ -23,6 +23,7 @@ AssetSummary _summary({
     ),
     gold: const AssetClassStat(cost: 180000000, value: 200000000, count: 1),
     monthlyInterest: 583333,
+    monthlyProfit: 1250000,
     averageAnnualReturn: 8.42,
     maturedSavingsCount: 1,
     nextMaturityDate: nextMaturity,
@@ -94,6 +95,7 @@ void main() {
         investments: AssetClassStat.empty(),
         gold: AssetClassStat.empty(),
         monthlyInterest: 0,
+        monthlyProfit: 0,
         averageAnnualReturn: 0,
         maturedSavingsCount: 0,
       );

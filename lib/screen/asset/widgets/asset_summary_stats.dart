@@ -306,6 +306,13 @@ class AssetStatsCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           _StatRow(
+            label: l10n.assetAvgMonthlyInterest,
+            value: format.money(summary.monthlyProfit),
+            valueColor: summary.monthlyProfit >= 0
+                ? colors.success
+                : colors.danger,
+          ),
+          _StatRow(
             label: l10n.assetYearlyInterest,
             value: format.money(summary.monthlyInterest * 12),
             valueColor: summary.monthlyInterest > 0 ? colors.success : null,
