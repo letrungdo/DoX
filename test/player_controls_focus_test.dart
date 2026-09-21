@@ -109,9 +109,9 @@ class _HarnessState extends State<_Harness> {
   }
 }
 
-/// The channel player's shape: a back button at the top of the picture and a
-/// play button in the middle of it, both in one bar, with the picture holding
-/// the focus until an arrow is pressed.
+/// A bar whose controls are stacked: one at the top of the picture and one in
+/// the middle of it, both in one bar, with the picture holding the focus until
+/// an arrow is pressed.
 class _StackedHarness extends StatefulWidget {
   const _StackedHarness({super.key});
 

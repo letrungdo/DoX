@@ -48,10 +48,9 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     debugLabel: 'tv-controls',
   );
 
-  /// Named so a press can aim at one: up reaches for the way out, down for the
-  /// thing that stops the picture.
+  /// Named so a press can aim at it: the way out of the channel, which is the
+  /// only control a live picture has.
   final FocusNode _backFocusNode = FocusNode(debugLabel: 'tv-back');
-  final FocusNode _playFocusNode = FocusNode(debugLabel: 'tv-play');
 
   /// The retry button of the error state, which the remote is put on as soon
   /// as it appears.
@@ -83,7 +82,6 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _videoFocusNode.dispose();
     _controlsScope.dispose();
     _backFocusNode.dispose();
-    _playFocusNode.dispose();
     _retryFocusNode.dispose();
     super.dispose();
   }
@@ -233,20 +231,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _scheduleHideControls();
   }
 
-  /// Hands the remote to the controls, aiming at the back button for a press
-  /// towards the top of the picture ([top]) and at the play button for one
-  /// towards its middle. From there the two reach each other, and the press
-  /// that leaves the last of them goes back to the picture.
+  /// Hands the remote to the controls, which on a live channel means the back
+  /// button — and the press that leaves it goes back to the picture.
   ///
   /// [afterFrame] for controls that are only now being shown: hidden ones are
   /// held out of the focus tree, so there is nothing to hand the remote to
   /// until the frame carrying them exists.
-  void _enterControls(bool top, {required bool afterFrame}) {
+  void _enterControls({required bool afterFrame}) {
     void enter() {
-      focusPlayerControls(
-        _controlsScope,
-        preferred: top ? _backFocusNode : _playFocusNode,
-      );
+      focusPlayerControls(_controlsScope, preferred: _backFocusNode);
     }
 
     if (!afterFrame) {
@@ -262,8 +255,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// The remote, on the picture itself.
   ///
   /// Arrows wake the controls and then walk onto them; OK puts them up and
-  /// takes them down again. A live channel has no timeline, so there is
-  /// nothing here for the remote to seek with.
+  /// takes them down again. A live channel has no timeline and nothing to
+  /// pause, so there is nothing here for the remote to seek or stop with.
   KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
     // The controls are inside this node, so their keys walk up through here.
     // Claiming them would swallow the OK meant for the focused button.
@@ -271,26 +264,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       return KeyEventResult.ignored;
     }
 
-    final isUp = event.logicalKey == LogicalKeyboardKey.arrowUp;
-    if (isUp || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown) {
       final wasVisible = _showControls;
       if (!wasVisible) setState(() => _showControls = true);
       _scheduleHideControls();
-      if (deviceType.isTv) _enterControls(isUp, afterFrame: !wasVisible);
+      if (deviceType.isTv) _enterControls(afterFrame: !wasVisible);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
-  }
-
-  void _togglePlayback() {
-    final controller = _controller;
-    if (controller == null) return;
-    if (controller.value.isPlaying) {
-      controller.pause();
-    } else {
-      controller.play();
-    }
-    _scheduleHideControls();
   }
 
   @override
@@ -331,7 +313,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                     duration: const Duration(milliseconds: 200),
                     child: IgnorePointer(
                       ignoring: !_showControls,
-                      child: _buildControls(l10n, controller),
+                      child: _buildControls(l10n),
                     ),
                   ),
                 ),
@@ -373,21 +355,19 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     );
   }
 
-  Widget _buildControls(
-    AppLocalizations l10n,
-    VideoPlayerController? controller,
-  ) {
-    final isPlaying = controller?.value.isPlaying ?? false;
-
-    // One scope for both controls, so up and down move between them; the press
-    // that leaves the topmost of them is the one that goes back to the picture.
+  Widget _buildControls(AppLocalizations l10n) {
+    // One scope for the controls; the press that leaves them goes back to the
+    // picture.
     return PlayerControlsFocus(
       node: _controlsScope,
       exit: TraversalDirection.up,
       onExit: _backToPicture,
+      // A column for one bar: it is what keeps the bar at its own height at
+      // the top of the picture, where the stack would otherwise stretch it
+      // over the whole frame and the gradient with it.
       child: Column(
         children: [
-          // The gradients are what keep white controls readable over a bright
+          // The gradient is what keeps the white bar readable over a bright
           // frame; the picture underneath is not ours to dim any further.
           Container(
             decoration: const BoxDecoration(
@@ -432,30 +412,6 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                   ],
                 ),
               ),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: controller == null
-                  ? const SizedBox.shrink()
-                  : FocusableTap(
-                      focusNode: _playFocusNode,
-                      onTap: _togglePlayback,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-                    ),
             ),
           ),
         ],
