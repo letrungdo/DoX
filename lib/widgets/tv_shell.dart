@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/device_type.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -311,118 +312,99 @@ class _FocusOutline extends StatefulWidget {
 }
 
 class _FocusOutlineState extends State<_FocusOutline> {
-  Rect? _rect;
   bool _hadControl = false;
 
-  /// How many more frames the outline re-measures itself for.
+  /// What the ring is drawn around, looked up when the focus moves.
+  ///
+  /// The lookup walks the element tree, which is only safe between frames —
+  /// so it is done here and the painter is left with render objects it can
+  /// simply ask where they are now.
+  final ValueNotifier<_FocusTarget?> _target = ValueNotifier<_FocusTarget?>(
+    null,
+  );
+
+  /// Bumped whenever the control may have moved under the ring: a list
+  /// scrolling, or the lift growing the card into place.
+  final ValueNotifier<int> _tick = ValueNotifier<int>(0);
+
+  /// How many more frames the ring follows the control for.
   ///
   /// The control the remote lands on grows into place rather than snapping,
-  /// so a single measurement taken the moment focus moves is of a card that
-  /// has not finished arriving. Following it for the length of that animation
-  /// is what keeps the ring on the card instead of inside it.
+  /// so a ring drawn once, the moment focus moves, is around a card that has
+  /// not finished arriving.
   ///
   /// Counted in frames rather than against the clock: a widget test runs on
-  /// its own time, where a wall-clock deadline is never reached and the
-  /// frames this asks for never stop coming.
+  /// its own time, where a wall-clock deadline is never reached and the frames
+  /// this asks for never stop coming.
   int _settleFrames = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addListener(_scheduleMeasure);
-    _scheduleMeasure();
-  }
-
-  @override
-  void dispose() {
-    FocusManager.instance.removeListener(_scheduleMeasure);
-    super.dispose();
-  }
-
-  /// Measured after the frame rather than during it: the widget that has just
-  /// taken focus is usually built by that very frame, so there is nothing laid
-  /// out to measure until it ends.
-  void _scheduleMeasure() {
-    final wasSettling = _settleFrames > 0;
-    _settleFrames = _settleFrameCount;
-    if (!wasSettling) _measureNextFrame();
-  }
 
   /// A little longer than the lift itself, so the last frame of it is caught.
   static const _settleFrameCount = 12;
 
-  void _measureNextFrame() {
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusChange);
+    _onFocusChange();
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_onFocusChange);
+    _target.dispose();
+    _tick.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    _follow();
+    // After the frame: the widget that has just taken the focus is usually
+    // built by that very frame, so there is nothing attached to look up until
+    // it ends.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _measure();
+      _target.value = _focusTarget();
+      _rescueIfOrphaned();
+    });
+  }
+
+  /// Asks for a repaint now, and for the frames the lift takes to settle.
+  void _follow() {
+    _tick.value++;
+    final wasSettling = _settleFrames > 0;
+    _settleFrames = _settleFrameCount;
+    if (!wasSettling) _followNextFrame();
+  }
+
+  void _followNextFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _tick.value++;
       if (--_settleFrames <= 0) return;
-      _measureNextFrame();
+      _followNextFrame();
       // The control is animating, so frames are being produced anyway — but
       // not once it settles, and a post-frame callback waiting for a frame
       // nobody asks for never runs. Asking costs a few idle frames per focus
-      // move and is what makes the last measurement the one that lands.
+      // move and is what puts the ring on the card's final size.
       SchedulerBinding.instance.scheduleFrame();
     });
   }
 
-  void _measure() {
-    if (!mounted) return;
-    final node = FocusManager.instance.primaryFocus;
-    final nodeContext = node?.context;
+  /// Puts the remote back on the page when whatever held it has gone.
+  void _rescueIfOrphaned() {
     // Whether the remote is on a control at all, which is *not* the same as
-    // whether one is outlined: a text field is a control the outline stays off.
-    // Reading the outline instead of this left the field submitting from the
+    // whether one is outlined: a text field is a control the ring stays off.
+    // Reading the ring instead of this left the field submitting from the
     // on-screen keyboard — the one way a TV signs in — outside the rescue.
-    var onAControl = false;
-    Rect? rect;
-    // A scope node spans its whole page; outlining that says nothing.
-    if (node != null && node is! FocusScopeNode && nodeContext != null) {
-      final box = nodeContext.findRenderObject();
-      if (box is RenderBox && box.attached && box.hasSize) {
-        onAControl = true;
-        if (!_marksItself(nodeContext) && !_isSurface(node, nodeContext)) {
-          // Where the control is *painted*, not where it was laid out. On a
-          // television the focused control is drawn larger than its slot, and
-          // `FocusNode.rect` reports the slot — an outline traced on that sits
-          // inside the card it is meant to be around.
-          rect = MatrixUtils.transformRect(
-            box.getTransformTo(null),
-            Offset.zero & box.size,
-          );
-        }
-      }
-    }
-    // The remote was on something and that something is gone — logging in
-    // replaces the page under it, switching tabs takes the old one out of the
-    // focus tree. Focus falls back to a scope, no arrow key finds anything from
-    // there, and the remote is dead for the rest of the session. Put it back on
-    // the page. Only when focus is *lost*, never at launch: forcing focus onto
+    final onAControl = _focusedBox() != null;
+    // Logging in replaces the page under the remote; switching tabs takes the
+    // old one out of the focus tree. Focus falls back to a scope, no arrow key
+    // finds anything from there, and the remote is dead for the rest of the
+    // session. Only when focus is *lost*, never at launch: forcing it onto
     // whatever a page happens to start with would open the on-screen keyboard
     // on any page whose first control is a text field.
     if (!onAControl && _hadControl) _rescueOrphanedRemote();
     _hadControl = onAControl;
-    if (rect != _rect) setState(() => _rect = rect);
-  }
-
-  /// Whether the focused widget already says it has the focus on its own.
-  ///
-  /// A text field does: its outline thickens and turns to the primary colour,
-  /// and the label lifts into the notch. Adding this outline as well draws a
-  /// second line just inside the first, which reads as a rendering mistake
-  /// rather than as emphasis — and the field's own cue is the better of the
-  /// two anyway, because it also fits the field's shape.
-  bool _marksItself(BuildContext context) {
-    return context.findAncestorWidgetOfExactType<EditableText>() != null;
-  }
-
-  /// Whether the focus is on a [TvFocusSurface] rather than on a control.
-  ///
-  /// Matched by node, not by ancestry: a player's controls are built *inside*
-  /// the picture they float over, so anything looser would take the outline
-  /// off the buttons too — the one place a television needs it most.
-  bool _isSurface(FocusNode node, BuildContext context) {
-    final surface = context.findAncestorWidgetOfExactType<TvFocusSurface>();
-    return surface != null && identical(surface.node, node);
   }
 
   void _rescueOrphanedRemote() {
@@ -450,12 +432,11 @@ class _FocusOutlineState extends State<_FocusOutline> {
 
   @override
   Widget build(BuildContext context) {
-    final rect = _rect;
     return NotificationListener<ScrollNotification>(
       // Focus does not change while a list scrolls, but the row it rests on
-      // moves under it, so without this the outline is left behind.
+      // moves under it, so without this the ring is left behind.
       onNotification: (_) {
-        _scheduleMeasure();
+        _follow();
         return false;
       },
       child: Stack(
@@ -463,23 +444,231 @@ class _FocusOutlineState extends State<_FocusOutline> {
         fit: StackFit.expand,
         children: [
           widget.child,
-          if (rect != null && !rect.isEmpty)
-            Positioned.fromRect(
-              rect: rect.inflate(Dimens.focusOutlineGap),
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(Dimens.radiusControl),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: Dimens.focusRingWidth,
-                    ),
-                  ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _FocusOutlinePainter(
+                  color: Theme.of(context).colorScheme.primary,
+                  target: _target,
+                  repaint: Listenable.merge([_target, _tick]),
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
   }
+}
+
+/// What the ring is drawn around: the focused control, and the lists it
+/// scrolls inside.
+///
+/// Render objects rather than contexts, because the painter asks them where
+/// they are while it paints — and walking the element tree then is not
+/// allowed.
+class _FocusTarget {
+  const _FocusTarget({
+    required this.box,
+    required this.verticalViewport,
+    required this.horizontalViewport,
+  });
+
+  final RenderBox box;
+
+  /// The list the control scrolls up and down in, if it is in one.
+  final RenderBox? verticalViewport;
+
+  /// The row it scrolls left and right in, if it is in one.
+  final RenderBox? horizontalViewport;
+}
+
+/// The focused control's box, or null when the remote is not on one.
+///
+/// A scope node spans its whole page, and a node whose widget has gone has
+/// nothing to measure — neither is a control.
+RenderBox? _focusedBox() {
+  final context = FocusManager.instance.primaryFocus?.context;
+  final node = FocusManager.instance.primaryFocus;
+  if (node == null || node is FocusScopeNode || context == null) return null;
+  if (!context.mounted) return null;
+  final box = context.findRenderObject();
+  if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+  return box;
+}
+
+/// What the ring should be drawn around right now, or null for nothing.
+_FocusTarget? _focusTarget() {
+  // Only a television draws one: everywhere else the remote does not exist
+  // and the platform marks focus its own way.
+  if (!deviceType.isTv) return null;
+  final box = _focusedBox();
+  final node = FocusManager.instance.primaryFocus;
+  final context = node?.context;
+  if (box == null || node == null || context == null) return null;
+  if (_marksItself(context) || _isSurface(node, context)) return null;
+
+  RenderBox? vertical;
+  RenderBox? horizontal;
+  context.visitAncestorElements((element) {
+    if (element is StatefulElement && element.state is ScrollableState) {
+      final state = element.state as ScrollableState;
+      final viewport = state.context.findRenderObject();
+      if (viewport is RenderBox && viewport.attached && viewport.hasSize) {
+        if (state.position.axis == Axis.vertical) {
+          vertical ??= viewport;
+        } else {
+          horizontal ??= viewport;
+        }
+      }
+    }
+    return vertical == null || horizontal == null;
+  });
+
+  return _FocusTarget(
+    box: box,
+    verticalViewport: vertical,
+    horizontalViewport: horizontal,
+  );
+}
+
+/// Whether the focused widget already says it has the focus on its own.
+///
+/// A text field does: its outline thickens and turns to the primary colour,
+/// and the label lifts into the notch. Adding this ring as well draws a second
+/// line just inside the first, which reads as a rendering mistake rather than
+/// as emphasis — and the field's own cue is the better of the two anyway,
+/// because it also fits the field's shape.
+bool _marksItself(BuildContext context) {
+  return context.findAncestorWidgetOfExactType<EditableText>() != null;
+}
+
+/// Whether the focus is on a [TvFocusSurface] rather than on a control.
+///
+/// Matched by node, not by ancestry: a player's controls are built *inside*
+/// the picture they float over, so anything looser would take the ring off the
+/// buttons too — the one place a television needs it most.
+bool _isSurface(FocusNode node, BuildContext context) {
+  final surface = context.findAncestorWidgetOfExactType<TvFocusSurface>();
+  return surface != null && identical(surface.node, node);
+}
+
+/// The rectangle of [target]'s ring, in global coordinates, or null when the
+/// list it scrolls in has carried it out of sight.
+Rect? _ringOf(_FocusTarget target) {
+  final box = target.box;
+  if (!box.attached || !box.hasSize) return null;
+  // Where the control is *painted*, not where it was laid out. On a television
+  // the focused control is drawn larger than its slot, and `FocusNode.rect`
+  // reports the slot — a ring traced on that sits inside the card it is meant
+  // to be around.
+  final painted = MatrixUtils.transformRect(
+    box.getTransformTo(null),
+    Offset.zero & box.size,
+  );
+  if (painted.isEmpty) return null;
+  final ring = painted.inflate(Dimens.focusOutlineGap);
+
+  final clip = _clipOf(target);
+  if (!clip.overlaps(ring)) return null;
+  return ring;
+}
+
+/// What the ring is allowed to reach, given the lists the control sits in.
+///
+/// Each list bounds it in that list's own direction only: a page bounds the
+/// ring top and bottom, which is what keeps a row scrolling out of sight from
+/// leaving its ring drawn across the app bar it has gone behind, and a row of
+/// chips bounds it left and right. Bounding both ways from either would cut
+/// the lift, which is drawn outside the slot the list gave the control — so
+/// each edge is let out by as much as the lift can add.
+Rect _clipOf(_FocusTarget target) {
+  var clip = Rect.largest;
+  const slack = Dimens.tvFocusGrowth;
+  final vertical = _globalRectOf(target.verticalViewport);
+  if (vertical != null) {
+    clip = Rect.fromLTRB(
+      clip.left,
+      vertical.top - slack,
+      clip.right,
+      vertical.bottom + slack,
+    );
+  }
+  final horizontal = _globalRectOf(target.horizontalViewport);
+  if (horizontal != null) {
+    clip = Rect.fromLTRB(
+      horizontal.left - slack,
+      clip.top,
+      horizontal.right + slack,
+      clip.bottom,
+    );
+  }
+  return clip;
+}
+
+Rect? _globalRectOf(RenderBox? box) {
+  if (box == null || !box.attached || !box.hasSize) return null;
+  return MatrixUtils.transformRect(
+    box.getTransformTo(null),
+    Offset.zero & box.size,
+  );
+}
+
+/// The ring `TvShell` would draw for the focus as it stands, with the bounds
+/// it is clipped to — or null when it would draw none. The shell's own
+/// answer, so a test can ask for it.
+@visibleForTesting
+({Rect ring, Rect clip})? tvFocusRing() {
+  final target = _focusTarget();
+  if (target == null) return null;
+  final ring = _ringOf(target);
+  if (ring == null) return null;
+  return (ring: ring, clip: _clipOf(target));
+}
+
+/// Draws the ring where the focused control is *at paint time*.
+///
+/// Not from a rectangle kept in state, because such a rectangle is a frame
+/// old: it is measured after one frame and drawn in the next, so during a
+/// fling the row has already moved on and the ring trails it across the
+/// screen. Reading the transform here — after this frame's layout, in the same
+/// frame as the page underneath — is what keeps the two together.
+class _FocusOutlinePainter extends CustomPainter {
+  _FocusOutlinePainter({
+    required this.color,
+    required this.target,
+    required Listenable repaint,
+  }) : super(repaint: repaint);
+
+  final Color color;
+  final ValueListenable<_FocusTarget?> target;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final target = this.target.value;
+    if (target == null) return;
+    final ring = _ringOf(target);
+    if (ring == null) return;
+
+    canvas
+      ..save()
+      ..clipRect(_clipOf(target))
+      // The stroke straddles the line it is drawn on, so the rectangle is
+      // pulled in by half of it to sit where a border of the same width would.
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          ring.deflate(Dimens.focusRingWidth / 2),
+          const Radius.circular(Dimens.radiusControl),
+        ),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = Dimens.focusRingWidth
+          ..color = color,
+      )
+      ..restore();
+  }
+
+  @override
+  bool shouldRepaint(_FocusOutlinePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.target != target;
 }

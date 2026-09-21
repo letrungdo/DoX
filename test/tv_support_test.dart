@@ -176,22 +176,11 @@ void main() {
 
   group('seeing where the remote is', () {
     /// The rect of the outline `TvShell` paints, or null when it paints none.
-    Rect? outline() {
-      final found = find
-          .byType(Positioned)
-          .evaluate()
-          .where(
-            (element) => (element.widget as Positioned).child is IgnorePointer,
-          );
-      if (found.isEmpty) return null;
-      final positioned = found.first.widget as Positioned;
-      return Rect.fromLTWH(
-        positioned.left!,
-        positioned.top!,
-        positioned.width!,
-        positioned.height!,
-      );
-    }
+    ///
+    /// Asked of the shell rather than read off a widget: the ring is painted
+    /// straight onto the page from where the focused control is at that
+    /// moment, so there is no positioned box holding the answer.
+    Rect? outline() => tvFocusRing()?.ring;
 
     testWidgets('an outline follows the focus onto any widget, control or not', (
       tester,
@@ -238,6 +227,59 @@ void main() {
       second.requestFocus();
       await tester.pumpAndSettle();
       expect(outline(), isNot(onFirst));
+    });
+
+    testWidgets('the ring is held inside the list the control scrolls in', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final controller = ScrollController();
+      final rows = [for (var i = 0; i < 40; i++) FocusNode(debugLabel: 'r$i')];
+      addTearDown(controller.dispose);
+      addTearDown(() {
+        for (final node in rows) {
+          node.dispose();
+        }
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              appBar: AppBar(title: const Text('page')),
+              body: ListView(
+                controller: controller,
+                children: [
+                  for (final node in rows)
+                    Focus(
+                      focusNode: node,
+                      child: const SizedBox(height: 60, width: 200),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      rows.first.requestFocus();
+      await tester.pumpAndSettle();
+
+      final drawn = tvFocusRing();
+      expect(drawn, isNotNull);
+      // The list starts below the app bar, and so does everything the ring is
+      // allowed to reach — bar the slack the lift is drawn into.
+      final listTop = tester.getTopLeft(find.byType(ListView)).dy;
+      expect(drawn!.clip.top, closeTo(listTop - Dimens.tvFocusGrowth, 0.01));
+      expect(drawn.clip.top, greaterThan(0));
+
+      // Scrolled well past, the row is behind the app bar: the ring goes with
+      // it instead of being left drawn across the bar.
+      controller.jumpTo(600);
+      await tester.pumpAndSettle();
+      expect(tvFocusRing(), isNull);
     });
 
     testWidgets('the picture a player parks the remote on is not outlined', (
