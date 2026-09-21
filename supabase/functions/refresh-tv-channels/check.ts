@@ -22,7 +22,15 @@ const CONCURRENCY = 24;
 
 export interface Verified {
   channel: Channel;
-  url: string;
+  /**
+   * The streams the app should try, in order, or empty when the channel is
+   * off the air.
+   *
+   * The first is the one seen playing here. The rest are the links the check
+   * never got to — a stream that plays today can be gone tomorrow, and by
+   * then the only thing worth having is another link to try.
+   */
+  urls: string[];
   checked: boolean;
 }
 
@@ -32,7 +40,8 @@ export interface Verified {
  *
  * A channel stops as soon as one of its links works, so the common case
  * costs a single check and the budget is spent on the channels that are in
- * trouble.
+ * trouble. What it stopped short of is kept: those links are unproven, not
+ * dead, and a week from now the proven one may be the dead one.
  */
 export async function check(
   channels: Channel[],
@@ -48,21 +57,32 @@ export async function check(
       const channel = channels[index];
 
       if (Date.now() > deadline) {
-        // Out of time: the channel keeps the link most likely to work and
-        // goes out unverified rather than disappearing for a week.
-        results[index] = { channel, url: channel.sources[0], checked: false };
+        // Out of time: the channel keeps its links in the order they were
+        // ranked and goes out unverified rather than disappearing for a week.
+        results[index] = { channel, urls: channel.sources, checked: false };
         continue;
       }
 
+      // Only the links proved dead are dropped. A link the check stopped
+      // before reaching stays on as a spare, behind the one that played.
       let playing = "";
-      for (const url of channel.sources) {
+      const untried: string[] = [];
+      for (const [position, url] of channel.sources.entries()) {
         if (await isPlaying(url, channel.headers)) {
           playing = url;
+          untried.push(...channel.sources.slice(position + 1));
           break;
         }
-        if (Date.now() > deadline) break;
+        if (Date.now() > deadline) {
+          untried.push(...channel.sources.slice(position + 1));
+          break;
+        }
       }
-      results[index] = { channel, url: playing, checked: true };
+      results[index] = {
+        channel,
+        urls: playing === "" ? untried : [playing, ...untried],
+        checked: true,
+      };
     }
   };
 

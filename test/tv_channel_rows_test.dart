@@ -10,6 +10,10 @@ final _rows = jsonEncode([
     'slug': 'vinhlong1',
     'name': 'Vinh Long TV 1',
     'url': 'https://example.com/thvl1/index.m3u8',
+    'urls': [
+      'https://example.com/thvl1/index.m3u8',
+      'https://spare.example.com/thvl1/index.m3u8',
+    ],
     'logo': 'https://example.com/thvl1.png',
     'categories': ['General', 'News'],
     'quality': '1080p',
@@ -46,6 +50,45 @@ void main() {
       expect(thvl1.groups, ['General', 'News']);
       expect(thvl1.quality, '1080p');
       expect(thvl1.headers, {'Referer': 'https://example.com/'});
+    });
+
+    test('carries the spare links behind the one that played', () {
+      final thvl1 = tvChannelService.parseChannels(_rows).first;
+
+      expect(thvl1.urls, [
+        'https://example.com/thvl1/index.m3u8',
+        'https://spare.example.com/thvl1/index.m3u8',
+      ]);
+    });
+
+    test('a row written before there were spares still has one link', () {
+      // The column was added after the table; a row from the run before it
+      // carries `url` alone and must not come back with nothing to play.
+      final htv7 = tvChannelService.parseChannels(_rows).last;
+
+      expect(htv7.urls, ['https://example.com/htv7/index.m3u8']);
+    });
+
+    test('the link that played leads, wherever the column lists it', () {
+      final channels = tvChannelService.parseChannels(
+        jsonEncode([
+          {
+            'slug': 'vtv1',
+            'name': 'VTV1',
+            'url': 'https://b.example.com/vtv1.m3u8',
+            'urls': [
+              'https://a.example.com/vtv1.m3u8',
+              'https://b.example.com/vtv1.m3u8',
+            ],
+            'sort_order': 0,
+          },
+        ]),
+      );
+
+      expect(channels.single.urls, [
+        'https://b.example.com/vtv1.m3u8',
+        'https://a.example.com/vtv1.m3u8',
+      ]);
     });
 
     test('keeps the order the rows arrive in', () {

@@ -104,6 +104,81 @@ void main() {
     });
   });
 
+  group('Mirrors of one channel', () {
+    /// The way `iptv-org` lists a channel several CDNs carry: one entry per
+    /// server, all under the same `tvg-id`.
+    const mirrors = '''
+#EXTM3U
+#EXTINF:-1 tvg-id="VTV1.vn" group-title="General",VTV1 (1080p)
+https://dethich.pw/vtv1/index.m3u8
+#EXTINF:-1 tvg-id="VTV1.vn" tvg-logo="https://example.com/vtv1.png" group-title="General",VTV1
+https://live.fptplay53.net/live/media/vtv1/live247-hls-avc/index.m3u8
+#EXTINF:-1 tvg-id="VTV1.vn" group-title="General",VTV1
+https://vips-livecdn.fptplay.net/live/media/vtv1/live247-hls-avc/index.m3u8
+''';
+
+    test('one row, with the other servers behind it', () {
+      final channels = tvChannelService.parsePlaylist(mirrors);
+
+      // Three entries, one station: the grid used to show it three times and
+      // a viewer who picked the dead one had no way of knowing there were
+      // two more.
+      expect(channels, hasLength(1));
+      expect(channels.single.urls, hasLength(3));
+      expect(channels.single.url, channels.single.urls.first);
+    });
+
+    test('a later entry fills in the logo the first one was missing', () {
+      final channels = tvChannelService.parsePlaylist(mirrors);
+
+      expect(channels.single.logo, 'https://example.com/vtv1.png');
+    });
+
+    test('folds entries with no tvg-id by name', () {
+      final channels = tvChannelService.parsePlaylist(
+        '#EXTM3U\n'
+        '#EXTINF:-1,Vĩnh Long 1 (1080p)\n'
+        'https://example.com/a/index.m3u8\n'
+        '#EXTINF:-1,Vinh Long 1\n'
+        'https://example.com/b/index.m3u8\n',
+      );
+
+      expect(channels, hasLength(1));
+      expect(channels.single.urls, [
+        'https://example.com/a/index.m3u8',
+        'https://example.com/b/index.m3u8',
+      ]);
+    });
+  });
+
+  group('Ordering the mirrors', () {
+    test('a plain CDN link goes before a proxy or a repository copy', () {
+      expect(
+        rankStreamUrls([
+          'https://iptv-org.github.io/vtv1.m3u8',
+          'https://example.com/play.m3u8?vid=51',
+          'https://cdn.example.com/vtv1/index.m3u8',
+        ]),
+        [
+          'https://cdn.example.com/vtv1/index.m3u8',
+          'https://example.com/play.m3u8?vid=51',
+          'https://iptv-org.github.io/vtv1.m3u8',
+        ],
+      );
+    });
+
+    test('drops repeats and stops at the number worth trying', () {
+      final ranked = rankStreamUrls([
+        for (var i = 0; i < 8; i++) 'https://cdn$i.example.com/index.m3u8',
+        'https://cdn0.example.com/index.m3u8',
+      ]);
+
+      expect(ranked, hasLength(maxStreamUrls));
+      // Ties keep the order the playlist listed them in.
+      expect(ranked.first, 'https://cdn0.example.com/index.m3u8');
+    });
+  });
+
   group('TvChannel.matches', () {
     test('finds a Vietnamese name typed without accents', () {
       final channels = tvChannelService.parsePlaylist(

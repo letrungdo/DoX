@@ -9,7 +9,7 @@ class TvChannel {
   const TvChannel({
     required this.id,
     required this.name,
-    required this.url,
+    required this.urls,
     this.logo,
     this.groups = const [],
     this.quality,
@@ -25,10 +25,20 @@ class TvChannel {
   factory TvChannel.fromRow(Map<String, dynamic> row) {
     final headers = row['headers'];
     final categories = row['categories'];
+    final primary = row['url'] as String? ?? '';
+    final spares = row['urls'];
+    final urls = [
+      // `url` is the link the checker last saw playing, so it leads whatever
+      // order the column happens to be in.
+      primary,
+      if (spares is List)
+        for (final spare in spares.whereType<String>())
+          if (spare != primary) spare,
+    ].where((url) => url.isNotEmpty).toList(growable: false);
     return TvChannel(
-      id: row['slug'] as String? ?? row['url'] as String? ?? '',
+      id: row['slug'] as String? ?? primary,
       name: row['name'] as String? ?? '',
-      url: row['url'] as String? ?? '',
+      urls: urls,
       logo: row['logo'] as String?,
       groups: categories is List
           ? categories.whereType<String>().toList()
@@ -54,7 +64,18 @@ class TvChannel {
   /// [isIntermittent] instead.
   final String name;
 
-  final String url;
+  /// Every stream known for this channel, the one most likely to play first.
+  ///
+  /// A live link dies without warning and without telling anybody — the CDN
+  /// stops serving segments and the picture simply never starts — so a
+  /// channel carries its spares and the player works down them.
+  final List<String> urls;
+
+  /// The stream a channel is opened on, and the empty string for a channel
+  /// with no link at all — which the sources this reads never produce, but
+  /// which a caller must not have to prove before reading a URL.
+  String get url => urls.isEmpty ? '' : urls.first;
+
   final String? logo;
 
   /// `group-title`, split on `;` — a channel is often filed under several.
@@ -82,6 +103,10 @@ class TvChannel {
     if (needle.isEmpty) return true;
     return _normalize(name).contains(needle);
   }
+
+  /// [value] lowercased and stripped of its Vietnamese accents, so two
+  /// playlists spelling one station differently still read as one name.
+  static String normalizeName(String value) => _normalize(value);
 
   static String _normalize(String value) {
     var text = value.toLowerCase().trim();

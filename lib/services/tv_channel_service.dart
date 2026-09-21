@@ -203,9 +203,15 @@ class _TvChannelService {
   /// Turns an M3U playlist into channels, skipping anything the platform player
   /// cannot open.
   ///
+  /// A playlist lists the same station several times over — one line per
+  /// mirror, and every one of them a link that can die on its own. They are
+  /// folded into a single channel here, with the rest of the mirrors kept as
+  /// the spares the player falls back on, rather than shown as a row each.
+  ///
   /// Public so the parser can be tested without a network round trip.
   List<TvChannel> parsePlaylist(String content) {
-    final channels = <TvChannel>[];
+    final drafts = <_ChannelDraft>[];
+    final draftByKey = <String, _ChannelDraft>{};
     final seen = <String>{};
 
     Map<String, String> attributes = {};
@@ -252,31 +258,50 @@ class _TvChannelService {
       if (!_isPlayable(line)) continue;
       if (!seen.add(line)) continue;
 
-      final logo = attributes['tvg-logo'];
+      final tvgId = attributes['tvg-id'] ?? '';
+      final cleanName = _cleanName(name).isEmpty ? line : _cleanName(name);
+
+      // Two entries are the same station when the playlist gives them the
+      // same `tvg-id`; without one, the name is all there is to go on.
+      final key = tvgId.isNotEmpty
+          ? 'id:$tvgId'
+          : 'name:${TvChannel.normalizeName(cleanName)}';
+      final existing = draftByKey[key];
+      if (existing != null) {
+        existing.urls.add(line);
+        // A later entry may carry the logo the first one was missing.
+        existing.logo ??= _logoOf(attributes);
+        continue;
+      }
+
       final group = attributes['group-title'] ?? '';
-      channels.add(
-        TvChannel(
-          id: attributes['tvg-id']?.isNotEmpty == true
-              ? attributes['tvg-id']!
-              : line,
-          name: _cleanName(name).isEmpty ? line : _cleanName(name),
-          url: line,
-          logo: logo == null || logo.isEmpty ? null : logo,
-          groups: group
-              .split(';')
-              .map((value) => value.trim())
-              .where((value) => value.isNotEmpty)
-              .toList(),
-          quality: _qualityExp.firstMatch(name)?.group(1),
-          isGeoBlocked: name.contains('[Geo-blocked]'),
-          isIntermittent: name.contains('[Not 24/7]'),
-          headers: Map.unmodifiable(headers),
-        ),
+      final draft = _ChannelDraft(
+        id: tvgId.isNotEmpty ? tvgId : line,
+        name: cleanName,
+        urls: [line],
+        logo: _logoOf(attributes),
+        groups: group
+            .split(';')
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(),
+        quality: _qualityExp.firstMatch(name)?.group(1),
+        isGeoBlocked: name.contains('[Geo-blocked]'),
+        isIntermittent: name.contains('[Not 24/7]'),
+        headers: Map.unmodifiable(headers),
       );
+      drafts.add(draft);
+      draftByKey[key] = draft;
     }
 
+    final channels = drafts.map((draft) => draft.build()).toList();
     channels.sort((a, b) => compareChannelNames(a.name, b.name));
     return channels;
+  }
+
+  String? _logoOf(Map<String, String> attributes) {
+    final logo = attributes['tvg-logo'];
+    return logo == null || logo.isEmpty ? null : logo;
   }
 
   /// Whether this platform's player can open [url] at all.
@@ -376,4 +401,77 @@ bool _isDigit(int codeUnit) => codeUnit >= 0x30 && codeUnit <= 0x39;
 String _withoutLeadingZeros(String digits) {
   final trimmed = digits.replaceFirst(RegExp(r'^0+'), '');
   return trimmed.isEmpty ? '0' : trimmed;
+}
+
+/// One channel while its mirrors are still being collected off the playlist.
+class _ChannelDraft {
+  _ChannelDraft({
+    required this.id,
+    required this.name,
+    required this.urls,
+    required this.logo,
+    required this.groups,
+    required this.quality,
+    required this.isGeoBlocked,
+    required this.isIntermittent,
+    required this.headers,
+  });
+
+  final String id;
+  final String name;
+  final List<String> urls;
+  String? logo;
+  final List<String> groups;
+  final String? quality;
+  final bool isGeoBlocked;
+  final bool isIntermittent;
+  final Map<String, String> headers;
+
+  TvChannel build() => TvChannel(
+    id: id,
+    name: name,
+    urls: rankStreamUrls(urls),
+    logo: logo,
+    groups: groups,
+    quality: quality,
+    isGeoBlocked: isGeoBlocked,
+    isIntermittent: isIntermittent,
+    headers: headers,
+  );
+}
+
+/// How many mirrors of one channel are worth carrying.
+///
+/// A viewer waiting on a dead link waits the whole of each attempt, so the
+/// list is short enough that working down all of it still ends before they
+/// give up on the channel themselves.
+const maxStreamUrls = 4;
+
+/// [urls] best first, deduplicated and cut to [maxStreamUrls].
+///
+/// The same order the weekly refresh ranks Vietnam's mirrors by, so a channel
+/// read off a playlist opens on the same kind of link as one read off our
+/// table.
+List<String> rankStreamUrls(Iterable<String> urls) {
+  final ordered = {...urls}.toList();
+  final ranked =
+      [for (var i = 0; i < ordered.length; i++) (url: ordered[i], index: i)]
+        ..sort((a, b) {
+          final byRank = _streamRank(a.url) - _streamRank(b.url);
+          return byRank != 0 ? byRank : a.index - b.index;
+        });
+  return [for (final entry in ranked.take(maxStreamUrls)) entry.url];
+}
+
+/// How much a link is worth trying, lowest first.
+int _streamRank(String url) {
+  final host = Uri.tryParse(url)?.host.toLowerCase();
+  if (host == null || host.isEmpty) return 3;
+  // A playlist committed to a repository is a copy of a link, taken on the
+  // day someone ran the scraper; the origin it was copied from outlives it.
+  if (host.endsWith('.github.io')) return 2;
+  // `play.m3u8?vid=51` is a proxy that looks the channel up rather than a
+  // stream, and it lasts as long as whoever runs it keeps paying.
+  if (url.contains('?')) return 1;
+  return 0;
 }

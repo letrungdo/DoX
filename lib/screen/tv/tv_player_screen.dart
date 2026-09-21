@@ -78,6 +78,14 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   String _typedNumber = '';
   Timer? _typedNumberTimer;
 
+  /// Which of [_channel]'s mirrors is on screen.
+  ///
+  /// A live link dies quietly — the manifest still loads, the segments are
+  /// gone, and the picture never starts — so a channel that will not come up
+  /// is not a channel that is off the air until every link it has behind it
+  /// has been tried too.
+  int _sourceIndex = 0;
+
   bool _isLoading = true;
   bool _hasError = false;
   bool _showControls = true;
@@ -190,8 +198,14 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       _hasError = false;
     });
 
+    if (_channel.urls.isEmpty) {
+      _showError();
+      return;
+    }
+
+    final url = _channel.urls[_sourceIndex.clamp(0, _channel.urls.length - 1)];
     final controller = VideoPlayerController.networkUrl(
-      Uri.parse(_channel.url),
+      Uri.parse(url),
       httpHeaders: _channel.headers,
     );
 
@@ -211,7 +225,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
             'TvPlayerScreen playback error: '
             '${controller.value.errorDescription}',
           );
-          _showError();
+          unawaited(_onSourceFailed());
           return;
         }
         setState(() {});
@@ -239,10 +253,31 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
         error: e,
         stackTrace: st,
       );
-      await controller.dispose();
+      // Not awaited: a controller whose creation threw never finishes
+      // disposing — it waits on the very creation that failed — and the
+      // channel would sit on the spinner for good waiting with it.
+      unawaited(controller.dispose());
       if (!mounted) return;
-      _showError();
+      await _onSourceFailed();
     }
+  }
+
+  /// Moves to the channel's next mirror, or gives up when there is none.
+  ///
+  /// Silent on purpose: swapping links is the player doing its job, and a
+  /// viewer who sees the spinner run a moment longer has been told everything
+  /// worth telling them. The error state is for a channel with nothing left.
+  Future<void> _onSourceFailed() async {
+    if (_sourceIndex >= _channel.urls.length - 1) {
+      _showError();
+      return;
+    }
+    logger.d(
+      'TvPlayerScreen falling back to mirror ${_sourceIndex + 1} '
+      'of ${_channel.name}',
+    );
+    _sourceIndex++;
+    await _replaceController();
   }
 
   /// Shows the channel as unplayable and puts the remote on the retry button.
@@ -277,6 +312,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     setState(() {
       _index = next;
       _channel = channels[next];
+      _sourceIndex = 0;
       _showChannelName = true;
       // The list is what the viewer was choosing from, and they have chosen.
       _showChannelList = false;
@@ -371,6 +407,9 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   Future<void> _retry() async {
     // The retry button is about to leave with the error state it belongs to.
     _videoFocusNode.requestFocus();
+    // From the top of the list again: the mirrors were exhausted minutes ago
+    // at the earliest, and the best of them is the one most likely to be back.
+    _sourceIndex = 0;
     await _replaceController();
   }
 

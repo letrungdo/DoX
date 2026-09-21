@@ -56,13 +56,16 @@ Deno.serve(async () => {
     const deadline = startedAt + CHECK_BUDGET_MS;
     const verified = await check(channels, deadline);
 
-    const playing = verified.filter((entry) => entry.url !== "");
+    const playing = verified.filter((entry) => entry.urls.length > 0);
     if (playing.length === 0) throw new Error("No channel is playing");
 
     const rows = playing.map((entry, index) => ({
       slug: entry.channel.slug,
       name: entry.channel.name,
-      url: entry.url,
+      url: entry.urls[0],
+      // The spares, behind the link that played, for the app to fall back on
+      // when this one has died before the next weekly run.
+      urls: entry.urls,
       logo: entry.channel.logo,
       categories: entry.channel.categories,
       quality: entry.channel.quality,

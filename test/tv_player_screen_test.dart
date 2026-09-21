@@ -5,11 +5,14 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+
+import 'fake_video_player_platform.dart';
 
 const _channel = TvChannel(
   id: 'VTV1.vn',
   name: 'VTV1',
-  url: 'https://example.com/vtv1/index.m3u8',
+  urls: ['https://example.com/vtv1/index.m3u8'],
 );
 
 /// Three channels in the order the grid showed them, which is the order the
@@ -19,16 +22,26 @@ const _playlist = [
   TvChannel(
     id: 'VTV3.vn',
     name: 'VTV3',
-    url: 'https://example.com/vtv3/index.m3u8',
+    urls: ['https://example.com/vtv3/index.m3u8'],
   ),
   TvChannel(
     id: 'HTV7.vn',
     name: 'HTV7',
-    url: 'https://example.com/htv7/index.m3u8',
+    urls: ['https://example.com/htv7/index.m3u8'],
   ),
 ];
 
 void main() {
+  // Every one of these is about a channel that is still trying to come up —
+  // the state the page is in for its first seconds, and the one the remote
+  // has to keep working in. Without a stand-in player the page would drop
+  // straight into the error state instead.
+  final original = VideoPlayerPlatform.instance;
+  setUp(
+    () => VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(stalls: true),
+  );
+  tearDown(() => VideoPlayerPlatform.instance = original);
+
   testWidgets(
     'a channel that has not come up yet keeps its way out on screen',
     (tester) async {
@@ -180,7 +193,7 @@ void main() {
           TvChannel(
             id: 'ch$i',
             name: 'Channel $i',
-            url: 'https://example.com/$i/index.m3u8',
+            urls: ['https://example.com/$i/index.m3u8'],
           ),
       ];
       await tester.pumpWidget(
@@ -215,7 +228,7 @@ void main() {
           TvChannel(
             id: 'ch$i',
             name: 'Channel $i',
-            url: 'https://example.com/$i/index.m3u8',
+            urls: ['https://example.com/$i/index.m3u8'],
           ),
       ];
       await tester.pumpWidget(
@@ -270,7 +283,7 @@ void main() {
         TvChannel(
           id: 'ch$i',
           name: 'Channel $i',
-          url: 'https://example.com/$i/index.m3u8',
+          urls: ['https://example.com/$i/index.m3u8'],
         ),
     ];
 
