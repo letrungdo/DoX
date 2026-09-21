@@ -171,8 +171,9 @@ function cleanName(raw: string): string {
 /**
  * The channel list, from the catalogue's entries and the collection's.
  *
- * Everything the catalogue lists is kept — it is curated by hand and its
- * entries are the ones with a logo and a real category. The collection only
+ * Everything the catalogue lists as Vietnamese is kept — it is curated by
+ * hand and its entries are the ones with a logo and a real category. The
+ * collection only
  * ever adds: a station it spells differently joins the row that is already
  * there, and its link becomes a spare for the checker to try.
  */
@@ -201,8 +202,13 @@ export function curate(primary: Entry[], extra: Entry[]): Channel[] {
     claim(identityKeys(name), rows.length - 1);
   };
 
+  // The catalogue is trusted for everything but the country: its Vietnamese
+  // file also carries the channels Vietnamese-speaking communities abroad
+  // watch, and a few of their neighbours' — `Hmong TV Network` and
+  // `Lao-Thai TV` are both filed here under an American `tvg-id`.
   for (const entry of primary) {
     if (urls.has(entry.url)) continue;
+    if (!isVietnamese(entry)) continue;
     urls.add(entry.url);
     add(entry, entry.name, entry.groups);
   }
@@ -335,6 +341,10 @@ function isJunkName(name: string): boolean {
  * name spelled with Vietnamese accents.
  */
 function isVietnamese(entry: Entry): boolean {
+  // Ahead of the `tvg-id`, which is where these are mislabelled in the first
+  // place: `Tea TV` and `Uniquely Thai` are both published as `.vn`.
+  if (FOREIGN_NAME.test(foldAccents(entry.name))) return false;
+
   const country = /^[^.]+\.([a-z]{2})(?:@.*)?$/i.exec(entry.id)?.[1];
   if (country) return country.toLowerCase() === "vn";
 
@@ -355,11 +365,23 @@ function isVietnamese(entry: Entry): boolean {
  * Other countries' channels that read as a Vietnamese network.
  *
  * `VTV` is Vietnam's national broadcaster, and also Indonesia's channel, the
- * Maldives', Uruguay's and Chile's — and every one of those is called just
- * that, where a Vietnamese VTV channel always carries a number or a province
- * after it. So the bare name belongs to somebody else.
+ * Maldives', Uruguay's and Chile's; `SCTV` is Vietnam's cable network and
+ * also one of Indonesia's biggest stations. Every one of those foreign
+ * namesakes is called just that, where the Vietnamese channel always carries
+ * a number or a province after it. So the bare name belongs to somebody else.
  */
-const FOREIGN_NAMESAKE = /^vtv( ?hd| ?sd)?$/;
+const FOREIGN_NAMESAKE = /^(vtv|sctv)( ?hd| ?sd)?$/;
+
+/**
+ * Channels of other countries the playlists file under Vietnam anyway.
+ *
+ * Both lists carry a handful of stations serving the Thai, Khmer, Hmong and
+ * Lao communities, and one American city council channel that reads as `HTV`
+ * — some of them even labelled `.vn`. Nothing in the entry gives them away,
+ * so they are named here.
+ */
+const FOREIGN_NAME =
+  /\b(hmong|khmer|houston|uniquely thai|lao[ -]?thai|tea tv)\b/;
 
 /** A letter from a script other than the Latin one Vietnamese is written in. */
 const FOREIGN_SCRIPT = /[^\P{L}\p{Script=Latin}]/u;
@@ -710,11 +732,33 @@ export function foldAccents(value: string): string {
  * Orders two channel names the way a viewer reads them, which means the
  * digits in them count as numbers: plain text ordering puts `VTV10` between
  * `VTV1` and `VTV2`, and the national channels come out shuffled.
+ *
+ * What is compared is not the name as written but the name reduced to what a
+ * viewer would say out loud. The two playlists spell one family of channels
+ * every which way — `Vinh Long TV 4` beside `Vĩnh Long 5` — and both the
+ * accents and the stray `TV` would otherwise break the family apart: every
+ * accented letter sorts after `z` in code point order, which files
+ * `Vĩnh Long 5` and `Đà Nẵng` past the end of the list, and the `TV` puts
+ * whatever carries it after every number.
  */
 export function compareChannelNames(first: string, second: string): number {
-  const left = first.toLowerCase();
-  const right = second.toLowerCase();
+  const byReading = compareText(sortKey(first), sortKey(second));
+  if (byReading !== 0) return byReading;
+  // Two names that read the same still have to have an order between them.
+  return compareText(foldAccents(first), foldAccents(second));
+}
 
+/**
+ * The words a channel name carries without them saying which channel it is,
+ * so that `Vĩnh Long 5` and `Vinh Long TV 4` sort as one run of numbers.
+ */
+const SORT_NOISE = /\b(tv|kenh|channel|hd|sd|fhd|uhd|4k)\b/g;
+
+function sortKey(name: string): string {
+  return foldAccents(name).replace(SORT_NOISE, " ").replace(/\s+/g, " ").trim();
+}
+
+function compareText(left: string, right: string): number {
   let i = 0;
   let j = 0;
   while (i < left.length && j < right.length) {

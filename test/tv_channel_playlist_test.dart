@@ -96,6 +96,16 @@ void main() {
       ]);
     });
 
+    test('reads a name the way it is said, not the way it is spelled', () {
+      // Accents sort after `z` in code unit order, and a name carrying `TV`
+      // sorts after every number — so spelled as a playlist spells them,
+      // these three came out at the far end of the list rather than beside
+      // one another.
+      expect(compareChannelNames('Vinh Long TV 4', 'Vĩnh Long 5'), lessThan(0));
+      expect(compareChannelNames('Đà Nẵng', 'Da Nang TV 1'), lessThan(0));
+      expect(compareChannelNames('Đà Nẵng', 'VTV1'), lessThan(0));
+    });
+
     test('reads a leading zero as the same number', () {
       // `07` and `7` are the same channel number, so neither jumps the queue.
       expect(compareChannelNames('VTV07', 'VTV7'), 0);

@@ -14,6 +14,14 @@ const PRIMARY = `#EXTM3U
 https://example.com/thvl1/index.m3u8
 #EXTINF:-1 tvg-id="HTV7.vn@SD" tvg-logo="" group-title="Entertainment",HTV7 (720p)
 https://example.com/htv7/index.m3u8
+#EXTINF:-1 tvg-id="VinhLongTV4.vn@SD" tvg-logo="" group-title="Culture",Vinh Long TV 4 (720p)
+https://example.com/vinhlong4/index.m3u8
+#EXTINF:-1 tvg-id="DaNangTV1.vn@SD" tvg-logo="" group-title="General",Da Nang TV 1 (1080p)
+https://example.com/danang1/index.m3u8
+#EXTINF:-1 tvg-id="HmongTVNetwork.us@SD" tvg-logo="" group-title="Culture",Hmong TV Network (720p)
+https://example.com/hmong/index.m3u8
+#EXTINF:-1 tvg-id="UniquelyThai.vn@SD" tvg-logo="" group-title="Shop",Uniquely Thai (720p)
+https://example.com/uniquelythai/index.m3u8
 `;
 
 /**
@@ -50,6 +58,12 @@ https://example.com/daklak/chunklist.m3u8
 https://example.com/vtv-id/index.m3u8
 #EXTINF:-1 ,[智利]VTV Aconcaga
 https://example.com/aconcaga/playlist.m3u8
+#EXTINF:-1 group-title="Địa phương",Vĩnh Long 5
+https://example.com/vinhlong5/index.m3u8
+#EXTINF:-1 group-title="Địa phương",Đà Nẵng
+https://example.com/danang/index.m3u8
+#EXTINF:-1 group-title="TV Nasional",SCTV
+https://example.com/sctv-id/index.m3u8
 `;
 
 const build = () => curate(parsePlaylist(PRIMARY), parsePlaylist(EXTRA));
@@ -135,6 +149,31 @@ Deno.test("another country's channel by the same name is not ours", () => {
   // always carries a number or a province after it.
   assertFalse(names().includes("VTV"));
   assertFalse(names().includes("VTV HD"));
+});
+
+Deno.test("the catalogue's own foreign channels are left out too", () => {
+  const found = names();
+
+  // The catalogue's Vietnamese file also carries what Vietnamese-speaking
+  // communities abroad watch, and their neighbours' channels with it. The
+  // `tvg-id` says so outright.
+  assertFalse(found.includes("Hmong TV Network"));
+  // And some of them it labels `.vn` regardless, so the name has to say it.
+  assertFalse(found.includes("Uniquely Thai"));
+  // `SCTV` is Vietnam's cable network, numbered, and also Indonesia's
+  // biggest station, bare.
+  assertFalse(found.includes("SCTV"));
+});
+
+Deno.test("one province's channels stand together, however they are spelled", () => {
+  const found = names();
+  const at = (name: string) => found.indexOf(name);
+
+  // Accents sort after `z`, and a name with `TV` in it sorts after every
+  // number — so spelled as the two playlists spell them, these ended up at
+  // the far end of the list instead of beside each other.
+  assertEquals(at("Vĩnh Long 5"), at("Vinh Long TV 4") + 1);
+  assertEquals(at("Da Nang TV 1"), at("Đà Nẵng") + 1);
 });
 
 Deno.test("the country in the brackets is read before they are stripped", () => {

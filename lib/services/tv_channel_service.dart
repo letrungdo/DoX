@@ -352,11 +352,34 @@ final tvChannelService = _TvChannelService();
 /// digits in them count as numbers: plain text ordering puts `VTV10` between
 /// `VTV1` and `VTV2`, and the national channels come out shuffled.
 ///
+/// What is compared is not the name as written but the name reduced to what
+/// a viewer would say out loud. A playlist spells one family of channels
+/// every which way — `Vinh Long TV 4` beside `Vĩnh Long 5` — and both the
+/// accents and the stray `TV` would otherwise break the family apart: every
+/// accented letter sorts after `z` in code unit order, which files
+/// `Vĩnh Long 5` and `Đà Nẵng` past the end of the list, and the `TV` puts
+/// whatever carries it after every number.
+///
 /// Public so the ordering can be tested on names alone.
 int compareChannelNames(String first, String second) {
-  final left = first.toLowerCase();
-  final right = second.toLowerCase();
+  final byReading = _compareText(_sortKey(first), _sortKey(second));
+  if (byReading != 0) return byReading;
+  // Two names that read the same still have to have an order between them.
+  return _compareText(
+    TvChannel.normalizeName(first),
+    TvChannel.normalizeName(second),
+  );
+}
 
+/// The words a channel name carries without them saying which channel it is,
+/// so that `Vĩnh Long 5` and `Vinh Long TV 4` sort as one run of numbers.
+final _sortNoiseExp = RegExp(r'\b(tv|kenh|channel|hd|sd|fhd|uhd|4k)\b');
+
+String _sortKey(String name) => TvChannel.normalizeName(
+  name,
+).replaceAll(_sortNoiseExp, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+int _compareText(String left, String right) {
   var i = 0;
   var j = 0;
   while (i < left.length && j < right.length) {
