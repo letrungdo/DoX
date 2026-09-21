@@ -228,7 +228,13 @@ class _AppRouter extends RootStackRouter {
       page: MovieDetailRoute.page,
       guards: [_supabaseAuthGuard],
     ),
+    AutoRoute(
+      path: '/movie/search',
+      page: MovieSearchRoute.page,
+      guards: [_supabaseAuthGuard],
+    ),
     AutoRoute(path: '/tv', page: TvRoute.page),
+    AutoRoute(path: '/tv/search', page: TvSearchRoute.page),
     // The player is only ever pushed on the root stack, so it covers the
     // bottom bar the way a full-screen video should.
     AutoRoute(path: '/tv/player', page: TvPlayerRoute.page),

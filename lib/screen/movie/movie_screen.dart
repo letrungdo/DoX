@@ -14,6 +14,7 @@ import 'package:do_x/screen/movie/movie_detail_screen.dart';
 import 'package:do_x/screen/movie/movie_filter_sheet.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_poster_card.dart';
+import 'package:do_x/screen/movie/movie_search_screen.dart';
 import 'package:do_x/screen/movie/movie_server_dialog.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
@@ -330,6 +331,33 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     _searchIconOrigin = body.globalToLocal(
       button.localToGlobal(button.size.center(Offset.zero)),
     );
+  }
+
+  /// Searches on a television: a page of its own.
+  ///
+  /// A full-screen keyboard leaves no room for a field wedged onto this page,
+  /// so the box, the results and the way out go on a page the keyboard can
+  /// have to itself. The same view model travels with it, so the query is
+  /// answered by the server already configured here — and it is cleared again
+  /// on the way back, which puts the whole library on screen without the
+  /// viewer having to empty a box that is no longer there.
+  Future<void> _openSearchPage() async {
+    if (_isSelectionMode) _exitSelectionMode();
+    final picked = await context.pushRoute<MovieSearchPick?>(
+      MovieSearchRoute(movieVm: vm),
+    );
+    if (!mounted) return;
+    final hadQuery = vm.searchQuery.isNotEmpty;
+    vm.setSearchQuery('');
+    if (hadQuery) {
+      await vm.loadMovies(refresh: true);
+      if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    }
+    // The player is an overlay on this page, not on the search page, so a
+    // film picked there is opened here — out of the poster it was picked from.
+    if (picked != null && mounted) {
+      await _openMovie(picked.movie, picked.cardRect);
+    }
   }
 
   void _toggleSearch() {
@@ -686,7 +714,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             tooltip: l10n.searchMoviesPlaceholder,
             color: _isSearchOpen ? Theme.of(context).colorScheme.primary : null,
             icon: _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
-            onPressed: _toggleSearch,
+            onPressed: deviceType.isTv ? _openSearchPage : _toggleSearch,
           ),
           const SizedBox(width: 8),
           Builder(
@@ -827,8 +855,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           Column(
             children: [
               // Grows and shrinks in place, so the list below slides down
-              // instead of jumping when the field appears.
-              _buildSearchField(vm, l10n),
+              // instead of jumping when the field appears. A television has no
+              // field here at all — it searches on a page of its own.
+              if (!deviceType.isTv) _buildSearchField(vm, l10n),
               Expanded(
                 child: _buildBrowserBody(
                   context,
@@ -840,7 +869,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
               ),
             ],
           ),
-          _buildFlyingSearchIcon(),
+          if (!deviceType.isTv) _buildFlyingSearchIcon(),
         ],
       ),
     );
@@ -981,7 +1010,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// makes the list glide down instead of snapping — and unlike `AnimatedSize`,
   /// it animates on the very first open too.
   Widget _buildSearchField(MovieViewModel vm, AppLocalizations l10n) {
-    final scheme = Theme.of(context).colorScheme;
     final curved = CurvedAnimation(
       parent: _searchAnimation,
       curve: Curves.easeOutCubic,
@@ -1008,47 +1036,53 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           opacity: curved,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              onChanged: _onSearchChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: l10n.searchMoviesPlaceholder,
-                prefixIcon: FadeTransition(
-                  opacity: prefixOpacity,
-                  child: const Icon(Icons.search_rounded),
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearchChanged('');
-                        },
-                      )
-                    : null,
-                isDense: true,
-                filled: true,
-                fillColor: scheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(Dimens.radiusControl),
-                  borderSide: BorderSide(
-                    color: scheme.outlineVariant,
-                    width: 1,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(Dimens.radiusControl),
-                  borderSide: BorderSide(
-                    color: scheme.outlineVariant,
-                    width: 1,
-                  ),
-                ),
+            child: _buildSearchBox(
+              vm,
+              l10n,
+              prefix: FadeTransition(
+                opacity: prefixOpacity,
+                child: const Icon(Icons.search_rounded),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// The box itself, kept apart from the field that slides it into the page.
+  Widget _buildSearchBox(
+    MovieViewModel vm,
+    AppLocalizations l10n, {
+    Widget prefix = const Icon(Icons.search_rounded),
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(Dimens.radiusControl),
+      borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
+    );
+    return TextField(
+      controller: _searchController,
+      focusNode: _searchFocusNode,
+      onChanged: _onSearchChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: l10n.searchMoviesPlaceholder,
+        prefixIcon: prefix,
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear_rounded),
+                onPressed: () {
+                  _searchController.clear();
+                  _onSearchChanged('');
+                },
+              )
+            : null,
+        isDense: true,
+        filled: true,
+        fillColor: scheme.surface,
+        border: border,
+        enabledBorder: border,
       ),
     );
   }
