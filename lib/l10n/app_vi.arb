@@ -1342,7 +1342,17 @@
   "tvNoResults": "Không có kênh nào khớp với tìm kiếm này.",
   "tvLoadFailed": "Không tải được danh sách kênh. Kiểm tra kết nối rồi thử lại.",
   "tvPlaybackFailed": "Không phát được kênh này. Có thể kênh đang ngừng phát hoặc chỉ xem được ở vùng khác.",
-  "tvGeoBlocked": "Chỉ xem được trong Việt Nam",
+  "tvGeoBlocked": "Chỉ xem được trong nước phát sóng",
+  "tvCountry": "Quốc gia",
+  "tvChannelCount": "{count, plural, other{{count} kênh}}",
+  "@tvChannelCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tvCountryHint": "Tìm quốc gia",
   "tvNotAllDay": "Không phát 24/7",
   "tvGroupOther": "Khác",
   "tvLive": "TRỰC TIẾP",

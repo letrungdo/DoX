@@ -37,6 +37,10 @@ class Envs {
   /// CSKH CPC (Trung tâm CSKH Điện lực miền Trung).
   static const electricApiUrl = String.fromEnvironment('ELECTRIC_API_URL');
 
+  /// iptv-org: the country catalogue and the channel playlists behind the TV
+  /// page. Both the `api` and the `iptv` repositories are published under it.
+  static const tvApiUrl = String.fromEnvironment('TV_API_URL');
+
   /// MyLife's own API key. It is the key their iOS client ships, and every
   /// platform authenticates with it — the app talks to MyLife's servers, not to
   /// a per-platform Firebase project of ours.

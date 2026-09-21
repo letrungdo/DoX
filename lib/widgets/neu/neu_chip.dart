@@ -12,6 +12,7 @@ class NeuChip extends StatelessWidget {
     this.fontSize = 13,
     this.radius = 12,
     this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+    this.trailing,
   });
 
   final String label;
@@ -21,12 +22,29 @@ class NeuChip extends StatelessWidget {
   final double radius;
   final EdgeInsetsGeometry padding;
 
+  /// Icon drawn after the label — a chevron on a chip that opens a picker
+  /// rather than one that toggles a filter.
+  final IconData? trailing;
+
   @override
   Widget build(BuildContext context) {
     final neu = context.neu;
     final scheme = context.theme.colorScheme;
     final background = NeuSurface.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final color = isSelected
+        ? Colors.white
+        : (isDark ? Colors.white70 : Colors.black87);
+    final text = Text(
+      label,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: color,
+        fontWeight: FontWeight.w600,
+        fontSize: fontSize,
+      ),
+    );
 
     Widget chip(bool pressed) => AnimatedContainer(
       duration: NeuPress.duration,
@@ -40,17 +58,16 @@ class NeuChip extends StatelessWidget {
         background: background,
         inset: isSelected,
       ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: isSelected
-              ? Colors.white
-              : (isDark ? Colors.white70 : Colors.black87),
-          fontWeight: FontWeight.w600,
-          fontSize: fontSize,
-        ),
-      ),
+      child: trailing == null
+          ? text
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 2,
+              children: [
+                Flexible(child: text),
+                Icon(trailing, size: fontSize + 5, color: color),
+              ],
+            ),
     );
 
     return NeuPress(

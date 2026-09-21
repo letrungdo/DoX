@@ -4342,8 +4342,26 @@ abstract class AppLocalizations {
   /// No description provided for @tvGeoBlocked.
   ///
   /// In en, this message translates to:
-  /// **'Only available inside Vietnam'**
+  /// **'Only available inside its own country'**
   String get tvGeoBlocked;
+
+  /// No description provided for @tvCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get tvCountry;
+
+  /// No description provided for @tvChannelCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 channel} other{{count} channels}}'**
+  String tvChannelCount(int count);
+
+  /// No description provided for @tvCountryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search country'**
+  String get tvCountryHint;
 
   /// No description provided for @tvNotAllDay.
   ///

@@ -2400,7 +2400,23 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không phát được kênh này. Có thể kênh đang ngừng phát hoặc chỉ xem được ở vùng khác.';
 
   @override
-  String get tvGeoBlocked => 'Chỉ xem được trong Việt Nam';
+  String get tvGeoBlocked => 'Chỉ xem được trong nước phát sóng';
+
+  @override
+  String get tvCountry => 'Quốc gia';
+
+  @override
+  String tvChannelCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kênh',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tvCountryHint => 'Tìm quốc gia';
 
   @override
   String get tvNotAllDay => 'Không phát 24/7';

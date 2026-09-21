@@ -1384,7 +1384,17 @@
   "tvNoResults": "No channel matches this search.",
   "tvLoadFailed": "Could not load the channel list. Check your connection and try again.",
   "tvPlaybackFailed": "This channel could not be played. It may be off air or restricted to another region.",
-  "tvGeoBlocked": "Only available inside Vietnam",
+  "tvGeoBlocked": "Only available inside its own country",
+  "tvCountry": "Country",
+  "tvChannelCount": "{count, plural, =1{1 channel} other{{count} channels}}",
+  "@tvChannelCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tvCountryHint": "Search country",
   "tvNotAllDay": "Does not broadcast 24/7",
   "tvGroupOther": "Other",
   "tvLive": "LIVE",

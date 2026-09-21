@@ -180,13 +180,17 @@ class _StorageService {
     return prefs.setString(StorageKey.movieSiteType, value);
   }
 
-  String? getTvPlaylist() {
+  /// The stored playlist, but only when it is the one [source] asked for —
+  /// the slot holds a single country, so another country's copy is no answer.
+  String? getTvPlaylist(String source) {
+    if (prefs.getString(StorageKey.tvPlaylistSource) != source) return null;
     return prefs.getString(StorageKey.tvPlaylist);
   }
 
-  /// Stores the playlist together with the moment it arrived, so its age can be
-  /// judged without parsing it.
-  Future<bool> setTvPlaylist(String value) async {
+  /// Stores the playlist together with its source and the moment it arrived,
+  /// so its age can be judged without parsing it.
+  Future<bool> setTvPlaylist(String source, String value) async {
+    await prefs.setString(StorageKey.tvPlaylistSource, source);
     await prefs.setString(
       StorageKey.tvPlaylistSavedAt,
       DateTime.now().toIso8601String(),
@@ -194,8 +198,31 @@ class _StorageService {
     return prefs.setString(StorageKey.tvPlaylist, value);
   }
 
-  DateTime? getTvPlaylistSavedAt() {
+  DateTime? getTvPlaylistSavedAt(String source) {
+    if (prefs.getString(StorageKey.tvPlaylistSource) != source) return null;
     final raw = prefs.getString(StorageKey.tvPlaylistSavedAt);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  /// The country code the TV page was left on, if the user ever changed it.
+  String? getTvCountry() => prefs.getString(StorageKey.tvCountry);
+
+  Future<bool> setTvCountry(String value) {
+    return prefs.setString(StorageKey.tvCountry, value);
+  }
+
+  String? getTvCountries() => prefs.getString(StorageKey.tvCountries);
+
+  Future<bool> setTvCountries(String value) async {
+    await prefs.setString(
+      StorageKey.tvCountriesSavedAt,
+      DateTime.now().toIso8601String(),
+    );
+    return prefs.setString(StorageKey.tvCountries, value);
+  }
+
+  DateTime? getTvCountriesSavedAt() {
+    final raw = prefs.getString(StorageKey.tvCountriesSavedAt);
     return raw == null ? null : DateTime.tryParse(raw);
   }
 

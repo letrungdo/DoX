@@ -4,6 +4,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/tv_category_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/tv_channel.dart';
+import 'package:do_x/model/tv_country.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
@@ -12,14 +13,15 @@ import 'package:do_x/view_model/tv/tv_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Live Vietnamese television: the channel list from the iptv-org playlist,
-/// and a tap to watch one.
+/// Live television: the channel list of the picked country from the iptv-org
+/// playlist, and a tap to watch one.
 @RoutePage()
 class TvScreen extends StatefulScreen implements AutoRouteWrapper {
   const TvScreen({super.key});
@@ -35,6 +37,9 @@ class TvScreen extends StatefulScreen implements AutoRouteWrapper {
     );
   }
 }
+
+/// Whether the page is waiting on the playlist, for the app bar's spinner.
+bool _isBusy(TvViewModel vm) => vm.isLoading || vm.isRefreshing;
 
 class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     with TabReselect {
@@ -65,18 +70,23 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     return AppScaffold(
       appBar: DoAppBar(
         title: l10n.tvChannels,
-        titleSuffix: AppBarSyncIcon<TvViewModel>(
-          selector: (vm) => vm.isLoading || vm.isRefreshing,
+        titleSuffix: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            // How much this country has on air, which is the one number that
+            // changes with every pick of the flag beside it.
+            if (viewModel.totalChannels > 0)
+              Text(
+                l10n.tvChannelCount(viewModel.totalChannels),
+                style: context.theme.textTheme.bodySmall?.copyWith(
+                  color: context.theme.hintColor,
+                ),
+              ),
+            const AppBarSyncIcon<TvViewModel>(selector: _isBusy),
+          ],
         ),
-        actions: [
-          NeuIconButton(
-            icon: Icons.refresh_rounded,
-            tooltip: l10n.retry,
-            size: Dimens.appBarActionSize,
-            depth: Dimens.appBarActionDepth,
-            onPressed: viewModel.isRefreshing ? null : viewModel.onRefresh,
-          ),
-        ],
+        actions: [_buildCountryButton(viewModel, l10n)],
       ),
       body: RefreshIndicator.adaptive(
         onRefresh: viewModel.onRefresh,
@@ -114,6 +124,42 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
         ),
       ),
     );
+  }
+
+  /// The country whose playlist is on screen, and the way to change it. The
+  /// flag alone: it is what tells two countries apart at a glance, and the
+  /// name would leave no room for the title.
+  Widget _buildCountryButton(TvViewModel viewModel, AppLocalizations l10n) {
+    final country = viewModel.country;
+    return Tooltip(
+      message: country.name.isEmpty ? l10n.tvCountry : country.name,
+      child: NeuChip(
+        label: country.flag.isEmpty ? country.code : country.flag,
+        isSelected: false,
+        fontSize: 18,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        trailing: Icons.expand_more_rounded,
+        onTap: () => _pickCountry(viewModel, l10n),
+      ),
+    );
+  }
+
+  Future<void> _pickCountry(
+    TvViewModel viewModel,
+    AppLocalizations l10n,
+  ) async {
+    if (viewModel.countries.isEmpty) return;
+    final picked = await showAppSearchSheet<TvCountry>(
+      context,
+      title: l10n.tvCountry,
+      options: viewModel.countries,
+      selected: viewModel.country,
+      labelBuilder: (country) => country.label,
+      searchIndex: (country) => '${country.name} ${country.code}',
+      searchHint: l10n.tvCountryHint,
+    );
+    if (picked == null || !mounted) return;
+    await viewModel.selectCountry(picked);
   }
 
   Widget _buildSearchField(TvViewModel viewModel, AppLocalizations l10n) {

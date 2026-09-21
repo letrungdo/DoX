@@ -76,6 +76,34 @@ void main() {
     });
   });
 
+  group('Channel ordering', () {
+    test('counts the digits in a name as a number', () {
+      final playlist = ['VTV10', 'VTV2', 'VTV1', 'VTV9', 'HTV07', 'HTV7 HD']
+          .map((name) => '#EXTINF:-1,$name\nhttps://example.com/$name.m3u8')
+          .join('\n');
+
+      final channels = tvChannelService.parsePlaylist('#EXTM3U\n$playlist');
+
+      // Plain text ordering would file VTV10 straight after VTV1, which is
+      // how nobody reads a remote control.
+      expect(channels.map((channel) => channel.name), [
+        'HTV07',
+        'HTV7 HD',
+        'VTV1',
+        'VTV2',
+        'VTV9',
+        'VTV10',
+      ]);
+    });
+
+    test('reads a leading zero as the same number', () {
+      // `07` and `7` are the same channel number, so neither jumps the queue.
+      expect(compareChannelNames('VTV07', 'VTV7'), 0);
+      expect(compareChannelNames('VTV3', 'VTV20'), lessThan(0));
+      expect(compareChannelNames('VTV3 HD', 'VTV3'), greaterThan(0));
+    });
+  });
+
   group('TvChannel.matches', () {
     test('finds a Vietnamese name typed without accents', () {
       final channels = tvChannelService.parsePlaylist(

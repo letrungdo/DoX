@@ -40,10 +40,21 @@ class StorageKey {
   static const movieLabel = "movieLabel";
   static const movieSiteType = "movieSiteType";
 
-  /// Last downloaded TV playlist (raw M3U) and when it was stored, so the
-  /// channel list is on screen before the network answers.
+  /// Last downloaded TV playlist (raw M3U), the source it was downloaded for
+  /// and when it was stored, so the channel list is on screen before the
+  /// network answers. One slot only: a playlist is up to a megabyte, so the
+  /// picked country keeps it and every other country is re-fetched.
   static const tvPlaylist = "tvPlaylist";
   static const tvPlaylistSavedAt = "tvPlaylistSavedAt";
+  static const tvPlaylistSource = "tvPlaylistSource";
+
+  /// The country the TV page was left on.
+  static const tvCountry = "tvCountry";
+
+  /// The iptv-org country catalogue, cached with its date so the picker opens
+  /// without waiting for the network.
+  static const tvCountries = "tvCountries";
+  static const tvCountriesSavedAt = "tvCountriesSavedAt";
 
   static const electricReminder = "electricReminder";
 

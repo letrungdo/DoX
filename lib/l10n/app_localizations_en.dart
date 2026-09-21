@@ -2411,7 +2411,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'This channel could not be played. It may be off air or restricted to another region.';
 
   @override
-  String get tvGeoBlocked => 'Only available inside Vietnam';
+  String get tvGeoBlocked => 'Only available inside its own country';
+
+  @override
+  String get tvCountry => 'Country';
+
+  @override
+  String tvChannelCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count channels',
+      one: '1 channel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tvCountryHint => 'Search country';
 
   @override
   String get tvNotAllDay => 'Does not broadcast 24/7';
