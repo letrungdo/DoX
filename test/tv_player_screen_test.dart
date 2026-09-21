@@ -31,6 +31,16 @@ const _playlist = [
   ),
 ];
 
+/// Whether the channel page lets the system pop it — which is what decides
+/// that a phone's swipe-back gesture works at all.
+bool _canPopOf(WidgetTester tester) {
+  final scope = tester
+      .widgetList(find.byWidgetPredicate((widget) => widget is PopScope))
+      .whereType<PopScope<dynamic>>()
+      .single;
+  return scope.canPop;
+}
+
 void main() {
   // Every one of these is about a channel that is still trying to come up —
   // the state the page is in for its first seconds, and the one the remote
@@ -64,6 +74,23 @@ void main() {
       expect(find.text(_channel.name), findsOneWidget);
     },
   );
+
+  testWidgets('a phone can still swipe the channel away', (tester) async {
+    // `canPop: false` takes the swipe-back gesture with it, and on a phone
+    // that gesture is the way out of a full-screen page. Nothing is being
+    // held back here: no list is open and the channel is the one the page
+    // was opened on.
+    await tester.pumpWidget(
+      const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: TvPlayerScreen(channel: _channel, playlist: _playlist),
+      ),
+    );
+    await tester.pump();
+
+    expect(_canPopOf(tester), isTrue);
+  });
 
   group('The remote, on the picture', () {
     setUp(() => deviceType.isTv = true);
@@ -349,6 +376,16 @@ void main() {
       await tester.drag(find.byType(ListView), const Offset(0, -4000));
       await tester.pumpAndSettle();
       expect(find.textContaining('Channel '), findsWidgets);
+    });
+
+    testWidgets('an open list holds the page back so Back can close it', (
+      tester,
+    ) async {
+      await pumpPlayer(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(_canPopOf(tester), isFalse);
     });
 
     testWidgets('Back closes the list instead of leaving the channel', (

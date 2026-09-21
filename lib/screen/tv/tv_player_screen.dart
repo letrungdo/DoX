@@ -638,8 +638,17 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     final l10n = AppLocalizations.of(context);
     final controller = _controller;
 
+    // Held back only while there is something to hold back for. `canPop:
+    // false` also turns off the swipe-back gesture, and on a phone that
+    // gesture is how the page is left — while both reasons to intercept are
+    // television, where there is no gesture to lose: a list open over the
+    // picture, which Back should close rather than leave, and a channel
+    // changed since the page opened, which the grid behind wants told.
+    final isIntercepting =
+        _showChannelList || !identical(_channel, widget.channel);
+
     return PopScope(
-      canPop: false,
+      canPop: !isIntercepting,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         // The list is what the Back key is pointed at while it is open; only
