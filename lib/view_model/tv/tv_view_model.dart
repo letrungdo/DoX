@@ -45,8 +45,13 @@ class TvViewModel extends CoreViewModel {
   bool _hasError = false;
   bool get hasError => _hasError;
 
-  /// Everything the country broadcasts, before any filter — what the app bar
-  /// counts.
+  /// Everything the country broadcasts, before any filter.
+  ///
+  /// What the app bar counts, and what a channel opened from the search page
+  /// travels with: the query was how the viewer found the channel, not what
+  /// they want the remote limited to once it is playing.
+  List<TvChannel> get allChannels => _channels;
+
   int get totalChannels => _channels.length;
 
   /// True when the filters, not the source, are why the grid is empty.

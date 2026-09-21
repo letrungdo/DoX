@@ -147,6 +147,22 @@ void main() {
       expect(find.text('VTV1'), findsNothing);
     });
 
+    testWidgets('a channel opened from the results carries the whole list', (
+      tester,
+    ) async {
+      await pumpSearch(tester);
+      await tester.enterText(find.byType(TextField), 'htv');
+      await tester.pumpAndSettle();
+
+      // What the player is handed. A search usually comes down to one match,
+      // and a player given a list of one has no channel list to open and
+      // nowhere to move to — OK on the remote does nothing. The query was
+      // how the viewer found the channel, not what the remote is shut inside
+      // once it is playing.
+      expect(vm.channels.length, 1);
+      expect(vm.allChannels.length, 4);
+    });
+
     testWidgets('leaving the page puts the whole list back', (tester) async {
       await pumpSearch(tester);
       await tester.enterText(find.byType(TextField), 'htv');

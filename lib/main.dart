@@ -8,6 +8,7 @@ import 'package:do_x/services/push_notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
+import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,7 +21,7 @@ import 'utils/logger.dart';
 
 void main() {
   runZonedGuarded(
-    () {
+    () async {
       WidgetsFlutterBinding.ensureInitialized();
       debugPrint = (String? message, {int? wrapWidth}) {
         if (kDebugMode) {
@@ -45,12 +46,35 @@ void main() {
       // Paint a Flutter loading screen immediately. Previously runApp was
       // called only after every plugin had initialized, leaving a blank page
       // throughout that work (especially noticeable on a cold web load).
-      runApp(AppBootstrap(initialize: _initializeApp));
+      //
+      // The one thing waited on first is the stored theme: the loading screen
+      // is the first thing anyone sees, and painting it light in front of
+      // someone who chose dark is a white flash on every launch. Reading one
+      // key out of the preferences file is the shortest wait there is, and a
+      // launch that cannot read it opens the way the device is set.
+      runApp(
+        AppBootstrap(
+          initialize: _initializeApp,
+          themeMode: await _storedThemeMode(),
+        ),
+      );
     },
     (error, stack) {
       logger.e("___App error!!", error: error, stackTrace: stack);
     },
   );
+}
+
+/// The theme the app was last set to, or the device's own preference when
+/// that cannot be read.
+Future<ThemeMode> _storedThemeMode() async {
+  try {
+    await storageService.init();
+    return storageService.getThemeMode();
+  } on Object catch (e, st) {
+    logger.e('Could not read the stored theme', error: e, stackTrace: st);
+    return ThemeMode.system;
+  }
 }
 
 Future<void> _initializeApp() async {
@@ -103,11 +127,15 @@ class AppBootstrap extends StatefulWidget {
   const AppBootstrap({
     required this.initialize,
     this.app = const MyApp(),
+    this.themeMode = ThemeMode.system,
     super.key,
   });
 
   final Future<void> Function() initialize;
   final Widget app;
+
+  /// The theme the app will open in, so the loading screen is already in it.
+  final ThemeMode themeMode;
 
   @override
   State<AppBootstrap> createState() => _AppBootstrapState();
@@ -115,6 +143,19 @@ class AppBootstrap extends StatefulWidget {
 
 class _AppBootstrapState extends State<AppBootstrap> {
   late final Future<void> _initialization = widget.initialize();
+
+  /// Whether the loading screen is a dark one.
+  ///
+  /// The platform's own brightness rather than a `MediaQuery`: this is the
+  /// first widget of the app and there is no `MaterialApp` above it to have
+  /// put one in place.
+  bool get _isDark => switch (widget.themeMode) {
+    ThemeMode.dark => true,
+    ThemeMode.light => false,
+    ThemeMode.system =>
+      WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -125,26 +166,30 @@ class _AppBootstrapState extends State<AppBootstrap> {
             !snapshot.hasError) {
           return widget.app;
         }
-        return const Directionality(
+        // Straight off the theme the app is about to build with, rather
+        // than a colour of its own: anything else is a flash of the wrong
+        // shade at the moment the real app takes over.
+        final theme = _isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
+        return Directionality(
           textDirection: TextDirection.ltr,
           child: ColoredBox(
-            color: Color(0xFFF4F0E8),
+            color: theme.scaffoldBackgroundColor,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image(
+                  const Image(
                     image: AssetImage('assets/images/app_icon.png'),
                     width: 72,
                     height: 72,
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   SizedBox(
                     width: 28,
                     height: 28,
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
-                      color: Color(0xFF715C3A),
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ],

@@ -166,16 +166,18 @@ class _TvSearchScreenState extends State<TvSearchScreen> {
           key: ValueKey(channel.url),
           channel: channel,
           focusNode: _focusNodeFor(channel.url),
-          onTap: () => _openChannel(channel, viewModel.channels),
+          onTap: () => _openChannel(channel, viewModel.allChannels),
         );
       },
     ).contentConstrainedBox();
   }
 
   Future<void> _openChannel(TvChannel channel, List<TvChannel> playlist) async {
-    // The results travel with the channel, exactly as the whole list does from
-    // the channel page: up and down in the player move through what the viewer
-    // was looking at.
+    // The whole country travels with the channel, not the results. A search
+    // usually comes down to one match, and a player handed a list of one has
+    // no channel list to open and no channel to move to — the viewer presses
+    // OK on the remote and nothing happens. The query was how they found the
+    // channel; it is not what the remote should be shut inside afterwards.
     final finalChannel = await context.pushRoute<TvChannel?>(
       TvPlayerRoute(channel: channel, playlist: playlist),
     );

@@ -4,10 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _StorageService {
-  late final SharedPreferences prefs;
+  SharedPreferences? _prefs;
 
+  SharedPreferences get prefs => _prefs!;
+
+  /// Opens the store, and does nothing if it is already open.
+  ///
+  /// Called twice on purpose: once before the first frame, because the splash
+  /// has to be painted in the theme the app is about to open in, and once
+  /// again among the other initializers, which is where a failed first
+  /// attempt gets its second chance.
   Future<void> init() async {
-    prefs = await SharedPreferences.getInstance();
+    _prefs ??= await SharedPreferences.getInstance();
   }
 
   ThemeMode getThemeMode() {
