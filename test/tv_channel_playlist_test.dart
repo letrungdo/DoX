@@ -167,6 +167,39 @@ https://vips-livecdn.fptplay.net/live/media/vtv1/live247-hls-avc/index.m3u8
       );
     });
 
+    test('a link that names 1080p goes before one that names 480p', () {
+      // Some CDNs publish one link per rendition beside the adaptive master.
+      // They all play, so nothing else tells them apart, and the channel
+      // used to open on whichever the playlist wrote first — TVB Vietnam
+      // opened on 480p.
+      expect(
+        rankStreamUrls([
+          'https://cdn.example.com/playlist480p.m3u8',
+          'https://cdn.example.com/playlist.m3u8',
+          'https://cdn.example.com/playlist1080p.m3u8',
+        ]),
+        [
+          'https://cdn.example.com/playlist1080p.m3u8',
+          // The master in the middle: the player can climb and fall with the
+          // line, but it starts on the smallest rendition, which is the
+          // first one a master lists.
+          'https://cdn.example.com/playlist.m3u8',
+          'https://cdn.example.com/playlist480p.m3u8',
+        ],
+      );
+    });
+
+    test('a number in the host is not a rendition', () {
+      // `…-us-4491.playouts…` is a hostname, not a 4491p picture.
+      expect(
+        rankStreamUrls([
+          'https://amg-us-4491.playouts.example.com/playlist.m3u8',
+          'https://cdn.example.com/playlist720p.m3u8',
+        ]).first,
+        'https://cdn.example.com/playlist720p.m3u8',
+      );
+    });
+
     test('drops repeats and stops at the number worth trying', () {
       final ranked = rankStreamUrls([
         for (var i = 0; i < 8; i++) 'https://cdn$i.example.com/index.m3u8',

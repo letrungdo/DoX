@@ -457,10 +457,32 @@ List<String> rankStreamUrls(Iterable<String> urls) {
   final ranked =
       [for (var i = 0; i < ordered.length; i++) (url: ordered[i], index: i)]
         ..sort((a, b) {
-          final byRank = _streamRank(a.url) - _streamRank(b.url);
-          return byRank != 0 ? byRank : a.index - b.index;
+          final byHost = _streamRank(a.url) - _streamRank(b.url);
+          if (byHost != 0) return byHost;
+          final byRendition = _renditionRank(a.url) - _renditionRank(b.url);
+          return byRendition != 0 ? byRendition : a.index - b.index;
         });
   return [for (final entry in ranked.take(maxStreamUrls)) entry.url];
+}
+
+/// How good a picture a link says it serves, lowest first.
+///
+/// A CDN often publishes one link per rendition beside the adaptive master —
+/// `playlist1080p.m3u8` next to `playlist480p.m3u8`. All of them play, so
+/// nothing else tells them apart, and the channel then opens on whichever
+/// the playlist wrote first.
+///
+/// The master is left in the middle rather than on top: the player climbing
+/// and falling with the line is the better stream in principle, but a master
+/// lists its renditions smallest first, and a player that knows nothing
+/// about the line yet starts on the first of them.
+int _renditionRank(String url) {
+  final named = RegExp(
+    r"(\d{3,4})p(?![a-z0-9])",
+    caseSensitive: false,
+  ).firstMatch(url.split('?').first);
+  if (named == null) return 1;
+  return int.parse(named.group(1)!) >= 720 ? 0 : 2;
 }
 
 /// How much a link is worth trying, lowest first.

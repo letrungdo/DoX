@@ -613,13 +613,40 @@ const NATIONAL_NETWORKS = new Set([
 export function rankSources(sources: string[]): string[] {
   const ordered = [...new Set(sources)];
   return ordered
-    .map((url, index) => ({ url, index, rank: sourceRank(url) }))
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((url, index) => ({
+      url,
+      index,
+      host: sourceRank(url),
+      rendition: renditionRank(url),
+    }))
+    .sort((a, b) =>
+      a.host - b.host || a.rendition - b.rendition || a.index - b.index
+    )
     .slice(0, MAX_SOURCES)
     .map((entry) => entry.url);
 }
 
 const MAX_SOURCES = 4;
+
+/**
+ * How good a picture the link says it serves, lowest first.
+ *
+ * A CDN often publishes one link per rendition beside the adaptive master —
+ * `playlist1080p.m3u8` next to `playlist480p.m3u8`. All of them play, so
+ * nothing else here tells them apart, and the channel then opens on
+ * whichever the playlist wrote first: TVB Vietnam opened on 480p.
+ *
+ * The master is left in the middle rather than on top. It is the better
+ * stream in principle, because the player can climb and fall with the line
+ * — but these masters list their renditions smallest first, and a player
+ * with no idea of the bandwidth yet starts on the first one, which on a
+ * television is a 360p picture on a very large screen.
+ */
+function renditionRank(url: string): number {
+  const named = /(\d{3,4})p(?![a-z0-9])/i.exec(url.split("?")[0]);
+  if (named === null) return 1;
+  return Number(named[1]) >= 720 ? 0 : 2;
+}
 
 /** How much a stream is worth trying, lowest first. */
 function sourceRank(url: string): number {

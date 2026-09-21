@@ -5,6 +5,7 @@ import {
   curate,
   identityKeys,
   parsePlaylist,
+  rankSources,
 } from "./playlist.ts";
 
 /** The iptv-org playlist for Vietnam, in the shape it is published in. */
@@ -142,6 +143,39 @@ Deno.test("the country in the brackets is read before they are stripped", () => 
   // clearest statement in the entry of where the channel is from, so it is
   // read first.
   assertFalse(names().some((name) => name.includes("Aconcaga")));
+});
+
+Deno.test("the mirror that names the best picture leads", () => {
+  // A CDN often publishes one link per rendition beside the adaptive
+  // master. They all play, so nothing further down tells them apart, and the
+  // channel opened on whichever the playlist wrote first — TVB Vietnam
+  // opened on 480p.
+  assertEquals(
+    rankSources([
+      "https://cdn.example.com/playlist480p.m3u8",
+      "https://cdn.example.com/playlist.m3u8",
+      "https://cdn.example.com/playlist1080p.m3u8",
+    ]),
+    [
+      "https://cdn.example.com/playlist1080p.m3u8",
+      // The master in the middle: the player can climb and fall with the
+      // line, but it starts on the smallest rendition, which is the first
+      // one a master lists.
+      "https://cdn.example.com/playlist.m3u8",
+      "https://cdn.example.com/playlist480p.m3u8",
+    ],
+  );
+});
+
+Deno.test("a number in the host is not a rendition", () => {
+  // `…-us-4491.playouts…` is a hostname, not a 4491p picture.
+  assertEquals(
+    rankSources([
+      "https://amg-us-4491.playouts.example.com/playlist.m3u8",
+      "https://cdn.example.com/playlist720p.m3u8",
+    ])[0],
+    "https://cdn.example.com/playlist720p.m3u8",
+  );
 });
 
 Deno.test("every channel has a slug of its own", () => {
