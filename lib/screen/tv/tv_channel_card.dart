@@ -23,6 +23,18 @@ class TvChannelCard extends StatelessWidget {
   /// name is drawn at the 18sp the leanback guidance asks for.
   static const _tvNameSize = 18 / Dimens.tvTextScale;
 
+  /// Two lines of name, always — see [_nameLineHeight].
+  static const _nameLines = 2;
+
+  /// The line box of the name, as a multiple of its font size.
+  ///
+  /// Spelled out rather than left to the font because the strip below the
+  /// logo reserves room for [_nameLines] of it whatever the name is. A strip
+  /// that grew with the name would take the room out of the logo above it,
+  /// and the plates would then be a different height on every card — which
+  /// is what the eye reads down a row of them, not the names.
+  static const _nameLineHeight = 1.25;
+
   /// Channel logos are drawn for a white background — a station's black
   /// wordmark on the page's own dark surface is an invisible card. So the logo
   /// tile keeps a near-white plate in both themes.
@@ -31,6 +43,11 @@ class TvChannelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final fontSize = deviceType.isTv ? _tvNameSize : 12.0;
+    // The scaler is applied by hand because the strip is sized by hand: the
+    // text would otherwise grow past the room kept for it.
+    final lineHeight =
+        MediaQuery.textScalerOf(context).scale(fontSize) * _nameLineHeight;
     return NeuCard(
       margin: EdgeInsets.zero,
       padding: EdgeInsets.zero,
@@ -75,19 +92,28 @@ class TvChannelCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-            child: Text(
-              channel.name,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                // The one label on this page that has to be read from a
-                // sofa. The television's own text scale carries the rest of
-                // the app most of the way, but it is held down to what the
-                // app's phone-sized rows can survive — so the name asks for
-                // the last of it here, where there is room for it.
-                fontSize: deviceType.isTv ? _tvNameSize : 12,
-                fontWeight: FontWeight.w600,
+            child: SizedBox(
+              height: lineHeight * _nameLines,
+              child: Text(
+                channel.name,
+                maxLines: _nameLines,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  // The one label on this page that has to be read from a
+                  // sofa. The television's own text scale carries the rest of
+                  // the app most of the way, but it is held down to what the
+                  // app's phone-sized rows can survive — so the name asks for
+                  // the last of it here, where there is room for it.
+                  fontSize: fontSize,
+                  height: _nameLineHeight,
+                  fontWeight: FontWeight.w600,
+                ),
+                strutStyle: StrutStyle(
+                  fontSize: fontSize,
+                  height: _nameLineHeight,
+                  forceStrutHeight: true,
+                ),
               ),
             ),
           ),
