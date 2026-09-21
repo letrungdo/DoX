@@ -483,7 +483,8 @@ Future<T?> showAppOptionSheet<T>(
 ///
 /// [searchIndex] returns the text a row is matched against; whatever the caller
 /// wants searchable goes in there, so a bank can be found by its short name,
-/// its full name or its code alike.
+/// its full name or its code alike. Case does not matter — the index is folded
+/// down here, so an index built straight out of a name still matches typing.
 Future<T?> showAppSearchSheet<T>(
   BuildContext context, {
   String? title,
@@ -554,7 +555,9 @@ class _SearchSheetBodyState<T> extends State<_SearchSheetBody<T>> {
       _visible = needle.isEmpty
           ? widget.options
           : widget.options
-                .where((o) => widget.searchIndex(o).contains(needle))
+                .where(
+                  (o) => widget.searchIndex(o).toLowerCase().contains(needle),
+                )
                 .toList();
     });
   }

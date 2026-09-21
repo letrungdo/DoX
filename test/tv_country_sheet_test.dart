@@ -88,6 +88,26 @@ void main() {
     expect(_editing(tester), isFalse);
   });
 
+  testWidgets('typing a name in any case finds the country', (tester) async {
+    await openPicker(tester);
+
+    // The box lower-cases what is typed, so an index that kept its capitals
+    // matched nothing at all — every country disappeared as the first letter
+    // went in.
+    await tester.enterText(find.byType(TextField), 'japan');
+    await tester.pumpAndSettle();
+
+    expect(find.text('🇯🇵 Japan'), findsOneWidget);
+    expect(find.text('🇻🇳 Vietnam'), findsNothing);
+
+    // The code is searchable too, and the case it is typed in is no more
+    // important there.
+    await tester.enterText(find.byType(TextField), 'kr');
+    await tester.pumpAndSettle();
+
+    expect(find.text('🇰🇷 South Korea'), findsOneWidget);
+  });
+
   testWidgets('OK on a country closes the picker with it', (tester) async {
     final picked = await openPicker(tester);
 

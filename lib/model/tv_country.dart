@@ -34,6 +34,10 @@ class TvCountry {
 
   String get label => flag.isEmpty ? name : '$flag $name';
 
+  /// What the picker's search box matches on: the name for someone who knows
+  /// it, the code for someone who knows that instead.
+  String get searchIndex => '$name $code'.toLowerCase();
+
   Map<String, dynamic> toJson() => {'code': code, 'name': name, 'flag': flag};
 
   @override

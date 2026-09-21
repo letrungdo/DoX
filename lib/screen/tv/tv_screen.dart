@@ -155,7 +155,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
       options: viewModel.countries,
       selected: viewModel.country,
       labelBuilder: (country) => country.label,
-      searchIndex: (country) => '${country.name} ${country.code}',
+      searchIndex: (country) => country.searchIndex,
       searchHint: l10n.tvCountryHint,
     );
     if (picked == null || !mounted) return;
