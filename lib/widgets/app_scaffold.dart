@@ -57,6 +57,28 @@ class AppScaffold extends StatelessWidget {
     final body = this.body;
     final appBar = this.appBar;
 
+    // A page with another one on top of it is out of reach of the finger, and
+    // has to be out of reach of the D-pad too.
+    //
+    // Focus does not respect what covers what on its own. A page pushed over
+    // this one takes the screen, but every control still underneath stays in
+    // the focus tree — and a remote resting somewhere outside that page, on
+    // the tab rail, walks straight into them: the ring lands on a row nobody
+    // can see and OK presses it. `isCurrent` is the navigator's own answer to
+    // which page is in front, and it rebuilds this when it changes.
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+
+    return ExcludeFocus(
+      excluding: !isCurrent,
+      child: _build(context, body: body, appBar: appBar),
+    );
+  }
+
+  Widget _build(
+    BuildContext context, {
+    required Widget? body,
+    required PreferredSizeWidget? appBar,
+  }) {
     return Scaffold(
       appBar: appBar == null ? null : _HorizontalSafeAppBar(child: appBar),
       backgroundColor: backgroundColor,

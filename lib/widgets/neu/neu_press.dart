@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
@@ -73,12 +75,23 @@ class _NeuPressState extends State<NeuPress> {
   /// focus behind on controls it has merely touched.
   bool _focused = false;
 
+  /// How wide the surface was when the remote arrived, so the lift can be
+  /// the same number of pixels whatever the control is.
+  double? _width;
+
   /// How big the surface is drawn: sunk while held, lifted while the remote
   /// is on it, its own size otherwise. Pressing wins, because a press is
   /// something the viewer is doing right now.
   double get _scale {
     if (_pressed) return widget.pressedScale;
-    return _focused ? Dimens.tvFocusScale : 1;
+    if (!_focused) return 1;
+
+    final width = _width;
+    if (width == null || !width.isFinite || width <= 0) {
+      return Dimens.tvFocusScaleMax;
+    }
+    // Capped, because ten pixels on an app bar's icon is a third of it.
+    return math.min(1 + Dimens.tvFocusGrowth / width, Dimens.tvFocusScaleMax);
   }
 
   bool get _enabled => widget.onTap != null || widget.onLongPress != null;
@@ -120,6 +133,21 @@ class _NeuPressState extends State<NeuPress> {
     widget.onTap?.call();
   }
 
+  void _onFocusHighlight(bool value) {
+    if (_focused == value || !mounted) return;
+    setState(() {
+      _focused = value;
+      // Read now rather than through a `LayoutBuilder`: one of these wraps
+      // every tappable surface in the app, and a layout builder among them
+      // would refuse the intrinsic measurements some of their parents ask
+      // for. The box was laid out by the frame before this one.
+      if (value) {
+        final box = context.findRenderObject();
+        _width = box is RenderBox && box.hasSize ? box.size.width : null;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // The scale wraps the focus node rather than sitting inside it. `TvShell`
@@ -136,12 +164,7 @@ class _NeuPressState extends State<NeuPress> {
         enabled: _enabled,
         autofocus: widget.autofocus,
         focusNode: widget.focusNode,
-        onShowFocusHighlight: deviceType.isTv
-            ? (value) {
-                if (_focused == value || !mounted) return;
-                setState(() => _focused = value);
-              }
-            : null,
+        onShowFocusHighlight: deviceType.isTv ? _onFocusHighlight : null,
         mouseCursor: _enabled
             ? SystemMouseCursors.click
             : SystemMouseCursors.basic,

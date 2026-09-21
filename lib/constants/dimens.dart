@@ -151,10 +151,19 @@ class Dimens {
   /// and finding every one of them first.
   static const tvTextScale = 1.2;
 
-  /// How much the control under the remote grows.
+  /// How much wider the control under the remote is drawn, in pixels.
   ///
   /// The outline says where the remote is; the lift is what makes it obvious
   /// from across the room, and it is what every television interface does.
-  /// Small enough that a card does not crowd its neighbours out of the grid.
-  static const tvFocusScale = 1.06;
+  ///
+  /// Pixels rather than a percentage, because the app's controls are nothing
+  /// like the same size. A tenth added to a channel tile is the small hop a
+  /// grid wants; the same tenth on a menu row that spans the page is fifty
+  /// pixels of lurch, and the row swings out past its neighbours like a
+  /// drawer coming open. A fixed amount reads as the same lift on both.
+  static const tvFocusGrowth = 10.0;
+
+  /// The most the lift may come to on a small control, where a fixed ten
+  /// pixels would otherwise be a third of it.
+  static const tvFocusScaleMax = 1.08;
 }
