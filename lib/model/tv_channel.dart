@@ -18,6 +18,33 @@ class TvChannel {
     this.headers = const {},
   });
 
+  /// One row of the `tv_channels` table.
+  ///
+  /// The week's list is already sorted, deduplicated and checked by then, so
+  /// there is nothing to work out here — only the column names to read.
+  factory TvChannel.fromRow(Map<String, dynamic> row) {
+    final headers = row['headers'];
+    final categories = row['categories'];
+    return TvChannel(
+      id: row['slug'] as String? ?? row['url'] as String? ?? '',
+      name: row['name'] as String? ?? '',
+      url: row['url'] as String? ?? '',
+      logo: row['logo'] as String?,
+      groups: categories is List
+          ? categories.whereType<String>().toList()
+          : const [],
+      quality: row['quality'] as String?,
+      isGeoBlocked: row['is_geo_blocked'] as bool? ?? false,
+      isIntermittent: row['is_intermittent'] as bool? ?? false,
+      headers: headers is Map
+          ? {
+              for (final entry in headers.entries)
+                entry.key.toString(): entry.value.toString(),
+            }
+          : const {},
+    );
+  }
+
   /// `tvg-id` when the playlist has one, the stream URL otherwise — a playlist
   /// is free to repeat an empty id, so it can never be the key on its own.
   final String id;

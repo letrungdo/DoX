@@ -1,0 +1,228 @@
+import { assert, assertEquals, assertFalse } from "jsr:@std/assert@1";
+import {
+  category,
+  cleanVietnameseName,
+  curate,
+  identityKeys,
+  parsePlaylist,
+} from "./playlist.ts";
+
+/** The iptv-org playlist for Vietnam, in the shape it is published in. */
+const PRIMARY = `#EXTM3U
+#EXTINF:-1 tvg-id="THVL1.vn@HD" tvg-logo="https://example.com/thvl1.png" group-title="General;News",THVL1 (1080p)
+https://example.com/thvl1/index.m3u8
+#EXTINF:-1 tvg-id="HTV7.vn@SD" tvg-logo="" group-title="Entertainment",HTV7 (720p)
+https://example.com/htv7/index.m3u8
+`;
+
+/**
+ * The collection, with the mess an automated scrape comes with: the same
+ * stations under other names, channels the catalogue misses, and entries
+ * that are not channels at all.
+ */
+const EXTRA = `#EXTM3U
+#EXTINF:-1 group-title="THVL",THVL1 HD | Vĩnh Long
+https://example.com/other/thvl1.m3u8
+#EXTINF:-1 group-title="HTV",HTV7 HD
+https://example.com/other/htv7.m3u8
+#EXTINF:-1 tvg-logo="https://example.com/ltv1.png" group-title="Địa phương",LTV1 | Báo và Phát thanh – Truyền hình Lâm Đồng
+https://example.com/lamdong1/chunklist.m3u8
+#EXTINF:-1 group-title="Địa phương",Cần Thơ 1 HD - Báo và PTTH Thành Phố Cần Thơ
+https://example.com/cantho1/chunklist.m3u8
+#EXTINF:-1 group-title="VTVcab",ON Sports HD
+https://example.com/onsports/index.m3u8
+#EXTINF:-1 group-title="VIETNAM TV24",ช่อง WION
+https://example.com/wion/index.m3u8
+#EXTINF:-1 group-title="Undefined",Pudahuel TV (720p)
+https://example.com/pudahuel/index.m3u8
+#EXTINF:-1 group-title="VTV",VTC1 HD_kkk.m3u?dl=0.ref-250415-039.done
+https://example.com/vtc1/index.m3u8
+#EXTINF:-1 group-title="Địa phương",Hà Nam TV
+https://example.com/hanam/next.php?id=hanam
+#EXTINF:-1 group-title="Địa phương",Bắc Giang TV
+https://dl.dropboxusercontent.com/s/xyz/bacgiang.m3u8
+#EXTINF:-1 group-title="Địa phương",DRT HD | TH Đắk Lắk
+https://example.com/drt/index.m3u8
+#EXTINF:-1 group-title="Địa phương",Đắk Lắk
+https://example.com/daklak/chunklist.m3u8
+`;
+
+const build = () => curate(parsePlaylist(PRIMARY), parsePlaylist(EXTRA));
+const names = () => build().map((channel) => channel.name);
+
+Deno.test("parses the fields a channel row needs", () => {
+  const [thvl1] = parsePlaylist(PRIMARY);
+
+  // The name loses the quality badge, which becomes a field of its own.
+  assertEquals(thvl1.name, "THVL1");
+  assertEquals(thvl1.quality, "1080p");
+  assertEquals(thvl1.groups, ["General", "News"]);
+  assertEquals(thvl1.logo, "https://example.com/thvl1.png");
+});
+
+Deno.test("reads the headers a CDN wants before it hands the stream over", () => {
+  const entries = parsePlaylist(`#EXTM3U
+#EXTINF:-1 group-title="General",Some Channel
+#EXTVLCOPT:http-referrer=https://example.com/
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64), Chrome
+https://example.com/some/playlist.m3u8
+`);
+
+  assertEquals(entries[0].headers, {
+    "Referer": "https://example.com/",
+    // The user agent has a comma in it, so the name is what follows the
+    // last one, not the first.
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64), Chrome",
+  });
+  assertEquals(entries[0].name, "Some Channel");
+});
+
+Deno.test("keeps the catalogue whole and fills the gaps around it", () => {
+  const found = names();
+
+  assert(found.includes("THVL1"));
+  assert(found.includes("HTV7"));
+  assert(found.includes("LTV1 Lâm Đồng"));
+  assert(found.includes("Cần Thơ 1"));
+  assert(found.includes("ON Sports"));
+});
+
+Deno.test("a channel both lists carry is one row, the catalogue's", () => {
+  const thvl1 = build().filter((c) => c.name.startsWith("THVL1"));
+
+  assertEquals(thvl1.length, 1);
+  // The kept entry is the catalogue's: it is the one with the logo and a
+  // category the app's chips can translate.
+  assertEquals(thvl1[0].logo, "https://example.com/thvl1.png");
+  assertEquals(thvl1[0].categories, ["General", "News"]);
+  // The other list's link stays, as something for the checker to fall back
+  // on — one of these is usually the dead one.
+  assertEquals(thvl1[0].sources, [
+    "https://example.com/thvl1/index.m3u8",
+    "https://example.com/other/thvl1.m3u8",
+  ]);
+});
+
+Deno.test("a station listed by call sign and by province is one row", () => {
+  const daklak = build().filter((c) => c.name.includes("Đắk Lắk"));
+
+  assertEquals(daklak.length, 1);
+  assertEquals(daklak[0].sources.length, 2);
+});
+
+Deno.test("drops what is not a Vietnamese channel on a playable stream", () => {
+  const found = names();
+
+  // Another country's channel, whatever shelf the collection put it on.
+  assertFalse(found.includes("ช่อง WION"));
+  assertFalse(found.some((n) => n.includes("Pudahuel")));
+  // Bookkeeping the scraper left in the name.
+  assertFalse(found.some((n) => n.includes(".done")));
+  // A redirector and a file-sharing link are not streams.
+  assertFalse(found.some((n) => n.includes("Hà Nam")));
+  assertFalse(found.some((n) => n.includes("Bắc Giang")));
+});
+
+Deno.test("every channel has a slug of its own", () => {
+  const channels = build();
+  const slugs = new Set(channels.map((c) => c.slug));
+
+  assertEquals(slugs.size, channels.length);
+  assertFalse(slugs.has(""));
+});
+
+Deno.test("the stream most likely to play is the one the app opens", () => {
+  const [daklak] = curate(
+    [],
+    parsePlaylist(`#EXTM3U
+#EXTINF:-1 group-title="Địa phương",DRT | TH Đắk Lắk
+https://bugsfreeweb.github.io/mirror/drt.m3u8
+#EXTINF:-1 group-title="Địa phương",Đắk Lắk TV
+https://freem3u.xyz/api/live/play.m3u8?vid=51
+#EXTINF:-1 group-title="Địa phương",Đắk Lắk
+https://cdn.drt.vn/live/daklak/chunklist.m3u8
+`),
+  );
+
+  // The station's own CDN first, then the proxy that looks it up, and last
+  // the copy someone committed to a repository.
+  assertEquals(daklak.sources, [
+    "https://cdn.drt.vn/live/daklak/chunklist.m3u8",
+    "https://freem3u.xyz/api/live/play.m3u8?vid=51",
+    "https://bugsfreeweb.github.io/mirror/drt.m3u8",
+  ]);
+});
+
+Deno.test("the merge does not depend on the order the entries arrive in", () => {
+  const forward = parsePlaylist(EXTRA);
+  const backward = [...forward].reverse();
+
+  const one = curate(parsePlaylist(PRIMARY), forward).map((c) => c.slug);
+  const other = curate(parsePlaylist(PRIMARY), backward).map((c) => c.slug);
+
+  assertEquals(one.sort(), other.sort());
+});
+
+Deno.test("drops the broadcaster boilerplate around the channel", () => {
+  assertEquals(
+    cleanVietnameseName("LTV1 | Báo và Phát thanh – Truyền hình Lâm Đồng"),
+    "LTV1 Lâm Đồng",
+  );
+  assertEquals(
+    cleanVietnameseName("QTV1 HD | TH Quảng Ninh"),
+    "QTV1 Quảng Ninh",
+  );
+  assertEquals(
+    cleanVietnameseName("Cần Thơ 1 HD - Báo và PTTH Thành Phố Cần Thơ"),
+    "Cần Thơ 1",
+  );
+});
+
+Deno.test("leaves a Vietnamese word that merely starts with a stripped one", () => {
+  // `TH` is how the sources write "truyền hình", but `Thơ`, `Thể` and `Thọ`
+  // are words in their own right.
+  assertEquals(cleanVietnameseName("Cần Thơ 2"), "Cần Thơ 2");
+  assertEquals(cleanVietnameseName("HTV Thể Thao HD"), "HTV Thể Thao");
+  assertEquals(cleanVietnameseName("PTV Phú Thọ"), "PTV Phú Thọ");
+  assertEquals(cleanVietnameseName("THVL4 HD"), "THVL4");
+});
+
+Deno.test("a name that is nothing but boilerplate is left as it was", () => {
+  assertEquals(cleanVietnameseName("Truyền hình"), "Truyền hình");
+});
+
+/** Two names are one channel when any of the keys they go by meet. */
+const sameChannel = (first: string, second: string) =>
+  [...identityKeys(first)].some((key) => identityKeys(second).has(key));
+
+Deno.test("two spellings of one station are one channel", () => {
+  assert(sameChannel("THVL1 HD", "Kênh THVL1"));
+  assert(sameChannel("Cần Thơ TV1 (1080p)", "Can Tho 1"));
+  assert(sameChannel("HanoiTV1 Hà Nội", "Hà Nội 1"));
+  // The station number written out twice — once in the call sign, once
+  // after the province.
+  assert(sameChannel("LTV1 Lâm Đồng 1", "LTV1 Lâm Đồng"));
+  // `DRT` is Đắk Lắk's station, so a list carrying both is carrying one
+  // channel twice.
+  assert(sameChannel("DRT Đắk Lắk", "Đắk Lắk"));
+  assert(sameChannel("THP3 Hải Phòng", "Hải Phòng 3"));
+});
+
+Deno.test("two stations are not", () => {
+  assertFalse(sameChannel("HTV1", "H1"));
+  assertFalse(sameChannel("VTV1", "VTV10"));
+  assertFalse(sameChannel("Cần Thơ 1", "Cần Thơ 2"));
+  assertFalse(sameChannel("LTV1 Lâm Đồng 2", "LTV1 Lâm Đồng"));
+  // A national network in front of a province is that network's own station
+  // there, not the province's channel.
+  assertFalse(sameChannel("VTV Cần Thơ", "Cần Thơ 1"));
+  assertFalse(sameChannel("VTV Cần Thơ", "VTV"));
+});
+
+Deno.test("reads a category off the name, since the source files by network", () => {
+  assertEquals(category("ON Sports HD"), "Sports");
+  assertEquals(category("HTVC Phim"), "Movies");
+  assertEquals(category("ON BiBi"), "Kids");
+  // A local station says nothing about itself beyond being a channel.
+  assertEquals(category("Cần Thơ 1"), "General");
+});

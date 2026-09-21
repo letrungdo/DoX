@@ -1,22 +1,37 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 
 /// Loads the list of live channels of one country.
 ///
-/// The catalogue is the community-maintained iptv-org playlist: one M3U file
-/// per country, rebuilt daily, holding the stream URL and the logo of every
-/// channel broadcasting there. Nothing is proxied through us — the app reads
-/// the playlist and hands each URL straight to the platform player.
+/// Most countries come straight from iptv-org: one M3U file each, rebuilt
+/// daily, holding the stream URL and the logo of every channel broadcasting
+/// there. Nothing is proxied through us — the app reads the playlist and
+/// hands each URL to the platform player.
+///
+/// Vietnam is different, because its iptv-org file is thin and because the
+/// Vietnamese playlists that are not thin are scraped rather than curated:
+/// full of dead links, of entries that are not channels, and of the same
+/// station listed half a dozen ways. Sorting that out is work, and the part
+/// that matters most — whether a stream is really playing — a phone can only
+/// learn by making someone sit through a channel that never starts. So it
+/// happens once a week in `refresh-tv-channels`, and here Vietnam is a read.
 class _TvChannelService {
   /// The playlist of one country. Country file rather than the full index: the
   /// index is tens of megabytes and every entry outside the picked country
   /// would be dropped again on this side.
   static String countryPlaylistUrl(String countryCode) =>
       '${Envs.tvApiUrl}/iptv/countries/${countryCode.toLowerCase()}.m3u';
+
+  /// The country whose list is read from our own table rather than from the
+  /// catalogue.
+  static const curatedCountryCode = 'vn';
 
   /// How long a downloaded playlist is served before it is fetched again. The
   /// upstream list is rebuilt daily, and a stream URL that rotates faster than
@@ -52,18 +67,19 @@ class _TvChannelService {
 
       final stored = _readStoredPlaylist(code);
       if (stored != null) {
-        final channels = parsePlaylist(stored);
+        final channels = parseChannels(stored);
         if (channels.isNotEmpty) return _channels[code] = channels;
       }
     }
 
     try {
-      final response = await _dio.get<String>(countryPlaylistUrl(code));
-      final body = response.data ?? '';
-      final channels = parsePlaylist(body);
+      final fetched = await _fetch(code);
+      final channels = parseChannels(fetched.body);
       if (channels.isEmpty) throw const FormatException('Empty TV playlist');
       _channels[code] = channels;
-      await storageService.setTvPlaylist(code, body);
+      if (fetched.isWorthKeeping) {
+        await storageService.setTvPlaylist(code, fetched.body);
+      }
       return channels;
     } catch (e, st) {
       logger.e('TvChannelService fetch failed', error: e, stackTrace: st);
@@ -101,7 +117,77 @@ class _TvChannelService {
         ? storageService.getTvPlaylist(countryCode)
         : _readStoredPlaylist(countryCode);
     if (raw == null || raw.isEmpty) return null;
-    return parsePlaylist(raw);
+    return parseChannels(raw);
+  }
+
+  /// The channel list [countryCode] should be shown, and whether it is the
+  /// one worth keeping.
+  ///
+  /// Vietnam's comes from our table. The catalogue stays behind it as a way
+  /// out: the page could always show something without us, and a database
+  /// that cannot be reached is no reason for that to stop. What comes back
+  /// that way is not stored, though — it is the thin, unchecked list, and
+  /// caching it would keep it on screen for half a day after the table came
+  /// back.
+  Future<({String body, bool isWorthKeeping})> _fetch(
+    String countryCode,
+  ) async {
+    if (countryCode == curatedCountryCode) {
+      try {
+        return (
+          body: await _fetchCuratedChannels(countryCode),
+          isWorthKeeping: true,
+        );
+      } catch (e, st) {
+        logger.d(
+          'TvChannelService curated list failed',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+    final response = await _dio.get<String>(countryPlaylistUrl(countryCode));
+    return (
+      body: response.data ?? '',
+      isWorthKeeping: countryCode != curatedCountryCode,
+    );
+  }
+
+  /// The rows `refresh-tv-channels` last wrote, as the JSON they are stored
+  /// and parsed as.
+  Future<String> _fetchCuratedChannels(String countryCode) async {
+    final rows = await supabase
+        .from('tv_channels')
+        .select()
+        .eq('country_code', countryCode.toUpperCase())
+        // The order is worked out when the list is built, so the grid draws
+        // the rows in the order they arrive.
+        .order('sort_order', ascending: true);
+    if (rows.isEmpty) throw const FormatException('Empty TV channel table');
+    return jsonEncode(rows);
+  }
+
+  /// The channels a stored or freshly fetched body holds.
+  ///
+  /// Two shapes reach this: the JSON rows of our own table, and the M3U of a
+  /// country the catalogue serves. They are told apart by what a JSON array
+  /// starts with, which no playlist ever does.
+  ///
+  /// Public so a stored copy of either shape can be tested.
+  List<TvChannel> parseChannels(String body) {
+    final trimmed = body.trimLeft();
+    if (!trimmed.startsWith('[')) return parsePlaylist(body);
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is! List) return const [];
+      return [
+        for (final row in decoded)
+          if (row is Map<String, dynamic>) TvChannel.fromRow(row),
+      ];
+    } on FormatException catch (e, st) {
+      logger.e('TvChannelService row parse failed', error: e, stackTrace: st);
+      return const [];
+    }
   }
 
   /// Attributes on an `#EXTINF` line: `tvg-logo="…"`, `group-title="…"`, …
