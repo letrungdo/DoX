@@ -5,7 +5,6 @@ import 'package:do_x/model/asset/asset_summary.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 /// Height of the stacked bar that shows what share each class holds.
 const _allocationBarHeight = 10.0;
@@ -280,71 +279,6 @@ class _AllocationRow extends StatelessWidget {
   }
 }
 
-/// The figures that do not belong to one class: what the deposits pay over a
-/// year, how many have run out, and which term ends next.
-class AssetStatsCard extends StatelessWidget {
-  const AssetStatsCard({super.key, required this.summary});
-
-  final AssetSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.colors;
-    final format = AssetFormat();
-    final dateFormat = DateFormat('dd/MM/yy');
-    final maturity = summary.nextMaturityDate;
-
-    return NeuCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.assetStatistics,
-            style: context.textTheme.primary.bold.size15,
-          ),
-          const SizedBox(height: 4),
-          _StatRow(
-            label: l10n.assetAvgMonthlyInterest,
-            value: format.money(summary.monthlyProfit),
-            valueColor: summary.monthlyProfit >= 0
-                ? colors.success
-                : colors.danger,
-          ),
-          _StatRow(
-            label: l10n.assetYearlyInterest,
-            value: format.money(summary.monthlyInterest * 12),
-            valueColor: summary.monthlyInterest > 0 ? colors.success : null,
-          ),
-          _StatRow(
-            label: l10n.assetCurrentValue,
-            value: format.money(summary.totalAssets),
-          ),
-          _StatRow(
-            label: l10n.assetMaturedSavings,
-            value: l10n.assetHoldingCount(summary.maturedSavingsCount),
-            // A matured deposit has stopped earning, so it is something to act
-            // on rather than a neutral count.
-            valueColor: summary.maturedSavingsCount > 0 ? colors.warning : null,
-          ),
-          _StatRow(
-            label: l10n.assetNextMaturity,
-            value: maturity == null
-                ? l10n.assetNotAvailable
-                : "${summary.nextMaturityBank} · ${dateFormat.format(maturity)}",
-            note: maturity == null
-                ? null
-                : l10n.assetDaysLeft(
-                    maturity.difference(DateTime.now()).inDays,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// The holding making the most and the one making the least, so the page says
 /// something about the picks and not only about the totals.
 class AssetPerformanceCard extends StatelessWidget {
@@ -391,7 +325,7 @@ class _PerformerRow extends StatelessWidget {
         ? context.colors.success
         : context.colors.danger;
 
-    return _StatRow(
+    return AssetStatRow(
       label: "$label · ${performer.name}",
       value: format.signedPercent(performer.profitLossPercent),
       note: format.signedCompact(performer.profitLoss),
@@ -400,9 +334,11 @@ class _PerformerRow extends StatelessWidget {
   }
 }
 
-/// One label/figure line inside a stats card.
-class _StatRow extends StatelessWidget {
-  const _StatRow({
+/// One label/figure line inside a stats card. Shared with the summary card,
+/// which carries the rest of these lines under its headline.
+class AssetStatRow extends StatelessWidget {
+  const AssetStatRow({
+    super.key,
     required this.label,
     required this.value,
     this.note,

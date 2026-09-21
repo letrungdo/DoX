@@ -58,30 +58,27 @@ AssetGold _gold({double quantity = 2, double buyPrice = 90000000}) {
 void _expectAmountsFlushRight(WidgetTester tester) {
   final cardRight = tester.getRect(find.byType(AssetTileCard).first).right;
   final expected = cardRight - AssetTileCard.sidePadding;
-  final rights = <String, double>{};
+  // A list, not a map: the total bar repeats a figure the tile below it also
+  // shows, and keying by the text hid one of the two.
+  final rights = <(String, double)>[];
 
-  // Only the figures inside the tiles: the total bar above them is a panel of
-  // its own with its own inset, and it is not what this line is about.
   for (final text in tester.widgetList<AutoSizeText>(
-    find.descendant(
-      of: find.byType(AssetTileCard),
-      matching: find.byType(AutoSizeText),
-    ),
+    find.byType(AutoSizeText),
   )) {
     final data = text.data ?? '';
     // The right-hand column is the one carrying a figure.
     if (!data.startsWith('+') && !data.startsWith('-') && !data.endsWith('đ')) {
       continue;
     }
-    rights[data] = tester.getRect(find.byWidget(text)).right;
+    rights.add((data, tester.getRect(find.byWidget(text)).right));
   }
 
   expect(rights, isNotEmpty, reason: 'no amounts found to check');
-  for (final entry in rights.entries) {
+  for (final (label, right) in rights) {
     expect(
-      entry.value,
+      right,
       expected,
-      reason: '"${entry.key}" should end on the tile\'s right-hand line',
+      reason: '"$label" should end on the tile\'s right-hand line',
     );
   }
 }

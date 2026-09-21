@@ -2036,9 +2036,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetTotal => 'Total Assets';
 
   @override
-  String get assetMonthlyInterest => 'Monthly Interest';
-
-  @override
   String get assetInterest => 'Interest';
 
   @override
@@ -2213,9 +2210,6 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get assetStatistics => 'Statistics';
 
   @override
   String get assetAvgMonthlyInterest => 'Avg interest/mo';

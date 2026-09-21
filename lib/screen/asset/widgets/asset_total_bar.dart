@@ -2,6 +2,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/screen/asset/widgets/asset_tile.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:flutter/material.dart';
 
@@ -47,7 +48,12 @@ class AssetTotalBar extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      // The same side inset as the tiles below, so the bar's figures land on
+      // the very column theirs do — 2px of drift there reads as a misprint.
+      padding: const EdgeInsets.symmetric(
+        horizontal: AssetTileCard.sidePadding,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: context.theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(Dimens.radiusCard),

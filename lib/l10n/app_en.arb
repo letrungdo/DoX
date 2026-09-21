@@ -1208,7 +1208,6 @@
   "assetGold": "Gold",
   "assetSummary": "Asset Summary",
   "assetTotal": "Total Assets",
-  "assetMonthlyInterest": "Monthly Interest",
   "assetInterest": "Interest",
   "assetProfitLoss": "Profit/Loss",
   "assetAdd": "Add Asset",
@@ -1291,7 +1290,6 @@
       }
     }
   },
-  "assetStatistics": "Statistics",
   "assetAvgMonthlyInterest": "Avg interest/mo",
   "assetYearlyInterest": "Savings interest/yr",
   "assetMaturedSavings": "Matured deposits",

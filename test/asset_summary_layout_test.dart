@@ -51,7 +51,6 @@ Future<void> _pump(WidgetTester tester, AssetSummary summary) async {
               AssetSummaryCard(summary: summary),
               AssetReturnCard(summary: summary),
               AssetAllocationCard(summary: summary),
-              AssetStatsCard(summary: summary),
               AssetPerformanceCard(summary: summary),
             ],
           ),
@@ -134,13 +133,23 @@ void main() {
         _summary(nextMaturity: DateTime.now().add(const Duration(days: 45))),
       );
 
-      for (final card in [
-        find.byType(AssetReturnCard),
-        find.byType(AssetAllocationCard),
-        find.byType(AssetStatsCard),
+      for (final (card, statRowsOnly) in [
+        (find.byType(AssetReturnCard), false),
+        (find.byType(AssetAllocationCard), false),
+        // The summary card's headline is centred by design; only the stat
+        // lines folded into it below belong to the right-hand column.
+        (find.byType(AssetSummaryCard), true),
       ]) {
         final cardRight = tester.getRect(card).right;
-        final figures = find.descendant(of: card, matching: find.byType(Text));
+        final figures = statRowsOnly
+            ? find.descendant(
+                of: find.descendant(
+                  of: card,
+                  matching: find.byType(AssetStatRow),
+                ),
+                matching: find.byType(Text),
+              )
+            : find.descendant(of: card, matching: find.byType(Text));
         final rights = <String, double>{};
 
         for (final text in tester.widgetList<Text>(figures)) {

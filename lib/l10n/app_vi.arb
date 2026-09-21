@@ -1166,7 +1166,6 @@
   "assetGold": "Vàng",
   "assetSummary": "Tổng quan tài sản",
   "assetTotal": "Tổng tài sản",
-  "assetMonthlyInterest": "Lãi tháng",
   "assetInterest": "Tiền lãi",
   "assetProfitLoss": "Lợi nhuận/Lỗ",
   "assetAdd": "Thêm tài sản",
@@ -1249,7 +1248,6 @@
       }
     }
   },
-  "assetStatistics": "Thống kê",
   "assetAvgMonthlyInterest": "Lãi TB/tháng",
   "assetYearlyInterest": "Lãi tiết kiệm/năm",
   "assetMaturedSavings": "Sổ đã đáo hạn",

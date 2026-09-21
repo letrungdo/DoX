@@ -2027,9 +2027,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get assetTotal => 'Tổng tài sản';
 
   @override
-  String get assetMonthlyInterest => 'Lãi tháng';
-
-  @override
   String get assetInterest => 'Tiền lãi';
 
   @override
@@ -2203,9 +2200,6 @@ class AppLocalizationsVi extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get assetStatistics => 'Thống kê';
 
   @override
   String get assetAvgMonthlyInterest => 'Lãi TB/tháng';

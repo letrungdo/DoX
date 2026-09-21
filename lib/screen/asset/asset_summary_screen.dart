@@ -53,7 +53,6 @@ class _AssetSummaryScreenState
                     AssetSummaryCard(summary: summary),
                     AssetReturnCard(summary: summary),
                     AssetAllocationCard(summary: summary),
-                    AssetStatsCard(summary: summary),
                     if (summary.best != null)
                       AssetPerformanceCard(summary: summary),
                   ],

@@ -1,11 +1,18 @@
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/model/asset/asset_summary.dart';
+import 'package:do_x/screen/asset/widgets/asset_summary_stats.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
-/// The page's headline: everything held, what it cost, and what it has made.
+/// The page's headline: everything held, what it cost, and what it has made —
+/// followed by the figures that belong to no single class.
+///
+/// The statistics used to sit in a card of their own, which put the portfolio's
+/// value in two places and left the reader hopping between panels to put one
+/// figure beside another. One card, one column of figures.
 class AssetSummaryCard extends StatelessWidget {
   const AssetSummaryCard({super.key, required this.summary});
 
@@ -19,6 +26,8 @@ class AssetSummaryCard extends StatelessWidget {
     final format = AssetFormat();
     final profit = summary.totalProfitLoss;
     final profitColor = profit >= 0 ? colors.success : colors.danger;
+    final dateFormat = DateFormat('dd/MM/yy');
+    final maturity = summary.nextMaturityDate;
 
     return NeuCard(
       padding: const EdgeInsets.all(16),
@@ -38,60 +47,43 @@ class AssetSummaryCard extends StatelessWidget {
             " (${format.signedPercent(summary.totalProfitLossPercent)})",
             style: textTheme.primary.bold.size13.textColor(profitColor),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _MinorStat(
-                  label: l10n.assetCostBasis,
-                  value: format.money(summary.totalCost),
-                ),
-              ),
-              Expanded(
-                child: _MinorStat(
-                  label: l10n.assetMonthlyInterest,
-                  value: format.money(summary.monthlyInterest),
-                  valueColor: summary.monthlyInterest > 0
-                      ? colors.success
-                      : null,
-                ),
-              ),
-            ],
+          const Divider(height: 24),
+          AssetStatRow(
+            label: l10n.assetCostBasis,
+            value: format.money(summary.totalCost),
+          ),
+          AssetStatRow(
+            label: l10n.assetAvgMonthlyInterest,
+            value: format.money(summary.monthlyProfit),
+            valueColor: summary.monthlyProfit >= 0
+                ? colors.success
+                : colors.danger,
+          ),
+          AssetStatRow(
+            label: l10n.assetYearlyInterest,
+            value: format.money(summary.monthlyInterest * 12),
+            valueColor: summary.monthlyInterest > 0 ? colors.success : null,
+          ),
+          AssetStatRow(
+            label: l10n.assetMaturedSavings,
+            value: l10n.assetHoldingCount(summary.maturedSavingsCount),
+            // A matured deposit has stopped earning, so it is something to act
+            // on rather than a neutral count.
+            valueColor: summary.maturedSavingsCount > 0 ? colors.warning : null,
+          ),
+          AssetStatRow(
+            label: l10n.assetNextMaturity,
+            value: maturity == null
+                ? l10n.assetNotAvailable
+                : "${summary.nextMaturityBank} · ${dateFormat.format(maturity)}",
+            note: maturity == null
+                ? null
+                : l10n.assetDaysLeft(
+                    maturity.difference(DateTime.now()).inDays,
+                  ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MinorStat extends StatelessWidget {
-  const _MinorStat({required this.label, required this.value, this.valueColor});
-
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = context.textTheme;
-    final style = textTheme.primary.bold.size15;
-
-    return Column(
-      children: [
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: textTheme.secondary.size13,
-        ),
-        const SizedBox(height: 2),
-        FittedBox(
-          child: Text(
-            value,
-            style: valueColor == null ? style : style.textColor(valueColor!),
-          ),
-        ),
-      ],
     );
   }
 }

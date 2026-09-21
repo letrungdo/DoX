@@ -3698,12 +3698,6 @@ abstract class AppLocalizations {
   /// **'Total Assets'**
   String get assetTotal;
 
-  /// No description provided for @assetMonthlyInterest.
-  ///
-  /// In en, this message translates to:
-  /// **'Monthly Interest'**
-  String get assetMonthlyInterest;
-
   /// No description provided for @assetInterest.
   ///
   /// In en, this message translates to:
@@ -4002,12 +3996,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 holding} other{{count} holdings}}'**
   String assetHoldingCount(int count);
-
-  /// No description provided for @assetStatistics.
-  ///
-  /// In en, this message translates to:
-  /// **'Statistics'**
-  String get assetStatistics;
 
   /// No description provided for @assetAvgMonthlyInterest.
   ///
