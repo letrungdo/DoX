@@ -88,40 +88,56 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
         ),
         actions: [_buildCountryButton(viewModel, l10n)],
       ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: viewModel.onRefresh,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // The content cap has to be applied by hand in a sliver tree: the
-            // padding is what centres the column, so it carries half of
-            // whatever the viewport has over [Dimens.contentMaxWidth].
-            final overflow = constraints.maxWidth - Dimens.contentMaxWidth;
-            final horizontalPadding =
-                Dimens.pagePadding + (overflow > 0 ? overflow / 2 : 0);
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // The content cap has to be applied by hand in a sliver tree: the
+          // padding is what centres the column, so it carries half of
+          // whatever the viewport has over [Dimens.contentMaxWidth].
+          final overflow = constraints.maxWidth - Dimens.contentMaxWidth;
+          final horizontalPadding =
+              Dimens.pagePadding + (overflow > 0 ? overflow / 2 : 0);
 
-            return CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    12,
-                    horizontalPadding,
-                    4,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildSearchField(viewModel, l10n),
+          return Column(
+            children: [
+              // Above the scroll view rather than pinned inside it: the box
+              // is how anyone reaches a channel in a list this long, so it
+              // stays put, and a field has no height a header could be told
+              // in advance — it grows with the text scale.
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  12,
+                  horizontalPadding,
+                  4,
+                ),
+                child: _buildSearchField(viewModel, l10n),
+              ),
+              Expanded(
+                child: RefreshIndicator.adaptive(
+                  onRefresh: viewModel.onRefresh,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    // The grid can be shorter than the viewport — one search
+                    // result, or none — and pull to refresh has to keep
+                    // working when it is.
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      if (viewModel.groups.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: _buildGroupChips(
+                            viewModel,
+                            l10n,
+                            horizontalPadding,
+                          ),
+                        ),
+                      _buildContent(viewModel, l10n, horizontalPadding),
+                    ],
                   ),
                 ),
-                if (viewModel.groups.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: _buildGroupChips(viewModel, l10n, horizontalPadding),
-                  ),
-                _buildContent(viewModel, l10n, horizontalPadding),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
