@@ -301,6 +301,16 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _videoFocusNode.requestFocus();
   }
 
+  /// Brings the list up, and leaves it up if it already is.
+  ///
+  /// What up and down do: the remote has its own pair of channel keys for
+  /// moving one at a time, so the arrows are better spent on the list, where
+  /// the viewer can see what they are moving to.
+  void _openChannelList() {
+    if (_showChannelList) return;
+    _toggleChannelList();
+  }
+
   void _toggleChannelList() {
     if (!_canChangeChannel) return;
     setState(() => _showChannelList = !_showChannelList);
@@ -423,9 +433,14 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// The remote, on the picture itself.
   ///
   /// The keys are a television's, not a video player's, because that is what
-  /// this is: up and down are the channel, OK is the channel list, and the
-  /// way to the controls is sideways. A live channel has no timeline and
-  /// nothing to pause, so there is nothing here to seek or stop with.
+  /// this is: up, down and OK all bring the channel list up, and the way to
+  /// the controls is sideways. A live channel has no timeline and nothing to
+  /// pause, so there is nothing here to seek or stop with.
+  ///
+  /// The arrows open the list rather than changing channel, because the
+  /// remote already has a pair of keys that change channel — and a blind hop
+  /// to the next channel is the worse of the two things an arrow could mean
+  /// when the list can show the viewer where they are going.
   ///
   /// Opened on a single channel — from a link, or from anywhere that has no
   /// list to hand — there are no neighbouring channels to move to, and the
@@ -439,12 +454,9 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
     final key = event.logicalKey;
     if (_canChangeChannel) {
-      if (key == LogicalKeyboardKey.arrowUp) {
-        unawaited(_changeChannel(-1));
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.arrowDown) {
-        unawaited(_changeChannel(1));
+      if (key == LogicalKeyboardKey.arrowUp ||
+          key == LogicalKeyboardKey.arrowDown) {
+        _openChannelList();
         return KeyEventResult.handled;
       }
       if (_isSelectKey(key)) {
@@ -464,8 +476,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       _scheduleHideControls();
       // On a television the bar is shown and nothing more. Handing the
       // remote to the back button inside it would take the picture's keys
-      // away with it — and the channel buttons and the keypad are the point
-      // of this page. The remote's own Back key is the way out, which is
+      // away with it — and the channel list, the channel buttons and the
+      // keypad are the point of this page. The remote's own Back key is the way out, which is
       // where a viewer reaches for it anyway.
       if (deviceType.isTv && !_canChangeChannel) {
         _enterControls(afterFrame: !wasVisible);
@@ -489,14 +501,17 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     }
     final key = event.logicalKey;
 
-    // Up the list is the previous channel; CH+ is the next channel number.
-    // They point opposite ways on purpose — that is what each button means
-    // on the remote it is printed on.
-    if (key == LogicalKeyboardKey.channelDown) {
+    // CH+ is the next channel number, CH- the previous one. The skip pair a
+    // recorder remote is printed with means the same thing here: there is no
+    // track to skip on a live channel, and the two buttons sit where a thumb
+    // expects to change channel from.
+    if (key == LogicalKeyboardKey.channelDown ||
+        key == LogicalKeyboardKey.mediaTrackPrevious) {
       unawaited(_changeChannel(-1));
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.channelUp) {
+    if (key == LogicalKeyboardKey.channelUp ||
+        key == LogicalKeyboardKey.mediaTrackNext) {
       unawaited(_changeChannel(1));
       return KeyEventResult.handled;
     }

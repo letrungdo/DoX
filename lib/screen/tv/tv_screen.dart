@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/tv_category_extensions.dart';
+import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/model/tv_country.dart';
@@ -9,6 +10,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/screen/tv/tv_channel_card.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/tv/tv_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
@@ -16,6 +18,7 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -49,6 +52,34 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   final _searchFocusNode = FocusNode(debugLabel: 'tv-search');
   final Map<String, FocusNode> _channelFocusNodes = {};
 
+  /// Whether the television's search layer is over the page.
+  ///
+  /// A television types with a full-screen keyboard, so a box at the top of
+  /// the page is half covered the moment it is used and the results appear
+  /// behind the keyboard. The layer is the search: the box, the results and
+  /// the way out, all in one place the remote cannot fall out of.
+  bool _isSearching = false;
+
+  /// The layer is its own scope, so the D-pad stays inside it instead of
+  /// walking onto the grid behind.
+  final FocusScopeNode _searchScope = FocusScopeNode(
+    debugLabel: 'tv-search-layer',
+  );
+
+  /// The bar on the page that opens the layer, and where the remote is put
+  /// back when the layer closes.
+  final FocusNode _searchBarFocusNode = FocusNode(debugLabel: 'tv-search-bar');
+
+  final ScrollController _searchScrollController = ScrollController();
+
+  /// Whether the remote has been pointed at the grid since the page opened.
+  ///
+  /// A television opens a page with the focus on the route's own scope, and
+  /// the first thing an arrow key then finds is whatever sits highest — the
+  /// country flag up in the app bar. The channels are what the page is for,
+  /// so the remote starts on them.
+  bool _hasAimedRemote = false;
+
   FocusNode _getFocusNodeForChannel(String url) {
     return _channelFocusNodes.putIfAbsent(
       url,
@@ -66,11 +97,40 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   Future<void> onTabRefresh() => vm.onRefresh();
 
   @override
+  void onResume() {
+    super.onResume();
+    // Coming back to the tab is opening the page again as far as the remote
+    // is concerned, so it is aimed at the channels once more — but only if it
+    // has nowhere else to be, which [_aimRemoteAtChannels] checks.
+    _hasAimedRemote = false;
+  }
+
+  /// Puts the remote on the first channel, once there is one to put it on.
+  void _aimRemoteAtChannels(TvViewModel viewModel) {
+    if (!deviceType.isTv || _hasAimedRemote || _isSearching) return;
+    if (viewModel.channels.isEmpty) return;
+    _hasAimedRemote = true;
+    final url = viewModel.channels.first.url;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isSearching) return;
+      // Only while the remote is still homeless: between the frame the
+      // channels arrived on and this one the viewer may have moved it
+      // somewhere themselves, and that is not ours to undo.
+      final current = FocusManager.instance.primaryFocus;
+      if (current != null && current is! FocusScopeNode) return;
+      _channelFocusNodes[url]?.requestFocus();
+    });
+  }
+
+  @override
   void dispose() {
     for (final node in _channelFocusNodes.values) {
       node.dispose();
     }
     _searchFocusNode.dispose();
+    _searchScope.dispose();
+    _searchBarFocusNode.dispose();
+    _searchScrollController.dispose();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -80,87 +140,155 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final viewModel = context.watch<TvViewModel>();
+    _aimRemoteAtChannels(viewModel);
 
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          // Android TV Remote Mic/Search button matches these hardware web/android scan codes
-          final keyCode = event.logicalKey.keyId;
-          const searchKeyId = 0x10000054; // Android KEYCODE_SEARCH / Web Search
-          const voiceDialKeyId = 0x1000005c; // Android KEYCODE_VOICE_DIAL
-
-          if (keyCode == searchKeyId || keyCode == voiceDialKeyId) {
-            _searchFocusNode.requestFocus();
-            return KeyEventResult.handled;
-          }
+        if (event is KeyDownEvent && _isSearchKey(event.logicalKey)) {
+          _openSearch();
+          return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
       },
-      child: AppScaffold(
-        appBar: DoAppBar(
-          title: l10n.tvChannels,
-          titleSuffix: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 8,
-            children: [
-              // How much this country has on air, which is the one number that
-              // changes with every pick of the flag beside it.
-              if (viewModel.totalChannels > 0)
-                Text(
-                  l10n.tvChannelCount(viewModel.totalChannels),
-                  style: context.theme.textTheme.bodySmall?.copyWith(
-                    color: context.theme.hintColor,
+      child: PopScope(
+        // On a television Back is what closes the search layer; the page only
+        // leaves once the layer is gone.
+        canPop: !_isSearching,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _closeSearch();
+        },
+        child: AppScaffold(
+          appBar: DoAppBar(
+            title: l10n.tvChannels,
+            titleSuffix: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                // How much this country has on air, which is the one number
+                // that changes with every pick of the flag beside it.
+                if (viewModel.totalChannels > 0)
+                  Text(
+                    l10n.tvChannelCount(viewModel.totalChannels),
+                    style: context.theme.textTheme.bodySmall?.copyWith(
+                      color: context.theme.hintColor,
+                    ),
                   ),
-                ),
-              const AppBarSyncIcon<TvViewModel>(selector: _isBusy),
-            ],
-          ),
-          actions: [_buildCountryButton(viewModel, l10n)],
-        ),
-        body: Column(
-          children: [
-            // Above the scroll view rather than pinned inside it: the box
-            // is how anyone reaches a channel in a list this long, so it
-            // stays put, and a field has no height a header could be told
-            // in advance — it grows with the text scale.
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                Dimens.pagePadding,
-                12,
-                Dimens.pagePadding,
-                4,
-              ),
-              child: _buildSearchField(viewModel, l10n),
+                const AppBarSyncIcon<TvViewModel>(selector: _isBusy),
+              ],
             ),
-            Expanded(
-              child: RefreshIndicator.adaptive(
-                onRefresh: viewModel.onRefresh,
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  // The grid can be shorter than the viewport — one search
-                  // result, or none — and pull to refresh has to keep
-                  // working when it is.
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    if (viewModel.groups.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: _buildGroupChips(
-                          viewModel,
-                          l10n,
-                          Dimens.pagePadding,
+            actions: [_buildCountryButton(viewModel, l10n)],
+          ),
+          body: Stack(
+            children: [
+              ExcludeFocus(
+                // Covered, the page is only still drawn: left in the focus
+                // tree the remote walks out of the search layer and onto a
+                // channel behind it.
+                excluding: _isSearching,
+                child: Column(
+                  children: [
+                    // Above the scroll view rather than pinned inside it: the
+                    // box is how anyone reaches a channel in a list this
+                    // long, so it stays put, and a field has no height a
+                    // header could be told in advance — it grows with the
+                    // text scale.
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        Dimens.pagePadding,
+                        12,
+                        Dimens.pagePadding,
+                        4,
+                      ),
+                      child: deviceType.isTv
+                          ? _buildSearchBar(l10n)
+                          : _buildSearchField(viewModel, l10n),
+                    ),
+                    Expanded(
+                      child: RefreshIndicator.adaptive(
+                        onRefresh: viewModel.onRefresh,
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          // The grid can be shorter than the viewport — one
+                          // search result, or none — and pull to refresh has
+                          // to keep working when it is.
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            if (viewModel.groups.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: _buildGroupChips(
+                                  viewModel,
+                                  l10n,
+                                  Dimens.pagePadding,
+                                ),
+                              ),
+                            _buildContent(viewModel, l10n, Dimens.pagePadding),
+                          ],
                         ),
                       ),
-                    _buildContent(viewModel, l10n, Dimens.pagePadding),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+              if (_isSearching) _buildSearchLayer(viewModel, l10n),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// The search button on a remote, under each of the names one arrives by.
+  ///
+  /// Android's `KEYCODE_SEARCH` is the one Flutter has a name for; the mic and
+  /// voice-assist keys of a television remote have none, so they come through
+  /// on Flutter's Android plane — the raw Android key code with the plane
+  /// added — and have to be matched by number.
+  bool _isSearchKey(LogicalKeyboardKey key) {
+    if (key == LogicalKeyboardKey.browserSearch) return true;
+    const androidPlane = 0x1100000000;
+    const androidSearch = 84; // KEYCODE_SEARCH
+    const androidVoiceDial = 92; // KEYCODE_VOICE_DIAL
+    return key.keyId == androidPlane + androidSearch ||
+        key.keyId == androidPlane + androidVoiceDial;
+  }
+
+  /// Opens the search.
+  ///
+  /// On a television that is a layer of its own; anywhere else the box is
+  /// already on the page and the remote or keyboard only has to be put in it.
+  void _openSearch() {
+    if (!deviceType.isTv) {
+      _searchFocusNode.requestFocus();
+      return;
+    }
+    if (_isSearching) return;
+    setState(() => _isSearching = true);
+    // The box is only now being built, so there is nothing to type into until
+    // the frame carrying it exists.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_isSearching) return;
+      _searchFocusNode.requestFocus();
+    });
+  }
+
+  /// Closes the layer and puts the whole list back.
+  ///
+  /// The query goes with it: the page behind is the country's channels, and
+  /// leaving a search applied to a page that no longer shows a search box
+  /// would be a filter with nothing on screen to explain it — or to undo it.
+  void _closeSearch() {
+    if (!_isSearching) return;
+    _searchController.clear();
+    vm.search('');
+    setState(() => _isSearching = false);
+    // Back where the remote came from, which is the bar it opened this with.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isSearching) return;
+      _searchBarFocusNode.requestFocus();
+    });
   }
 
   /// The country whose playlist is on screen, and the way to change it. The
@@ -197,6 +325,107 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     );
     if (picked == null || !mounted) return;
     await viewModel.selectCountry(picked);
+  }
+
+  /// What stands in for the box on a television: the page shows where the
+  /// search is, and OK opens the layer that does it.
+  ///
+  /// Not a text field, because a field on the page is a field the television's
+  /// full-screen keyboard covers as soon as it is used.
+  Widget _buildSearchBar(AppLocalizations l10n) {
+    return NeuCard(
+      radius: Dimens.radiusControl,
+      depth: 0.5,
+      focusNode: _searchBarFocusNode,
+      onTap: _openSearch,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      child: Row(
+        spacing: 10,
+        children: [
+          Icon(Icons.search_rounded, color: context.theme.hintColor),
+          Expanded(
+            child: Text(
+              l10n.tvSearchHint,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.theme.hintColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The search itself, over the page: the way out, the box, and the results
+  /// of what has been typed so far.
+  ///
+  /// No heading of its own — the box says what it is, and a television has
+  /// little enough height to spend on a line that repeats it.
+  Widget _buildSearchLayer(TvViewModel viewModel, AppLocalizations l10n) {
+    return Positioned.fill(
+      child: FocusScope(
+        node: _searchScope,
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+          },
+          child: Actions(
+            actions: {
+              DismissIntent: CallbackAction<DismissIntent>(
+                onInvoke: (_) {
+                  _closeSearch();
+                  return null;
+                },
+              ),
+            },
+            child: ColoredBox(
+              // The page stays visible through it, so it reads as the search
+              // sitting on this page rather than as another page.
+              color: Colors.black.withValues(alpha: 0.55),
+              child: SafeArea(
+                child: Padding(
+                  padding: Dimens.screenPadding,
+                  child: Material(
+                    color: context.theme.colorScheme.surface,
+                    clipBehavior: Clip.antiAlias,
+                    borderRadius: BorderRadius.circular(Dimens.radiusPanel),
+                    child: Padding(
+                      padding: Dimens.screenPadding,
+                      child: Column(
+                        spacing: 12,
+                        children: [
+                          Row(
+                            spacing: 12,
+                            children: [
+                              NeuIconButton(
+                                icon: Icons.arrow_back_rounded,
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).backButtonTooltip,
+                                onPressed: _closeSearch,
+                              ),
+                              Expanded(
+                                child: _buildSearchField(viewModel, l10n),
+                              ),
+                            ],
+                          ),
+                          Expanded(
+                            child: CustomScrollView(
+                              controller: _searchScrollController,
+                              slivers: [_buildContent(viewModel, l10n, 0)],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ).contentConstrainedBox(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSearchField(TvViewModel viewModel, AppLocalizations l10n) {

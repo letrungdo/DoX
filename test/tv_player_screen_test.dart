@@ -67,28 +67,63 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('down moves to the next channel and names it', (tester) async {
+    testWidgets('down brings the channel list up, without changing channel', (
+      tester,
+    ) async {
       await pumpPlayer(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      // Named over the picture: without it, two quick presses leave the
-      // viewer with no idea where they have landed until the stream comes up.
+      // The remote already has a pair of keys that change channel, so the
+      // arrows are better spent on the list, where the viewer can see what
+      // they are moving to instead of hopping blind.
+      expect(find.byType(ListView), findsOneWidget);
       expect(find.text('VTV3'), findsWidgets);
-      expect(find.text('2'), findsOneWidget);
+      expect(find.text('VTV1'), findsWidgets);
     });
 
-    testWidgets('up from the first channel wraps to the last', (tester) async {
+    testWidgets('up brings it up too, and a second press leaves it up', (
+      tester,
+    ) async {
       await pumpPlayer(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(find.byType(ListView), findsOneWidget);
+
+      // The list holds the arrows once it is open, so a second press walks
+      // through it rather than closing it under the viewer.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(find.byType(ListView), findsOneWidget);
+    });
+
+    testWidgets('CH- from the first channel wraps to the last', (tester) async {
+      await pumpPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.channelDown);
       await tester.pump();
 
       // A remote has no end of the list, and stopping dead at the first
       // channel is the one thing no television does.
       expect(find.text('HTV7'), findsWidgets);
       expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('the skip pair changes channel as well', (tester) async {
+      await pumpPlayer(tester);
+
+      // What a recorder's remote is printed with. There is no track to skip
+      // on a live channel, and the buttons sit where a thumb expects to
+      // change channel from.
+      await tester.sendKeyEvent(LogicalKeyboardKey.mediaTrackNext);
+      await tester.pump();
+      expect(find.text('VTV3'), findsWidgets);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.mediaTrackPrevious);
+      await tester.pump();
+      expect(find.text('VTV1'), findsWidgets);
     });
 
     testWidgets('OK brings the channel list over the picture', (tester) async {
