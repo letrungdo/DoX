@@ -43,6 +43,16 @@ class NeuChip extends StatelessWidget {
         color: color,
         fontWeight: FontWeight.w600,
         fontSize: fontSize,
+        // Centres the label in the pill, which it otherwise is not.
+        //
+        // A line's box is the font's ascent plus its descent, and a font that
+        // can write Vietnamese keeps an ascent tall enough for `Ẫ` — room
+        // that `Tổng hợp` never uses. Centring that box leaves the words
+        // sitting low, with a gap above them and the tail of the `ợ` against
+        // the bottom edge. Pinning the box to the em square and splitting
+        // what is left evenly centres the letters instead.
+        height: 1,
+        leadingDistribution: TextLeadingDistribution.even,
       ),
     );
 

@@ -12,6 +12,7 @@
 import 'dart:io' as _i40;
 
 import 'package:auto_route/auto_route.dart' as _i32;
+import 'package:collection/collection.dart' as _i42;
 import 'package:do_x/constants/enum/market_code.dart' as _i36;
 import 'package:do_x/model/movie_model.dart' as _i38;
 import 'package:do_x/model/tv_channel.dart' as _i41;
@@ -56,7 +57,7 @@ import 'package:do_x/screen/tv/tv_player_screen.dart' deferred as _i27;
 import 'package:do_x/screen/tv/tv_screen.dart' deferred as _i28;
 import 'package:do_x/view_model/asset_view_model.dart' as _i34;
 import 'package:do_x/view_model/electric_view_model.dart' as _i35;
-import 'package:do_x/view_model/verify_otp_view_model.dart' as _i42;
+import 'package:do_x/view_model/verify_otp_view_model.dart' as _i43;
 import 'package:flutter/foundation.dart' as _i37;
 import 'package:flutter/material.dart' as _i33;
 
@@ -866,10 +867,15 @@ class TvPlayerRoute extends _i32.PageRouteInfo<TvPlayerRouteArgs> {
   TvPlayerRoute({
     _i33.Key? key,
     required _i41.TvChannel channel,
+    List<_i41.TvChannel> playlist = const [],
     List<_i32.PageRouteInfo>? children,
   }) : super(
          TvPlayerRoute.name,
-         args: TvPlayerRouteArgs(key: key, channel: channel),
+         args: TvPlayerRouteArgs(
+           key: key,
+           channel: channel,
+           playlist: playlist,
+         ),
          initialChildren: children,
        );
 
@@ -881,33 +887,51 @@ class TvPlayerRoute extends _i32.PageRouteInfo<TvPlayerRouteArgs> {
       final args = data.argsAs<TvPlayerRouteArgs>();
       return _i32.DeferredWidget(
         _i27.loadLibrary,
-        () => _i27.TvPlayerScreen(key: args.key, channel: args.channel),
+        () => _i27.TvPlayerScreen(
+          key: args.key,
+          channel: args.channel,
+          playlist: args.playlist,
+        ),
       );
     },
   );
 }
 
 class TvPlayerRouteArgs {
-  const TvPlayerRouteArgs({this.key, required this.channel});
+  const TvPlayerRouteArgs({
+    this.key,
+    required this.channel,
+    this.playlist = const [],
+  });
 
   final _i33.Key? key;
 
   final _i41.TvChannel channel;
 
+  final List<_i41.TvChannel> playlist;
+
   @override
   String toString() {
-    return 'TvPlayerRouteArgs{key: $key, channel: $channel}';
+    return 'TvPlayerRouteArgs{key: $key, channel: $channel, playlist: $playlist}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! TvPlayerRouteArgs) return false;
-    return key == other.key && channel == other.channel;
+    return key == other.key &&
+        channel == other.channel &&
+        const _i42.ListEquality<_i41.TvChannel>().equals(
+          playlist,
+          other.playlist,
+        );
   }
 
   @override
-  int get hashCode => key.hashCode ^ channel.hashCode;
+  int get hashCode =>
+      key.hashCode ^
+      channel.hashCode ^
+      const _i42.ListEquality<_i41.TvChannel>().hash(playlist);
 }
 
 /// generated route for
@@ -992,7 +1016,7 @@ class VerifyOtpRoute extends _i32.PageRouteInfo<VerifyOtpRouteArgs> {
   VerifyOtpRoute({
     _i33.Key? key,
     required String email,
-    required _i42.OtpPurpose purpose,
+    required _i43.OtpPurpose purpose,
     List<_i32.PageRouteInfo>? children,
   }) : super(
          VerifyOtpRoute.name,
@@ -1031,7 +1055,7 @@ class VerifyOtpRouteArgs {
 
   final String email;
 
-  final _i42.OtpPurpose purpose;
+  final _i43.OtpPurpose purpose;
 
   @override
   String toString() {

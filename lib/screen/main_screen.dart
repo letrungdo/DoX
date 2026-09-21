@@ -232,9 +232,11 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
             routes: routes,
             value: value,
           ),
-          // Every label on show: a television is read from across a room, and
-          // there is no hovering or long-pressing an icon to find out what it
-          // is.
+          // Every label on show, and the rail standing in the layout rather
+          // than over it. Both were tried the other way: icons alone that
+          // named themselves when the remote arrived read well until the
+          // expansion covered the first column of the page behind it, and a
+          // page is not something a navigation bar may sit on top of.
           labelType: NavigationRailLabelType.all,
           destinations: tabs
               .map((tab) => _railDestinationOf(tab, l10n))

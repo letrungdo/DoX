@@ -21,9 +21,22 @@ import 'package:video_player/video_player.dart';
 /// over it inside their own [SafeArea].
 @RoutePage()
 class TvPlayerScreen extends StatefulWidget {
-  const TvPlayerScreen({super.key, required this.channel});
+  const TvPlayerScreen({
+    super.key,
+    required this.channel,
+    this.playlist = const [],
+  });
 
+  /// The channel to open with.
   final TvChannel channel;
+
+  /// The channels either side of it, in the order the grid showed them.
+  ///
+  /// This is what makes the page behave like a television rather than like a
+  /// video: up and down move to the next channel without going back to a
+  /// list, and OK brings the list to the viewer over the picture that keeps
+  /// playing. Left empty, the page is a single-channel player as before.
+  final List<TvChannel> playlist;
 
   @override
   State<TvPlayerScreen> createState() => _TvPlayerScreenState();
@@ -32,6 +45,29 @@ class TvPlayerScreen extends StatefulWidget {
 class _TvPlayerScreenState extends State<TvPlayerScreen> {
   VideoPlayerController? _controller;
   VoidCallback? _listener;
+
+  /// What is on screen now, which is not what the page was opened on once the
+  /// viewer has pressed up or down.
+  late TvChannel _channel = widget.channel;
+
+  /// Where [_channel] sits in [TvPlayerScreen.playlist]. -1 when the page was
+  /// opened without one, which is what turns the channel keys off.
+  late int _index = widget.playlist.indexWhere(
+    (channel) => channel.url == widget.channel.url,
+  );
+
+  bool get _canChangeChannel => _index >= 0 && widget.playlist.length > 1;
+
+  /// The channel name over the picture, just after a change.
+  ///
+  /// A television names the channel it has just moved to and then gets out of
+  /// the way; without it, pressing up twice quickly leaves the viewer with no
+  /// idea where they have landed until the stream comes up.
+  bool _showChannelName = false;
+  Timer? _channelNameTimer;
+
+  /// Whether the channel list is open over the picture.
+  bool _showChannelList = false;
 
   bool _isLoading = true;
   bool _hasError = false;
@@ -56,10 +92,23 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// as it appears.
   final FocusNode _retryFocusNode = FocusNode(debugLabel: 'tv-retry');
 
+  /// The channel list, which is its own scope so the D-pad stays inside it
+  /// while it is open instead of walking off onto the picture behind.
+  final FocusScopeNode _channelListScope = FocusScopeNode(
+    debugLabel: 'tv-channels',
+  );
+
+  final ScrollController _channelListController = ScrollController();
+
   bool get _controlsHaveFocus => _controlsScope.hasFocus;
 
   /// How long the controls stay up after a tap before they fade away again.
   static const _controlsTimeout = Duration(seconds: 4);
+
+  /// How long the name of a channel just moved to stays over the picture.
+  /// Long enough to read from a sofa, short enough that pressing up three
+  /// times does not leave a banner sitting on the programme.
+  static const _channelNameTimeout = Duration(seconds: 3);
 
   @override
   void initState() {
@@ -72,6 +121,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   @override
   void dispose() {
     _hideControlsTimer?.cancel();
+    _channelNameTimer?.cancel();
     unawaited(_setImmersive(false));
     final controller = _controller;
     final listener = _listener;
@@ -83,6 +133,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _controlsScope.dispose();
     _backFocusNode.dispose();
     _retryFocusNode.dispose();
+    _channelListScope.dispose();
+    _channelListController.dispose();
     super.dispose();
   }
 
@@ -107,8 +159,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     });
 
     final controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.channel.url),
-      httpHeaders: widget.channel.headers,
+      Uri.parse(_channel.url),
+      httpHeaders: _channel.headers,
     );
 
     try {
@@ -151,7 +203,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       });
     } on Object catch (e, st) {
       logger.e(
-        'TvPlayerScreen could not open ${widget.channel.name}',
+        'TvPlayerScreen could not open ${_channel.name}',
         error: e,
         stackTrace: st,
       );
@@ -180,7 +232,60 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     });
   }
 
-  Future<void> _retry() async {
+  /// Moves [delta] channels along the list and starts playing what is there.
+  ///
+  /// Wraps around: a remote has no end of the list, and stopping dead at the
+  /// last channel is the one thing no television does.
+  Future<void> _changeChannel(int delta) async {
+    if (!_canChangeChannel) return;
+    final channels = widget.playlist;
+    final next = (_index + delta) % channels.length;
+
+    _channelNameTimer?.cancel();
+    setState(() {
+      _index = next;
+      _channel = channels[next];
+      _showChannelName = true;
+      // The list is what the viewer was choosing from, and they have chosen.
+      _showChannelList = false;
+    });
+    _channelNameTimer = Timer(_channelNameTimeout, () {
+      if (!mounted) return;
+      setState(() => _showChannelName = false);
+    });
+
+    await _replaceController();
+  }
+
+  /// Opens the picture on a channel picked out of the list.
+  Future<void> _playFromList(int index) async {
+    if (index == _index) {
+      setState(() => _showChannelList = false);
+      _videoFocusNode.requestFocus();
+      return;
+    }
+    await _changeChannel(index - _index);
+    if (!mounted) return;
+    _videoFocusNode.requestFocus();
+  }
+
+  void _toggleChannelList() {
+    if (!_canChangeChannel) return;
+    setState(() => _showChannelList = !_showChannelList);
+    if (_showChannelList) {
+      // The list is only now being built, so there is nothing to hand the
+      // remote to until the frame carrying it exists.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_showChannelList) return;
+        _channelListScope.requestFocus();
+      });
+      return;
+    }
+    _videoFocusNode.requestFocus();
+  }
+
+  /// Drops the controller on screen so another channel can take its place.
+  Future<void> _replaceController() async {
     final controller = _controller;
     final listener = _listener;
     if (controller != null && listener != null) {
@@ -191,9 +296,13 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       _controller = null;
       _listener = null;
     });
+    await _open();
+  }
+
+  Future<void> _retry() async {
     // The retry button is about to leave with the error state it belongs to.
     _videoFocusNode.requestFocus();
-    await _open();
+    await _replaceController();
   }
 
   void _toggleControls() {
@@ -254,9 +363,14 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
   /// The remote, on the picture itself.
   ///
-  /// Arrows wake the controls and then walk onto them; OK puts them up and
-  /// takes them down again. A live channel has no timeline and nothing to
-  /// pause, so there is nothing here for the remote to seek or stop with.
+  /// The keys are a television's, not a video player's, because that is what
+  /// this is: up and down are the channel, OK is the channel list, and the
+  /// way to the controls is sideways. A live channel has no timeline and
+  /// nothing to pause, so there is nothing here to seek or stop with.
+  ///
+  /// Opened on a single channel — from a link, or from anywhere that has no
+  /// list to hand — there are no neighbouring channels to move to, and the
+  /// arrows go back to being the way to the controls.
   KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
     // The controls are inside this node, so their keys walk up through here.
     // Claiming them would swallow the OK meant for the focused button.
@@ -264,8 +378,28 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       return KeyEventResult.ignored;
     }
 
-    if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
-        event.logicalKey == LogicalKeyboardKey.arrowDown) {
+    final key = event.logicalKey;
+    if (_canChangeChannel) {
+      if (key == LogicalKeyboardKey.arrowUp) {
+        unawaited(_changeChannel(-1));
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowDown) {
+        unawaited(_changeChannel(1));
+        return KeyEventResult.handled;
+      }
+      if (_isSelectKey(key)) {
+        _toggleChannelList();
+        return KeyEventResult.handled;
+      }
+    }
+
+    final wakesControls = _canChangeChannel
+        ? key == LogicalKeyboardKey.arrowLeft ||
+              key == LogicalKeyboardKey.arrowRight
+        : key == LogicalKeyboardKey.arrowUp ||
+              key == LogicalKeyboardKey.arrowDown;
+    if (wakesControls) {
       final wasVisible = _showControls;
       if (!wasVisible) setState(() => _showControls = true);
       _scheduleHideControls();
@@ -274,6 +408,12 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     }
     return KeyEventResult.ignored;
   }
+
+  /// The OK button, under each of the names a remote sends it by.
+  bool _isSelectKey(LogicalKeyboardKey key) =>
+      key == LogicalKeyboardKey.select ||
+      key == LogicalKeyboardKey.enter ||
+      key == LogicalKeyboardKey.gameButtonA;
 
   @override
   Widget build(BuildContext context) {
@@ -317,7 +457,119 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                     ),
                   ),
                 ),
+                if (_showChannelName && !_showChannelList) _buildChannelName(),
+                if (_showChannelList) _buildChannelList(l10n),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The channel just moved to, named over the corner of the picture.
+  ///
+  /// Bottom left, where a television has always put it, and out of the way of
+  /// the controls that come down from the top.
+  Widget _buildChannelName() {
+    return IgnorePointer(
+      child: Align(
+        alignment: AlignmentDirectional.bottomStart,
+        child: SafeArea(
+          child: Padding(
+            padding: Dimens.screenPadding,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(Dimens.radiusCard),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 10,
+                  children: [
+                    Text(
+                      // The position in the list, which is the closest thing
+                      // these playlists have to a channel number.
+                      '${_index + 1}',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      _channel.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The channel list, over the picture that keeps playing behind it.
+  ///
+  /// Down the side rather than across the screen: a viewer opening it is
+  /// still watching, and a list that covered the programme would be a list
+  /// they had to close before they could decide.
+  Widget _buildChannelList(AppLocalizations l10n) {
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: FocusScope(
+        node: _channelListScope,
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+          },
+          child: Actions(
+            actions: {
+              DismissIntent: CallbackAction<DismissIntent>(
+                onInvoke: (_) {
+                  _toggleChannelList();
+                  return null;
+                },
+              ),
+            },
+            child: Container(
+              width: 320,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.centerEnd,
+                  end: AlignmentDirectional.centerStart,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.92),
+                    Colors.black.withValues(alpha: 0.55),
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: ListView.builder(
+                  controller: _channelListController,
+                  padding: Dimens.screenPadding,
+                  itemCount: widget.playlist.length,
+                  itemBuilder: (context, index) {
+                    final channel = widget.playlist[index];
+                    return _ChannelRow(
+                      position: index + 1,
+                      channel: channel,
+                      isPlaying: index == _index,
+                      autofocus: index == _index,
+                      onTap: () => _playFromList(index),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -397,7 +649,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        widget.channel.name,
+                        _channel.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -442,6 +694,71 @@ class _LiveBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+/// One channel in the list the player opens over the picture.
+class _ChannelRow extends StatelessWidget {
+  const _ChannelRow({
+    required this.position,
+    required this.channel,
+    required this.isPlaying,
+    required this.autofocus,
+    required this.onTap,
+  });
+
+  final int position;
+  final TvChannel channel;
+
+  /// The channel behind the list, marked so the viewer can see where they
+  /// are before they start moving.
+  final bool isPlaying;
+
+  final bool autofocus;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusableTap(
+      autofocus: autofocus,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          spacing: 12,
+          children: [
+            SizedBox(
+              width: 28,
+              child: Text(
+                '$position',
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                channel.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isPlaying ? Colors.white : Colors.white70,
+                  fontWeight: isPlaying ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (isPlaying)
+              const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+          ],
         ),
       ),
     );

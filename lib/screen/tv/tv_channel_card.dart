@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/tv_channel.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,10 @@ class TvChannelCard extends StatelessWidget {
 
   final TvChannel channel;
   final VoidCallback onTap;
+
+  /// Chosen so that once the television's text scale has been applied the
+  /// name is drawn at the 18sp the leanback guidance asks for.
+  static const _tvNameSize = 18 / Dimens.tvTextScale;
 
   /// Channel logos are drawn for a white background — a station's black
   /// wordmark on the page's own dark surface is an invisible card. So the logo
@@ -68,7 +73,15 @@ class TvChannelCard extends StatelessWidget {
               maxLines: 2,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                // The one label on this page that has to be read from a
+                // sofa. The television's own text scale carries the rest of
+                // the app most of the way, but it is held down to what the
+                // app's phone-sized rows can survive — so the name asks for
+                // the last of it here, where there is room for it.
+                fontSize: deviceType.isTv ? _tvNameSize : 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

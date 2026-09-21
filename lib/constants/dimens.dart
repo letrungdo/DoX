@@ -1,3 +1,4 @@
+import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -22,7 +23,14 @@ class Dimens {
   ///
   /// Read it through `Widget.contentConstrainedBox()` unless a sliver forces
   /// you to do the padding maths by hand.
-  static const contentMaxWidth = 700.0;
+  ///
+  /// A television is the one screen that wants more of it. A 1080p panel
+  /// reports 960dp across, and once the nav rail and the overscan band have
+  /// taken their share there is about 780dp of page left — so the phone's cap
+  /// would leave a strip empty down each side for no reason. It is not the
+  /// dramatic gain the pixel count suggests, because a TV's device pixel
+  /// ratio is 2: the screen is wide in pixels and ordinary in dp.
+  static double get contentMaxWidth => deviceType.isTv ? 820.0 : 700.0;
 
   /// Gap between a page's content and the edge of its content column. Sits
   /// *inside* [contentMaxWidth], so a card is the same width on every page.
@@ -124,4 +132,29 @@ class Dimens {
   /// How far the television's focus outline is drawn outside the control it
   /// marks, so the control's own edge stays readable underneath it.
   static const focusOutlineGap = 3.0;
+
+  /// The smallest the text may be on a television.
+  ///
+  /// The app is written for a phone held at arm's length; a television is read
+  /// from a sofa, about ten times as far away for a screen only a few times
+  /// the size. Google's leanback guidance puts the floor for body text at
+  /// 18sp, and the app's own body text is 14 — so everything is scaled up
+  /// rather than each size being chosen twice.
+  ///
+  /// A floor, not a multiplier: a viewer who has already asked their TV for
+  /// larger text gets what they asked for instead of that on top of this.
+  ///
+  /// 1.2 and no more. 1.5 is what the leanback guidance would want, and on a
+  /// television emulator it broke page after page: the app is full of rows,
+  /// tiles and bars whose height was chosen once against phone-sized text,
+  /// and half again is more than they have to give. Raising this means going
+  /// and finding every one of them first.
+  static const tvTextScale = 1.2;
+
+  /// How much the control under the remote grows.
+  ///
+  /// The outline says where the remote is; the lift is what makes it obvious
+  /// from across the room, and it is what every television interface does.
+  /// Small enough that a card does not crowd its neighbours out of the grid.
+  static const tvFocusScale = 1.06;
 }

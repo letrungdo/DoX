@@ -1,3 +1,5 @@
+import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,9 +13,15 @@ import 'package:flutter/services.dart';
 /// It is also the app's single focus target. Cards, buttons and chips all end
 /// up here, so giving this one widget a focus node is what makes the whole
 /// neumorphic surface family reachable with a TV remote's D-pad. It draws no
-/// focus marker of its own — `TvShell` outlines whatever the remote is on, for
-/// every widget in the app, and a second marker here only read as a stray line
-/// inside the first.
+/// focus *marker* of its own — `TvShell` outlines whatever the remote is on,
+/// for every widget in the app, and a second marker here only read as a stray
+/// line inside the first.
+///
+/// What it does do on a television is grow. An outline alone is a thin line
+/// on a panel being read from across a room; the control lifting off the page
+/// is what can be seen from the sofa, and it is what every television
+/// interface does. `TvShell` measures the outline from where the control is
+/// actually painted, so the ring grows with it.
 class NeuPress extends StatefulWidget {
   const NeuPress({
     super.key,
@@ -60,6 +68,19 @@ class _NeuPressState extends State<NeuPress> {
   bool _fingerDown = false;
   bool _sinkFinished = true;
 
+  /// Whether the remote is resting on this control. Only ever set on a
+  /// television — elsewhere nothing reads it, and a mouse or a finger leaves
+  /// focus behind on controls it has merely touched.
+  bool _focused = false;
+
+  /// How big the surface is drawn: sunk while held, lifted while the remote
+  /// is on it, its own size otherwise. Pressing wins, because a press is
+  /// something the viewer is doing right now.
+  double get _scale {
+    if (_pressed) return widget.pressedScale;
+    return _focused ? Dimens.tvFocusScale : 1;
+  }
+
   bool get _enabled => widget.onTap != null || widget.onLongPress != null;
 
   /// Presses the surface in and holds it there for at least
@@ -101,31 +122,43 @@ class _NeuPressState extends State<NeuPress> {
 
   @override
   Widget build(BuildContext context) {
-    return FocusableActionDetector(
-      enabled: _enabled,
-      autofocus: widget.autofocus,
-      focusNode: widget.focusNode,
-      mouseCursor: _enabled
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            _activate();
-            return null;
-          },
-        ),
-      },
-      child: GestureDetector(
-        onTapDown: _enabled ? (_) => _sink() : null,
-        onTapUp: _enabled ? (_) => _release() : null,
-        onTapCancel: _enabled ? _release : null,
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
-        child: AnimatedScale(
-          scale: _pressed ? widget.pressedScale : 1,
-          duration: NeuPress.duration,
-          curve: Curves.easeOut,
+    // The scale wraps the focus node rather than sitting inside it. `TvShell`
+    // measures its outline from the focused node's render object, and a
+    // transform *below* that node is one the measurement cannot see — the
+    // card grew and the ring stayed the size of the slot, drawn across the
+    // middle of it. From out here the transform is on the way up, so the
+    // rect the shell measures is the one that is actually on screen.
+    return AnimatedScale(
+      scale: _scale,
+      duration: NeuPress.duration,
+      curve: Curves.easeOut,
+      child: FocusableActionDetector(
+        enabled: _enabled,
+        autofocus: widget.autofocus,
+        focusNode: widget.focusNode,
+        onShowFocusHighlight: deviceType.isTv
+            ? (value) {
+                if (_focused == value || !mounted) return;
+                setState(() => _focused = value);
+              }
+            : null,
+        mouseCursor: _enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              _activate();
+              return null;
+            },
+          ),
+        },
+        child: GestureDetector(
+          onTapDown: _enabled ? (_) => _sink() : null,
+          onTapUp: _enabled ? (_) => _release() : null,
+          onTapCancel: _enabled ? _release : null,
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
           child: widget.builder(context, _pressed),
         ),
       ),

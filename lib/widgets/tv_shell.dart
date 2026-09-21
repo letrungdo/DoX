@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 /// Everything the app does differently because it is running on a television.
@@ -14,6 +15,9 @@ import 'package:flutter/services.dart';
 ///
 /// Two things happen here:
 ///
+/// * **Text size.** Everything in the app is sized for a phone at arm's
+///   length. A television is read from a sofa, so the whole app is scaled up
+///   from here rather than every size being chosen a second time.
 /// * **Overscan.** A TV can crop the outer few percent of the picture, and the
 ///   panel has no notch for the system to report, so the padding has to be
 ///   invented. Injecting it into [MediaQuery] means every `SafeArea` already in
@@ -58,6 +62,11 @@ class TvShell extends StatelessWidget {
       data: media.copyWith(
         padding: media.padding + Dimens.tvOverscan,
         viewPadding: media.viewPadding + Dimens.tvOverscan,
+        // Clamped rather than set: the app's sizes are chosen for a phone at
+        // arm's length and are too small to read from a sofa, but a viewer
+        // who has already turned their television's text up wants that, not
+        // that multiplied by this.
+        textScaler: media.textScaler.clamp(minScaleFactor: Dimens.tvTextScale),
       ),
       child: _FocusOutline(
         child: Shortcuts(
@@ -137,6 +146,14 @@ class _FocusOutlineState extends State<_FocusOutline> {
   Rect? _rect;
   bool _hadControl = false;
 
+  /// Until when the outline keeps re-measuring itself every frame.
+  ///
+  /// The control the remote lands on grows into place rather than snapping,
+  /// so a single measurement taken the moment focus moves is of a card that
+  /// has not finished arriving. Following it for the length of that animation
+  /// is what keeps the ring on the card instead of inside it.
+  DateTime? _settleUntil;
+
   @override
   void initState() {
     super.initState();
@@ -154,7 +171,26 @@ class _FocusOutlineState extends State<_FocusOutline> {
   /// taken focus is usually built by that very frame, so there is nothing laid
   /// out to measure until it ends.
   void _scheduleMeasure() {
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    _settleUntil = DateTime.now().add(_settleWindow);
+    _measureNextFrame();
+  }
+
+  /// A little longer than the lift itself, so the last frame of it is caught.
+  static const _settleWindow = Duration(milliseconds: 180);
+
+  void _measureNextFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _measure();
+      final until = _settleUntil;
+      if (until == null || !DateTime.now().isBefore(until)) return;
+      _measureNextFrame();
+      // The control is animating, so frames are being produced anyway — but
+      // not once it settles, and a post-frame callback waiting for a frame
+      // nobody asks for never runs. Asking costs one idle frame per focus
+      // move and is what makes the last measurement the one that lands.
+      SchedulerBinding.instance.scheduleFrame();
+    });
   }
 
   void _measure() {
@@ -173,7 +209,14 @@ class _FocusOutlineState extends State<_FocusOutline> {
       if (box is RenderBox && box.attached && box.hasSize) {
         onAControl = true;
         if (!_marksItself(nodeContext) && !_isSurface(node, nodeContext)) {
-          rect = node.rect;
+          // Where the control is *painted*, not where it was laid out. On a
+          // television the focused control is drawn larger than its slot, and
+          // `FocusNode.rect` reports the slot — an outline traced on that sits
+          // inside the card it is meant to be around.
+          rect = MatrixUtils.transformRect(
+            box.getTransformTo(null),
+            Offset.zero & box.size,
+          );
         }
       }
     }

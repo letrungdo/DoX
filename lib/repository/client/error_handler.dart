@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:do_x/model/response/my_life_error_res.dart';
 import 'package:do_x/repository/client/dio_exception.dart';
+import 'package:do_x/services/supabase_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 
@@ -43,7 +44,28 @@ class Result<T> {
   bool get isError => error != null;
   bool get isCancelByUser => error?.type == ApiErrorType.cancel;
 
-  static Future<Result<T>> guardFuture<T>(Future<T> Function() request) async {
+  static Future<Result<T>> guardFuture<T>(Future<T> Function() request) {
+    return _classify(() => _retryOnExpiredSession(request));
+  }
+
+  /// Runs [request] again if the only thing wrong with it was the session.
+  ///
+  /// Sits in front of the classifying below rather than inside it, so a
+  /// failure that survives the retry is reported exactly as it always was.
+  static Future<T> _retryOnExpiredSession<T>(
+    Future<T> Function() request,
+  ) async {
+    try {
+      return await request();
+    } on Object catch (e) {
+      if (!isExpiredSessionError(e)) rethrow;
+      logger.d('Api retrying after an expired session');
+      if (!await recoverExpiredSupabaseSession()) rethrow;
+      return await request();
+    }
+  }
+
+  static Future<Result<T>> _classify<T>(Future<T> Function() request) async {
     try {
       return Result(data: await request());
     } on DioException catch (e) {

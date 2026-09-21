@@ -296,7 +296,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
           final channel = viewModel.channels[index];
           return TvChannelCard(
             channel: channel,
-            onTap: () => _openChannel(channel),
+            onTap: () => _openChannel(channel, viewModel.channels),
           );
         },
       ),
@@ -322,7 +322,9 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     );
   }
 
-  void _openChannel(TvChannel channel) {
-    context.pushRoute(TvPlayerRoute(channel: channel));
+  void _openChannel(TvChannel channel, List<TvChannel> playlist) {
+    // The whole list travels with the channel: the player is a television,
+    // and up and down there move to the next channel rather than back here.
+    context.pushRoute(TvPlayerRoute(channel: channel, playlist: playlist));
   }
 }
