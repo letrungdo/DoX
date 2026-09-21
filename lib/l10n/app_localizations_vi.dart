@@ -2425,9 +2425,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get tvGroupOther => 'Khác';
 
   @override
-  String get tvLive => 'TRỰC TIẾP';
-
-  @override
   String get tvCategoryAnimation => 'Hoạt hình';
 
   @override

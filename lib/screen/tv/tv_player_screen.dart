@@ -956,42 +956,12 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                         ),
                       ),
                     ),
-                    if (!_hasError && !_isLoading)
-                      _LiveBadge(label: l10n.tvLive),
                   ],
                 ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// The "this is a live stream" marker: a live channel has no timeline to show
-/// how far in it is, so this is what stands in for one.
-class _LiveBadge extends StatelessWidget {
-  const _LiveBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.redAccent,
-        borderRadius: BorderRadius.circular(Dimens.radiusSmall),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
-        ),
       ),
     );
   }

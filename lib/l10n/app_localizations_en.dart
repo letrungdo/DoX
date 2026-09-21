@@ -2437,9 +2437,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvGroupOther => 'Other';
 
   @override
-  String get tvLive => 'LIVE';
-
-  @override
   String get tvCategoryAnimation => 'Animation';
 
   @override

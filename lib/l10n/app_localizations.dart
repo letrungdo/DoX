@@ -4375,12 +4375,6 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get tvGroupOther;
 
-  /// No description provided for @tvLive.
-  ///
-  /// In en, this message translates to:
-  /// **'LIVE'**
-  String get tvLive;
-
   /// No description provided for @tvCategoryAnimation.
   ///
   /// In en, this message translates to:
