@@ -163,4 +163,22 @@ class Dimens {
   /// The most the lift may come to on a small control, where a fixed ten
   /// pixels would otherwise be a third of it.
   static const tvFocusScaleMax = 1.08;
+
+  /// Width of the channel list the live player opens over the picture.
+  ///
+  /// Down the side rather than across the screen: the viewer is still
+  /// watching while they choose.
+  static const tvChannelListWidth = 320.0;
+
+  /// Height of one row in that list.
+  ///
+  /// Fixed rather than measured, because the list repeats the playlist end to
+  /// end so it can be scrolled past either edge: a known row height is what
+  /// lets it jump straight to the channel playing without building the
+  /// thousands of rows in between.
+  static const tvChannelListRowHeight = 48.0;
+
+  /// Width of the channel number column in that list, wide enough for the
+  /// three digits a long playlist reaches.
+  static const tvChannelListNumberWidth = 44.0;
 }

@@ -109,7 +109,24 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
   final ScrollController _channelListController = ScrollController();
 
+  /// The row of the channel playing, so the list opens on it rather than on
+  /// whichever row happens to be built first.
+  final FocusNode _currentChannelFocusNode = FocusNode(
+    debugLabel: 'tv-current-channel',
+  );
+
+  /// How many times the playlist is repeated inside the open list.
+  ///
+  /// The list scrolls on past either end the way the channel keys wrap, so a
+  /// viewer who keeps pressing down never hits a wall. An odd number of
+  /// copies so the middle one — the copy the list opens on — has as much room
+  /// either side of it.
+  static const _channelListLoops = 101;
+
   bool get _controlsHaveFocus => _controlsScope.hasFocus;
+
+  /// Where the middle copy of the playlist starts inside the looping list.
+  int get _channelListBase => widget.playlist.length * (_channelListLoops ~/ 2);
 
   /// How long the controls stay up after a tap before they fade away again.
   static const _controlsTimeout = Duration(seconds: 4);
@@ -149,6 +166,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _retryFocusNode.dispose();
     _channelListScope.dispose();
     _channelListController.dispose();
+    _currentChannelFocusNode.dispose();
     super.dispose();
   }
 
@@ -291,11 +309,38 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       // remote to until the frame carrying it exists.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_showChannelList) return;
-        _channelListScope.requestFocus();
+        _centreChannelList();
+        // And the row it was scrolled to is itself only built by that scroll,
+        // so the remote waits one more frame for it.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !_showChannelList) return;
+          if (_currentChannelFocusNode.context != null) {
+            _currentChannelFocusNode.requestFocus();
+            return;
+          }
+          _channelListScope.requestFocus();
+        });
       });
       return;
     }
     _videoFocusNode.requestFocus();
+  }
+
+  /// Puts the channel playing in the middle of the open list.
+  ///
+  /// The list is thousands of rows long, and the one that matters is the one
+  /// the viewer is on: opening at the top would leave them scrolling down to
+  /// find out where they already are.
+  void _centreChannelList() {
+    if (!_channelListController.hasClients) return;
+    const rowHeight = Dimens.tvChannelListRowHeight;
+    final position = _channelListController.position;
+    final target =
+        (_channelListBase + _index) * rowHeight -
+        (position.viewportDimension - rowHeight) / 2;
+    _channelListController.jumpTo(
+      target.clamp(position.minScrollExtent, position.maxScrollExtent),
+    );
   }
 
   /// Drops the controller on screen so another channel can take its place.
@@ -543,6 +588,12 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        // The list is what the Back key is pointed at while it is open; only
+        // once it is gone does Back mean leaving the channel.
+        if (_showChannelList) {
+          _toggleChannelList();
+          return;
+        }
         Navigator.of(context).pop(_channel);
       },
       child: Focus(
@@ -716,7 +767,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
               ),
             },
             child: Container(
-              width: 320,
+              width: Dimens.tvChannelListWidth,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: AlignmentDirectional.centerEnd,
@@ -730,16 +781,27 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
               child: SafeArea(
                 child: ListView.builder(
                   controller: _channelListController,
-                  padding: Dimens.screenPadding,
-                  itemCount: widget.playlist.length,
+                  // No page padding down the sides: the row it would inset is
+                  // the one the remote lifts, and the lift needs the room.
+                  padding: EdgeInsets.zero,
+                  // A known row height is what lets the list jump straight to
+                  // the channel playing, thousands of rows in, without
+                  // building everything above it.
+                  itemExtent: Dimens.tvChannelListRowHeight,
+                  itemCount: widget.playlist.length * _channelListLoops,
                   itemBuilder: (context, index) {
-                    final channel = widget.playlist[index];
+                    final position = index % widget.playlist.length;
+                    final isPlaying = position == _index;
                     return _ChannelRow(
-                      position: index + 1,
-                      channel: channel,
-                      isPlaying: index == _index,
-                      autofocus: index == _index,
-                      onTap: () => _playFromList(index),
+                      position: position + 1,
+                      channel: widget.playlist[position],
+                      isPlaying: isPlaying,
+                      // Only the middle copy's row is the one the list opens
+                      // on; the others are the same channel further along.
+                      focusNode: index == _channelListBase + _index
+                          ? _currentChannelFocusNode
+                          : null,
+                      onTap: () => _playFromList(position),
                     );
                   },
                 ),
@@ -887,8 +949,8 @@ class _ChannelRow extends StatelessWidget {
     required this.position,
     required this.channel,
     required this.isPlaying,
-    required this.autofocus,
     required this.onTap,
+    this.focusNode,
   });
 
   final int position;
@@ -898,24 +960,34 @@ class _ChannelRow extends StatelessWidget {
   /// are before they start moving.
   final bool isPlaying;
 
-  final bool autofocus;
   final VoidCallback onTap;
+
+  /// Set on the row of the channel playing, which is where the remote is put
+  /// when the list opens.
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     return FocusableTap(
-      autofocus: autofocus,
+      focusNode: focusNode,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Dimens.pagePadding,
+          vertical: 4,
+        ),
         child: Row(
           spacing: 12,
           children: [
             SizedBox(
-              width: 28,
+              width: Dimens.tvChannelListNumberWidth,
               child: Text(
                 '$position',
                 textAlign: TextAlign.end,
+                // Three digits stay on the line they belong to rather than
+                // breaking under the first two.
+                maxLines: 1,
+                softWrap: false,
                 style: const TextStyle(
                   color: Colors.white38,
                   fontWeight: FontWeight.w700,

@@ -213,9 +213,7 @@ void main() {
       expect(find.text('9'), findsNothing);
     });
 
-    testWidgets('the back button is not a stop for the remote', (
-      tester,
-    ) async {
+    testWidgets('the back button is not a stop for the remote', (tester) async {
       await pumpPlayer(tester);
 
       // It is there to say what the remote's own Back key does. Taking the
@@ -228,6 +226,99 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.channelUp);
       await tester.pump();
       expect(find.text('VTV3'), findsWidgets);
+    });
+
+    /// A playlist long enough to have three-digit channel numbers and to put
+    /// the channel playing well below the first screenful of the list.
+    List<TvChannel> longPlaylist() => [
+      for (var i = 1; i <= 150; i++)
+        TvChannel(
+          id: 'ch$i',
+          name: 'Channel $i',
+          url: 'https://example.com/$i/index.m3u8',
+        ),
+    ];
+
+    Future<List<TvChannel>> pumpLongPlayer(WidgetTester tester) async {
+      final playlist = longPlaylist();
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TvPlayerScreen(channel: playlist[99], playlist: playlist),
+        ),
+      );
+      await tester.pump();
+      return playlist;
+    }
+
+    testWidgets('the list opens on the channel playing', (tester) async {
+      await pumpLongPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+
+      // Opening at the top of a 150-channel list would leave the viewer
+      // scrolling to find out where they already are.
+      expect(find.text('Channel 100'), findsWidgets);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'tv-current-channel',
+      );
+    });
+
+    testWidgets('a three-digit channel number stays on one line', (
+      tester,
+    ) async {
+      await pumpLongPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+
+      final number = tester.widget<Text>(
+        find.descendant(of: find.byType(ListView), matching: find.text('100')),
+      );
+      expect(number.maxLines, 1);
+      expect(number.softWrap, isFalse);
+    });
+
+    testWidgets('the list keeps going past the end of the playlist', (
+      tester,
+    ) async {
+      await pumpLongPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+
+      // Past the last channel the list starts the playlist again, the way the
+      // channel keys wrap rather than stopping dead.
+      expect(
+        tester.widget<ListView>(find.byType(ListView)).semanticChildCount,
+        greaterThan(150),
+      );
+
+      // Well past channel 150 from channel 100, and there is still list left.
+      await tester.drag(find.byType(ListView), const Offset(0, -4000));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Channel '), findsWidgets);
+    });
+
+    testWidgets('Back closes the list instead of leaving the channel', (
+      tester,
+    ) async {
+      await pumpLongPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(find.byType(ListView), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // The list is gone and the channel is still on: Back was pointed at the
+      // list while it was open.
+      expect(find.byType(ListView), findsNothing);
+      expect(find.byType(TvPlayerScreen), findsOneWidget);
     });
 
     testWidgets('a single channel leaves the arrows to the controls', (
