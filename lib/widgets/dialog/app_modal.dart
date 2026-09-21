@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Every dialog and bottom sheet in the app goes through this file.
 ///
@@ -30,8 +34,81 @@ Future<T?> showAppModal<T>(
     context: context,
     barrierDismissible: barrierDismissible,
     useSafeArea: true,
-    builder: builder,
+    builder: (dialogContext) => TvModalFocus(child: builder(dialogContext)),
   );
+}
+
+/// Hands the remote to the first control inside a modal, on a television.
+///
+/// A dialog or sheet is its own route, and it opens with the focus on that
+/// route's scope rather than on anything inside it. A phone does not care —
+/// the next thing that happens is a finger landing on a button. A television
+/// has nothing else: no outline is drawn, OK presses nothing, and a dialog
+/// built around a text field cannot be typed into at all, which is what made
+/// adding a second electricity account or editing a movie server impossible
+/// from the sofa.
+///
+/// Every dialog and sheet in the app is wrapped in one of these by
+/// [showAppModal] and [showAppBottomSheet], so no modal has to remember it.
+/// A modal that has already pointed the remote somewhere of its own — a field
+/// with `autofocus`, or a node it asked for by name — keeps that choice; this
+/// only fills the gap where nothing was chosen.
+class TvModalFocus extends StatefulWidget {
+  const TvModalFocus({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<TvModalFocus> createState() => _TvModalFocusState();
+}
+
+class _TvModalFocusState extends State<TvModalFocus> {
+  /// How many frames the modal is given to point the remote somewhere of its
+  /// own before this steps in, and to keep it there afterwards.
+  ///
+  /// More than one, because a modal settles over several frames: a sheet
+  /// builds its list after it has been measured, and the route's own focus
+  /// handling can put the focus back on the scope after the first frame — at
+  /// which point the remote is homeless again.
+  static const _attempts = 5;
+
+  int _attemptsLeft = _attempts;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!deviceType.isTv) return;
+    _scheduleAttempt();
+  }
+
+  /// After the frame that builds the modal, and then on a microtask: its
+  /// controls do not exist until the frame ends, and a field's own
+  /// `autofocus` is only applied once the focus manager runs — which it does
+  /// on a microtask. Looking before that would take the remote off the
+  /// control the modal asked for.
+  void _scheduleAttempt() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      scheduleMicrotask(_attempt);
+    });
+    // A settled modal produces no frames, and a post-frame callback waiting
+    // for a frame nobody asks for never runs.
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
+  void _attempt() {
+    if (!mounted) return;
+    final scope = FocusScope.of(context);
+    // Something inside holds the remote — the modal's own choice, or this.
+    if (scope.focusedChild == null) {
+      scope.traversalDescendants.firstOrNull?.requestFocus();
+    }
+    if (--_attemptsLeft <= 0) return;
+    _scheduleAttempt();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// The app's dialog surface: a titled panel with an optional message/content
@@ -195,15 +272,17 @@ Future<T?> showAppBottomSheet<T>(
     // bottom edge while the content clears the home indicator.
     useSafeArea: false,
     constraints: const BoxConstraints(maxWidth: Dimens.sheetMaxWidth),
-    builder: (sheetContext) => AppBottomSheet(
-      title: title,
-      showDragHandle: showDragHandle,
-      scrollable: scrollable,
-      useBottomSafeArea: useBottomSafeArea,
-      showCloseButton: showCloseButton,
-      maxHeightFactor: maxHeightFactor,
-      padding: padding,
-      child: builder(sheetContext),
+    builder: (sheetContext) => TvModalFocus(
+      child: AppBottomSheet(
+        title: title,
+        showDragHandle: showDragHandle,
+        scrollable: scrollable,
+        useBottomSafeArea: useBottomSafeArea,
+        showCloseButton: showCloseButton,
+        maxHeightFactor: maxHeightFactor,
+        padding: padding,
+        child: builder(sheetContext),
+      ),
     ),
   );
 }

@@ -1352,10 +1352,29 @@ class _AddAccountDialog extends StatefulWidget {
 class _AddAccountDialogState extends State<_AddAccountDialog> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  /// Held explicitly rather than left to the field's `autofocus`: the dialog
+  /// opens with the focus on its own route scope and nothing inside it, so on
+  /// a television the remote has nothing to point at — no outline, and OK
+  /// presses nothing. Asking for it by name is what puts the caret in the
+  /// first field and brings the TV's keyboard up, which is the only way to
+  /// type a second account's credentials.
+  final _usernameFocusNode = FocusNode(debugLabel: 'electric-add-username');
+
   bool _obscurePassword = true;
 
   /// Local copy so forgetting an account updates the dialog right away.
   late List<ElectricAccount> _savedAccounts = widget.savedAccounts;
+
+  @override
+  void initState() {
+    super.initState();
+    // After the frame that builds the field: its node has nothing to attach
+    // to until then.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _usernameFocusNode.requestFocus();
+    });
+  }
 
   Future<void> _forget(ElectricAccount account) async {
     final removed = await widget.onForgetSavedAccount(account);
@@ -1371,6 +1390,7 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _usernameFocusNode.dispose();
     super.dispose();
   }
 
@@ -1411,6 +1431,8 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
               ),
             TextField(
               controller: _usernameController,
+              focusNode: _usernameFocusNode,
+              autofocus: true,
               autocorrect: false,
               textInputAction: TextInputAction.next,
               decoration: cuteInputDecoration(context, l10n.username),
