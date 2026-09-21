@@ -107,6 +107,129 @@ void main() {
       expect(find.text('HTV7'), findsNothing);
     });
 
+    testWidgets('the remote’s own channel buttons move channel', (
+      tester,
+    ) async {
+      await pumpPlayer(tester);
+
+      // What a television remote sends, and what the arrows on a game-pad
+      // style remote do not: `CH+` is the next channel *number*, so it goes
+      // the opposite way from the arrow that walks up the list.
+      await tester.sendKeyEvent(LogicalKeyboardKey.channelUp);
+      await tester.pump();
+      expect(find.text('VTV3'), findsWidgets);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.channelDown);
+      await tester.pump();
+      expect(find.text('VTV1'), findsWidgets);
+    });
+
+    testWidgets('typing a number on the keypad opens that channel', (
+      tester,
+    ) async {
+      await pumpPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+      await tester.pump();
+
+      // Three channels, so one digit is the whole number and there is
+      // nothing to wait for.
+      expect(find.text('HTV7'), findsWidgets);
+    });
+
+    testWidgets('two digits are one channel number, not two channels', (
+      tester,
+    ) async {
+      final long = [
+        for (var i = 1; i <= 20; i++)
+          TvChannel(
+            id: 'ch$i',
+            name: 'Channel $i',
+            url: 'https://example.com/$i/index.m3u8',
+          ),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TvPlayerScreen(channel: long.first, playlist: long),
+        ),
+      );
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+      await tester.pump();
+      // Still waiting: `1` could be the start of `12`, so nothing has moved
+      // and what has been typed is on screen instead.
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('Channel 1'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+      await tester.pump();
+
+      // Twenty channels, so two digits is as long as a number gets and
+      // there is nothing left to wait for.
+      expect(find.text('Channel 12'), findsWidgets);
+    });
+
+    testWidgets('a single digit is acted on once the viewer stops typing', (
+      tester,
+    ) async {
+      final long = [
+        for (var i = 1; i <= 20; i++)
+          TvChannel(
+            id: 'ch$i',
+            name: 'Channel $i',
+            url: 'https://example.com/$i/index.m3u8',
+          ),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TvPlayerScreen(channel: long.first, playlist: long),
+        ),
+      );
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
+      await tester.pump();
+      expect(find.text('Channel 7'), findsNothing);
+
+      // The pause every television keypad has.
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('Channel 7'), findsWidgets);
+    });
+
+    testWidgets('a number no channel has is forgotten', (tester) async {
+      await pumpPlayer(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+      await tester.pump();
+
+      // A television does not explain that channel 9 is not a channel; it
+      // goes back to what was on.
+      expect(find.text('VTV1'), findsWidgets);
+      expect(find.text('9'), findsNothing);
+    });
+
+    testWidgets('the back button is not a stop for the remote', (
+      tester,
+    ) async {
+      await pumpPlayer(tester);
+
+      // It is there to say what the remote's own Back key does. Taking the
+      // focus into it would take the channel buttons and the keypad away
+      // with it, which are the whole point of the page.
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.channelUp);
+      await tester.pump();
+      expect(find.text('VTV3'), findsWidgets);
+    });
+
     testWidgets('a single channel leaves the arrows to the controls', (
       tester,
     ) async {

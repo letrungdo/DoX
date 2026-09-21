@@ -69,6 +69,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// Whether the channel list is open over the picture.
   bool _showChannelList = false;
 
+  /// The channel number being typed on the remote's keypad.
+  ///
+  /// A television takes digits one at a time and waits a moment to see
+  /// whether another is coming — 1 then 2 is channel 12, not channel 1 and
+  /// then channel 2 — so what has been typed so far sits here until the
+  /// pause says the number is finished.
+  String _typedNumber = '';
+  Timer? _typedNumberTimer;
+
   bool _isLoading = true;
   bool _hasError = false;
   bool _showControls = true;
@@ -110,6 +119,10 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// times does not leave a banner sitting on the programme.
   static const _channelNameTimeout = Duration(seconds: 3);
 
+  /// How long a typed digit waits for the next one before the number is
+  /// taken as finished. The pause every television keypad has.
+  static const _typedNumberTimeout = Duration(milliseconds: 1500);
+
   @override
   void initState() {
     super.initState();
@@ -122,6 +135,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   void dispose() {
     _hideControlsTimer?.cancel();
     _channelNameTimer?.cancel();
+    _typedNumberTimer?.cancel();
     unawaited(_setImmersive(false));
     final controller = _controller;
     final listener = _listener;
@@ -403,7 +417,47 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       final wasVisible = _showControls;
       if (!wasVisible) setState(() => _showControls = true);
       _scheduleHideControls();
-      if (deviceType.isTv) _enterControls(afterFrame: !wasVisible);
+      // On a television the bar is shown and nothing more. Handing the
+      // remote to the back button inside it would take the picture's keys
+      // away with it — and the channel buttons and the keypad are the point
+      // of this page. The remote's own Back key is the way out, which is
+      // where a viewer reaches for it anyway.
+      if (deviceType.isTv && !_canChangeChannel) {
+        _enterControls(afterFrame: !wasVisible);
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// The keys a television remote has that a game-pad style one does not:
+  /// the channel pair and the number keypad.
+  ///
+  /// Handled for the whole page rather than for the picture, because they
+  /// mean the same thing wherever the remote happens to be resting — on the
+  /// back button, on the retry button of a channel that would not come up,
+  /// anywhere. Only the arrows are the picture's own, because there they
+  /// compete with moving between controls.
+  KeyEventResult _handlePageKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent || !_canChangeChannel) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+
+    // Up the list is the previous channel; CH+ is the next channel number.
+    // They point opposite ways on purpose — that is what each button means
+    // on the remote it is printed on.
+    if (key == LogicalKeyboardKey.channelDown) {
+      unawaited(_changeChannel(-1));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelUp) {
+      unawaited(_changeChannel(1));
+      return KeyEventResult.handled;
+    }
+    final digit = _digitOf(key);
+    if (digit != null) {
+      _typeDigit(digit);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -415,51 +469,171 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       key == LogicalKeyboardKey.enter ||
       key == LogicalKeyboardKey.gameButtonA;
 
+  /// The digit [key] stands for, from the row of numbers or from a keypad.
+  // Not `const`: `LogicalKeyboardKey` defines its own equality, which a
+  // constant map may not have for its keys.
+  static final _digits = <LogicalKeyboardKey, String>{
+    LogicalKeyboardKey.digit0: '0',
+    LogicalKeyboardKey.digit1: '1',
+    LogicalKeyboardKey.digit2: '2',
+    LogicalKeyboardKey.digit3: '3',
+    LogicalKeyboardKey.digit4: '4',
+    LogicalKeyboardKey.digit5: '5',
+    LogicalKeyboardKey.digit6: '6',
+    LogicalKeyboardKey.digit7: '7',
+    LogicalKeyboardKey.digit8: '8',
+    LogicalKeyboardKey.digit9: '9',
+    LogicalKeyboardKey.numpad0: '0',
+    LogicalKeyboardKey.numpad1: '1',
+    LogicalKeyboardKey.numpad2: '2',
+    LogicalKeyboardKey.numpad3: '3',
+    LogicalKeyboardKey.numpad4: '4',
+    LogicalKeyboardKey.numpad5: '5',
+    LogicalKeyboardKey.numpad6: '6',
+    LogicalKeyboardKey.numpad7: '7',
+    LogicalKeyboardKey.numpad8: '8',
+    LogicalKeyboardKey.numpad9: '9',
+  };
+
+  String? _digitOf(LogicalKeyboardKey key) => _digits[key];
+
+  /// Takes one more digit of a channel number.
+  ///
+  /// The number is only acted on once it can no longer grow: either the
+  /// viewer has typed as many digits as the list has, or they have stopped.
+  /// A leading zero is nobody's channel, so it is ignored rather than
+  /// counted towards the length.
+  void _typeDigit(String digit) {
+    final typed = _typedNumber + digit;
+    if (typed == '0') return;
+
+    _typedNumberTimer?.cancel();
+    setState(() {
+      _typedNumber = typed;
+      // The name of the channel being left has nothing to say now.
+      _showChannelName = false;
+    });
+
+    if (typed.length >= widget.playlist.length.toString().length) {
+      _openTypedNumber();
+      return;
+    }
+    _typedNumberTimer = Timer(_typedNumberTimeout, _openTypedNumber);
+  }
+
+  /// Goes to the channel the typed number stands for.
+  ///
+  /// Out of range it is simply forgotten: a television does not explain that
+  /// channel 300 is not a channel, it goes back to what was on.
+  void _openTypedNumber() {
+    _typedNumberTimer?.cancel();
+    final typed = int.tryParse(_typedNumber);
+    if (!mounted) return;
+    setState(() => _typedNumber = '');
+    if (typed == null || typed < 1 || typed > widget.playlist.length) return;
+    unawaited(_changeChannel(typed - 1 - _index));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final controller = _controller;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: TvFocusSurface(
-        node: _videoFocusNode,
-        child: Focus(
-          focusNode: _videoFocusNode,
-          autofocus: true,
-          onKeyEvent: _handleVideoKeyEvent,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _toggleControls,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (controller != null && controller.value.isInitialized)
-                  Center(
-                    child: AspectRatio(
-                      aspectRatio: controller.value.aspectRatio,
-                      child: VideoPlayer(controller),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.of(context).pop(_channel);
+      },
+      child: Focus(
+        // Watching the whole page, taking no turn of its own: the keys below
+        // are read after whatever holds the focus has declined them.
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _handlePageKeyEvent,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: TvFocusSurface(
+            node: _videoFocusNode,
+            child: Focus(
+              focusNode: _videoFocusNode,
+              autofocus: true,
+              onKeyEvent: _handleVideoKeyEvent,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleControls,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (controller != null && controller.value.isInitialized)
+                      Center(
+                        child: AspectRatio(
+                          aspectRatio: controller.value.aspectRatio,
+                          child: VideoPlayer(controller),
+                        ),
+                      ),
+                    if (_isLoading) const Center(child: Loading()),
+                    if (_hasError) _buildError(l10n),
+                    ExcludeFocus(
+                      // Hidden, the controls are only invisible: left in the focus
+                      // tree the remote lands on a button nobody can see, and the TV
+                      // paints its outline around nothing at all.
+                      excluding: !_showControls,
+                      child: AnimatedOpacity(
+                        opacity: _showControls ? 1 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: IgnorePointer(
+                          ignoring: !_showControls,
+                          child: _buildControls(l10n),
+                        ),
+                      ),
                     ),
-                  ),
-                if (_isLoading) const Center(child: Loading()),
-                if (_hasError) _buildError(l10n),
-                ExcludeFocus(
-                  // Hidden, the controls are only invisible: left in the focus
-                  // tree the remote lands on a button nobody can see, and the TV
-                  // paints its outline around nothing at all.
-                  excluding: !_showControls,
-                  child: AnimatedOpacity(
-                    opacity: _showControls ? 1 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: IgnorePointer(
-                      ignoring: !_showControls,
-                      child: _buildControls(l10n),
-                    ),
+                    if (_typedNumber.isNotEmpty)
+                      _buildTypedNumber()
+                    else if (_showChannelName && !_showChannelList)
+                      _buildChannelName(),
+                    if (_showChannelList) _buildChannelList(l10n),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The channel number as it is being typed.
+  ///
+  /// Bigger than the banner it stands in for, and in the same corner: it is
+  /// the one thing on screen the viewer is waiting on, and they are reading
+  /// it to check they pressed what they meant to.
+  Widget _buildTypedNumber() {
+    return IgnorePointer(
+      child: Align(
+        alignment: AlignmentDirectional.bottomStart,
+        child: SafeArea(
+          child: Padding(
+            padding: Dimens.screenPadding,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(Dimens.radiusCard),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                child: Text(
+                  _typedNumber,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (_showChannelName && !_showChannelList) _buildChannelName(),
-                if (_showChannelList) _buildChannelList(l10n),
-              ],
+              ),
             ),
           ),
         ),
@@ -636,14 +810,21 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                 child: Row(
                   spacing: 8,
                   children: [
-                    FocusableTap(
-                      focusNode: _backFocusNode,
-                      onTap: () => Navigator.of(context).maybePop(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
+                    ExcludeFocus(
+                      // The remote has a Back key of its own, so the button
+                      // is a label for it rather than a stop on the way
+                      // round the page — and leaving it out of the focus
+                      // tree is what keeps the picture holding the keys.
+                      excluding: deviceType.isTv && _canChangeChannel,
+                      child: FocusableTap(
+                        focusNode: _backFocusNode,
+                        onTap: () => Navigator.of(context).pop(_channel),
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

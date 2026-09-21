@@ -8,10 +8,16 @@ import 'package:flutter/material.dart';
 
 /// One channel in the grid: its logo over its name.
 class TvChannelCard extends StatelessWidget {
-  const TvChannelCard({super.key, required this.channel, required this.onTap});
+  const TvChannelCard({
+    super.key,
+    required this.channel,
+    required this.onTap,
+    this.focusNode,
+  });
 
   final TvChannel channel;
   final VoidCallback onTap;
+  final FocusNode? focusNode;
 
   /// Chosen so that once the television's text scale has been applied the
   /// name is drawn at the 18sp the leanback guidance asks for.
@@ -29,6 +35,7 @@ class TvChannelCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       padding: EdgeInsets.zero,
       radius: Dimens.radiusCard,
+      focusNode: focusNode,
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

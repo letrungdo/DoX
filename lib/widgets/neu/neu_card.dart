@@ -21,9 +21,11 @@ class NeuCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.clipBehavior = Clip.antiAlias,
+    this.focusNode,
   });
 
   final Widget? child;
+  final FocusNode? focusNode;
 
   /// Fill that replaces the shared surface colour, for cards that carry a
   /// semantic tint (`colors.successSoft` and friends). This is how a card shows
@@ -87,6 +89,7 @@ class NeuCard extends StatelessWidget {
     // same 3% here reads as the whole panel lurching.
     return NeuPress(
       pressedScale: 0.99,
+      focusNode: focusNode,
       onTap: onTap,
       onLongPress: onLongPress,
       builder: (context, pressed) => panel(pressed),

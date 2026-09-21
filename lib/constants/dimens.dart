@@ -122,12 +122,9 @@ class Dimens {
   /// from across a room, and it is the only cue a television gets.
   static const focusRingWidth = 2.5;
 
-  /// Margin a television keeps free along every edge, because the panel may
-  /// crop the outer band of the picture (overscan). Google's leanback guidance
-  /// puts it at 5% of the screen, which on the 960x540dp a 1080p TV reports is
-  /// 48dp across and 27dp down. Injected into the media query by `TvShell`, so
-  /// every `SafeArea` in the app honours it without knowing why.
-  static const tvOverscan = EdgeInsets.symmetric(horizontal: 48, vertical: 27);
+  /// Shared television margins, injected by `TvShell` for every page.
+  /// The right edge uses a compact 24dp inset to give content more room.
+  static const tvOverscan = EdgeInsets.fromLTRB(48, 27, 24, 27);
 
   /// How far the television's focus outline is drawn outside the control it
   /// marks, so the control's own edge stays readable underneath it.

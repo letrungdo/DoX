@@ -2,6 +2,8 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -110,7 +112,7 @@ class LunarCalendarGrid extends StatelessWidget {
     final isSpecialLunar = lunar.day == 1 || lunar.day == 15;
     final lunarColor = isSpecialLunar ? scheme.error : scheme.onSurfaceVariant;
 
-    return Container(
+    final cell = Container(
       margin: _cellMargin,
       width: double.infinity,
       decoration: BoxDecoration(
@@ -169,6 +171,18 @@ class LunarCalendarGrid extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    // A television has no finger to put on a day. `table_calendar` hands the
+    // tap to its own detector, which carries no focus node, so without this
+    // the whole month is scenery the D-pad walks straight past — and with it
+    // the page below, which is only reachable by scrolling through the grid.
+    if (!deviceType.isTv) return cell;
+    return FocusableTap(
+      // Selecting the day that is already selected is what it already was, so
+      // the extra tap this adds on a device that has both costs nothing.
+      onTap: () => onDaySelected(date, date),
+      child: cell,
     );
   }
 

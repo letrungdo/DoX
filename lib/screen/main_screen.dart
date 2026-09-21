@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/extensions/app_page_extensions.dart';
 import 'package:do_x/extensions/context_extensions.dart';
@@ -13,6 +14,8 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:do_x/widgets/update_download_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -102,19 +105,6 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       icon: visuals.icon,
       activeIcon: visuals.activeIcon,
       label: visuals.label,
-    );
-  }
-
-  /// The same tab, drawn for the rail a television navigates with.
-  NavigationRailDestination _railDestinationOf(
-    AppPage page,
-    AppLocalizations l10n,
-  ) {
-    final visuals = _navVisualsOf(page, l10n);
-    return NavigationRailDestination(
-      icon: visuals.icon,
-      selectedIcon: visuals.activeIcon,
-      label: Text(visuals.label),
     );
   }
 
@@ -209,6 +199,21 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   /// row of the page, which on a feed of a few hundred articles means it is not
   /// reachable at all. Beside the content it sits level with whatever row is
   /// focused, so one press of LEFT lands on it from anywhere in the list.
+  /// The tab rail a television navigates with.
+  ///
+  /// Beside the content rather than under it. Not a style choice — it is the
+  /// only placement a remote can use: a bar under the content is reachable
+  /// only by walking the D-pad *past* every row of the page, which on a feed
+  /// of a few hundred articles means it is not reachable at all. Beside the
+  /// content it sits level with whatever row is focused, so one press of LEFT
+  /// lands on it from anywhere in the list.
+  ///
+  /// Built by hand rather than from [NavigationRail], which could not be
+  /// talked into this shape: laid out `extended` it draws the selection
+  /// behind the icon alone with the label outside it, and its margins are
+  /// fixed. A rail read from a sofa wants the opposite — the row wide and
+  /// the rail narrow. These are five rows; building them is less work than
+  /// arguing with that.
   Widget _buildTabRail(
     BuildContext context, {
     required TabsRouter tabsRouter,
@@ -216,31 +221,96 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     required List<PageRouteInfo> routes,
     required AppLocalizations l10n,
   }) {
+    final selected = tabsRouter.activeIndex.clamp(0, routes.length - 1);
     return ColoredBox(
       color: context.neu.base,
-      // The tab host does not inset its own body (each tab is a full page that
-      // insets itself), so the rail has to clear the TV's overscan band on the
-      // left itself. Not on the right: that edge is the seam with the content.
+      // The tab host does not inset its own body (each tab is a full page
+      // that insets itself), so the rail keeps its own margin. Top and
+      // bottom clear the television's overscan band in full; the left is a
+      // plain margin, because 48dp of caution on the one edge nobody reads
+      // was costing the page more than the rail's contents do.
       child: SafeArea(
+        left: false,
         right: false,
-        child: NavigationRail(
-          selectedIndex: tabsRouter.activeIndex.clamp(0, routes.length - 1),
-          onDestinationSelected: (value) => _onTabSelected(
-            context,
-            tabsRouter: tabsRouter,
-            tabs: tabs,
-            routes: routes,
-            value: value,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(_railPadding, 8, 8, 8),
+          // Every row as wide as the widest, so the rail is no wider than its
+          // longest label and each row still fills it.
+          child: IntrinsicWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < tabs.length; i++)
+                  _buildRailItem(
+                    context,
+                    page: tabs[i],
+                    l10n: l10n,
+                    isSelected: i == selected,
+                    onTap: () => _onTabSelected(
+                      context,
+                      tabsRouter: tabsRouter,
+                      tabs: tabs,
+                      routes: routes,
+                      value: i,
+                    ),
+                  ),
+              ],
+            ),
           ),
-          // Every label on show, and the rail standing in the layout rather
-          // than over it. Both were tried the other way: icons alone that
-          // named themselves when the remote arrived read well until the
-          // expansion covered the first column of the page behind it, and a
-          // page is not something a navigation bar may sit on top of.
-          labelType: NavigationRailLabelType.all,
-          destinations: tabs
-              .map((tab) => _railDestinationOf(tab, l10n))
-              .toList(),
+        ),
+      ),
+    );
+  }
+
+  /// The room between the screen's left edge and the rail's rows.
+  static const _railPadding = 20.0;
+
+  Widget _buildRailItem(
+    BuildContext context, {
+    required AppPage page,
+    required AppLocalizations l10n,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final visuals = _navVisualsOf(page, l10n);
+    final scheme = context.theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: FocusableTap(
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isSelected ? context.neuTint(scheme.primary) : null,
+            borderRadius: BorderRadius.circular(Dimens.radiusControl),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              spacing: 12,
+              children: [
+                IconTheme.merge(
+                  data: IconThemeData(
+                    color: isSelected
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant,
+                    size: 24,
+                  ),
+                  child: isSelected ? visuals.activeIcon : visuals.icon,
+                ),
+                Text(
+                  visuals.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? scheme.primary : scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -323,14 +393,18 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                             l10n: l10n,
                           ),
                         ),
-                        // The rail has already spent the left inset; leaving it
-                        // in the media query would inset the page a second time
-                        // against the rail's own edge.
+                        // The rail separates this edge from the screen, so
+                        // only full-screen content needs the left safe inset.
                         Expanded(
-                          child: MediaQuery.removePadding(
-                            context: context,
-                            removeLeft: true,
+                          child: ValueListenableBuilder<bool>(
+                            valueListenable: immersiveMode,
                             child: content,
+                            builder: (context, isImmersive, child) =>
+                                MediaQuery.removePadding(
+                                  context: context,
+                                  removeLeft: !isImmersive,
+                                  child: child!,
+                                ),
                           ),
                         ),
                       ],

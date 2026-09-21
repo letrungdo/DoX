@@ -96,10 +96,178 @@ class TvShell extends StatelessWidget {
               ignoreTextFields: false,
             ),
           },
-          child: child,
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              DirectionalFocusIntent: _DirectionalFocusOrScrollAction(),
+            },
+            child: child,
+          ),
         ),
       ),
     );
+  }
+}
+
+/// Moves the remote, and scrolls the page when there is nowhere to move it.
+///
+/// A phone scrolls under a finger wherever the finger lands. A television has
+/// only the focus, so a page scrolls exactly as far as its last focusable
+/// control and no further — and anything printed below that, a card of
+/// details under a calendar, is on the page but out of reach for good.
+///
+/// So when the arrow finds nothing to move to, it scrolls instead. Only then:
+/// while there is another control in that direction, going to it is what the
+/// viewer meant, and the scrolling that brings it into view happens anyway.
+/// Marks the page a control belongs to, so the remote can be kept inside it.
+///
+/// `AppScaffold` puts one of these around every page, which nests: the tab
+/// host is a page whose body holds the rail *and* whichever page is on
+/// screen, and that page brings its own. So the nearest one above a control
+/// tells the rail apart from the page beside it.
+class TvPageArea extends InheritedWidget {
+  const TvPageArea({super.key, required super.child});
+
+  /// The page [context] sits in, or null for anything outside one — a
+  /// full-screen player, a dialog, the app before a page is built.
+  ///
+  /// The element, not the widget. A widget is rebuilt into a new instance
+  /// whenever anything above it changes, so comparing those says two
+  /// controls are on different pages every time the page redraws — which
+  /// stopped the remote moving inside the tab rail at all. The element is
+  /// the same object for as long as the page is on screen.
+  static Element? of(BuildContext? context) {
+    if (context == null || !context.mounted) return null;
+    return context.getElementForInheritedWidgetOfExactType<TvPageArea>();
+  }
+
+  @override
+  bool updateShouldNotify(TvPageArea oldWidget) => false;
+}
+
+class _DirectionalFocusOrScrollAction extends Action<DirectionalFocusIntent> {
+  /// How far one press carries the page when it is scrolling rather than
+  /// moving the focus. A little over half a screen: enough to be worth the
+  /// press, little enough to keep a line of sight on what was already read.
+  static const _pageFraction = 0.6;
+
+  static const _duration = Duration(milliseconds: 220);
+
+  @override
+  Object? invoke(DirectionalFocusIntent intent) {
+    final node = FocusManager.instance.primaryFocus;
+    if (node == null) return null;
+
+    final from = TvPageArea.of(node.context);
+    if (!node.focusInDirection(intent.direction)) {
+      _scroll(node.context, intent.direction);
+      return null;
+    }
+    if (from == null || !_isVertical(intent.direction)) return null;
+
+    // Where the focus went is only known after the manager has applied it,
+    // which it does on a microtask — before any of it is drawn, so putting
+    // it back here costs nothing on screen.
+    scheduleMicrotask(() => _keepInsidePage(node, from, intent.direction));
+    return null;
+  }
+
+  /// Puts the remote back and scrolls, if the arrow took it off the page.
+  ///
+  /// Up and down belong to the page: a page whose lower half holds nothing
+  /// pressable has the tab rail as the nearest thing below its last control,
+  /// so pressing down there threw the remote sideways into the rail — and
+  /// the page, having never run out of places to send the focus, never
+  /// scrolled. Leaving the page is what left and right are for.
+  void _keepInsidePage(
+    FocusNode node,
+    Element from,
+    TraversalDirection direction,
+  ) {
+    final landed = FocusManager.instance.primaryFocus;
+    if (landed == null || identical(TvPageArea.of(landed.context), from)) {
+      return;
+    }
+    node.requestFocus();
+    _scroll(node.context, direction);
+  }
+
+  static bool _isVertical(TraversalDirection direction) =>
+      direction == TraversalDirection.up ||
+      direction == TraversalDirection.down;
+
+  void _scroll(BuildContext? context, TraversalDirection direction) {
+    if (context == null || !context.mounted) return;
+    final forward = switch (direction) {
+      TraversalDirection.down => true,
+      TraversalDirection.up => false,
+      // Sideways is for the rail and for a row of chips, both of which have
+      // their own controls to move between. Nothing here to scroll.
+      TraversalDirection.left || TraversalDirection.right => null,
+    };
+    if (forward == null) return;
+
+    final position = _pageScrollPosition(context);
+    if (position == null) return;
+
+    final step = position.viewportDimension * _pageFraction;
+    final target = (position.pixels + (forward ? step : -step)).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if ((target - position.pixels).abs() < 1) return;
+
+    position.animateTo(target, duration: _duration, curve: Curves.easeOutCubic);
+  }
+
+  /// The list this page is read by scrolling.
+  ///
+  /// Usually the one the focused control sits in, and looking up the tree
+  /// finds it. But the control need not be inside it at all — the remote can
+  /// be on the app bar, or over on the tab rail — and then the page has to be
+  /// searched from the top down instead.
+  ScrollPosition? _pageScrollPosition(BuildContext context) {
+    final enclosing = Scrollable.maybeOf(
+      context,
+      axis: Axis.vertical,
+    )?.position;
+    if (_canScroll(enclosing)) return enclosing;
+
+    final page = TvPageArea.of(context);
+    if (page == null) return null;
+    return _firstScrollableIn(page);
+  }
+
+  /// Whether [position] has anywhere to go.
+  ///
+  /// A list that fits its viewport is still a list, and stopping at the first
+  /// one found would mean the tab rail — which is scrollable, and never has
+  /// to scroll — answering for the page beside it.
+  bool _canScroll(ScrollPosition? position) =>
+      position != null &&
+      position.hasContentDimensions &&
+      position.maxScrollExtent > 0;
+
+  /// Searches [element]'s subtree for the page's own list.
+  ///
+  /// Downwards, which the framework has no api for — `Scrollable.of` only
+  /// looks up. Walking the elements is the way to ask the question, and this
+  /// only runs on a press that had nowhere else to go.
+  ScrollPosition? _firstScrollableIn(Element element) {
+    ScrollPosition? found;
+    void visit(Element child) {
+      if (found != null) return;
+      if (child is StatefulElement && child.state is ScrollableState) {
+        final position = (child.state as ScrollableState).position;
+        if (position.axis == Axis.vertical && _canScroll(position)) {
+          found = position;
+          return;
+        }
+      }
+      child.visitChildren(visit);
+    }
+
+    element.visitChildren(visit);
+    return found;
   }
 }
 
@@ -146,13 +314,17 @@ class _FocusOutlineState extends State<_FocusOutline> {
   Rect? _rect;
   bool _hadControl = false;
 
-  /// Until when the outline keeps re-measuring itself every frame.
+  /// How many more frames the outline re-measures itself for.
   ///
   /// The control the remote lands on grows into place rather than snapping,
   /// so a single measurement taken the moment focus moves is of a card that
   /// has not finished arriving. Following it for the length of that animation
   /// is what keeps the ring on the card instead of inside it.
-  DateTime? _settleUntil;
+  ///
+  /// Counted in frames rather than against the clock: a widget test runs on
+  /// its own time, where a wall-clock deadline is never reached and the
+  /// frames this asks for never stop coming.
+  int _settleFrames = 0;
 
   @override
   void initState() {
@@ -171,23 +343,23 @@ class _FocusOutlineState extends State<_FocusOutline> {
   /// taken focus is usually built by that very frame, so there is nothing laid
   /// out to measure until it ends.
   void _scheduleMeasure() {
-    _settleUntil = DateTime.now().add(_settleWindow);
-    _measureNextFrame();
+    final wasSettling = _settleFrames > 0;
+    _settleFrames = _settleFrameCount;
+    if (!wasSettling) _measureNextFrame();
   }
 
   /// A little longer than the lift itself, so the last frame of it is caught.
-  static const _settleWindow = Duration(milliseconds: 180);
+  static const _settleFrameCount = 12;
 
   void _measureNextFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _measure();
-      final until = _settleUntil;
-      if (until == null || !DateTime.now().isBefore(until)) return;
+      if (--_settleFrames <= 0) return;
       _measureNextFrame();
       // The control is animating, so frames are being produced anyway — but
       // not once it settles, and a post-frame callback waiting for a frame
-      // nobody asks for never runs. Asking costs one idle frame per focus
+      // nobody asks for never runs. Asking costs a few idle frames per focus
       // move and is what makes the last measurement the one that lands.
       SchedulerBinding.instance.scheduleFrame();
     });

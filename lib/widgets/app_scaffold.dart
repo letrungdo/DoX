@@ -1,3 +1,4 @@
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 
 /// The [Scaffold] every page in the app is built on.
@@ -70,7 +71,11 @@ class AppScaffold extends StatelessWidget {
 
     return ExcludeFocus(
       excluding: !isCurrent,
-      child: _build(context, body: body, appBar: appBar),
+      // Names this page, so a television's arrow keys can tell the page from
+      // the tab rail beside it and stay where they were put.
+      child: TvPageArea(
+        child: _build(context, body: body, appBar: appBar),
+      ),
     );
   }
 

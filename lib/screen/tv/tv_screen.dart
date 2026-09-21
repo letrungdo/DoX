@@ -45,6 +45,14 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     with TabReselect {
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
+  final Map<String, FocusNode> _channelFocusNodes = {};
+
+  FocusNode _getFocusNodeForChannel(String url) {
+    return _channelFocusNodes.putIfAbsent(
+      url,
+      () => FocusNode(debugLabel: 'tv-channel-$url'),
+    );
+  }
 
   @override
   String get tabRouteName => TvRoute.name;
@@ -57,6 +65,9 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
 
   @override
   void dispose() {
+    for (final node in _channelFocusNodes.values) {
+      node.dispose();
+    }
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -88,56 +99,45 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
         ),
         actions: [_buildCountryButton(viewModel, l10n)],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // The content cap has to be applied by hand in a sliver tree: the
-          // padding is what centres the column, so it carries half of
-          // whatever the viewport has over [Dimens.contentMaxWidth].
-          final overflow = constraints.maxWidth - Dimens.contentMaxWidth;
-          final horizontalPadding =
-              Dimens.pagePadding + (overflow > 0 ? overflow / 2 : 0);
-
-          return Column(
-            children: [
-              // Above the scroll view rather than pinned inside it: the box
-              // is how anyone reaches a channel in a list this long, so it
-              // stays put, and a field has no height a header could be told
-              // in advance — it grows with the text scale.
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  12,
-                  horizontalPadding,
-                  4,
-                ),
-                child: _buildSearchField(viewModel, l10n),
+      body: Column(
+        children: [
+          // Above the scroll view rather than pinned inside it: the box
+          // is how anyone reaches a channel in a list this long, so it
+          // stays put, and a field has no height a header could be told
+          // in advance — it grows with the text scale.
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              Dimens.pagePadding,
+              12,
+              Dimens.pagePadding,
+              4,
+            ),
+            child: _buildSearchField(viewModel, l10n),
+          ),
+          Expanded(
+            child: RefreshIndicator.adaptive(
+              onRefresh: viewModel.onRefresh,
+              child: CustomScrollView(
+                controller: _scrollController,
+                // The grid can be shorter than the viewport — one search
+                // result, or none — and pull to refresh has to keep
+                // working when it is.
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  if (viewModel.groups.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _buildGroupChips(
+                        viewModel,
+                        l10n,
+                        Dimens.pagePadding,
+                      ),
+                    ),
+                  _buildContent(viewModel, l10n, Dimens.pagePadding),
+                ],
               ),
-              Expanded(
-                child: RefreshIndicator.adaptive(
-                  onRefresh: viewModel.onRefresh,
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    // The grid can be shorter than the viewport — one search
-                    // result, or none — and pull to refresh has to keep
-                    // working when it is.
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      if (viewModel.groups.isNotEmpty)
-                        SliverToBoxAdapter(
-                          child: _buildGroupChips(
-                            viewModel,
-                            l10n,
-                            horizontalPadding,
-                          ),
-                        ),
-                      _buildContent(viewModel, l10n, horizontalPadding),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -203,40 +203,45 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     );
   }
 
-  /// Category chips. Full-bleed on purpose — the row scrolls, so its first and
-  /// last chip sit at the content edge while the rest can run past it.
+  /// Keep the clip inside the page margins and the viewport inside fixed
+  /// gutters, so chip shadows have room without painting into the page padding.
   Widget _buildGroupChips(
     TvViewModel viewModel,
     AppLocalizations l10n,
     double horizontalPadding,
   ) {
-    return SizedBox(
-      height: 46,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          8,
-          horizontalPadding,
-          8,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ClipRect(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: SizedBox(
+            height: 46,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              clipBehavior: Clip.none,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: viewModel.groups.length + 1,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return NeuChip(
+                    label: l10n.all,
+                    isSelected: viewModel.selectedGroup == null,
+                    onTap: () => viewModel.selectGroup(null),
+                  );
+                }
+                final group = viewModel.groups[index - 1];
+                return NeuChip(
+                  label: tvCategoryLabel(group, l10n),
+                  isSelected: viewModel.selectedGroup == group,
+                  onTap: () => viewModel.selectGroup(group),
+                );
+              },
+            ),
+          ),
         ),
-        itemCount: viewModel.groups.length + 1,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return NeuChip(
-              label: l10n.all,
-              isSelected: viewModel.selectedGroup == null,
-              onTap: () => viewModel.selectGroup(null),
-            );
-          }
-          final group = viewModel.groups[index - 1];
-          return NeuChip(
-            label: tvCategoryLabel(group, l10n),
-            isSelected: viewModel.selectedGroup == group,
-            onTap: () => viewModel.selectGroup(group),
-          );
-        },
       ),
     );
   }
@@ -295,7 +300,9 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
         itemBuilder: (context, index) {
           final channel = viewModel.channels[index];
           return TvChannelCard(
+            key: ValueKey(channel.url),
             channel: channel,
+            focusNode: _getFocusNodeForChannel(channel.url),
             onTap: () => _openChannel(channel, viewModel.channels),
           );
         },
@@ -322,9 +329,21 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     );
   }
 
-  void _openChannel(TvChannel channel, List<TvChannel> playlist) {
+  Future<void> _openChannel(TvChannel channel, List<TvChannel> playlist) async {
     // The whole list travels with the channel: the player is a television,
     // and up and down there move to the next channel rather than back here.
-    context.pushRoute(TvPlayerRoute(channel: channel, playlist: playlist));
+    final finalChannel = await context.pushRoute<TvChannel?>(
+      TvPlayerRoute(channel: channel, playlist: playlist),
+    );
+    if (!mounted) return;
+
+    final targetChannel = finalChannel ?? channel;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final node = _channelFocusNodes[targetChannel.url];
+      if (node != null) {
+        node.requestFocus();
+      }
+    });
   }
 }
