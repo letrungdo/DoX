@@ -45,6 +45,10 @@ https://dl.dropboxusercontent.com/s/xyz/bacgiang.m3u8
 https://example.com/drt/index.m3u8
 #EXTINF:-1 group-title="Địa phương",Đắk Lắk
 https://example.com/daklak/chunklist.m3u8
+#EXTINF:-1 group-title="INDONESIA",VTV HD
+https://example.com/vtv-id/index.m3u8
+#EXTINF:-1 ,[智利]VTV Aconcaga
+https://example.com/aconcaga/playlist.m3u8
 `;
 
 const build = () => curate(parsePlaylist(PRIMARY), parsePlaylist(EXTRA));
@@ -121,6 +125,23 @@ Deno.test("drops what is not a Vietnamese channel on a playable stream", () => {
   // A redirector and a file-sharing link are not streams.
   assertFalse(found.some((n) => n.includes("Hà Nam")));
   assertFalse(found.some((n) => n.includes("Bắc Giang")));
+});
+
+Deno.test("another country's channel by the same name is not ours", () => {
+  // Both of these reached the page. `VTV` is Vietnam's national broadcaster
+  // and also Indonesia's channel, the Maldives', Uruguay's and Chile's — and
+  // every one of those is called just that, where a Vietnamese VTV channel
+  // always carries a number or a province after it.
+  assertFalse(names().includes("VTV"));
+  assertFalse(names().includes("VTV HD"));
+});
+
+Deno.test("the country in the brackets is read before they are stripped", () => {
+  // `[智利]` is Chile. The brackets go, because the ones the app cares about
+  // are `[Geo-blocked]` and `[Not 24/7]` — but what goes with them is the
+  // clearest statement in the entry of where the channel is from, so it is
+  // read first.
+  assertFalse(names().some((name) => name.includes("Aconcaga")));
 });
 
 Deno.test("every channel has a slug of its own", () => {

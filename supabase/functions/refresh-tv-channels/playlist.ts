@@ -32,6 +32,16 @@ export interface Channel {
 interface Entry {
   id: string;
   name: string;
+  /**
+   * The name as the playlist wrote it, brackets and all.
+   *
+   * The collection marks a channel's country in them — `[智利]VTV Aconcaga`
+   * is Chile's — and [cleanName] strips brackets, because the ones that
+   * matter to the app are `[Geo-blocked]` and `[Not 24/7]`. What is thrown
+   * out with them is the clearest statement in the entry of where the
+   * channel is from, so it is kept here for [isVietnamese] to read.
+   */
+  rawName: string;
   url: string;
   logo: string | null;
   groups: string[];
@@ -105,6 +115,7 @@ export function parsePlaylist(content: string): Entry[] {
     entries.push({
       id: attributes["tvg-id"] || line,
       name: cleaned === "" ? line : cleaned,
+      rawName: name,
       url: line,
       logo: logo === "" ? null : logo,
       groups: group.split(";").map((g) => g.trim()).filter((g) => g !== ""),
@@ -328,15 +339,27 @@ function isVietnamese(entry: Entry): boolean {
   if (country) return country.toLowerCase() === "vn";
 
   // A name in another script is another country's channel, whatever bucket
-  // the collection filed it under.
-  if (FOREIGN_SCRIPT.test(entry.name)) return false;
+  // the collection filed it under. Read off the untouched name, because the
+  // script is usually inside the brackets the parser drops.
+  if (FOREIGN_SCRIPT.test(entry.rawName)) return false;
 
   // The name alone, never the group: the collection's shelves are broad
   // enough that a `VIETNAM TV24` bucket holds channels from anywhere.
   const name = foldAccents(entry.name);
+  if (FOREIGN_NAMESAKE.test(name)) return false;
   if (NETWORK.test(name) || PROVINCE.test(name)) return true;
   return name !== entry.name.toLowerCase();
 }
+
+/**
+ * Other countries' channels that read as a Vietnamese network.
+ *
+ * `VTV` is Vietnam's national broadcaster, and also Indonesia's channel, the
+ * Maldives', Uruguay's and Chile's — and every one of those is called just
+ * that, where a Vietnamese VTV channel always carries a number or a province
+ * after it. So the bare name belongs to somebody else.
+ */
+const FOREIGN_NAMESAKE = /^vtv( ?hd| ?sd)?$/;
 
 /** A letter from a script other than the Latin one Vietnamese is written in. */
 const FOREIGN_SCRIPT = /[^\P{L}\p{Script=Latin}]/u;
