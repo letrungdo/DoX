@@ -18,6 +18,7 @@ import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_chip.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 /// Live television: the channel list of the picked country from the iptv-org
@@ -45,6 +46,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     with TabReselect {
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode(debugLabel: 'tv-search');
   final Map<String, FocusNode> _channelFocusNodes = {};
 
   FocusNode _getFocusNodeForChannel(String url) {
@@ -68,6 +70,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     for (final node in _channelFocusNodes.values) {
       node.dispose();
     }
+    _searchFocusNode.dispose();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -78,66 +81,84 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     final l10n = AppLocalizations.of(context);
     final viewModel = context.watch<TvViewModel>();
 
-    return AppScaffold(
-      appBar: DoAppBar(
-        title: l10n.tvChannels,
-        titleSuffix: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 8,
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          // Android TV Remote Mic/Search button matches these hardware web/android scan codes
+          final keyCode = event.logicalKey.keyId;
+          const searchKeyId = 0x10000054; // Android KEYCODE_SEARCH / Web Search
+          const voiceDialKeyId = 0x1000005c; // Android KEYCODE_VOICE_DIAL
+
+          if (keyCode == searchKeyId || keyCode == voiceDialKeyId) {
+            _searchFocusNode.requestFocus();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AppScaffold(
+        appBar: DoAppBar(
+          title: l10n.tvChannels,
+          titleSuffix: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              // How much this country has on air, which is the one number that
+              // changes with every pick of the flag beside it.
+              if (viewModel.totalChannels > 0)
+                Text(
+                  l10n.tvChannelCount(viewModel.totalChannels),
+                  style: context.theme.textTheme.bodySmall?.copyWith(
+                    color: context.theme.hintColor,
+                  ),
+                ),
+              const AppBarSyncIcon<TvViewModel>(selector: _isBusy),
+            ],
+          ),
+          actions: [_buildCountryButton(viewModel, l10n)],
+        ),
+        body: Column(
           children: [
-            // How much this country has on air, which is the one number that
-            // changes with every pick of the flag beside it.
-            if (viewModel.totalChannels > 0)
-              Text(
-                l10n.tvChannelCount(viewModel.totalChannels),
-                style: context.theme.textTheme.bodySmall?.copyWith(
-                  color: context.theme.hintColor,
+            // Above the scroll view rather than pinned inside it: the box
+            // is how anyone reaches a channel in a list this long, so it
+            // stays put, and a field has no height a header could be told
+            // in advance — it grows with the text scale.
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                Dimens.pagePadding,
+                12,
+                Dimens.pagePadding,
+                4,
+              ),
+              child: _buildSearchField(viewModel, l10n),
+            ),
+            Expanded(
+              child: RefreshIndicator.adaptive(
+                onRefresh: viewModel.onRefresh,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  // The grid can be shorter than the viewport — one search
+                  // result, or none — and pull to refresh has to keep
+                  // working when it is.
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    if (viewModel.groups.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: _buildGroupChips(
+                          viewModel,
+                          l10n,
+                          Dimens.pagePadding,
+                        ),
+                      ),
+                    _buildContent(viewModel, l10n, Dimens.pagePadding),
+                  ],
                 ),
               ),
-            const AppBarSyncIcon<TvViewModel>(selector: _isBusy),
+            ),
           ],
         ),
-        actions: [_buildCountryButton(viewModel, l10n)],
-      ),
-      body: Column(
-        children: [
-          // Above the scroll view rather than pinned inside it: the box
-          // is how anyone reaches a channel in a list this long, so it
-          // stays put, and a field has no height a header could be told
-          // in advance — it grows with the text scale.
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              Dimens.pagePadding,
-              12,
-              Dimens.pagePadding,
-              4,
-            ),
-            child: _buildSearchField(viewModel, l10n),
-          ),
-          Expanded(
-            child: RefreshIndicator.adaptive(
-              onRefresh: viewModel.onRefresh,
-              child: CustomScrollView(
-                controller: _scrollController,
-                // The grid can be shorter than the viewport — one search
-                // result, or none — and pull to refresh has to keep
-                // working when it is.
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  if (viewModel.groups.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildGroupChips(
-                        viewModel,
-                        l10n,
-                        Dimens.pagePadding,
-                      ),
-                    ),
-                  _buildContent(viewModel, l10n, Dimens.pagePadding),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -181,6 +202,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   Widget _buildSearchField(TvViewModel viewModel, AppLocalizations l10n) {
     return TextField(
       controller: _searchController,
+      focusNode: _searchFocusNode,
       onChanged: viewModel.search,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
