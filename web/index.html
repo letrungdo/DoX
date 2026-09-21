@@ -37,7 +37,11 @@
       width: 100%;
       height: 100%;
       margin: 0;
-      background: #f4f0e8;
+      /* The app's dark background, whatever the device's dark mode says: the
+         page is painted before the app can tell which theme it was put in,
+         and a light one in front of someone running it dark is a white flash
+         on every load. */
+      background: #16201e;
     }
 
     #app-loading {
@@ -47,7 +51,7 @@
       place-content: center;
       justify-items: center;
       gap: 24px;
-      color: #715c3a;
+      color: #2dd4bf;
       font: 500 14px system-ui, sans-serif;
     }
 
@@ -59,8 +63,8 @@
     #app-loading-spinner {
       width: 24px;
       height: 24px;
-      border: 3px solid rgb(113 92 58 / 25%);
-      border-top-color: #715c3a;
+      border: 3px solid rgb(45 212 191 / 25%);
+      border-top-color: #2dd4bf;
       border-radius: 50%;
       animation: spin 800ms linear infinite;
     }

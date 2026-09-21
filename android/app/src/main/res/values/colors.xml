@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#ffffff</color>
-    <color name="launchBackgroundColor">#e7f1ed</color>
+    <!-- The app's own dark background, in both the light and the dark resource
+         set on purpose: the window the system draws before Flutter has painted
+         anything is resolved against the *device's* dark mode, which says
+         nothing about the theme the app was set to. Following it meant a white
+         flash on every launch for anyone running a dark app on a light device.
+         One dark plate for everyone is the one colour that never flashes. -->
+    <color name="launchBackgroundColor">#16201E</color>
     <!-- Accent behind the (alpha-only) status bar icon of a notification. -->
     <color name="notificationColor">#00695C</color>
 </resources>
