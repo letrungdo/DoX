@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:video_player/video_player.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/services/music_auth_service.dart';
 import 'package:do_x/services/music_service.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
@@ -249,6 +251,7 @@ class MusicViewModel extends CoreViewModel {
       _duration = controller.value.duration;
       await controller.play();
       _isPlaying = true;
+      unawaited(_setWakelock(true));
 
       controller.addListener(_videoPlayerListener);
       _startPositionTimer();
@@ -259,6 +262,7 @@ class MusicViewModel extends CoreViewModel {
         stackTrace: st,
       );
       _isPlaying = false;
+      unawaited(_setWakelock(false));
     }
     notifyListenersSafe();
   }
@@ -272,6 +276,12 @@ class MusicViewModel extends CoreViewModel {
         seekTo(Duration.zero);
         controller.play();
       } else {
+        // Released here rather than only where playback fails: with nothing
+        // left in the queue the track that just ended is the last one, and the
+        // lock would outlive the music. [playTrack] takes it again for a queue
+        // that does have a next track.
+        _isPlaying = false;
+        unawaited(_setWakelock(false));
         nextTrack();
       }
     }
@@ -299,6 +309,7 @@ class MusicViewModel extends CoreViewModel {
       controller.play();
       _isPlaying = true;
     }
+    unawaited(_setWakelock(_isPlaying));
     notifyListenersSafe();
   }
 
@@ -379,8 +390,32 @@ class MusicViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
+  /// Holds the television's screen on while a track plays, the way the channel
+  /// player does.
+  ///
+  /// Only a television: an album side is half an hour nobody touches the
+  /// remote for, and the set goes to standby over it — while on a phone a
+  /// screen that will not turn off during music is a battery complaint, not a
+  /// feature. Failures are logged and swallowed: a platform without a wakelock
+  /// is no reason to stop the music.
+  Future<void> _setWakelock(bool enabled) async {
+    if (!deviceType.isTv) return;
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } on Object catch (e) {
+      logger.d('MusicViewModel wakelock failed: $e');
+    }
+  }
+
   @override
   void dispose() {
+    // Never left behind: the page can go away mid-track, and a lock still held
+    // is a television that never sleeps again.
+    unawaited(_setWakelock(false));
     musicAuth.removeListener(_onAccountChanged);
     _positionTimer?.cancel();
     _debounceTimer?.cancel();
