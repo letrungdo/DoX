@@ -233,7 +233,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
         left: false,
         right: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(_railPadding, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(Dimens.tvRailPadding, 8, 8, 8),
           // Every row as wide as the widest, so the rail is no wider than its
           // longest label and each row still fills it.
           child: IntrinsicWidth(
@@ -263,9 +263,6 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       ),
     );
   }
-
-  /// The room between the screen's left edge and the rail's rows.
-  static const _railPadding = 20.0;
 
   Widget _buildRailItem(
     BuildContext context, {

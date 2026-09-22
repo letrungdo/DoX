@@ -5,13 +5,16 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/music/music_track_card.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -34,6 +37,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   final _searchFocusNode = FocusNode(debugLabel: 'tv-music-search');
   final Map<String, FocusNode> _trackFocusNodes = {};
 
+  /// The heart on each row. Its own node, because on a television the remote
+  /// is put on it by hand — see [MusicTrackCard].
+  final Map<String, FocusNode> _likeFocusNodes = {};
+
   final FocusNode _playPauseFocusNode = FocusNode(debugLabel: 'tv-music-play');
   final FocusNode _nextFocusNode = FocusNode(debugLabel: 'tv-music-next');
   final FocusNode _prevFocusNode = FocusNode(debugLabel: 'tv-music-prev');
@@ -50,9 +57,19 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     );
   }
 
+  FocusNode _getLikeNodeForTrack(String id) {
+    return _likeFocusNodes.putIfAbsent(
+      id,
+      () => FocusNode(debugLabel: 'tv-track-like-$id'),
+    );
+  }
+
   @override
   void dispose() {
     for (final node in _trackFocusNodes.values) {
+      node.dispose();
+    }
+    for (final node in _likeFocusNodes.values) {
       node.dispose();
     }
     _searchFocusNode.dispose();
@@ -71,15 +88,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     final minutes = d.inMinutes.toString().padLeft(2, '0');
     final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
-  }
-
-  String _formatNumber(int number) {
-    if (number >= 1000000) {
-      return '${(number / 1000000).toStringAsFixed(1)}M';
-    } else if (number >= 1000) {
-      return '${(number / 1000).toStringAsFixed(1)}K';
-    }
-    return number.toString();
   }
 
   @override
@@ -116,6 +124,12 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
           );
 
     return AppScaffold(
+      // On a television the rail is the leftmost thing on the page, exactly as
+      // it is on the home page — so it takes the screen's edge and the columns
+      // apply their own insets. Inset here instead, the rail sat a safe area
+      // *and* its own margin away from the edge while its other side had only
+      // the margin, and it leaned to the right.
+      bodyHorizontal: !isTv,
       appBar: DoAppBar(
         title: pageTitle,
         actions: [_buildAccountAction(viewModel)],
@@ -183,53 +197,110 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     }
   }
 
+  /// The tab rail, in the shape the home page's rail already has.
+  ///
+  /// Same rows, same numbers: a tinted plate behind the selected one rather
+  /// than a raised button, the icon and label in the primary colour, and the
+  /// rail only as wide as its longest label. A second rail with a style of its
+  /// own reads as a different app one screen along.
   Widget _buildTvSidebarNavigation(MusicViewModel viewModel) {
-    Widget navItem(MusicTab tab, IconData icon, String label) {
-      final isSelected = viewModel.currentTab == tab;
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-        child: NeuButton(
-          onPressed: () => viewModel.switchTab(tab),
-          accent: isSelected
-              ? context.theme.colorScheme.primaryContainer
-              : null,
-          expand: true,
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isSelected ? context.theme.colorScheme.primary : null,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 13,
+    final l10n = context.l10n;
+    return ColoredBox(
+      color: context.neu.base,
+      // Its own margin, top and bottom clearing the television's overscan
+      // band; the sides are a plain margin, as on the home page's rail.
+      child: SafeArea(
+        left: false,
+        right: false,
+        child: Padding(
+          // The same margin all round, so the rows sit as far from the screen's
+          // edge as they do from the divider on their other side.
+          padding: const EdgeInsets.all(Dimens.tvRailPadding),
+          child: IntrinsicWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              // From the top, level with the first row of the list beside it.
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildRailItem(
+                  viewModel,
+                  MusicTab.home,
+                  Icons.library_music_rounded,
+                  l10n.musicTabDiscover,
                 ),
-              ),
-            ],
+                _buildRailItem(
+                  viewModel,
+                  MusicTab.search,
+                  Icons.search_rounded,
+                  l10n.musicTabSearch,
+                ),
+                _buildRailItem(
+                  viewModel,
+                  MusicTab.likes,
+                  Icons.favorite_rounded,
+                  l10n.musicTabLikes,
+                ),
+                _buildRailItem(
+                  viewModel,
+                  MusicTab.history,
+                  Icons.history_rounded,
+                  l10n.musicTabHistory,
+                ),
+              ],
+            ),
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return SizedBox(
-      width: 160,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        children: [
-          navItem(MusicTab.home, Icons.library_music_rounded, 'Khám phá'),
-          navItem(MusicTab.search, Icons.search_rounded, 'Tìm kiếm'),
-          navItem(MusicTab.likes, Icons.favorite_rounded, 'Yêu thích'),
-          navItem(MusicTab.history, Icons.history_rounded, 'Lịch sử'),
-        ],
+  Widget _buildRailItem(
+    MusicViewModel viewModel,
+    MusicTab tab,
+    IconData icon,
+    String label,
+  ) {
+    final scheme = context.theme.colorScheme;
+    final isSelected = viewModel.currentTab == tab;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: FocusableTap(
+        onTap: () => viewModel.switchTab(tab),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isSelected ? context.neuTint(scheme.primary) : null,
+            borderRadius: BorderRadius.circular(Dimens.radiusControl),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              spacing: 12,
+              children: [
+                Icon(
+                  icon,
+                  size: 24,
+                  color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? scheme.primary : scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildMobileTabs(MusicViewModel viewModel) {
+    final l10n = context.l10n;
     Widget tabItem(MusicTab tab, IconData icon, String label) {
       final isSelected = viewModel.currentTab == tab;
       return Expanded(
@@ -279,10 +350,18 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       color: Colors.transparent,
       child: Row(
         children: [
-          tabItem(MusicTab.home, Icons.library_music_rounded, 'Khám phá'),
-          tabItem(MusicTab.search, Icons.search_rounded, 'Tìm kiếm'),
-          tabItem(MusicTab.likes, Icons.favorite_rounded, 'Yêu thích'),
-          tabItem(MusicTab.history, Icons.history_rounded, 'Lịch sử'),
+          tabItem(
+            MusicTab.home,
+            Icons.library_music_rounded,
+            l10n.musicTabDiscover,
+          ),
+          tabItem(MusicTab.search, Icons.search_rounded, l10n.musicTabSearch),
+          tabItem(MusicTab.likes, Icons.favorite_rounded, l10n.musicTabLikes),
+          tabItem(
+            MusicTab.history,
+            Icons.history_rounded,
+            l10n.musicTabHistory,
+          ),
         ],
       ),
     );
@@ -298,18 +377,16 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       case MusicTab.home:
         return _buildDiscoverHome(viewModel, isTv);
       case MusicTab.search:
-        return _buildSearchTab(viewModel, isTv);
+        return _buildSearchTab(viewModel);
       case MusicTab.likes:
         return _buildTrackListSection(
           viewModel.likedTracks,
-          isTv,
           'Bài hát yêu thích',
           Icons.favorite_border_rounded,
         );
       case MusicTab.history:
         return _buildTrackListSection(
           viewModel.historyTracks,
-          isTv,
           'Lịch sử đã nghe',
           Icons.history_rounded,
         );
@@ -336,14 +413,14 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
               ),
             ),
           ),
-          _buildSliverGrid(shelf.tracks, isTv),
+          _buildSliverGrid(shelf.tracks),
         ],
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
   }
 
-  Widget _buildSearchTab(MusicViewModel viewModel, bool isTv) {
+  Widget _buildSearchTab(MusicViewModel viewModel) {
     return Column(
       children: [
         Padding(
@@ -394,7 +471,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                   slivers: [
                     SliverPadding(
                       padding: const EdgeInsets.all(4),
-                      sliver: _buildSliverGrid(viewModel.searchResults, isTv),
+                      sliver: _buildSliverGrid(viewModel.searchResults),
                     ),
                   ],
                 ),
@@ -405,7 +482,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
 
   Widget _buildTrackListSection(
     List<MusicTrack> tracks,
-    bool isTv,
     String emptyTitle,
     IconData emptyIcon,
   ) {
@@ -425,253 +501,163 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(8),
-          sliver: _buildSliverGrid(tracks, isTv),
+          sliver: _buildSliverGrid(tracks),
         ),
       ],
     );
   }
 
-  Widget _buildSliverGrid(List<MusicTrack> trackList, bool isTv) {
+  /// The list of tracks.
+  ///
+  /// One row per line whatever the screen: a row is artwork, a title, an
+  /// artist and a heart laid out across, and two of them side by side on a
+  /// television left the title a dozen pixels wide — the artwork is a square
+  /// as tall as the row, so a short column is a wide picture and no words.
+  /// The height is fixed for the same reason, rather than being whatever an
+  /// aspect ratio makes of the column's width.
+  Widget _buildSliverGrid(List<MusicTrack> trackList) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       sliver: SliverGrid(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: isTv ? 2 : 1,
-          childAspectRatio: isTv ? 1.4 : 3.8,
+          crossAxisCount: 1,
+          mainAxisExtent: Dimens.musicTrackTileHeight,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final track = trackList[index];
           final vModel = context.read<MusicViewModel>();
-          final isCurrent = vModel.currentTrack?.id == track.id;
-          final isTrackLiked = vModel.isLiked(track.id);
-
-          return Focus(
-            canRequestFocus: false,
-            skipTraversal: true,
-            onFocusChange: (hasFocus) {
-              if (hasFocus && isTv) {
-                Scrollable.ensureVisible(
-                  context,
-                  alignment: Dimens.tvFocusScrollAlignment,
-                  duration: Dimens.tvFocusScrollDuration,
-                );
-              }
-            },
-            child: NeuCard(
-              focusNode: _getNodeForTrack(track.id),
-              onTap: () => vModel.playTrack(track),
-              color: isCurrent
-                  ? context.theme.colorScheme.primaryContainer.withValues(
-                      alpha: 0.7,
-                    )
-                  : null,
-              child: Row(
-                children: [
-                  AspectRatio(
-                    aspectRatio: 1,
-                    child: Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          Dimens.radiusControlSmall,
-                        ),
-                        image: track.artworkUrl.isNotEmpty
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(
-                                  track.artworkUrl,
-                                ),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                        color: track.artworkUrl.isEmpty
-                            ? context.theme.disabledColor.withValues(alpha: 0.2)
-                            : null,
-                      ),
-                      child: track.artworkUrl.isEmpty
-                          ? const Icon(Icons.music_note_rounded)
-                          : null,
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 8.0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            track.title,
-                            maxLines: isTv ? 2 : 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            track.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.theme.hintColor,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.favorite_rounded,
-                                size: 12,
-                                color: context.theme.colorScheme.error
-                                    .withValues(alpha: 0.8),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _formatNumber(track.likesCount),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: context.theme.hintColor,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Icon(
-                                Icons.repeat_rounded,
-                                size: 12,
-                                color: context.theme.colorScheme.primary
-                                    .withValues(alpha: 0.8),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _formatNumber(track.repostsCount),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: context.theme.hintColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      isTrackLiked
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 20,
-                    ),
-                    color: isTrackLiked
-                        ? context.theme.colorScheme.error
-                        : context.theme.hintColor,
-                    onPressed: () => _onToggleLike(track),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-              ),
-            ),
+          return MusicTrackCard(
+            key: ValueKey(track.id),
+            track: track,
+            isCurrent: vModel.currentTrack?.id == track.id,
+            isLiked: vModel.isLiked(track.id),
+            focusNode: _getNodeForTrack(track.id),
+            likeFocusNode: _getLikeNodeForTrack(track.id),
+            onTap: () => vModel.playTrack(track),
+            onToggleLike: () => _onToggleLike(track),
           );
         }, childCount: trackList.length),
       ),
     );
   }
 
+  /// Wraps a seek bar so the remote can get back off it.
+  ///
+  /// A [Slider] binds all four arrows to its own value, and its shortcuts sit
+  /// closer to the focus than anything a page can put around it — so on a
+  /// television the D-pad walked onto the seek bar and stayed there for good.
+  /// In directional navigation mode the slider claims left and right only and
+  /// leaves up and down to move the focus, which is exactly the split a remote
+  /// wants. Declared here rather than app-wide: the mode also makes every
+  /// `InkWell` focusable, which is why `TvShell` does not turn it on.
+  Widget _seekable(Widget slider) {
+    if (!deviceType.isTv) return slider;
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(navigationMode: NavigationMode.directional),
+      child: slider,
+    );
+  }
+
   Widget _buildRightPlayerDashboard(MusicViewModel viewModel) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (viewModel.currentTrack == null) ...[
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                spacing: 12,
-                children: [
-                  Icon(
-                    Icons.radio_rounded,
-                    size: 72,
-                    color: context.theme.colorScheme.primary.withValues(
-                      alpha: 0.4,
+    return SafeArea(
+      top: false,
+      left: false,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (viewModel.currentTrack == null) ...[
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  spacing: 12,
+                  children: [
+                    Icon(
+                      Icons.radio_rounded,
+                      size: 72,
+                      color: context.theme.colorScheme.primary.withValues(
+                        alpha: 0.4,
+                      ),
                     ),
-                  ),
-                  const Text(
-                    'Chọn bài hát để thưởng thức âm nhạc chất lượng cao',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ],
+                    const Text(
+                      'Chọn bài hát để thưởng thức âm nhạc chất lượng cao',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ] else ...[
-            Expanded(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Dimens.radiusPanel),
-                      boxShadow: [
-                        BoxShadow(
-                          color: context.theme.shadowColor.withValues(
-                            alpha: 0.2,
+            ] else ...[
+              Expanded(
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
+                        boxShadow: [
+                          BoxShadow(
+                            color: context.theme.shadowColor.withValues(
+                              alpha: 0.2,
+                            ),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(Dimens.radiusPanel),
-                      child: viewModel.currentTrack!.artworkUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: viewModel.currentTrack!.artworkUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) =>
-                                  const Center(child: Loading()),
-                              errorWidget: (_, _, _) => Icon(
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
+                        child: viewModel.currentTrack!.artworkUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: viewModel.currentTrack!.artworkUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) =>
+                                    const Center(child: Loading()),
+                                errorWidget: (_, _, _) => Icon(
+                                  Icons.music_note_rounded,
+                                  size: 64,
+                                  color: context.theme.disabledColor,
+                                ),
+                              )
+                            : Icon(
                                 Icons.music_note_rounded,
                                 size: 64,
                                 color: context.theme.disabledColor,
                               ),
-                            )
-                          : Icon(
-                              Icons.music_note_rounded,
-                              size: 64,
-                              color: context.theme.disabledColor,
-                            ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              viewModel.currentTrack!.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              viewModel.currentTrack!.artist,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.theme.hintColor, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            _buildPlayerControls(viewModel),
+              const SizedBox(height: 12),
+              Text(
+                viewModel.currentTrack!.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                viewModel.currentTrack!.artist,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.theme.hintColor, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              _buildPlayerControls(viewModel),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -769,17 +755,19 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: Slider(
-                value: viewModel.position.inMilliseconds.toDouble().clamp(
-                  0.0,
-                  viewModel.duration.inMilliseconds.toDouble(),
+              child: _seekable(
+                Slider(
+                  value: viewModel.position.inMilliseconds.toDouble().clamp(
+                    0.0,
+                    viewModel.duration.inMilliseconds.toDouble(),
+                  ),
+                  max: viewModel.duration.inMilliseconds.toDouble() == 0.0
+                      ? 1.0
+                      : viewModel.duration.inMilliseconds.toDouble(),
+                  onChanged: (val) {
+                    viewModel.seekTo(Duration(milliseconds: val.toInt()));
+                  },
                 ),
-                max: viewModel.duration.inMilliseconds.toDouble() == 0.0
-                    ? 1.0
-                    : viewModel.duration.inMilliseconds.toDouble(),
-                onChanged: (val) {
-                  viewModel.seekTo(Duration(milliseconds: val.toInt()));
-                },
               ),
             ),
           ),
@@ -792,23 +780,25 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
     return Column(
       children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 4,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-          ),
-          child: Slider(
-            value: viewModel.position.inMilliseconds.toDouble().clamp(
-              0.0,
-              viewModel.duration.inMilliseconds.toDouble(),
+        _seekable(
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 4,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
             ),
-            max: viewModel.duration.inMilliseconds.toDouble() == 0.0
-                ? 1.0
-                : viewModel.duration.inMilliseconds.toDouble(),
-            onChanged: (val) {
-              viewModel.seekTo(Duration(milliseconds: val.toInt()));
-            },
+            child: Slider(
+              value: viewModel.position.inMilliseconds.toDouble().clamp(
+                0.0,
+                viewModel.duration.inMilliseconds.toDouble(),
+              ),
+              max: viewModel.duration.inMilliseconds.toDouble() == 0.0
+                  ? 1.0
+                  : viewModel.duration.inMilliseconds.toDouble(),
+              onChanged: (val) {
+                viewModel.seekTo(Duration(milliseconds: val.toInt()));
+              },
+            ),
           ),
         ),
         Padding(

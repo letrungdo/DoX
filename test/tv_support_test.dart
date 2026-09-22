@@ -165,7 +165,7 @@ void main() {
 
       expect(
         await paddingSeenByPages(tester),
-        const EdgeInsets.fromLTRB(48, 24 + 27, 24, 27),
+        const EdgeInsets.fromLTRB(24, 24 + 27, 24, 27),
       );
     });
 

@@ -123,8 +123,16 @@ class Dimens {
   static const focusRingWidth = 2.5;
 
   /// Shared television margins, injected by `TvShell` for every page.
-  /// The right edge uses a compact 24dp inset to give content more room.
-  static const tvOverscan = EdgeInsets.fromLTRB(48, 27, 24, 27);
+  ///
+  /// The same inset on both sides. The left edge used to be twice the right
+  /// one, which nothing on screen explains: a rail down the left of a page
+  /// then stood further from the panel's edge than the player on the other
+  /// side, and every grid sat off-centre.
+  static const tvOverscan = EdgeInsets.symmetric(horizontal: 24, vertical: 27);
+
+  /// The margin around a television rail's rows, shared by the home page's
+  /// rail and the music page's so the two are the same object twice.
+  static const tvRailPadding = 20.0;
 
   /// How far the television's focus outline is drawn outside the control it
   /// marks, so the control's own edge stays readable underneath it.
@@ -190,6 +198,18 @@ class Dimens {
   static const tvChannelLogoDecodeWidth = 256;
   static const tvChannelTileAspect = 1.4;
   static const tvChannelTileSpacing = 12.0;
+
+  /// One track in the music list: a row, not a tile.
+  ///
+  /// Sized rather than given an aspect ratio, because the row's artwork is a
+  /// square as tall as the row — so a ratio chosen for the grid decided how
+  /// much width was left for the title, and on a television it left almost
+  /// none. Fixing the height and the square fixes the title's room with them.
+  static const musicTrackArtSize = 56.0;
+
+  /// Tall enough for the title, the artist and the counts underneath, at the
+  /// television's larger text as well as the phone's.
+  static double get musicTrackTileHeight => deviceType.isTv ? 92.0 : 76.0;
 
   /// Where a tile the remote has just moved onto is parked in its viewport,
   /// and how long the ride takes. Half way up, so there is always a row of

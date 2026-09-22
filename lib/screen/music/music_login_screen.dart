@@ -11,6 +11,7 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/tv_web_navigator.dart';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
@@ -96,6 +97,14 @@ class _MusicLoginScreenState
   /// The provider's window opens on a blank page and reaches its own sign-in
   /// screen a moment later, so it needs the same cover as the page below it.
   bool _isPopupLoading = true;
+
+  /// What drives each web view from the remote — see [TvWebNavigator]. The
+  /// page's own controls are not Flutter's to focus, so without this a
+  /// television can see the sign-in form and reach nothing in it.
+  final _pageNavigator = GlobalKey<TvWebNavigatorState>();
+  final _popupNavigator = GlobalKey<TvWebNavigatorState>();
+  InAppWebViewController? _pageWebView;
+  InAppWebViewController? _popupWebView;
 
   void _setPopupLoading(bool value) {
     if (!mounted || _isPopupLoading == value) return;
@@ -231,72 +240,82 @@ class _MusicLoginScreenState
             padding: const EdgeInsets.symmetric(horizontal: Dimens.pagePadding),
             child: Stack(
               children: [
-                InAppWebView(
-                  key: ValueKey(request.url),
-                  initialUrlRequest: URLRequest(url: WebUri(request.url)),
-                  initialUserScripts: UnmodifiableListView([
-                    UserScript(
-                      source: _pageStyleScript(pageBackground),
-                      injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                TvWebNavigator(
+                  key: const ValueKey('tv-music-login'),
+                  autofocus: true,
+                  controller: () => _pageWebView,
+                  child: InAppWebView(
+                    key: ValueKey(request.url),
+                    onWebViewCreated: (controller) => _pageWebView = controller,
+                    initialUrlRequest: URLRequest(url: WebUri(request.url)),
+                    initialUserScripts: UnmodifiableListView([
+                      UserScript(
+                        source: _pageStyleScript(pageBackground),
+                        injectionTime:
+                            UserScriptInjectionTime.AT_DOCUMENT_START,
+                      ),
+                    ]),
+                    initialSettings: InAppWebViewSettings(
+                      // Deliberately no user agent of our own. Claiming to be a
+                      // desktop browser from inside a phone's web view is exactly
+                      // the mismatch the service's bot protection blocks on, and
+                      // the page works fine as whatever the device really is.
+                      javaScriptEnabled: true,
+                      thirdPartyCookiesEnabled: true,
+                      // A social provider is signed in to through a window the
+                      // page opens; Android serves one only when the web view is
+                      // told to expect it.
+                      supportMultipleWindows: true,
+                      javaScriptCanOpenWindowsAutomatically: true,
+                      // Until the page has been styled — and while it loads at
+                      // all — what shows through is the app's own surface, not a
+                      // white rectangle.
+                      transparentBackground: true,
                     ),
-                  ]),
-                  initialSettings: InAppWebViewSettings(
-                    // Deliberately no user agent of our own. Claiming to be a
-                    // desktop browser from inside a phone's web view is exactly
-                    // the mismatch the service's bot protection blocks on, and
-                    // the page works fine as whatever the device really is.
-                    javaScriptEnabled: true,
-                    thirdPartyCookiesEnabled: true,
-                    // A social provider is signed in to through a window the
-                    // page opens; Android serves one only when the web view is
-                    // told to expect it.
-                    supportMultipleWindows: true,
-                    javaScriptCanOpenWindowsAutomatically: true,
-                    // Until the page has been styled — and while it loads at
-                    // all — what shows through is the app's own surface, not a
-                    // white rectangle.
-                    transparentBackground: true,
+                    // The redirect carries the code, and is caught before it is
+                    // even loaded; the load/history hooks are the fallback that
+                    // reads the cookie if redeeming the code does not work out.
+                    shouldOverrideUrlLoading: (_, action) async {
+                      final url = action.request.url?.toString() ?? '';
+                      if (await _claimCode(url)) {
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                      return NavigationActionPolicy.ALLOW;
+                    },
+                    onLoadStop: (controller, url) async {
+                      // Android leaves the document-start script out on web view
+                      // versions that do not support one, so colour the page the
+                      // slow way too — running it twice changes nothing.
+                      await controller.evaluateJavascript(
+                        source: _pageStyleScript(pageBackground),
+                      );
+                      _setPageLoading(false);
+                      // A new document has no element the remote was on, so the
+                      // page is aimed at its first one again.
+                      await _pageNavigator.currentState?.onPageLoaded();
+                      if (await _claimCode(url?.toString() ?? '')) return;
+                      await _claimToken();
+                    },
+                    onUpdateVisitedHistory: (_, url, _) async {
+                      if (await _claimCode(url?.toString() ?? '')) return;
+                      await _claimToken();
+                    },
+                    onLoadStart: (_, _) => _setPageLoading(true),
+                    onCreateWindow: (_, action) async {
+                      setState(() {
+                        _popupWindowId = action.windowId;
+                        _isPopupLoading = true;
+                      });
+                      return true;
+                    },
+                    // The provider closes its own window when it is done, which is
+                    // the sign-in page's cue to carry on underneath.
+                    onCloseWindow: (_) => _closePopup(),
+                    // Both failures still end the wait: an error page is a page,
+                    // and leaving the spinner up over it hides what went wrong.
+                    onReceivedError: (_, _, _) => _setPageLoading(false),
+                    onReceivedHttpError: (_, _, _) => _setPageLoading(false),
                   ),
-                  // The redirect carries the code, and is caught before it is
-                  // even loaded; the load/history hooks are the fallback that
-                  // reads the cookie if redeeming the code does not work out.
-                  shouldOverrideUrlLoading: (_, action) async {
-                    final url = action.request.url?.toString() ?? '';
-                    if (await _claimCode(url)) {
-                      return NavigationActionPolicy.CANCEL;
-                    }
-                    return NavigationActionPolicy.ALLOW;
-                  },
-                  onLoadStop: (controller, url) async {
-                    // Android leaves the document-start script out on web view
-                    // versions that do not support one, so colour the page the
-                    // slow way too — running it twice changes nothing.
-                    await controller.evaluateJavascript(
-                      source: _pageStyleScript(pageBackground),
-                    );
-                    _setPageLoading(false);
-                    if (await _claimCode(url?.toString() ?? '')) return;
-                    await _claimToken();
-                  },
-                  onUpdateVisitedHistory: (_, url, _) async {
-                    if (await _claimCode(url?.toString() ?? '')) return;
-                    await _claimToken();
-                  },
-                  onLoadStart: (_, _) => _setPageLoading(true),
-                  onCreateWindow: (_, action) async {
-                    setState(() {
-                      _popupWindowId = action.windowId;
-                      _isPopupLoading = true;
-                    });
-                    return true;
-                  },
-                  // The provider closes its own window when it is done, which is
-                  // the sign-in page's cue to carry on underneath.
-                  onCloseWindow: (_) => _closePopup(),
-                  // Both failures still end the wait: an error page is a page,
-                  // and leaving the spinner up over it hides what went wrong.
-                  onReceivedError: (_, _, _) => _setPageLoading(false),
-                  onReceivedHttpError: (_, _, _) => _setPageLoading(false),
                 ),
                 if (_isPageLoading)
                   Positioned.fill(
@@ -335,37 +354,45 @@ class _MusicLoginScreenState
           Expanded(
             child: Stack(
               children: [
-                InAppWebView(
-                  windowId: _popupWindowId,
-                  initialSettings: InAppWebViewSettings(
-                    javaScriptEnabled: true,
-                    thirdPartyCookiesEnabled: true,
-                    transparentBackground: true,
+                TvWebNavigator(
+                  key: const ValueKey('tv-music-login-popup'),
+                  autofocus: true,
+                  controller: () => _popupWebView,
+                  child: InAppWebView(
+                    windowId: _popupWindowId,
+                    onWebViewCreated: (controller) =>
+                        _popupWebView = controller,
+                    initialSettings: InAppWebViewSettings(
+                      javaScriptEnabled: true,
+                      thirdPartyCookiesEnabled: true,
+                      transparentBackground: true,
+                    ),
+                    // The provider can hand the code straight back, without the
+                    // page underneath ever seeing the redirect.
+                    shouldOverrideUrlLoading: (_, action) async {
+                      final url = action.request.url?.toString() ?? '';
+                      if (await _claimCode(url)) {
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                      return NavigationActionPolicy.ALLOW;
+                    },
+                    onLoadStart: (_, _) => _setPopupLoading(true),
+                    onLoadStop: (_, url) async {
+                      final current = url?.toString() ?? '';
+                      // The window is opened blank and told where to go a moment
+                      // later, so that first load settling is not the provider's
+                      // page arriving — uncovering it there shows nothing at all.
+                      if (current.isNotEmpty && current != 'about:blank') {
+                        _setPopupLoading(false);
+                      }
+                      await _popupNavigator.currentState?.onPageLoaded();
+                      if (await _claimCode(current)) return;
+                      await _claimToken();
+                    },
+                    onReceivedError: (_, _, _) => _setPopupLoading(false),
+                    onReceivedHttpError: (_, _, _) => _setPopupLoading(false),
+                    onCloseWindow: (_) => _closePopup(),
                   ),
-                  // The provider can hand the code straight back, without the
-                  // page underneath ever seeing the redirect.
-                  shouldOverrideUrlLoading: (_, action) async {
-                    final url = action.request.url?.toString() ?? '';
-                    if (await _claimCode(url)) {
-                      return NavigationActionPolicy.CANCEL;
-                    }
-                    return NavigationActionPolicy.ALLOW;
-                  },
-                  onLoadStart: (_, _) => _setPopupLoading(true),
-                  onLoadStop: (_, url) async {
-                    final current = url?.toString() ?? '';
-                    // The window is opened blank and told where to go a moment
-                    // later, so that first load settling is not the provider's
-                    // page arriving — uncovering it there shows nothing at all.
-                    if (current.isNotEmpty && current != 'about:blank') {
-                      _setPopupLoading(false);
-                    }
-                    if (await _claimCode(current)) return;
-                    await _claimToken();
-                  },
-                  onReceivedError: (_, _, _) => _setPopupLoading(false),
-                  onReceivedHttpError: (_, _, _) => _setPopupLoading(false),
-                  onCloseWindow: (_) => _closePopup(),
                 ),
                 if (_isPopupLoading)
                   Positioned.fill(
@@ -384,6 +411,7 @@ class _MusicLoginScreenState
 
   void _closePopup() {
     if (!mounted || _popupWindowId == null) return;
+    _popupWebView = null;
     setState(() => _popupWindowId = null);
   }
 
@@ -448,6 +476,8 @@ class _MusicLoginScreenState
     _claimingToken = false;
     _signInRequest = null;
     _popupWindowId = null;
+    _pageWebView = null;
+    _popupWebView = null;
     if (kIsWeb) return;
     await CookieManager.instance().deleteCookies(
       url: WebUri(MusicAuthService.siteUrl),

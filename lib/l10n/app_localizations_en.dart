@@ -2534,6 +2534,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvCategoryWeather => 'Weather';
 
   @override
+  String get musicTabDiscover => 'Discover';
+
+  @override
+  String get musicTabSearch => 'Search';
+
+  @override
+  String get musicTabLikes => 'Favourites';
+
+  @override
+  String get musicTabHistory => 'History';
+
+  @override
+  String get tvWebFieldTitle => 'Enter text';
+
+  @override
   String get musicLoginTitle => 'Music sign-in';
 
   @override

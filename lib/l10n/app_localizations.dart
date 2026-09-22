@@ -4561,6 +4561,36 @@ abstract class AppLocalizations {
   /// **'Weather'**
   String get tvCategoryWeather;
 
+  /// No description provided for @musicTabDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get musicTabDiscover;
+
+  /// No description provided for @musicTabSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get musicTabSearch;
+
+  /// No description provided for @musicTabLikes.
+  ///
+  /// In en, this message translates to:
+  /// **'Favourites'**
+  String get musicTabLikes;
+
+  /// No description provided for @musicTabHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get musicTabHistory;
+
+  /// No description provided for @tvWebFieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter text'**
+  String get tvWebFieldTitle;
+
   /// No description provided for @musicLoginTitle.
   ///
   /// In en, this message translates to:

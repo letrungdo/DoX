@@ -2522,6 +2522,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get tvCategoryWeather => 'Thời tiết';
 
   @override
+  String get musicTabDiscover => 'Khám phá';
+
+  @override
+  String get musicTabSearch => 'Tìm kiếm';
+
+  @override
+  String get musicTabLikes => 'Yêu thích';
+
+  @override
+  String get musicTabHistory => 'Lịch sử';
+
+  @override
+  String get tvWebFieldTitle => 'Nhập nội dung';
+
+  @override
   String get musicLoginTitle => 'Đăng nhập Music';
 
   @override
