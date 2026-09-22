@@ -65,7 +65,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => const FengShuiCompassRoute(),
     AppPage.movie => const MovieRoute(),
     AppPage.tv => const TvRoute(),
-    AppPage.music => const TvMusicRoute(),
+    AppPage.music => const MusicRoute(),
     AppPage.imageEditor => const ImageEditorRoute(),
     AppPage.asset => const AssetRoute(),
     AppPage.menu => const MenuRoute(),

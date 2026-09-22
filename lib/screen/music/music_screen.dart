@@ -6,7 +6,7 @@ import 'package:do_x/model/music_track.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/utils/device_type.dart';
-import 'package:do_x/view_model/tv/tv_music_view_model.dart';
+import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/loading.dart';
@@ -16,22 +16,22 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 @RoutePage()
-class TvMusicScreen extends StatefulScreen implements AutoRouteWrapper {
-  const TvMusicScreen({super.key});
+class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
+  const MusicScreen({super.key});
 
   @override
-  State<TvMusicScreen> createState() => _TvMusicScreenState();
+  State<MusicScreen> createState() => _MusicScreenState();
 
   @override
   Widget wrappedRoute(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TvMusicViewModel(),
+      create: (_) => MusicViewModel(),
       child: this,
     );
   }
 }
 
-class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
+class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'tv-music-search');
@@ -87,7 +87,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<TvMusicViewModel>();
+    final viewModel = context.watch<MusicViewModel>();
     final isTv = deviceType.isTv;
     final l10n = context.l10n;
 
@@ -147,7 +147,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
   /// The account the personal endpoints are called for. An icon rather than a
   /// tab: signing in is something you do once, and the page works without it
   /// for everything but the likes.
-  Widget _buildAccountAction(TvMusicViewModel viewModel) {
+  Widget _buildAccountAction(MusicViewModel viewModel) {
     final l10n = context.l10n;
     final isSignedIn = viewModel.isSignedIn;
     return IconButton(
@@ -186,7 +186,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     }
   }
 
-  Widget _buildTvSidebarNavigation(TvMusicViewModel viewModel) {
+  Widget _buildTvSidebarNavigation(MusicViewModel viewModel) {
     Widget navItem(MusicTab tab, IconData icon, String label) {
       final isSelected = viewModel.currentTab == tab;
       return Padding(
@@ -232,7 +232,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     );
   }
 
-  Widget _buildMobileTabs(TvMusicViewModel viewModel) {
+  Widget _buildMobileTabs(MusicViewModel viewModel) {
     Widget tabItem(MusicTab tab, IconData icon, String label) {
       final isSelected = viewModel.currentTab == tab;
       return Expanded(
@@ -291,7 +291,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     );
   }
 
-  Widget _buildMainBodyArea(TvMusicViewModel viewModel, bool isTv) {
+  Widget _buildMainBodyArea(MusicViewModel viewModel, bool isTv) {
     if (viewModel.isLoading &&
         (viewModel.currentTab == MusicTab.home &&
             viewModel.trendingTracks.isEmpty)) {
@@ -320,7 +320,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     }
   }
 
-  Widget _buildDiscoverHome(TvMusicViewModel viewModel, bool isTv) {
+  Widget _buildDiscoverHome(MusicViewModel viewModel, bool isTv) {
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
@@ -355,7 +355,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     );
   }
 
-  Widget _buildSearchTab(TvMusicViewModel viewModel, bool isTv) {
+  Widget _buildSearchTab(MusicViewModel viewModel, bool isTv) {
     return Column(
       children: [
         Padding(
@@ -455,7 +455,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final track = trackList[index];
-          final vModel = context.read<TvMusicViewModel>();
+          final vModel = context.read<MusicViewModel>();
           final isCurrent = vModel.currentTrack?.id == track.id;
           final isTrackLiked = vModel.isLiked(track.id);
 
@@ -595,7 +595,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     );
   }
 
-  Widget _buildRightPlayerDashboard(TvMusicViewModel viewModel) {
+  Widget _buildRightPlayerDashboard(MusicViewModel viewModel) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -688,7 +688,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     );
   }
 
-  Widget _buildBottomMobilePlayer(TvMusicViewModel viewModel) {
+  Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
     return NeuCard(
@@ -800,7 +800,7 @@ class _TvMusicScreenState extends ScreenState<TvMusicScreen, TvMusicViewModel> {
     );
   }
 
-  Widget _buildPlayerControls(TvMusicViewModel viewModel) {
+  Widget _buildPlayerControls(MusicViewModel viewModel) {
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
     return Column(
       children: [

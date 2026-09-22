@@ -5,10 +5,11 @@ import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/services/music_auth_service.dart';
-import 'package:do_x/view_model/tv/music_login_view_model.dart';
+import 'package:do_x/view_model/music/music_login_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'dart:collection';
 
@@ -44,21 +45,16 @@ class MusicLoginScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-/// Makes the service's sign-in page sit in the app rather than in a panel of
-/// its own.
+/// Gives the service's sign-in page the app's background.
 ///
-/// Two things are wrong with it as served. It runs its form edge to edge below
-/// its desktop breakpoint, so on a phone the fields touch both sides of the
-/// screen; and it paints its own background, which shows up as a slab of a
-/// different colour wherever the page does not cover the screen. Neither is
-/// fixable from the Flutter side — padding the web view only insets the page's
-/// own background and leaves that band behind — so the page is handed the
-/// app's gutter and the app's background instead.
+/// The page paints its own, which shows up as a slab of a different colour
+/// around a form that never fills the screen. Colouring the web view from the
+/// Flutter side does not reach it — the page's own background is drawn on top
+/// — so the colour is handed to the page itself.
 String _pageStyleScript(Color background) {
   final hex = (background.toARGB32() & 0xFFFFFF)
       .toRadixString(16)
       .padLeft(6, '0');
-  final gutter = Dimens.pagePadding.toInt();
   return '''
 (function () {
   var style = document.getElementById('do-x-style')
@@ -66,9 +62,7 @@ String _pageStyleScript(Color background) {
   style.id = 'do-x-style';
   style.textContent =
       'html, body.ui-evo-body, body.ui-evo-body .connect-form'
-      + ' { background: #$hex !important; }'
-      + 'body.ui-evo-body main { padding-left: ${gutter}px;'
-      + ' padding-right: ${gutter}px; box-sizing: border-box; }';
+      + ' { background: #$hex !important; }';
   document.documentElement.appendChild(style);
 })();
 ''';
@@ -87,6 +81,16 @@ class _MusicLoginScreenState
   /// Built once per attempt: the code the page hands back can only be redeemed
   /// with the secret the page was opened with.
   MusicSignInRequest? _signInRequest;
+
+  /// The sign-in page takes its time to arrive, and a web view shows nothing
+  /// at all until it does. Without this the screen is an empty rectangle for
+  /// several seconds and looks broken.
+  bool _isPageLoading = true;
+
+  void _setPageLoading(bool value) {
+    if (!mounted || _isPageLoading == value) return;
+    setState(() => _isPageLoading = value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,52 +208,75 @@ class _MusicLoginScreenState
               ),
             ),
           ),
+        // The gutter is the web view's own: now that the page carries the
+        // app's background, insetting it no longer shows a band of the wrong
+        // colour down each side.
         Expanded(
-          child: InAppWebView(
-            key: ValueKey(request.url),
-            initialUrlRequest: URLRequest(url: WebUri(request.url)),
-            initialUserScripts: UnmodifiableListView([
-              UserScript(
-                source: _pageStyleScript(pageBackground),
-                injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-              ),
-            ]),
-            initialSettings: InAppWebViewSettings(
-              // Deliberately no user agent of our own. Claiming to be a
-              // desktop browser from inside a phone's web view is exactly the
-              // mismatch the service's bot protection blocks on, and the page
-              // works fine as whatever the device really is.
-              javaScriptEnabled: true,
-              thirdPartyCookiesEnabled: true,
-              // Until the page has been styled — and while it loads at all —
-              // what shows through is the app's own surface, not a white
-              // rectangle.
-              transparentBackground: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.pagePadding),
+            child: Stack(
+              children: [
+                InAppWebView(
+                  key: ValueKey(request.url),
+                  initialUrlRequest: URLRequest(url: WebUri(request.url)),
+                  initialUserScripts: UnmodifiableListView([
+                    UserScript(
+                      source: _pageStyleScript(pageBackground),
+                      injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                    ),
+                  ]),
+                  initialSettings: InAppWebViewSettings(
+                    // Deliberately no user agent of our own. Claiming to be a
+                    // desktop browser from inside a phone's web view is exactly
+                    // the mismatch the service's bot protection blocks on, and
+                    // the page works fine as whatever the device really is.
+                    javaScriptEnabled: true,
+                    thirdPartyCookiesEnabled: true,
+                    // Until the page has been styled — and while it loads at
+                    // all — what shows through is the app's own surface, not a
+                    // white rectangle.
+                    transparentBackground: true,
+                  ),
+                  // The redirect carries the code, and is caught before it is
+                  // even loaded; the load/history hooks are the fallback that
+                  // reads the cookie if redeeming the code does not work out.
+                  shouldOverrideUrlLoading: (_, action) async {
+                    final url = action.request.url?.toString() ?? '';
+                    if (await _claimCode(url)) {
+                      return NavigationActionPolicy.CANCEL;
+                    }
+                    return NavigationActionPolicy.ALLOW;
+                  },
+                  onLoadStop: (controller, url) async {
+                    // Android leaves the document-start script out on web view
+                    // versions that do not support one, so colour the page the
+                    // slow way too — running it twice changes nothing.
+                    await controller.evaluateJavascript(
+                      source: _pageStyleScript(pageBackground),
+                    );
+                    _setPageLoading(false);
+                    if (await _claimCode(url?.toString() ?? '')) return;
+                    await _claimToken();
+                  },
+                  onUpdateVisitedHistory: (_, url, _) async {
+                    if (await _claimCode(url?.toString() ?? '')) return;
+                    await _claimToken();
+                  },
+                  onLoadStart: (_, _) => _setPageLoading(true),
+                  // Both failures still end the wait: an error page is a page,
+                  // and leaving the spinner up over it hides what went wrong.
+                  onReceivedError: (_, _, _) => _setPageLoading(false),
+                  onReceivedHttpError: (_, _, _) => _setPageLoading(false),
+                ),
+                if (_isPageLoading)
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: pageBackground,
+                      child: const Center(child: Loading()),
+                    ),
+                  ),
+              ],
             ),
-            // The redirect carries the code, and is caught before it is even
-            // loaded; the load/history hooks are the fallback that reads the
-            // cookie if redeeming the code does not work out.
-            shouldOverrideUrlLoading: (_, action) async {
-              final url = action.request.url?.toString() ?? '';
-              if (await _claimCode(url)) {
-                return NavigationActionPolicy.CANCEL;
-              }
-              return NavigationActionPolicy.ALLOW;
-            },
-            onLoadStop: (controller, url) async {
-              // Android leaves the document-start script out on web view
-              // versions that do not support one, so put the gutter back the
-              // slow way too — running it twice changes nothing.
-              await controller.evaluateJavascript(
-                source: _pageStyleScript(pageBackground),
-              );
-              if (await _claimCode(url?.toString() ?? '')) return;
-              await _claimToken();
-            },
-            onUpdateVisitedHistory: (_, url, _) async {
-              if (await _claimCode(url?.toString() ?? '')) return;
-              await _claimToken();
-            },
           ),
         ),
       ],

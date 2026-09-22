@@ -14,7 +14,7 @@ enum MusicTab { home, search, likes, history }
 /// not just another failure.
 enum MusicLikeOutcome { done, signInRequired, failed }
 
-class TvMusicViewModel extends CoreViewModel {
+class MusicViewModel extends CoreViewModel {
   List<MusicTrack> _trendingTracks = [];
   List<MusicTrack> get trendingTracks => _trendingTracks;
 
@@ -115,7 +115,7 @@ class TvMusicViewModel extends CoreViewModel {
       _recommendedTracks = results[1];
     } catch (e, st) {
       logger.e(
-        'TvMusicViewModel loadHomeData failed',
+        'MusicViewModel loadHomeData failed',
         error: e,
         stackTrace: st,
       );
@@ -132,7 +132,7 @@ class TvMusicViewModel extends CoreViewModel {
       _likedTracks = await musicService.getLikedTracks();
     } catch (e, st) {
       logger.e(
-        'TvMusicViewModel loadLikedTracks failed',
+        'MusicViewModel loadLikedTracks failed',
         error: e,
         stackTrace: st,
       );
@@ -149,7 +149,7 @@ class TvMusicViewModel extends CoreViewModel {
       _historyTracks = await musicService.getHistoryTracks();
     } catch (e, st) {
       logger.e(
-        'TvMusicViewModel loadHistoryTracks failed',
+        'MusicViewModel loadHistoryTracks failed',
         error: e,
         stackTrace: st,
       );
@@ -169,7 +169,7 @@ class TvMusicViewModel extends CoreViewModel {
         _searchResults = await musicService.searchTracks(query);
       } catch (e, st) {
         logger.e(
-          'TvMusicViewModel searchTracks failed',
+          'MusicViewModel searchTracks failed',
           error: e,
           stackTrace: st,
         );
@@ -186,7 +186,7 @@ class TvMusicViewModel extends CoreViewModel {
     } on MusicSignInRequired {
       return MusicLikeOutcome.signInRequired;
     } catch (e, st) {
-      logger.e('TvMusicViewModel toggleLike failed', error: e, stackTrace: st);
+      logger.e('MusicViewModel toggleLike failed', error: e, stackTrace: st);
       notifyListenersSafe();
       return MusicLikeOutcome.failed;
     }
@@ -245,7 +245,7 @@ class TvMusicViewModel extends CoreViewModel {
       _startPositionTimer();
     } catch (e, st) {
       logger.e(
-        'TvMusicViewModel playTrack network failure',
+        'MusicViewModel playTrack network failure',
         error: e,
         stackTrace: st,
       );

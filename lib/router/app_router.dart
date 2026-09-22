@@ -130,7 +130,7 @@ class _AppRouter extends RootStackRouter {
           AutoRoute(
             initial: initialTab == AppPage.music,
             path: 'music',
-            page: TvMusicRoute.page,
+            page: MusicRoute.page,
           ),
           AutoRoute(
             initial: initialTab == AppPage.imageEditor,
@@ -240,7 +240,7 @@ class _AppRouter extends RootStackRouter {
     ),
     AutoRoute(path: '/tv', page: TvRoute.page),
     AutoRoute(path: '/tv/search', page: TvSearchRoute.page),
-    AutoRoute(path: '/tv/music', page: TvMusicRoute.page),
+    AutoRoute(path: '/tv/music', page: MusicRoute.page),
     AutoRoute(path: '/tv/music/login', page: MusicLoginRoute.page),
     // The player is only ever pushed on the root stack, so it covers the
     // bottom bar the way a full-screen video should.

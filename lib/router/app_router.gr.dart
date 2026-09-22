@@ -45,17 +45,17 @@ import 'package:do_x/screen/movie/movie_detail_controller.dart' as _i43;
 import 'package:do_x/screen/movie/movie_detail_screen.dart' deferred as _i21;
 import 'package:do_x/screen/movie/movie_screen.dart' deferred as _i22;
 import 'package:do_x/screen/movie/movie_search_screen.dart' deferred as _i23;
+import 'package:do_x/screen/music/music_login_screen.dart' deferred as _i24;
+import 'package:do_x/screen/music/music_screen.dart' deferred as _i25;
 import 'package:do_x/screen/my_life/account_screen.dart' deferred as _i1;
 import 'package:do_x/screen/my_life/login_screen.dart' deferred as _i16;
-import 'package:do_x/screen/my_life/my_life_screen.dart' deferred as _i25;
-import 'package:do_x/screen/my_life/trimmer_screen.dart' deferred as _i28;
+import 'package:do_x/screen/my_life/my_life_screen.dart' deferred as _i26;
+import 'package:do_x/screen/my_life/trimmer_screen.dart' deferred as _i29;
 import 'package:do_x/screen/network/wifi_management_screen.dart'
     deferred as _i35;
 import 'package:do_x/screen/news/market_detail_screen.dart' deferred as _i19;
-import 'package:do_x/screen/news/news_screen.dart' deferred as _i26;
-import 'package:do_x/screen/settings_screen.dart' deferred as _i27;
-import 'package:do_x/screen/tv/music_login_screen.dart' deferred as _i24;
-import 'package:do_x/screen/tv/tv_music_screen.dart' deferred as _i29;
+import 'package:do_x/screen/news/news_screen.dart' deferred as _i27;
+import 'package:do_x/screen/settings_screen.dart' deferred as _i28;
 import 'package:do_x/screen/tv/tv_player_screen.dart' deferred as _i30;
 import 'package:do_x/screen/tv/tv_screen.dart' deferred as _i31;
 import 'package:do_x/screen/tv/tv_search_screen.dart' deferred as _i32;
@@ -835,7 +835,26 @@ class MusicLoginRoute extends _i36.PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [_i25.MyLifeScreen]
+/// [_i25.MusicScreen]
+class MusicRoute extends _i36.PageRouteInfo<void> {
+  const MusicRoute({List<_i36.PageRouteInfo>? children})
+    : super(MusicRoute.name, initialChildren: children);
+
+  static const String name = 'MusicRoute';
+
+  static _i36.PageInfo page = _i36.PageInfo(
+    name,
+    builder: (data) {
+      return _i36.DeferredWidget(
+        _i25.loadLibrary,
+        () => _i36.WrappedRoute(child: _i25.MusicScreen()),
+      );
+    },
+  );
+}
+
+/// generated route for
+/// [_i26.MyLifeScreen]
 class MyLifeRoute extends _i36.PageRouteInfo<void> {
   const MyLifeRoute({List<_i36.PageRouteInfo>? children})
     : super(MyLifeRoute.name, initialChildren: children);
@@ -846,15 +865,15 @@ class MyLifeRoute extends _i36.PageRouteInfo<void> {
     name,
     builder: (data) {
       return _i36.DeferredWidget(
-        _i25.loadLibrary,
-        () => _i36.WrappedRoute(child: _i25.MyLifeScreen()),
+        _i26.loadLibrary,
+        () => _i36.WrappedRoute(child: _i26.MyLifeScreen()),
       );
     },
   );
 }
 
 /// generated route for
-/// [_i26.NewsScreen]
+/// [_i27.NewsScreen]
 class NewsRoute extends _i36.PageRouteInfo<void> {
   const NewsRoute({List<_i36.PageRouteInfo>? children})
     : super(NewsRoute.name, initialChildren: children);
@@ -865,15 +884,15 @@ class NewsRoute extends _i36.PageRouteInfo<void> {
     name,
     builder: (data) {
       return _i36.DeferredWidget(
-        _i26.loadLibrary,
-        () => _i36.WrappedRoute(child: _i26.NewsScreen()),
+        _i27.loadLibrary,
+        () => _i36.WrappedRoute(child: _i27.NewsScreen()),
       );
     },
   );
 }
 
 /// generated route for
-/// [_i27.SettingsScreen]
+/// [_i28.SettingsScreen]
 class SettingsRoute extends _i36.PageRouteInfo<void> {
   const SettingsRoute({List<_i36.PageRouteInfo>? children})
     : super(SettingsRoute.name, initialChildren: children);
@@ -883,13 +902,13 @@ class SettingsRoute extends _i36.PageRouteInfo<void> {
   static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i36.DeferredWidget(_i27.loadLibrary, () => _i27.SettingsScreen());
+      return _i36.DeferredWidget(_i28.loadLibrary, () => _i28.SettingsScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i28.TrimmerScreen]
+/// [_i29.TrimmerScreen]
 class TrimmerRoute extends _i36.PageRouteInfo<TrimmerRouteArgs> {
   TrimmerRoute({
     required _i45.File file,
@@ -908,8 +927,8 @@ class TrimmerRoute extends _i36.PageRouteInfo<TrimmerRouteArgs> {
     builder: (data) {
       final args = data.argsAs<TrimmerRouteArgs>();
       return _i36.DeferredWidget(
-        _i28.loadLibrary,
-        () => _i28.TrimmerScreen(args.file, key: args.key),
+        _i29.loadLibrary,
+        () => _i29.TrimmerScreen(args.file, key: args.key),
       );
     },
   );
@@ -936,25 +955,6 @@ class TrimmerRouteArgs {
 
   @override
   int get hashCode => file.hashCode ^ key.hashCode;
-}
-
-/// generated route for
-/// [_i29.TvMusicScreen]
-class TvMusicRoute extends _i36.PageRouteInfo<void> {
-  const TvMusicRoute({List<_i36.PageRouteInfo>? children})
-    : super(TvMusicRoute.name, initialChildren: children);
-
-  static const String name = 'TvMusicRoute';
-
-  static _i36.PageInfo page = _i36.PageInfo(
-    name,
-    builder: (data) {
-      return _i36.DeferredWidget(
-        _i29.loadLibrary,
-        () => _i36.WrappedRoute(child: _i29.TvMusicScreen()),
-      );
-    },
-  );
 }
 
 /// generated route for
