@@ -1044,6 +1044,24 @@
       }
     }
   },
+  "confirmRemoveSelectedFromHistory": "Xoá {count} phim đã chọn khỏi lịch sử đã xem?",
+  "@confirmRemoveSelectedFromHistory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedCountTitle": "Đã chọn {count}",
+  "@selectedCountTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectMovies": "Chọn phim",
+  "playFromStart": "Xem từ đầu",
   "directorLabel": "Đạo diễn",
   "actorsLabel": "Diễn viên",
   "countryLabel": "Quốc gia",

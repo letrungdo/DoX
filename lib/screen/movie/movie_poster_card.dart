@@ -24,9 +24,15 @@ class MoviePosterCard extends StatelessWidget {
     this.showOverlays = true,
     this.titleMaxLines = 1,
     this.titleFontSize = 12,
+    this.focusNode,
   });
 
   final Movie movie;
+
+  /// Lets the grid move the remote back onto this exact card — after the
+  /// player overlay closes, say, when the node that held focus has gone with
+  /// it. Handed straight down to the [NeuCard]'s press surface.
+  final FocusNode? focusNode;
 
   /// Receives the card's rect on screen so a caller can zoom out of exactly
   /// this card.
@@ -63,6 +69,7 @@ class MoviePosterCard extends StatelessWidget {
         onTap(box.localToGlobal(Offset.zero) & box.size);
       },
       onLongPress: onLongPress,
+      focusNode: focusNode,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

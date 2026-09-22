@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -21,6 +22,7 @@ import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_button.dart';
 import 'package:do_x/widgets/player_controls_focus.dart';
@@ -31,6 +33,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_orientation_manager/flutter_orientation_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// How long playback may report itself as playing without the position moving
 /// before the player is treated as wedged and rebuilt.
@@ -128,6 +131,41 @@ class _MovieDetailScreenState
   bool get _controlsHaveFocus =>
       _topControlsScope.hasFocus || _bottomControlsScope.hasFocus;
 
+  /// The seek bar as a control the remote can stand on. Scrubbing with a D-pad
+  /// is a pending position the arrows move and OK commits, so the film does
+  /// not re-buffer on every press of the key.
+  final FocusNode _timelineFocusNode = FocusNode(debugLabel: 'movie-timeline');
+  bool _isScrubbing = false;
+
+  /// The episode grid laid over the picture in full screen, and the remote's
+  /// place inside it.
+  final FocusScopeNode _episodeOverlayScope = FocusScopeNode(
+    debugLabel: 'movie-episode-overlay',
+  );
+  final FocusNode _currentEpisodeFocusNode = FocusNode(
+    debugLabel: 'movie-episode-current',
+  );
+  final ScrollController _episodeOverlayController = ScrollController();
+  bool _showEpisodeOverlay = false;
+
+  /// Where the remote lands on the television's landing page.
+  final FocusNode _tvPrimaryActionFocusNode = FocusNode(
+    debugLabel: 'movie-tv-primary-action',
+  );
+
+  /// Television only: nothing plays until the viewer asks for it, so the page
+  /// opens on the poster and its row of actions instead of on a film already
+  /// running. Set by the first press that starts playback.
+  bool _hasStartedPlayback = false;
+
+  /// Set once the remote has been put on the landing page's first action, so
+  /// a rebuild does not snatch it back from wherever the viewer moved it.
+  bool _tvLandingFocusRequested = false;
+
+  /// How many times the arrow being held has repeated, so a long press seeks
+  /// further per step than a tap does.
+  int _seekRepeatCount = 0;
+
   /// Anchors the volume popup to the volume button, whatever the bar layout is.
   final LayerLink _volumeButtonLink = LayerLink();
   VoidCallback? _videoValueListener;
@@ -209,16 +247,13 @@ class _MovieDetailScreenState
     widget.controller?.attach(_exitFullScreen);
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // A television opens on its landing page instead: the poster, and a row
+      // of actions saying what pressing OK will do. Dropping someone straight
+      // into a film they only moved the remote onto is what a ten-foot page
+      // is supposed to spare them.
       final shouldAutoEnterFullScreen =
-          kIsWeb ||
-          defaultTargetPlatform == TargetPlatform.macOS ||
-          // A television never rotates, so the orientation listener that puts
-          // a phone into full screen never fires there — and a film playing in
-          // a strip halfway down a scrolling page is not what anyone sat down
-          // in front of a TV for. The embedded player included: picking a
-          // poster on the browse page is someone asking to watch that film,
-          // not to preview it.
-          deviceType.isTv;
+          !deviceType.isTv &&
+          (kIsWeb || defaultTargetPlatform == TargetPlatform.macOS);
       if (mounted && shouldAutoEnterFullScreen) _enterFullScreen();
     });
   }
@@ -231,11 +266,19 @@ class _MovieDetailScreenState
       initialMovie: widget.initialMovie,
     );
     if (!mounted) return;
-    if (_vm.selectedEpisode != null && _videoController == null) {
-      _playEpisode(_vm.selectedEpisode!);
-    }
+    if (_shouldAutoPlay) _playEpisode(_vm.selectedEpisode!);
     super.initData();
   }
+
+  /// Whether the episode the page settled on should start by itself.
+  ///
+  /// Everywhere but a television, yes: the page exists to play the film. On a
+  /// television playback waits for the landing page's Resume or Play button,
+  /// so nothing starts streaming because the remote passed over a poster.
+  bool get _shouldAutoPlay =>
+      _vm.selectedEpisode != null &&
+      _videoController == null &&
+      (!deviceType.isTv || _hasStartedPlayback);
 
   void _initOrientationListener() {
     if (!_supportsOrientationManager) return;
@@ -262,6 +305,9 @@ class _MovieDetailScreenState
     if (oldWidget.movieId != widget.movieId ||
         oldWidget.movieUrl != widget.movieUrl) {
       unawaited(_detachAndDisposeController());
+      // Another film: a television is back on its landing page for it.
+      _hasStartedPlayback = false;
+      _tvLandingFocusRequested = false;
       () async {
         await _vm.init(
           widget.movieUrl,
@@ -269,9 +315,7 @@ class _MovieDetailScreenState
           initialMovie: widget.initialMovie,
         );
         if (!mounted) return;
-        if (_vm.selectedEpisode != null && _videoController == null) {
-          _playEpisode(_vm.selectedEpisode!);
-        }
+        if (_shouldAutoPlay) _playEpisode(_vm.selectedEpisode!);
       }();
     }
   }
@@ -301,8 +345,17 @@ class _MovieDetailScreenState
     _videoFocusNode.dispose();
     _topControlsScope.dispose();
     _bottomControlsScope.dispose();
+    _timelineFocusNode.dispose();
+    _episodeOverlayScope.dispose();
+    _currentEpisodeFocusNode.dispose();
+    _episodeOverlayController.dispose();
+    _tvPrimaryActionFocusNode.dispose();
     _progressTimer?.cancel();
     _watchdogTimer?.cancel();
+    // Unconditionally, not through [_setWakelock]: the page may be leaving
+    // mid-film, and a screen held awake by a player that no longer exists is
+    // never switched off again.
+    unawaited(WakelockPlus.disable());
 
     // Reset everything to normal
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -328,6 +381,18 @@ class _MovieDetailScreenState
       widget.initialMovie,
     );
     await _vm.recordWatched(movie, positionSeconds: positionSeconds);
+  }
+
+  /// Holds the screen awake while the film runs, and hands it back the moment
+  /// it stops. A player is the one page that has to: nothing is being touched
+  /// for two hours, so the display would otherwise time out mid-scene.
+  Future<void> _setWakelock(bool enabled) async {
+    try {
+      await WakelockPlus.toggle(enable: enabled);
+    } on Object catch (error) {
+      // A platform that has no such switch is not a reason to fail playback.
+      logger.d('MovieDetailScreen: wakelock unavailable ($error)');
+    }
   }
 
   void _startProgressTimer() {
@@ -471,6 +536,7 @@ class _MovieDetailScreenState
         final isPlaying = controller.value.isPlaying;
         if (isPlaying != _isPlaying) {
           setState(() => _isPlaying = isPlaying);
+          unawaited(_setWakelock(isPlaying));
           if (isPlaying) {
             _startControlsTimer();
             _startProgressTimer();
@@ -490,6 +556,7 @@ class _MovieDetailScreenState
         _isBuffering = controller.value.isBuffering;
       });
       _vm.setStreamLoading(false);
+      unawaited(_setWakelock(true));
       controller.addListener(videoValueListener);
       _startControlsTimer();
       _startProgressTimer();
@@ -598,6 +665,7 @@ class _MovieDetailScreenState
     final listener = _videoValueListener;
     if (controller == null) return;
 
+    unawaited(_setWakelock(false));
     if (mounted) {
       setState(() {
         _videoController = null;
@@ -732,18 +800,40 @@ class _MovieDetailScreenState
   void _startControlsTimer() {
     _controlsTimer?.cancel();
     if (_isPlaying && !_showVolumeControl) {
-      _controlsTimer = Timer(const Duration(seconds: 3), () {
+      _controlsTimer = Timer(Dimens.playerControlsTimeout, () {
         // A bar the remote is resting on stays: the user is part way through
         // choosing something, and pulling it away would drop their place and
         // the focus with it.
         if (mounted &&
             !_isTimelineHovering &&
             !_isDragging &&
+            !_isScrubbing &&
+            !_showEpisodeOverlay &&
             !_controlsHaveFocus) {
           setState(() => _showControls = false);
         }
       });
     }
+  }
+
+  /// Brings the control overlay back up and restarts its countdown — what
+  /// every key the player claims does before doing its own work, so the viewer
+  /// sees what the press changed.
+  void _wakeControls() {
+    if (!_showControls) setState(() => _showControls = true);
+    _startControlsTimer();
+  }
+
+  /// Hides the overlay and takes the remote off it, which is what the first
+  /// press of BACK means on a television.
+  void _hideControls() {
+    if (!_showControls) return;
+    setState(() {
+      _showControls = false;
+      _showVolumeControl = false;
+    });
+    _controlsTimer?.cancel();
+    _releaseControlsFocus();
   }
 
   void _togglePlayback() {
@@ -795,6 +885,12 @@ class _MovieDetailScreenState
   }
 
   void _handleVolumeTap() {
+    // A television's own remote owns the volume, and the popup slider is a
+    // dead end for a D-pad — so here the button simply mutes and unmutes.
+    if (deviceType.isTv) {
+      _toggleMute();
+      return;
+    }
     final isMobile =
         defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
@@ -830,7 +926,63 @@ class _MovieDetailScreenState
     // to press the button the remote is sitting on.
     if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
 
+    // A held arrow arrives as a repeat, and a repeat left alone walks up to
+    // `TvShell`'s shortcuts — whose activators count repeats — and carries the
+    // remote off the picture. Every arrow the player claims is claimed on the
+    // way down and on every repeat of it.
+    final isPress = event is KeyDownEvent;
+    if (isPress || event is KeyRepeatEvent) {
+      final key = event.logicalKey;
+
+      if (key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.arrowRight) {
+        final isForward = key == LogicalKeyboardKey.arrowRight;
+        _seekRepeatCount = isPress ? 0 : _seekRepeatCount + 1;
+        final seconds = _seekStepSeconds;
+        _seekBy(Duration(seconds: isForward ? seconds : -seconds));
+        _triggerSkipIndicator(isForward: isForward, seconds: seconds);
+        return KeyEventResult.handled;
+      }
+
+      final isUp = key == LogicalKeyboardKey.arrowUp;
+      if (isUp || key == LogicalKeyboardKey.arrowDown) {
+        final wasVisible = _showControls;
+        if (!wasVisible) {
+          // The transport bar is hidden, and hidden means out of the focus
+          // tree — so this press wakes it, the way a set-top box behaves.
+          // Handled either way, or traversal would run now and carry the
+          // remote off the video to whatever sits under the player.
+          _wakeControls();
+          return KeyEventResult.handled;
+        }
+        if (!deviceType.isTv) {
+          // Bar already up: leave the key alone so traversal can walk onto it.
+          return KeyEventResult.ignored;
+        }
+        if (!isPress) return KeyEventResult.handled;
+        // Traversal cannot find the bars — they are inside this very node's
+        // rectangle — so the remote is handed to them by name. Up reaches the
+        // transport bar (and from there, up again, the bar at the top); down
+        // is left to traversal, which is how the server chips and the episode
+        // list under an inline player are reached at all. Full screen has no
+        // page under the picture, so there down means the transport bar too.
+        if (isUp || _isFullScreen) {
+          _enterControls(false, afterFrame: false);
+          return KeyEventResult.handled;
+        }
+        _startControlsTimer();
+        return KeyEventResult.ignored;
+      }
+    }
+
     if (event is KeyDownEvent) {
+      // Full screen on a television, OK on the picture opens the episode grid
+      // rather than pausing: with the transport bar a press away, choosing
+      // what to watch next is the thing the picture itself has no key for.
+      if (_canOpenEpisodeOverlay && _isSelectKey(event.logicalKey)) {
+        _openEpisodeOverlay();
+        return KeyEventResult.handled;
+      }
       if (_playPauseKeys.contains(event.logicalKey)) {
         if (!_isPlayPauseKeyDown) {
           _isPlayPauseKeyDown = true;
@@ -849,34 +1001,6 @@ class _MovieDetailScreenState
       if (event.logicalKey == LogicalKeyboardKey.escape && _isFullScreen) {
         _exitFullScreen();
         return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        _seekBy(const Duration(seconds: -10));
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        _seekBy(const Duration(seconds: 10));
-        return KeyEventResult.handled;
-      }
-      final isUp = event.logicalKey == LogicalKeyboardKey.arrowUp;
-      if (isUp || event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        final wasVisible = _showControls;
-        if (!wasVisible) {
-          // The transport bar is hidden, and hidden means out of the focus
-          // tree — so this press wakes it, the way a set-top box behaves.
-          // Handled either way, or traversal would run now and carry the
-          // remote off the video to whatever sits under the player.
-          setState(() => _showControls = true);
-          _startControlsTimer();
-        }
-        if (deviceType.isTv) {
-          // Traversal cannot find the bars — they are inside this very node's
-          // rectangle — so the remote is handed to them by name.
-          _enterControls(isUp, afterFrame: !wasVisible);
-          return KeyEventResult.handled;
-        }
-        // Bar already up: leave the key alone so traversal can walk onto it.
-        return wasVisible ? KeyEventResult.ignored : KeyEventResult.handled;
       }
     } else if (event is KeyRepeatEvent) {
       if (_playPauseKeys.contains(event.logicalKey)) {
@@ -897,6 +1021,97 @@ class _MovieDetailScreenState
       }
     }
     return KeyEventResult.ignored;
+  }
+
+  /// The OK button, under each of the names a remote sends it by.
+  bool _isSelectKey(LogicalKeyboardKey key) =>
+      key == LogicalKeyboardKey.select ||
+      key == LogicalKeyboardKey.enter ||
+      key == LogicalKeyboardKey.gameButtonA;
+
+  /// How far one press of left or right jumps. A held key jumps further, so
+  /// crossing half an hour of film is a couple of seconds of holding rather
+  /// than a hundred presses.
+  static const _seekStepShort = 10;
+  static const _seekStepLong = 30;
+  static const _seekRepeatsBeforeLongStep = 5;
+
+  int get _seekStepSeconds => _seekRepeatCount >= _seekRepeatsBeforeLongStep
+      ? _seekStepLong
+      : _seekStepShort;
+
+  /// The keys a remote's transport row sends, handled for the whole page
+  /// rather than for the picture: they mean the same thing wherever the remote
+  /// happens to be resting — on a chip in the body, on the transport bar, in
+  /// the episode grid.
+  KeyEventResult _handlePageKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final controller = _videoController;
+    final key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      _wakeControls();
+      _togglePlayback();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay) {
+      if (controller?.value.isInitialized ?? false) {
+        _wakeControls();
+        unawaited(controller!.play());
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPause) {
+      if (controller?.value.isInitialized ?? false) {
+        _wakeControls();
+        unawaited(controller!.pause());
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaStop) {
+      if (controller?.value.isInitialized ?? false) {
+        unawaited(controller!.pause());
+      }
+      _leavePlayer();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaFastForward ||
+        key == LogicalKeyboardKey.mediaRewind) {
+      final isForward = key == LogicalKeyboardKey.mediaFastForward;
+      _wakeControls();
+      _seekBy(Duration(seconds: isForward ? _seekStepLong : -_seekStepLong));
+      _triggerSkipIndicator(isForward: isForward, seconds: _seekStepLong);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaTrackNext) {
+      if (_hasNextEpisode) {
+        _wakeControls();
+        _playNextEpisode();
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaTrackPrevious) {
+      if (_hasPreviousEpisode) {
+        _wakeControls();
+        _playPreviousEpisode();
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// What the stop key does once playback is paused: back out of the picture,
+  /// then out of the page — the same ladder the BACK key climbs.
+  void _leavePlayer() {
+    if (widget.embedded) {
+      widget.onClose?.call();
+      return;
+    }
+    if (_isFullScreen) {
+      _exitFullScreen();
+      return;
+    }
+    unawaited(Navigator.of(context).maybePop());
   }
 
   void _seekBy(Duration offset) {
@@ -1071,20 +1286,167 @@ class _MovieDetailScreenState
     }
   }
 
-  void _triggerSkipIndicator({required bool isForward}) {
+  /// [seconds] is how far the jump that raised this badge went, so a held
+  /// arrow reads the same as the double tap it is standing in for.
+  void _triggerSkipIndicator({
+    required bool isForward,
+    int seconds = _seekStepShort,
+  }) {
     if (isForward) {
       _skipForwardTimer?.cancel();
-      setState(() => _skipForwardValue += 10);
+      setState(() => _skipForwardValue += seconds);
       _skipForwardTimer = Timer(const Duration(milliseconds: 600), () {
         if (mounted) setState(() => _skipForwardValue = 0);
       });
     } else {
       _skipBackwardTimer?.cancel();
-      setState(() => _skipBackwardValue += 10);
+      setState(() => _skipBackwardValue += seconds);
       _skipBackwardTimer = Timer(const Duration(milliseconds: 600), () {
         if (mounted) setState(() => _skipBackwardValue = 0);
       });
     }
+  }
+
+  /// Moves the pending scrub position by [offset] without seeking.
+  ///
+  /// A remote has no pointer to drag, so the timeline is scrubbed the way a
+  /// set-top box does it: the arrows walk a marker along the bar with the
+  /// thumbnail preview following it, and the film only moves once OK says so.
+  void _scrubBy(Duration offset) {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    final duration = controller.value.duration;
+    if (duration <= Duration.zero) return;
+
+    final base = _isScrubbing
+        ? _dragPosition
+        : (_virtualSeekPosition ?? controller.value.position);
+    var target = base + offset;
+    if (target < Duration.zero) target = Duration.zero;
+    if (target > duration) target = duration;
+
+    _controlsTimer?.cancel();
+    setState(() {
+      _isScrubbing = true;
+      _showControls = true;
+      _dragPosition = target;
+      _dragFraction = target.inMilliseconds / duration.inMilliseconds;
+      _hoverThumbnailCue = _vm.thumbnailTrack?.cueAt(target);
+    });
+  }
+
+  void _commitScrub() {
+    final controller = _videoController;
+    if (!_isScrubbing || controller == null) return;
+    final target = _dragPosition;
+    setState(() => _isScrubbing = false);
+    unawaited(controller.seekTo(target));
+    _startControlsTimer();
+  }
+
+  void _cancelScrub() {
+    if (!_isScrubbing) return;
+    setState(() => _isScrubbing = false);
+    _startControlsTimer();
+  }
+
+  KeyEventResult _handleTimelineKeyEvent(FocusNode node, KeyEvent event) {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) {
+      return KeyEventResult.ignored;
+    }
+    final isPress = event is KeyDownEvent;
+    if (!isPress && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      final isForward = key == LogicalKeyboardKey.arrowRight;
+      _seekRepeatCount = isPress ? 0 : _seekRepeatCount + 1;
+      final seconds = _seekStepSeconds;
+      _scrubBy(Duration(seconds: isForward ? seconds : -seconds));
+      return KeyEventResult.handled;
+    }
+    if (!isPress) return KeyEventResult.ignored;
+    if (_isSelectKey(key) || key == LogicalKeyboardKey.space) {
+      _commitScrub();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp) {
+      // Left to the bar's own exit, which is the way off every other control
+      // in it; the marker is simply dropped on the way out.
+      _cancelScrub();
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// The episodes of the server currently selected.
+  List<MovieEpisode> get _episodes =>
+      _vm.selectedServer?.episodes ?? const <MovieEpisode>[];
+
+  bool get _isSeries => _episodes.length > 1;
+
+  /// Whether OK on the picture should bring the episode grid up.
+  bool get _canOpenEpisodeOverlay =>
+      deviceType.isTv && _isFullScreen && _isSeries && !_showEpisodeOverlay;
+
+  void _openEpisodeOverlay() {
+    if (!_isSeries || _showEpisodeOverlay) return;
+    _controlsTimer?.cancel();
+    setState(() => _showEpisodeOverlay = true);
+    // The grid is only now being built, so there is nothing to hand the remote
+    // to until the frame carrying it exists.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_showEpisodeOverlay) return;
+      final context = _currentEpisodeFocusNode.context;
+      if (context != null) {
+        unawaited(
+          Scrollable.ensureVisible(
+            context,
+            alignment: Dimens.tvFocusScrollAlignment,
+            duration: Dimens.tvFocusScrollDuration,
+          ),
+        );
+        _currentEpisodeFocusNode.requestFocus();
+        return;
+      }
+      _episodeOverlayScope.requestFocus();
+    });
+  }
+
+  void _closeEpisodeOverlay() {
+    if (!_showEpisodeOverlay) return;
+    setState(() => _showEpisodeOverlay = false);
+    // Back where the grid was opened from: the picture, or the landing page's
+    // row of actions when nothing is playing yet.
+    if (_showTvLanding) {
+      _tvPrimaryActionFocusNode.requestFocus();
+    } else {
+      _videoFocusNode.requestFocus();
+    }
+    _startControlsTimer();
+  }
+
+  /// Where playback would pick up from, when the page was left part way
+  /// through this very episode on this very server.
+  Duration? get _resumePosition {
+    final state = _vm.libraryState;
+    if (state == null) return null;
+    if (state.lastEpisodeName != _vm.selectedEpisode?.name ||
+        state.lastServerName != _vm.selectedServer?.name) {
+      return null;
+    }
+    final seconds = state.lastPositionSeconds ?? 0;
+    if (seconds <= 5) return null;
+    return Duration(seconds: seconds);
+  }
+
+  /// The press that starts a film on a television: full screen, then play.
+  void _startTvPlayback(MovieEpisode episode, {Duration? seekTo}) {
+    setState(() => _hasStartedPlayback = true);
+    _enterFullScreen();
+    unawaited(_playEpisode(episode, seekTo: seekTo));
   }
 
   /// The original title, shown as a strip right under the app bar so it stays
@@ -1133,80 +1495,280 @@ class _MovieDetailScreenState
           subtitleLines: widget.embedded ? 1 : subtitleMaxLines,
         );
 
-        return PopScope(
-          canPop: widget.embedded || !_isFullScreen,
-          onPopInvokedWithResult: (didPop, result) {
-            if (!widget.embedded && _isFullScreen) {
-              _toggleFullScreen();
-            }
-          },
-          child: _isFullScreen
-              ? Scaffold(
-                  backgroundColor: Colors.black,
-                  body: SizedBox.expand(
-                    child: _buildVideoPlayerArea(isFullScreen: true),
-                  ),
-                )
-              : widget.embedded
-              ? _buildEmbedded(
-                  context,
-                  title: title,
-                  alternateTitle: alternateTitle,
-                  originalTitle: originalTitle,
-                  titleFit: titleFit,
-                )
-              : GestureDetector(
-                  onTap: () => FocusScope.of(context).unfocus(),
-                  child: AppScaffold(
-                    appBar: DoAppBar(
-                      title: title,
-                      titleStyle: titleFit.titleStyle,
-                      subtitle: alternateTitle == null
-                          ? null
-                          : Text(
-                              alternateTitle,
-                              style: titleFit.subtitleStyle,
-                              maxLines: subtitleMaxLines,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                      titleMaxLines: titleMaxLines,
-                      height: titleFit.height,
-                      actions: [
-                        NeuIconButton(
-                          size: Dimens.appBarActionSize,
-                          iconSize: 18,
-                          depth: Dimens.appBarActionDepth,
-                          tooltip: vm.isFavorite
-                              ? l10n.removeFromFavorites
-                              : l10n.addToFavorites,
-                          onPressed: vm.isUpdatingFavorite
-                              ? null
-                              : _toggleFavorite,
-                          icon: vm.isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: vm.isFavorite ? Colors.pinkAccent : null,
-                        ),
-                      ],
-                    ),
-                    body: vm.isLoading
-                        ? const Center(child: Loading())
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (originalTitle != null)
-                                _buildOriginalTitleBar(
-                                  originalTitle,
-                                  subtitleStripStyle(context, originalTitle),
-                                ),
-                              _buildVideoPlayerArea(isFullScreen: false),
-                              Expanded(child: _buildDetailBody()),
-                            ],
-                          ),
-                  ),
+        final page = _isFullScreen
+            ? Scaffold(
+                backgroundColor: Colors.black,
+                body: SizedBox.expand(
+                  child: _buildVideoPlayerArea(isFullScreen: true),
                 ),
+              )
+            : widget.embedded
+            ? _buildEmbedded(
+                context,
+                title: title,
+                alternateTitle: alternateTitle,
+                originalTitle: originalTitle,
+                titleFit: titleFit,
+              )
+            : GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: AppScaffold(
+                  appBar: DoAppBar(
+                    title: title,
+                    titleStyle: titleFit.titleStyle,
+                    subtitle: alternateTitle == null
+                        ? null
+                        : Text(
+                            alternateTitle,
+                            style: titleFit.subtitleStyle,
+                            maxLines: subtitleMaxLines,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                    titleMaxLines: titleMaxLines,
+                    height: titleFit.height,
+                    actions: [
+                      NeuIconButton(
+                        size: Dimens.appBarActionSize,
+                        iconSize: 18,
+                        depth: Dimens.appBarActionDepth,
+                        tooltip: vm.isFavorite
+                            ? l10n.removeFromFavorites
+                            : l10n.addToFavorites,
+                        onPressed: vm.isUpdatingFavorite
+                            ? null
+                            : _toggleFavorite,
+                        icon: vm.isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: vm.isFavorite ? Colors.pinkAccent : null,
+                      ),
+                    ],
+                  ),
+                  body: vm.isLoading
+                      ? const Center(child: Loading())
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (originalTitle != null)
+                              _buildOriginalTitleBar(
+                                originalTitle,
+                                subtitleStripStyle(context, originalTitle),
+                              ),
+                            if (_showTvLanding)
+                              _buildTvLanding(l10n)
+                            else
+                              _buildVideoPlayerArea(isFullScreen: false),
+                            Expanded(child: _buildDetailBody()),
+                          ],
+                        ),
+                ),
+              );
+
+        return PopScope(
+          canPop: widget.embedded || (!_isFullScreen && !_showEpisodeOverlay),
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop || widget.embedded) return;
+            // The ladder BACK climbs on a television: the grid first, then the
+            // control overlay, and only then the picture itself.
+            if (_showEpisodeOverlay) {
+              _closeEpisodeOverlay();
+              return;
+            }
+            if (deviceType.isTv &&
+                _isFullScreen &&
+                _showControls &&
+                _videoController != null) {
+              _hideControls();
+              return;
+            }
+            if (_isFullScreen) _toggleFullScreen();
+          },
+          // Watching the whole page, taking no turn of its own: the transport
+          // keys below are read wherever the remote happens to be resting.
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: _handlePageKeyEvent,
+            child: _showEpisodeOverlay
+                ? Stack(children: [page, _buildEpisodeOverlay(l10n)])
+                : page,
+          ),
         );
       },
+    );
+  }
+
+  /// Television only: the page opens on the poster and a row of actions, and
+  /// nothing streams until one of them is pressed.
+  bool get _showTvLanding =>
+      deviceType.isTv && !widget.embedded && !_hasStartedPlayback;
+
+  /// The television landing page: the poster as the hero, and the row of
+  /// actions that decide what the OK button does — resume, start again, or
+  /// pick an episode. Nothing here streams until one of them is pressed.
+  Widget _buildTvLanding(AppLocalizations l10n) {
+    final poster = _vm.detail?.poster ?? widget.initialMovie?.poster ?? '';
+    final episode = _vm.selectedEpisode;
+    final resumeFrom = _resumePosition;
+    final theme = Theme.of(context);
+
+    // The first action is where the remote lands, so the page opens on the
+    // thing the viewer came for instead of on the app bar.
+    if (!_tvLandingFocusRequested && episode != null) {
+      _tvLandingFocusRequested = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_showTvLanding) return;
+        _tvPrimaryActionFocusNode.requestFocus();
+      });
+    }
+
+    return SizedBox(
+      height: tvLandingHeroHeight,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (poster.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: poster,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => const ColoredBox(color: Colors.black),
+              errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
+            )
+          else
+            const ColoredBox(color: Colors.black),
+          // The actions sit on the poster, so the poster has to stop competing
+          // with them where they are.
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black87],
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Padding(
+              padding: Dimens.screenPadding,
+              child: Wrap(
+                spacing: Dimens.modalItemSpacing,
+                runSpacing: Dimens.modalItemSpacing,
+                children: [
+                  if (resumeFrom != null)
+                    NeuButton(
+                      focusNode: _tvPrimaryActionFocusNode,
+                      accent: theme.colorScheme.primary,
+                      onPressed: episode == null
+                          ? null
+                          : () => _startTvPlayback(episode, seekTo: resumeFrom),
+                      child: Text(
+                        l10n.resumePlayback(formatDuration(resumeFrom)),
+                      ),
+                    ),
+                  NeuButton(
+                    focusNode: resumeFrom == null
+                        ? _tvPrimaryActionFocusNode
+                        : null,
+                    accent: resumeFrom == null
+                        ? theme.colorScheme.primary
+                        : null,
+                    onPressed: episode == null
+                        ? null
+                        : () =>
+                              _startTvPlayback(episode, seekTo: Duration.zero),
+                    child: Text(l10n.playFromStart),
+                  ),
+                  if (_isSeries)
+                    NeuButton(
+                      onPressed: _openEpisodeOverlay,
+                      child: Text(l10n.episodeLabel),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The episode grid, over whatever is behind it — the picture in full
+  /// screen, the landing page before playback has started.
+  Widget _buildEpisodeOverlay(AppLocalizations l10n) {
+    final episodes = _episodes;
+    final selectedSlug = _vm.selectedEpisode?.slug;
+    return Positioned.fill(
+      child: FocusScope(
+        node: _episodeOverlayScope,
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+          },
+          child: Actions(
+            actions: {
+              DismissIntent: CallbackAction<DismissIntent>(
+                onInvoke: (_) {
+                  _closeEpisodeOverlay();
+                  return null;
+                },
+              ),
+            },
+            // Dimmed rather than opaque: the film keeps running underneath,
+            // and the viewer is choosing where to take it next.
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.85),
+              child: SafeArea(
+                child: Padding(
+                  padding: Dimens.screenPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.episodeLabel,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: Dimens.modalItemSpacing),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: _episodeOverlayController,
+                          child: Wrap(
+                            spacing: Dimens.modalItemSpacing,
+                            runSpacing: Dimens.modalItemSpacing,
+                            children: [
+                              for (final episode in episodes)
+                                _EpisodeOverlayTile(
+                                  key: ValueKey(episode.slug),
+                                  label: episode.name,
+                                  isSelected: episode.slug == selectedSlug,
+                                  focusNode: episode.slug == selectedSlug
+                                      ? _currentEpisodeFocusNode
+                                      : null,
+                                  onTap: () {
+                                    _closeEpisodeOverlay();
+                                    if (_hasStartedPlayback) {
+                                      unawaited(_playEpisode(episode));
+                                    } else {
+                                      _startTvPlayback(episode);
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1434,11 +1996,18 @@ class _MovieDetailScreenState
                     opacity: t,
                     child: IgnorePointer(
                       ignoring: t < 0.99,
-                      child: Padding(
-                        padding: sideInsets,
-                        child: _vm.isLoading
-                            ? const Center(child: Loading())
-                            : _buildDetailBody(),
+                      // Untappable is not enough for a remote: left in the
+                      // focus tree, a body faded out behind the mini player
+                      // still takes the D-pad. It enters the tree exactly
+                      // when it becomes visible.
+                      child: ExcludeFocus(
+                        excluding: t < 0.99,
+                        child: Padding(
+                          padding: sideInsets,
+                          child: _vm.isLoading
+                              ? const Center(child: Loading())
+                              : _buildDetailBody(),
+                        ),
                       ),
                     ),
                   ),
@@ -1781,9 +2350,23 @@ class _MovieDetailScreenState
                                   node: _bottomControlsScope,
                                   // Up is the way off the bottom bar: back onto
                                   // the picture, not further into the page.
+                                  //
+                                  // On a television it leads to the bar above
+                                  // instead, which the remote otherwise has no
+                                  // way to reach: up from the picture is what
+                                  // enters this bar, and down from the top bar
+                                  // is what comes back to the picture. Down
+                                  // out of this bar is left to traversal, which
+                                  // is how the episode list under an inline
+                                  // player is reached.
                                   exit: TraversalDirection.up,
                                   onExit: () {
-                                    _videoFocusNode.requestFocus();
+                                    _cancelScrub();
+                                    if (deviceType.isTv) {
+                                      _enterControls(true, afterFrame: false);
+                                    } else {
+                                      _videoFocusNode.requestFocus();
+                                    }
                                     _startControlsTimer();
                                   },
                                   child: Align(
@@ -1840,114 +2423,134 @@ class _MovieDetailScreenState
                                               return Stack(
                                                 clipBehavior: Clip.none,
                                                 children: [
-                                                  MouseRegion(
-                                                    cursor: SystemMouseCursors
-                                                        .click,
-                                                    onEnter: (event) =>
-                                                        _updateHoverPreview(
-                                                          event
-                                                              .localPosition
-                                                              .dx,
-                                                          constraints.maxWidth,
-                                                        ),
-                                                    onHover: (event) =>
-                                                        _updateHoverPreview(
-                                                          event
-                                                              .localPosition
-                                                              .dx,
-                                                          constraints.maxWidth,
-                                                        ),
-                                                    onExit: (_) {
-                                                      if (_isTimelineHovering) {
-                                                        setState(
-                                                          () =>
-                                                              _isTimelineHovering =
-                                                                  false,
-                                                        );
-                                                      }
-                                                      _startControlsTimer();
-                                                    },
-                                                    child: GestureDetector(
-                                                      behavior: HitTestBehavior
-                                                          .opaque,
-                                                      onHorizontalDragStart:
-                                                          (details) {
-                                                            _resumeAfterDrag =
-                                                                controller
-                                                                    .value
-                                                                    .isPlaying;
-                                                            unawaited(
-                                                              controller
-                                                                  .pause(),
-                                                            );
-                                                            _controlsTimer
-                                                                ?.cancel();
-                                                            setState(
-                                                              () =>
-                                                                  _isDragging =
-                                                                      true,
-                                                            );
-                                                            _updateDragPosition(
-                                                              controller,
-                                                              details
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            );
-                                                          },
-                                                      onHorizontalDragUpdate:
-                                                          (details) {
-                                                            _updateDragPosition(
-                                                              controller,
-                                                              details
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            );
-                                                          },
-                                                      onHorizontalDragEnd:
-                                                          (_) =>
-                                                              _finishDragging(
-                                                                controller,
-                                                              ),
-                                                      onHorizontalDragCancel:
-                                                          () => _finishDragging(
-                                                            controller,
+                                                  // The seek bar as a control
+                                                  // of its own, so a remote
+                                                  // can stand on it: the
+                                                  // arrows walk a marker
+                                                  // along it and OK commits.
+                                                  Focus(
+                                                    focusNode:
+                                                        _timelineFocusNode,
+                                                    onKeyEvent:
+                                                        _handleTimelineKeyEvent,
+                                                    child: MouseRegion(
+                                                      cursor: SystemMouseCursors
+                                                          .click,
+                                                      onEnter: (event) =>
+                                                          _updateHoverPreview(
+                                                            event
+                                                                .localPosition
+                                                                .dx,
+                                                            constraints
+                                                                .maxWidth,
                                                           ),
-                                                      onTapDown: (details) {
-                                                        _updateDragPosition(
-                                                          controller,
-                                                          details
-                                                              .localPosition
-                                                              .dx,
-                                                          constraints.maxWidth,
-                                                        );
+                                                      onHover: (event) =>
+                                                          _updateHoverPreview(
+                                                            event
+                                                                .localPosition
+                                                                .dx,
+                                                            constraints
+                                                                .maxWidth,
+                                                          ),
+                                                      onExit: (_) {
+                                                        if (_isTimelineHovering) {
+                                                          setState(
+                                                            () =>
+                                                                _isTimelineHovering =
+                                                                    false,
+                                                          );
+                                                        }
+                                                        _startControlsTimer();
                                                       },
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets.only(
-                                                              top: 14,
-                                                              bottom: 2,
+                                                      child: GestureDetector(
+                                                        behavior:
+                                                            HitTestBehavior
+                                                                .opaque,
+                                                        onHorizontalDragStart:
+                                                            (details) {
+                                                              _resumeAfterDrag =
+                                                                  controller
+                                                                      .value
+                                                                      .isPlaying;
+                                                              unawaited(
+                                                                controller
+                                                                    .pause(),
+                                                              );
+                                                              _controlsTimer
+                                                                  ?.cancel();
+                                                              setState(
+                                                                () =>
+                                                                    _isDragging =
+                                                                        true,
+                                                              );
+                                                              _updateDragPosition(
+                                                                controller,
+                                                                details
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
+                                                              );
+                                                            },
+                                                        onHorizontalDragUpdate:
+                                                            (details) {
+                                                              _updateDragPosition(
+                                                                controller,
+                                                                details
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
+                                                              );
+                                                            },
+                                                        onHorizontalDragEnd:
+                                                            (_) =>
+                                                                _finishDragging(
+                                                                  controller,
+                                                                ),
+                                                        onHorizontalDragCancel:
+                                                            () =>
+                                                                _finishDragging(
+                                                                  controller,
+                                                                ),
+                                                        onTapDown: (details) {
+                                                          _updateDragPosition(
+                                                            controller,
+                                                            details
+                                                                .localPosition
+                                                                .dx,
+                                                            constraints
+                                                                .maxWidth,
+                                                          );
+                                                        },
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.only(
+                                                                top: 14,
+                                                                bottom: 2,
+                                                              ),
+                                                          child: VideoProgressIndicator(
+                                                            controller,
+                                                            allowScrubbing:
+                                                                false,
+                                                            colors: const VideoProgressColors(
+                                                              playedColor: Colors
+                                                                  .pinkAccent,
+                                                              bufferedColor:
+                                                                  Colors
+                                                                      .white30,
+                                                              backgroundColor:
+                                                                  Colors
+                                                                      .white12,
                                                             ),
-                                                        child: VideoProgressIndicator(
-                                                          controller,
-                                                          allowScrubbing: false,
-                                                          colors: const VideoProgressColors(
-                                                            playedColor: Colors
-                                                                .pinkAccent,
-                                                            bufferedColor:
-                                                                Colors.white30,
-                                                            backgroundColor:
-                                                                Colors.white12,
                                                           ),
                                                         ),
                                                       ),
                                                     ),
                                                   ),
                                                   if (_isDragging ||
-                                                      _isTimelineHovering)
+                                                      _isTimelineHovering ||
+                                                      _isScrubbing)
                                                     Positioned(
                                                       left: previewLeft,
                                                       bottom: 42,
@@ -2027,7 +2630,8 @@ class _MovieDetailScreenState
                                                           child,
                                                         ) {
                                                           final currentPos =
-                                                              _isDragging
+                                                              (_isDragging ||
+                                                                  _isScrubbing)
                                                               ? _dragPosition
                                                               : (_virtualSeekPosition ??
                                                                     value
@@ -2283,5 +2887,50 @@ class _MovieDetailScreenState
       return SizedBox.expand(child: playerWidget);
     }
     return playerWidget;
+  }
+}
+
+/// One episode in the grid laid over the player, sized and spaced to be read
+/// and hit from across a room rather than with a fingertip.
+class _EpisodeOverlayTile extends StatelessWidget {
+  const _EpisodeOverlayTile({
+    super.key,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.focusNode,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final FocusNode? focusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return FocusableTap(
+      focusNode: focusNode,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Dimens.pagePadding,
+          vertical: Dimens.modalItemSpacing,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? scheme.primary
+              : Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(Dimens.radiusControl),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? scheme.onPrimary : Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 }

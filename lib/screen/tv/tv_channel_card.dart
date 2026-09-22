@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
@@ -47,71 +49,97 @@ class TvChannelCard extends StatelessWidget {
     // text would otherwise grow past the room kept for it.
     final lineHeight =
         MediaQuery.textScalerOf(context).scale(fontSize) * _nameLineHeight;
-    return NeuCard(
-      margin: EdgeInsets.zero,
-      padding: EdgeInsets.zero,
-      radius: Dimens.radiusCard,
-      focusNode: focusNode,
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            // No plate of its own: the card's own surface carries the logo,
-            // so the tile is the colour of whichever theme is on. A logo
-            // drawn as dark artwork for a white page loses contrast in the
-            // dark theme, which is the price of the card being one colour.
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: TvChannelLogo(channel: channel),
-                ),
-                if (channel.isGeoBlocked || channel.isIntermittent)
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: _Badge(
-                      icon: channel.isGeoBlocked
-                          ? Icons.public_off_rounded
-                          : Icons.schedule_rounded,
-                      tooltip: channel.isGeoBlocked
-                          ? l10n.tvGeoBlocked
-                          : l10n.tvNotAllDay,
-                    ),
+    return Focus(
+      // Not a stop of its own on the way round the grid — the card's own node
+      // is that. This one only listens, so the tile can ride the grid when the
+      // remote reaches it.
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (hasFocus) => _rideIntoView(context, hasFocus),
+      child: NeuCard(
+        margin: EdgeInsets.zero,
+        padding: EdgeInsets.zero,
+        radius: Dimens.radiusCard,
+        focusNode: focusNode,
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              // No plate of its own: the card's own surface carries the logo,
+              // so the tile is the colour of whichever theme is on. A logo
+              // drawn as dark artwork for a white page loses contrast in the
+              // dark theme, which is the price of the card being one colour.
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: TvChannelLogo(channel: channel),
                   ),
-              ],
+                  if (channel.isGeoBlocked || channel.isIntermittent)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: _Badge(
+                        icon: channel.isGeoBlocked
+                            ? Icons.public_off_rounded
+                            : Icons.schedule_rounded,
+                        tooltip: channel.isGeoBlocked
+                            ? l10n.tvGeoBlocked
+                            : l10n.tvNotAllDay,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-            child: SizedBox(
-              height: lineHeight * _nameLines,
-              child: TvChannelName(
-                name: channel.name,
-                style: TextStyle(
-                  // The one label on this page that has to be read from a
-                  // sofa. The television's own text scale carries the rest of
-                  // the app most of the way, but it is held down to what the
-                  // app's phone-sized rows can survive — so the name asks for
-                  // the last of it here, where there is room for it.
-                  fontSize: fontSize,
-                  height: _nameLineHeight,
-                  fontWeight: FontWeight.w600,
-                ),
-                // The strut keeps the base size whatever the name shrinks
-                // to, so a card with a long name is the same height as the
-                // one beside it.
-                strutStyle: StrutStyle(
-                  fontSize: fontSize,
-                  height: _nameLineHeight,
-                  forceStrutHeight: true,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: SizedBox(
+                height: lineHeight * _nameLines,
+                child: TvChannelName(
+                  name: channel.name,
+                  style: TextStyle(
+                    // The one label on this page that has to be read from a
+                    // sofa. The television's own text scale carries the rest of
+                    // the app most of the way, but it is held down to what the
+                    // app's phone-sized rows can survive — so the name asks for
+                    // the last of it here, where there is room for it.
+                    fontSize: fontSize,
+                    height: _nameLineHeight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  // The strut keeps the base size whatever the name shrinks
+                  // to, so a card with a long name is the same height as the
+                  // one beside it.
+                  strutStyle: StrutStyle(
+                    fontSize: fontSize,
+                    height: _nameLineHeight,
+                    forceStrutHeight: true,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Parks a tile the remote has just reached half way up its viewport.
+  ///
+  /// Nothing else scrolls the grid for the focus, so a tile reached with an
+  /// arrow is otherwise left flush against an edge: its lift and its focus
+  /// ring cut off on the clip boundary, and no sight of the row after it to
+  /// say the grid carries on. Television only — a phone moves its own grid
+  /// with a thumb, and a tap must not make the list jump under it.
+  void _rideIntoView(BuildContext context, bool hasFocus) {
+    if (!hasFocus || !deviceType.isTv) return;
+    unawaited(
+      Scrollable.ensureVisible(
+        context,
+        alignment: Dimens.tvFocusScrollAlignment,
+        duration: Dimens.tvFocusScrollDuration,
       ),
     );
   }

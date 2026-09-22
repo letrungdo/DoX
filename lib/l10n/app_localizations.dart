@@ -3014,6 +3014,30 @@ abstract class AppLocalizations {
   /// **'Remove \'{title}\' from your watched history?'**
   String confirmRemoveFromHistory(String title);
 
+  /// No description provided for @confirmRemoveSelectedFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {count} selected movies from your watched history?'**
+  String confirmRemoveSelectedFromHistory(int count);
+
+  /// No description provided for @selectedCountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCountTitle(int count);
+
+  /// No description provided for @selectMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Select movies'**
+  String get selectMovies;
+
+  /// No description provided for @playFromStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Play from start'**
+  String get playFromStart;
+
   /// No description provided for @directorLabel.
   ///
   /// In en, this message translates to:

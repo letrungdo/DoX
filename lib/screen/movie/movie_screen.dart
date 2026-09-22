@@ -72,7 +72,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// The search field sits above the list and is only laid out while toggled on.
   bool _isSearchOpen = false;
   final _searchFocusNode = FocusNode();
-  final _collectionMenuKey = GlobalKey();
   final _searchButtonKey = GlobalKey();
   final _bodyKey = GlobalKey();
 
@@ -108,6 +107,14 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
 
   bool _isSelectionMode = false;
   final Set<String> _selectedMovieIds = {};
+
+  /// One focus node per built grid tile, keyed by its index, so the remote can
+  /// be put back on a particular card. Television only — nothing else reads it.
+  final Map<int, FocusNode> _tileFocusNodes = {};
+
+  /// The film the overlay was opened out of, remembered so the remote can go
+  /// back to its poster once the overlay closes.
+  String? _lastOpenedMovieId;
 
   /// Categories shown as the always-visible chip row (everything that is not a
   /// genre or a country, which get their own picker buttons instead).
@@ -164,6 +171,10 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     _searchFocusNode.dispose();
     _serverUrlController.dispose();
     _scrollController.dispose();
+    for (final node in _tileFocusNodes.values) {
+      node.dispose();
+    }
+    _tileFocusNodes.clear();
     _debounceTimer?.cancel();
     super.dispose();
   }
@@ -244,12 +255,22 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     _searchFocusNode.unfocus();
 
     final current = isCountry ? vm.selectedCountry : vm.selectedGenre;
-    final result = await MovieFilterSheet.show(
-      context,
-      title: title,
-      options: options,
-      selectedId: current?.id,
-    );
+    // A wrapped mosaic of chips is the wrong shape for a D-pad: directional
+    // traversal sorts candidates into bands, so up and down through rows of
+    // unequal width skip columns unpredictably. One row per option travels
+    // straight down, and reads from the sofa as well.
+    final result = deviceType.isTv
+        ? await _showTvFilterSheet(
+            title: title,
+            options: options,
+            current: current,
+          )
+        : await MovieFilterSheet.show(
+            context,
+            title: title,
+            options: options,
+            selectedId: current?.id,
+          );
     if (result == null || !mounted) return;
     if (result.category?.id == current?.id) return;
 
@@ -257,65 +278,44 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
+  /// The television shape of the country / genre picker: the shared option
+  /// sheet, one focusable row per entry.
+  Future<MovieFilterResult?> _showTvFilterSheet({
+    required String title,
+    required List<MovieCategory> options,
+    required MovieCategory? current,
+  }) async {
+    final l10n = AppLocalizations.of(context);
+    final rows = [
+      _FilterOption(null, l10n.all),
+      for (final option in options) _FilterOption(option, option.name),
+    ];
+    final picked = await showAppOptionSheet<_FilterOption>(
+      context,
+      title: title,
+      options: rows,
+      selected: _FilterOption(current, current?.name ?? l10n.all),
+      labelBuilder: (option) => option.label,
+    );
+    return picked == null ? null : (category: picked.category);
+  }
+
   Future<void> _showCollectionMenu() async {
-    // Same reason as the filter sheet: a popup is a route too, and closing it
+    // Same reason as the filter sheet: a sheet is a route too, and closing it
     // would restore the caret to the search field.
     _searchFocusNode.unfocus();
 
     final l10n = AppLocalizations.of(context);
-    final button =
-        _collectionMenuKey.currentContext?.findRenderObject() as RenderBox?;
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (button == null || overlay == null) return;
-
-    final topLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(topLeft, topLeft + button.size.bottomRight(Offset.zero)),
-      Offset.zero & overlay.size,
-    );
-
-    final scheme = Theme.of(context).colorScheme;
-    PopupMenuItem<MovieCollection> item(
-      MovieCollection collection,
-      IconData icon,
-      String label,
-    ) {
-      final isActive = vm.collection == collection;
-      return PopupMenuItem(
-        value: collection,
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: isActive ? scheme.primary : null),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(color: isActive ? scheme.primary : null),
-              ),
-            ),
-            if (isActive)
-              Icon(Icons.check_rounded, size: 18, color: scheme.primary),
-          ],
-        ),
-      );
-    }
-
-    final selected = await showMenu<MovieCollection>(
-      context: context,
-      position: position,
-      items: [
-        item(
-          MovieCollection.watched,
-          Icons.history_rounded,
-          l10n.watchedMovies,
-        ),
-        item(
-          MovieCollection.favorites,
-          Icons.favorite_rounded,
-          l10n.favoriteMovies,
-        ),
-      ],
+    final selected = await showAppOptionSheet<MovieCollection>(
+      context,
+      options: const [MovieCollection.watched, MovieCollection.favorites],
+      // Browsing is not one of the rows, so nothing is marked while it is on.
+      selected: vm.collection == MovieCollection.browse ? null : vm.collection,
+      labelBuilder: (collection) => switch (collection) {
+        MovieCollection.watched => l10n.watchedMovies,
+        MovieCollection.favorites => l10n.favoriteMovies,
+        MovieCollection.browse => l10n.all,
+      },
     );
     if (selected == null || !mounted) return;
     _selectCollection(selected);
@@ -357,6 +357,10 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     // film picked there is opened here — out of the poster it was picked from.
     if (picked != null && mounted) {
       await _openMovie(picked.movie, picked.cardRect);
+    } else if (hadQuery && mounted) {
+      // The grid was refetched and ridden back to the top under a focus that
+      // no longer maps to anything, so the remote is handed the first tile.
+      _restoreGridFocus(null);
     }
   }
 
@@ -399,6 +403,18 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     });
   }
 
+  /// Turns selection mode on with nothing selected yet.
+  ///
+  /// The only other way in is a long press, which a remote cannot produce —
+  /// `NeuPress` answers the D-pad's OK with `ActivateIntent`, and that fires
+  /// `onTap` alone. Without this the bulk delete is dead on a television.
+  void _startSelectionMode() {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedMovieIds.clear();
+    });
+  }
+
   void _enterSelectionMode(String movieId) {
     setState(() {
       _isSelectionMode = true;
@@ -421,7 +437,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     final confirm = await showAppConfirmDialog(
       context,
       title: l10n.removeFromHistory,
-      message: 'Xoá $count phim đã chọn khỏi lịch sử đã xem?',
+      message: l10n.confirmRemoveSelectedFromHistory(count),
       confirmText: l10n.delete,
       isDestructive: true,
     );
@@ -434,6 +450,40 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
         await vm.loadMovies(refresh: true);
       }
     }
+  }
+
+  /// The focus node of the grid tile at [index], created on first use.
+  FocusNode _tileFocusNode(int index) =>
+      _tileFocusNodes.putIfAbsent(index, FocusNode.new);
+
+  /// Puts the remote back on the grid after something took focus away.
+  ///
+  /// The node that held it lived inside the overlay — or on the search page —
+  /// and went with it, so `TvShell` falls back to the first thing it can
+  /// traverse, the app bar, and `ensureVisible` drags a grid twelve rows down
+  /// back to the top. Focusing the poster the viewer came from keeps the place
+  /// they had. [movieId] of `null`, or a film no longer in the list, lands on
+  /// the first tile, which is where a refreshed list has been scrolled anyway.
+  void _restoreGridFocus(String? movieId) {
+    if (!deviceType.isTv) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final found = movieId == null
+          ? -1
+          : vm.movies.indexWhere((movie) => movie.id == movieId);
+      final node = _tileFocusNodes[found < 0 ? 0 : found];
+      if (node == null || !node.canRequestFocus) return;
+      node.requestFocus();
+      final nodeContext = node.context;
+      if (nodeContext == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          nodeContext,
+          alignment: Dimens.tvFocusScrollAlignment,
+          duration: Dimens.tvFocusScrollDuration,
+        ),
+      );
+    });
   }
 
   Future<void> _handleMovieLongPress(Movie movie) async {
@@ -459,6 +509,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     // `autofocus` is honoured — otherwise the overlay opens with the D-pad
     // pointing at nothing.
     FocusManager.instance.primaryFocus?.unfocus();
+    _lastOpenedMovieId = movie.id;
     setState(() {
       _playingMovie = movie;
       _entryRect = cardRect;
@@ -513,6 +564,8 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     } else {
       await vm.loadMovies(refresh: true, silent: true);
     }
+    if (!mounted) return;
+    _restoreGridFocus(_lastOpenedMovieId);
   }
 
   void _onOverlayDragUpdate(DragUpdateDetails details, double travel) {
@@ -668,7 +721,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             icon: const Icon(Icons.close_rounded),
             onPressed: _exitSelectionMode,
           ),
-          title: '${_selectedMovieIds.length} đã chọn',
+          title: l10n.selectedCountTitle(_selectedMovieIds.length),
           actions: [
             IconButton(
               icon: const Icon(Icons.delete_outline_rounded),
@@ -717,6 +770,17 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             onPressed: deviceType.isTv ? _openSearchPage : _toggleSearch,
           ),
           const SizedBox(width: 8),
+          if (vm.collection == MovieCollection.watched) ...[
+            NeuIconButton(
+              size: Dimens.appBarActionSize,
+              iconSize: 18,
+              depth: Dimens.appBarActionDepth,
+              tooltip: l10n.selectMovies,
+              icon: Icons.checklist_rounded,
+              onPressed: _startSelectionMode,
+            ),
+            const SizedBox(width: 8),
+          ],
           Builder(
             builder: (context) {
               final appBarTheme = Theme.of(context).appBarTheme;
@@ -732,8 +796,16 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
 
               // Estimated title block: Label + Suffix (expand icon, sync icon) + gaps.
               final titleBlockWidth = textPainter.width + 48 + 16;
-              // Actions: Search (40) + History (40) + Favorite (40) + End padding (10).
-              final actionsWidth = (3 * Dimens.appBarActionSize) + (2 * 8) + 10;
+              // Actions: Search (40) + History (40) + Favorite (40) + End
+              // padding (10), plus the select button while the watch history
+              // is the collection on screen.
+              final actionsWidth =
+                  (3 * Dimens.appBarActionSize) +
+                  (2 * 8) +
+                  10 +
+                  (vm.collection == MovieCollection.watched
+                      ? Dimens.appBarActionSize + 8
+                      : 0);
               // If the sum plus safe margins fits the bar width.
               final showAll =
                   constraints.maxWidth > (titleBlockWidth + actionsWidth + 32);
@@ -772,7 +844,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
               }
 
               return NeuIconButton(
-                key: _collectionMenuKey,
                 size: Dimens.appBarActionSize,
                 iconSize: 18,
                 depth: Dimens.appBarActionDepth,
@@ -986,6 +1057,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                             isFavorite: libraryState?.isFavorite ?? false,
                             libraryState: libraryState,
                             isSelected: isSelected,
+                            focusNode: deviceType.isTv
+                                ? _tileFocusNode(index)
+                                : null,
                             onTap: (cardRect) {
                               if (_isSelectionMode) {
                                 _toggleSelection(movie.id);
@@ -1515,4 +1589,21 @@ class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.color != color ||
         oldDelegate.child != child;
   }
+}
+
+/// One row of the television filter sheet: a category, or "All" when
+/// [category] is null. Equality is by id, which is what lets the sheet mark
+/// the row that is already active.
+class _FilterOption {
+  const _FilterOption(this.category, this.label);
+
+  final MovieCategory? category;
+  final String label;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _FilterOption && other.category?.id == category?.id;
+
+  @override
+  int get hashCode => category?.id.hashCode ?? 0;
 }

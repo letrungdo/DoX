@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
@@ -58,6 +60,21 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   /// so the remote starts on them.
   bool _hasAimedRemote = false;
 
+  /// The shape the channel grid was last laid out at: how many cards to a
+  /// row, how tall a card is, and where the first row starts.
+  ///
+  /// Worked out during layout, where the width is known, and kept here for
+  /// [_revealChannel], which runs between frames with nothing to measure.
+  int _gridColumns = 1;
+  double _gridTileHeight = 1;
+  double _gridTop = 0;
+
+  /// The height of the strip of group chips above the grid.
+  static const _groupChipsHeight = 46.0;
+
+  /// The gap between that strip and the first row of channels.
+  static const _gridTopPadding = 8.0;
+
   FocusNode _getFocusNodeForChannel(String url) {
     return _channelFocusNodes.putIfAbsent(
       url,
@@ -116,6 +133,8 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     final l10n = AppLocalizations.of(context);
     final viewModel = context.watch<TvViewModel>();
     _aimRemoteAtChannels(viewModel);
+    _gridTop =
+        (viewModel.groups.isNotEmpty ? _groupChipsHeight : 0) + _gridTopPadding;
 
     return Focus(
       canRequestFocus: false,
@@ -328,7 +347,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: SizedBox(
-            height: 46,
+            height: _groupChipsHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const ClampingScrollPhysics(),
@@ -394,31 +413,50 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
       );
     }
 
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        8,
-        horizontalPadding,
-        MediaQuery.paddingOf(context).bottom + 24,
-      ),
-      sliver: SliverGrid.builder(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: Dimens.tvChannelTileMaxWidth,
-          childAspectRatio: Dimens.tvChannelTileAspect,
-          crossAxisSpacing: Dimens.tvChannelTileSpacing,
-          mainAxisSpacing: Dimens.tvChannelTileSpacing,
-        ),
-        itemCount: viewModel.channels.length,
-        itemBuilder: (context, index) {
-          final channel = viewModel.channels[index];
-          return TvChannelCard(
-            key: ValueKey(channel.url),
-            channel: channel,
-            focusNode: _getFocusNodeForChannel(channel.url),
-            onTap: () => _openChannel(channel, viewModel.channels),
-          );
-        },
-      ),
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        // The same arithmetic `SliverGridDelegateWithMaxCrossAxisExtent` does,
+        // spelled out because coming back from the player needs the answer
+        // too: which row a channel is on, and how far down that is.
+        final width = constraints.crossAxisExtent - horizontalPadding * 2;
+        final columns =
+            (width /
+                    (Dimens.tvChannelTileMaxWidth +
+                        Dimens.tvChannelTileSpacing))
+                .ceil()
+                .clamp(1, viewModel.channels.length);
+        final tileWidth =
+            (width - Dimens.tvChannelTileSpacing * (columns - 1)) / columns;
+        _gridColumns = columns;
+        _gridTileHeight = tileWidth / Dimens.tvChannelTileAspect;
+
+        return SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            _gridTopPadding,
+            horizontalPadding,
+            MediaQuery.paddingOf(context).bottom + 24,
+          ),
+          sliver: SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: Dimens.tvChannelTileMaxWidth,
+              childAspectRatio: Dimens.tvChannelTileAspect,
+              crossAxisSpacing: Dimens.tvChannelTileSpacing,
+              mainAxisSpacing: Dimens.tvChannelTileSpacing,
+            ),
+            itemCount: viewModel.channels.length,
+            itemBuilder: (context, index) {
+              final channel = viewModel.channels[index];
+              return TvChannelCard(
+                key: ValueKey(channel.url),
+                channel: channel,
+                focusNode: _getFocusNodeForChannel(channel.url),
+                onTap: () => _openChannel(channel, viewModel.channels),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -449,13 +487,52 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     );
     if (!mounted) return;
 
-    final targetChannel = finalChannel ?? channel;
+    _restoreFocusTo(finalChannel ?? channel, playlist);
+  }
+
+  /// Brings the grid back to the channel the viewer came out of the player
+  /// on, and puts the remote on it.
+  ///
+  /// Not [FocusNode.requestFocus] on its own. After channel-surfing that tile
+  /// is rows outside the range the grid has built, so its node has no parent
+  /// and the request is a silent no-op — the shell then rescues the homeless
+  /// focus onto the app bar, and the grid is left at the top with the remote
+  /// nowhere near where the viewer left it. So the row is scrolled to first,
+  /// which is what builds the tile, and only the frame after that is the
+  /// remote handed to it.
+  void _restoreFocusTo(TvChannel target, List<TvChannel> playlist) {
+    final index = playlist.indexWhere((c) => c.url == target.url);
+    if (index >= 0) _revealChannel(index);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final node = _channelFocusNodes[targetChannel.url];
-      if (node != null) {
-        node.requestFocus();
-      }
+      final node = _channelFocusNodes[target.url];
+      if (node == null) return;
+      node.requestFocus();
+      final nodeContext = node.context;
+      if (nodeContext == null) return;
+      // The jump above was worked out from the last layout; this settles the
+      // tile exactly where a focused tile belongs.
+      unawaited(
+        Scrollable.ensureVisible(
+          nodeContext,
+          alignment: Dimens.tvFocusScrollAlignment,
+        ),
+      );
     });
+  }
+
+  /// Scrolls the row [index] sits on into the middle of the viewport.
+  void _revealChannel(int index) {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final rowStride = _gridTileHeight + Dimens.tvChannelTileSpacing;
+    final target =
+        _gridTop +
+        (index ~/ _gridColumns) * rowStride -
+        (position.viewportDimension - _gridTileHeight) *
+            Dimens.tvFocusScrollAlignment;
+    _scrollController.jumpTo(
+      target.clamp(position.minScrollExtent, position.maxScrollExtent),
+    );
   }
 }

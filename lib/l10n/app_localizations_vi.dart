@@ -1666,6 +1666,22 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String confirmRemoveSelectedFromHistory(int count) {
+    return 'Xoá $count phim đã chọn khỏi lịch sử đã xem?';
+  }
+
+  @override
+  String selectedCountTitle(int count) {
+    return 'Đã chọn $count';
+  }
+
+  @override
+  String get selectMovies => 'Chọn phim';
+
+  @override
+  String get playFromStart => 'Xem từ đầu';
+
+  @override
   String get directorLabel => 'Đạo diễn';
 
   @override

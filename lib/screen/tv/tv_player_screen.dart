@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Plays one live channel, full screen.
 ///
@@ -137,9 +138,6 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   int _gridColumns = 1;
   double _gridRowStride = 1;
 
-  /// How long the controls stay up after a tap before they fade away again.
-  static const _controlsTimeout = Duration(seconds: 4);
-
   /// How long the name of a channel just moved to stays over the picture.
   /// Long enough to read from a sofa, short enough that pressing up three
   /// times does not leave a banner sitting on the programme.
@@ -163,6 +161,10 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _channelNameTimer?.cancel();
     _typedNumberTimer?.cancel();
     unawaited(_setImmersive(false));
+    // Never left behind: the page can be popped from anywhere — Back, the
+    // control bar, the system gesture — and a lock still held is a television
+    // that never goes to sleep again.
+    unawaited(_setWakelock(false));
     final controller = _controller;
     final listener = _listener;
     if (controller != null && listener != null) {
@@ -190,6 +192,24 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     } on Object catch (e) {
       // A platform without the channel is no reason to fail playback.
       logger.d('TvPlayerScreen system UI mode failed: $e');
+    }
+  }
+
+  /// Holds the screen awake while a channel is playing, and lets it go again.
+  ///
+  /// Live television is the one thing in the app nobody touches for an hour
+  /// at a time: without this the picture is still running when the display
+  /// times out. Failures are logged and swallowed — a platform that has no
+  /// wakelock is no reason to stop playing.
+  Future<void> _setWakelock(bool enabled) async {
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } on Object catch (e) {
+      logger.d('TvPlayerScreen wakelock failed: $e');
     }
   }
 
@@ -263,6 +283,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
         _listener = listener;
         _isLoading = false;
       });
+      // A channel is on screen, so the display stays on it.
+      unawaited(_setWakelock(true));
     } on Object catch (e, st) {
       logger.e(
         'TvPlayerScreen could not open ${_channel.name}',
@@ -304,6 +326,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// reach — it sits inside the picture's own rectangle, where directional
   /// traversal never looks.
   void _showError() {
+    // Nothing is playing, so nothing is worth keeping the display awake for.
+    unawaited(_setWakelock(false));
     setState(() {
       _hasError = true;
       _isLoading = false;
@@ -412,6 +436,28 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     await _open();
   }
 
+  /// Stops the picture on a frame, or picks it up again.
+  ///
+  /// A live channel has no timeline to scrub, but it can still be held: the
+  /// phone rings and the viewer wants the room quiet, which is the whole of
+  /// what play/pause means here. Resuming carries on from wherever the stream
+  /// is now, not from where it was left.
+  Future<void> _setPlaying(bool playing) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (controller.value.isPlaying == playing) return;
+    if (playing) {
+      await controller.play();
+      unawaited(_setWakelock(true));
+    } else {
+      await controller.pause();
+      // Paused, the picture is a still frame; the display may sleep over it.
+      unawaited(_setWakelock(false));
+    }
+    if (!mounted) return;
+    setState(() {});
+  }
+
   Future<void> _retry() async {
     // The retry button is about to leave with the error state it belongs to.
     _videoFocusNode.requestFocus();
@@ -432,7 +478,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
   void _scheduleHideControls() {
     _hideControlsTimer?.cancel();
-    _hideControlsTimer = Timer(_controlsTimeout, () {
+    _hideControlsTimer = Timer(Dimens.playerControlsTimeout, () {
       // While playback is broken the controls are the only way out of the
       // page, so they stay put until something plays.
       if (!mounted || _hasError || _isLoading) return;
@@ -495,15 +541,17 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
     // The controls are inside this node, so their keys walk up through here.
     // Claiming them would swallow the OK meant for the focused button.
-    if (!node.hasPrimaryFocus || event is! KeyDownEvent) {
-      return KeyEventResult.ignored;
-    }
+    if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
+
+    // A held arrow is a repeat, not a second press, and it has to be claimed
+    // here all the same: left to fall through it reaches the shell's
+    // `Shortcuts`, whose activators take repeats by default, and the remote
+    // walks off the picture while the viewer is simply leaning on the key.
+    final isPress = event is KeyDownEvent;
+    final isRepeat = event is KeyRepeatEvent;
+    if (!isPress && !isRepeat) return KeyEventResult.ignored;
 
     final key = event.logicalKey;
-    if (_canChangeChannel && _isSelectKey(key)) {
-      _toggleChannelList();
-      return KeyEventResult.handled;
-    }
 
     final isArrow =
         key == LogicalKeyboardKey.arrowUp ||
@@ -518,27 +566,65 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       // up. Handed it on the press that revealed it, the picture would lose
       // the keys — the grid, the channel pair and the keypad are all the
       // picture's — before the viewer had seen what they were reaching for.
-      if (deviceType.isTv && wasVisible) {
+      //
+      // And only on a press: a key held down is the viewer waiting for
+      // something, not asking for it twice.
+      if (deviceType.isTv && wasVisible && isPress) {
         _enterControls(afterFrame: false);
       }
+      return KeyEventResult.handled;
+    }
+
+    // Everything below is a press. OK held down is still one press of OK.
+    if (!isPress) return KeyEventResult.ignored;
+
+    if (_canChangeChannel && _isSelectKey(key)) {
+      _toggleChannelList();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
 
   /// The keys a television remote has that a game-pad style one does not:
-  /// the channel pair and the number keypad.
+  /// the transport keys, the channel pair and the number keypad.
   ///
   /// Handled for the whole page rather than for the picture, because they
   /// mean the same thing wherever the remote happens to be resting — on the
   /// back button, on the retry button of a channel that would not come up,
   /// anywhere. Only the arrows are the picture's own, because there they
   /// compete with moving between controls.
+  ///
+  /// `mediaFastForward` and `mediaRewind` are deliberately absent: a live
+  /// channel is whatever is going out now, there is no timeline behind or
+  /// ahead of it, and a key that silently does nothing is worse than one the
+  /// page never claimed — unclaimed, the remote is free to pass it on.
   KeyEventResult _handlePageKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent || !_canChangeChannel) {
-      return KeyEventResult.ignored;
-    }
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
+
+    // STOP is the way out of the channel, the same one Back takes: the grid
+    // behind is told which channel the viewer ended up on.
+    if (key == LogicalKeyboardKey.mediaStop) {
+      Navigator.of(context).pop(_channel);
+      return KeyEventResult.handled;
+    }
+    // Live or not, the picture can be held on a frame — and the remote has a
+    // key printed for it, which until now did nothing at all.
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      unawaited(_setPlaying(!(_controller?.value.isPlaying ?? false)));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPause) {
+      unawaited(_setPlaying(false));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay) {
+      unawaited(_setPlaying(true));
+      return KeyEventResult.handled;
+    }
+
+    // The rest move between channels, which needs a list to move along.
+    if (!_canChangeChannel) return KeyEventResult.ignored;
 
     // CH+ is the next channel number, CH- the previous one. The skip pair a
     // recorder remote is printed with means the same thing here: there is no
@@ -640,12 +726,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
     // Held back only while there is something to hold back for. `canPop:
     // false` also turns off the swipe-back gesture, and on a phone that
-    // gesture is how the page is left — while both reasons to intercept are
+    // gesture is how the page is left — while every reason to intercept is
     // television, where there is no gesture to lose: a list open over the
-    // picture, which Back should close rather than leave, and a channel
-    // changed since the page opened, which the grid behind wants told.
+    // picture, an overlay up over it, either of which Back should close
+    // rather than leave, and a channel changed since the page opened, which
+    // the grid behind wants told.
     final isIntercepting =
-        _showChannelList || !identical(_channel, widget.channel);
+        _showChannelList ||
+        (_showControls && deviceType.isTv) ||
+        !identical(_channel, widget.channel);
 
     return PopScope(
       canPop: !isIntercepting,
@@ -655,6 +744,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
         // once it is gone does Back mean leaving the channel.
         if (_showChannelList) {
           _toggleChannelList();
+          return;
+        }
+        // And the same for the bar over the picture: on a television Back is
+        // how anything on screen is dismissed, so the first press takes the
+        // overlay down and only the next one leaves the channel.
+        if (_showControls && deviceType.isTv) {
+          _hideControlsTimer?.cancel();
+          _releaseControlsFocus();
+          setState(() => _showControls = false);
           return;
         }
         Navigator.of(context).pop(_channel);

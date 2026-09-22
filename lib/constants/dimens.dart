@@ -172,7 +172,11 @@ class Dimens {
   /// a square the artwork ends up a band across the middle with as much air
   /// above and below it as there is logo. Half that height is what the
   /// picture actually needs, and the rows it saves are rows of channels.
-  static const tvChannelTileMaxWidth = 150.0;
+  ///
+  /// A television gets a wider tile than a phone for the same reason it gets
+  /// a wider content column: the panel is read from a sofa, and 150dp of
+  /// logo-and-name at that distance is a smudge.
+  static double get tvChannelTileMaxWidth => deviceType.isTv ? 210.0 : 150.0;
 
   /// The width every channel logo is decoded at, in pixels.
   ///
@@ -186,6 +190,20 @@ class Dimens {
   static const tvChannelLogoDecodeWidth = 256;
   static const tvChannelTileAspect = 1.4;
   static const tvChannelTileSpacing = 12.0;
+
+  /// Where a tile the remote has just moved onto is parked in its viewport,
+  /// and how long the ride takes. Half way up, so there is always a row of
+  /// peek above and below telling the viewer the grid carries on.
+  static const tvFocusScrollAlignment = 0.5;
+  static const tvFocusScrollDuration = Duration(milliseconds: 180);
+
+  /// How long the player's control overlay stays up after the last key press.
+  ///
+  /// A television waits longer than a phone: the viewer is three metres away
+  /// reading the bar rather than an arm's length away pointing at it, and
+  /// every correction costs another press of the remote.
+  static Duration get playerControlsTimeout =>
+      deviceType.isTv ? const Duration(seconds: 5) : const Duration(seconds: 3);
 
   /// The same card over the picture is a shallower one again: it is laid
   /// over a programme the viewer is still watching, so every row of it that

@@ -1065,6 +1065,24 @@
       }
     }
   },
+  "confirmRemoveSelectedFromHistory": "Remove {count} selected movies from your watched history?",
+  "@confirmRemoveSelectedFromHistory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedCountTitle": "{count} selected",
+  "@selectedCountTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectMovies": "Select movies",
+  "playFromStart": "Play from start",
   "directorLabel": "Director",
   "actorsLabel": "Cast",
   "countryLabel": "Country",

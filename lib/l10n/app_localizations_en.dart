@@ -1669,6 +1669,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String confirmRemoveSelectedFromHistory(int count) {
+    return 'Remove $count selected movies from your watched history?';
+  }
+
+  @override
+  String selectedCountTitle(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get selectMovies => 'Select movies';
+
+  @override
+  String get playFromStart => 'Play from start';
+
+  @override
   String get directorLabel => 'Director';
 
   @override
