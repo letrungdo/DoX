@@ -41,7 +41,7 @@ export interface Verified {
  * A channel stops as soon as one of its links works, so the common case
  * costs a single check and the budget is spent on the channels that are in
  * trouble. What it stopped short of is kept: those links are unproven, not
- * dead, and a week from now the proven one may be the dead one.
+ * dead, and two days from now the proven one may be the dead one.
  */
 export async function check(
   channels: Channel[],
@@ -58,7 +58,8 @@ export async function check(
 
       if (Date.now() > deadline) {
         // Out of time: the channel keeps its links in the order they were
-        // ranked and goes out unverified rather than disappearing for a week.
+        // ranked and goes out unverified rather than disappearing until the
+        // next run.
         results[index] = { channel, urls: channel.sources, checked: false };
         continue;
       }

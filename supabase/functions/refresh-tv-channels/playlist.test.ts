@@ -22,6 +22,18 @@ https://example.com/danang1/index.m3u8
 https://example.com/hmong/index.m3u8
 #EXTINF:-1 tvg-id="UniquelyThai.vn@SD" tvg-logo="" group-title="Shop",Uniquely Thai (720p)
 https://example.com/uniquelythai/index.m3u8
+#EXTINF:-1 tvg-id="AnNinhTV.vn@HD" tvg-logo="" group-title="Undefined",An Ninh TV HD (1080p)
+https://example.com/anninhtv/index.m3u8
+#EXTINF:-1 tvg-id="VTV10.vn@HD" tvg-logo="" group-title="Education",VTV10 (1080p)
+https://example.com/vtv10/index.m3u8
+#EXTINF:-1 tvg-id="VTV10.vn@SD" tvg-logo="" group-title="Education",VTV10 SD (576p)
+https://example.com/vtv10-sd/index.m3u8
+#EXTINF:-1 tvg-id="VTV5TayNguyen.vn@HD" tvg-logo="" group-title="General",VTV5 Tay Nguyen HD (1080p)
+https://example.com/vtv5-taynguyen/index.m3u8
+#EXTINF:-1 tvg-id="HTVSports.vn@SD" tvg-logo="" group-title="Sports",HTV Sports (720p)
+https://example.com/htvsports/index.m3u8
+#EXTINF:-1 tvg-id="CanThoTV.vn@SD" tvg-logo="" group-title="General",Can Tho TV (720p)
+https://example.com/cantho/index.m3u8
 `;
 
 /**
@@ -64,6 +76,32 @@ https://example.com/vinhlong5/index.m3u8
 https://example.com/danang/index.m3u8
 #EXTINF:-1 group-title="TV Nasional",SCTV
 https://example.com/sctv-id/index.m3u8
+#EXTINF:-1 group-title="ANQP",ANTV
+https://example.com/antv/index.m3u8
+#EXTINF:-1 ,Vietnam ANTV
+https://example.com/vietnam-antv/index.m3u8
+#EXTINF:-1 group-title="INDONESIA SD",ANTV
+https://example.com/antv-id/index.m3u8
+#EXTINF:-1 tvg-id="KhmerTV.vn" tvg-country="VN" group-title="Vietnam越南",KhmerTV
+https://example.com/khmertv/index.m3u8
+#EXTINF:-1 group-title="ANQP",QPVN Quốc Phòng
+https://example.com/qpvn-1/index.m3u8
+#EXTINF:-1 group-title="ANQP",QPVN QUỐC PHÒNG VIỆT NAM
+https://example.com/qpvn-2/index.m3u8
+#EXTINF:-1 group-title="ANQP",Quốc Phòng VN
+https://example.com/qpvn-3/index.m3u8
+#EXTINF:-1 group-title="THVL",THVL5
+https://example.com/thvl5/index.m3u8
+#EXTINF:-1 group-title="Địa phương",Vĩnh Long 5
+https://example.com/vinhlong5-2/index.m3u8
+#EXTINF:-1 group-title="Thể thao",VTV5 TN
+https://example.com/vtv5-tn/index.m3u8
+#EXTINF:-1 group-title="Thể thao",HTVC Thể Thao
+https://example.com/htvc-thethao/index.m3u8
+#EXTINF:-1 group-title="Địa phương",Cần Thơ THTPCT
+https://example.com/cantho-thtpct/index.m3u8
+#EXTINF:-1 group-title="Địa phương",THTPCT1 Cần Thơ 1
+https://example.com/cantho-thtpct1/index.m3u8
 `;
 
 const build = () => curate(parsePlaylist(PRIMARY), parsePlaylist(EXTRA));
@@ -102,7 +140,9 @@ Deno.test("keeps the catalogue whole and fills the gaps around it", () => {
   assert(found.includes("THVL1"));
   assert(found.includes("HTV7"));
   assert(found.includes("LTV1 Lâm Đồng"));
-  assert(found.includes("Cần Thơ 1"));
+  // The collection's `Cần Thơ 1 HD - Báo và PTTH Thành Phố Cần Thơ` is the
+  // catalogue's `Can Tho TV`, so it joins that row rather than making one.
+  assert(found.includes("Can Tho TV"));
   assert(found.includes("ON Sports"));
 });
 
@@ -160,6 +200,8 @@ Deno.test("the catalogue's own foreign channels are left out too", () => {
   assertFalse(found.includes("Hmong TV Network"));
   // And some of them it labels `.vn` regardless, so the name has to say it.
   assertFalse(found.includes("Uniquely Thai"));
+  // Even written with nothing between the word and the `TV`.
+  assertFalse(found.includes("KhmerTV"));
   // `SCTV` is Vietnam's cable network, numbered, and also Indonesia's
   // biggest station, bare.
   assertFalse(found.includes("SCTV"));
@@ -174,6 +216,69 @@ Deno.test("one province's channels stand together, however they are spelled", ()
   // the far end of the list instead of beside each other.
   assertEquals(at("Vĩnh Long 5"), at("Vinh Long TV 4") + 1);
   assertEquals(at("Da Nang TV 1"), at("Đà Nẵng") + 1);
+});
+
+Deno.test("a call sign and the name it stands for are one channel", () => {
+  const antv = build().filter((c) => /An Ninh|ANTV/.test(c.name));
+
+  // `ANTV` is `An Ninh TV`, the police channel, and the sources write it
+  // both ways — and once more as `Vietnam ANTV`.
+  assertEquals(antv.length, 1);
+  assertEquals(antv[0].name, "An Ninh TV HD");
+  assertEquals(antv[0].sources, [
+    "https://example.com/anninhtv/index.m3u8",
+    "https://example.com/antv/index.m3u8",
+    "https://example.com/vietnam-antv/index.m3u8",
+  ]);
+});
+
+Deno.test("a name that spells its own call sign out is not two channels", () => {
+  const qpvn = build().filter((c) => /QPVN|Quốc Phòng/i.test(c.name));
+
+  // `QPVN` is `Quốc Phòng Việt Nam`, and the sources write it every way
+  // there is — twice over in the same name, in two of them.
+  assertEquals(qpvn.length, 1);
+  assertEquals(qpvn[0].sources.length, 3);
+});
+
+Deno.test("the many ways one station is written come to one row", () => {
+  const found = names();
+  const once = (pattern: RegExp) =>
+    found.filter((name) => pattern.test(name)).length;
+
+  // `THVL5` is `Vĩnh Long 5`, `VTV5 TN` is `VTV5 Tây Nguyên`, `HTVC Thể
+  // Thao` is `HTV Sports`, and `Cần Thơ`'s own station spells its call sign
+  // out as the city it is named after.
+  assertEquals(once(/Vĩnh Long 5|THVL5/), 1);
+  assertEquals(once(/VTV5 T/i), 1);
+  assertEquals(once(/HTVC? (Sports|Thể ?thao)/i), 1);
+  assertEquals(once(/Cần Thơ|Can Tho/i), 1);
+  // The catalogue's spelling is the one that stays, and everything the
+  // others found stays with it as a spare link.
+  const cantho = build().find((c) => c.name === "Can Tho TV")!;
+  assertEquals(cantho.sources.length, 4);
+});
+
+Deno.test("two feeds of one station in the catalogue are one row", () => {
+  const vtv10 = build().filter((c) => c.name.startsWith("VTV10"));
+
+  // `VTV10` and `VTV10 SD` are the same channel at two resolutions, and the
+  // second is a spare link rather than a row of its own.
+  assertEquals(vtv10.length, 1);
+  assertEquals(vtv10[0].sources, [
+    "https://example.com/vtv10/index.m3u8",
+    "https://example.com/vtv10-sd/index.m3u8",
+  ]);
+});
+
+Deno.test("a channel shelved under another country is theirs", () => {
+  // `ANTV` is also one of Indonesia's biggest stations, and the only thing
+  // telling that entry from ours is the shelf it sits on. Left in, its
+  // stream became one of the spares the app falls back on for the police
+  // channel.
+  const antv = build().find((c) => c.name === "An Ninh TV HD")!;
+
+  assertFalse(antv.sources.includes("https://example.com/antv-id/index.m3u8"));
 });
 
 Deno.test("the country in the brackets is read before they are stripped", () => {

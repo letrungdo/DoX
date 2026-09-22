@@ -21,7 +21,8 @@ import 'package:flutter/foundation.dart';
 /// station listed half a dozen ways. Sorting that out is work, and the part
 /// that matters most — whether a stream is really playing — a phone can only
 /// learn by making someone sit through a channel that never starts. So it
-/// happens once a week in `refresh-tv-channels`, and here Vietnam is a read.
+/// happens every other day in `refresh-tv-channels`, and here Vietnam is a
+/// read.
 class _TvChannelService {
   /// The playlist of one country. Country file rather than the full index: the
   /// index is tens of megabytes and every entry outside the picked country
@@ -472,7 +473,7 @@ const maxStreamUrls = 4;
 
 /// [urls] best first, deduplicated and cut to [maxStreamUrls].
 ///
-/// The same order the weekly refresh ranks Vietnam's mirrors by, so a channel
+/// The same order the scheduled refresh ranks Vietnam's mirrors by, so a channel
 /// read off a playlist opens on the same kind of link as one read off our
 /// table.
 List<String> rankStreamUrls(Iterable<String> urls) {

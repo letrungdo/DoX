@@ -210,6 +210,20 @@ export function curate(primary: Entry[], extra: Entry[]): Channel[] {
     if (urls.has(entry.url)) continue;
     if (!isVietnamese(entry)) continue;
     urls.add(entry.url);
+
+    // The catalogue lists one station twice when it has two feeds of it —
+    // `VTV10` beside `VTV10 SD`. The second is a spare link for the first,
+    // not a row of its own.
+    const keys = identityKeys(entry.name);
+    const owned = [...keys]
+      .map((key) => owner.get(key))
+      .find((index) => index !== undefined);
+    if (owned !== undefined) {
+      rows[owned].sources.push(entry.url);
+      claim(keys, owned);
+      continue;
+    }
+
     add(entry, entry.name, entry.groups);
   }
 
@@ -348,13 +362,22 @@ function isVietnamese(entry: Entry): boolean {
   const country = /^[^.]+\.([a-z]{2})(?:@.*)?$/i.exec(entry.id)?.[1];
   if (country) return country.toLowerCase() === "vn";
 
+  // A shelf is worth reading when it names somebody else: `ANTV` is
+  // Vietnam's police channel and also one of Indonesia's biggest stations,
+  // and the only thing telling those two entries apart is that one of them
+  // sits under `INDONESIA SD`.
+  if (entry.groups.some((group) => FOREIGN_GROUP.test(foldAccents(group)))) {
+    return false;
+  }
+
   // A name in another script is another country's channel, whatever bucket
   // the collection filed it under. Read off the untouched name, because the
   // script is usually inside the brackets the parser drops.
   if (FOREIGN_SCRIPT.test(entry.rawName)) return false;
 
-  // The name alone, never the group: the collection's shelves are broad
-  // enough that a `VIETNAM TV24` bucket holds channels from anywhere.
+  // Past that the name alone, never the group: a shelf that claims Vietnam
+  // is broad enough that a `VIETNAM TV24` bucket holds channels from
+  // anywhere.
   const name = foldAccents(entry.name);
   if (FOREIGN_NAMESAKE.test(name)) return false;
   if (NETWORK.test(name) || PROVINCE.test(name)) return true;
@@ -378,10 +401,22 @@ const FOREIGN_NAMESAKE = /^(vtv|sctv)( ?hd| ?sd)?$/;
  * Both lists carry a handful of stations serving the Thai, Khmer, Hmong and
  * Lao communities, and one American city council channel that reads as `HTV`
  * — some of them even labelled `.vn`. Nothing in the entry gives them away,
- * so they are named here.
+ * so they are named here. The word only has to start a word, because the
+ * collection writes `KhmerTV` with nothing in between.
  */
 const FOREIGN_NAME =
-  /\b(hmong|khmer|houston|uniquely thai|lao[ -]?thai|tea tv)\b/;
+  /\b(hmong|khmer|houston|uniquely thai|lao[ -]?thai|tea tv)/;
+
+/**
+ * A group title that says the channel is another country's.
+ *
+ * The shelves the collection claims Vietnam with are broad enough to hold
+ * anything — a `VIETNAM TV24` bucket has channels from everywhere — but a
+ * shelf named after somebody else is only ever theirs. `nasional` is how the
+ * Indonesian lists label their own national channels.
+ */
+const FOREIGN_GROUP =
+  /\b(indonesia|nasional|malaysia|thailand|philippines|singapore|cambodia|myanmar|laos|india|china|korea|japan)\b/;
 
 /** A letter from a script other than the Latin one Vietnamese is written in. */
 const FOREIGN_SCRIPT = /[^\P{L}\p{Script=Latin}]/u;
@@ -562,19 +597,63 @@ function containsRun(words: string[], run: string[]): boolean {
  * keeps the letters and digits that are left.
  */
 export function dedupeKey(name: string): string {
-  return foldAccents(name)
+  let key = foldAccents(name);
+  for (const [spelling, callSign] of CALL_SIGN_ALIAS) {
+    key = key.replace(spelling, callSign);
+  }
+  return key
     .replace(/\([^)]*\)/g, " ")
     .replace(/\[[^\]]*\]/g, " ")
     .replace(/\b(hd|sd|fhd|uhd|4k|tv|kenh|channel|dai|truyen hinh)\b/g, " ")
     .replace(/[^a-z0-9]/g, "")
-    // `CanThoTV1` and `Can Tho 1` are one channel. Two letters have to come
-    // first, or the `TV` of `HTV1` would be filed off too and the station
-    // would collide with whatever else is called `H1`.
-    .replace(/(?<=[a-z]{2})tv(?=\d|$)/, "")
+    // `CanThoTV1` and `Can Tho 1` are one channel. Three letters have to
+    // come first, or the `TV` of `HTV1` would be filed off too and the
+    // station would collide with whatever else is called `H1` — and `ANTV`,
+    // where the `TV` is part of the call sign, would come out as `AN`.
+    .replace(/(?<=[a-z]{3})tv(?=\d|$)/, "")
     // A tail of three or more characters the key already contains, which is
     // the province said twice: `HanoiTV1 Hà Nội` keys as `hanoi1hanoi`.
-    .replace(/(?<=(\w{3,})\w*)\1$/, "");
+    .replace(/(?<=(\w{3,})\w*)\1$/, "")
+    // The same thing with nothing in between, which is what a name that
+    // gives the call sign and then spells it out comes to: `QPVN Quốc
+    // Phòng` is `qpvnqpvn` once the spelling is folded onto the sign, and
+    // `Cần Thơ THTPCT` is `canthocantho1` with the station number behind it.
+    .replace(/^(\w{3,})\1(\d*)$/, "$1$2");
 }
+
+/**
+ * Call signs the sources are as likely to spell out as to abbreviate.
+ *
+ * `ANTV` is `An Ninh TV`, the police channel, and it is written both ways —
+ * and once as `Vietnam ANTV`. `QPVN` is `Quốc Phòng Việt Nam`, and the
+ * sources manage four spellings of it, two of which say it twice over.
+ * Nothing the keys are built from makes them look alike, so without this
+ * each spelling is a channel of its own.
+ */
+const CALL_SIGN_ALIAS: [RegExp, string][] = [
+  [/\ban ninh\b/g, "antv"],
+  [/\bcong an nhan dan\b/g, "antv"],
+  [/\bquoc phong( viet ?nam| vn)?\b/g, "qpvn"],
+  [/\bviet ?nam (antv|qpvn|vtc|vtv|htv)\b/g, "$1"],
+  // `THVL` is `Truyền hình Vĩnh Long`, and the number that follows is the
+  // station: `THVL5` is `Vĩnh Long 5`.
+  [/\bthvl(?=\d)/g, "vinh long "],
+  // `VTV5` broadcasts a region at a time, and the regions are abbreviated
+  // as often as they are written out.
+  [/\bvtv5 ?tnb\b/g, "vtv5 tay nam bo"],
+  [/\bvtv5 ?tn\b/g, "vtv5 tay nguyen"],
+  // `Cần Thơ`'s own station, whose call sign stands for the city it is
+  // named after, so that every spelling of it says the city twice.
+  [
+    /\b(can tho tv(?! ?\d)|can tho thtpct|thtpct ?1? ?can tho ?1?)\b/g,
+    "can tho 1",
+  ],
+  // The sports and the travel channel of Ho Chi Minh City's network, which
+  // the sources name in two languages and at three lengths.
+  [/\bhtvc? ?(sports?|the thao)\b/g, "htv the thao"],
+  [/\bdu lich (va )?cuoc song\b/g, "du lich"],
+  [/\bdramas\b/g, "drama"],
+];
 
 /**
  * Every key one channel could be known by, its own first.

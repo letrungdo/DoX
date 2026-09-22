@@ -3,7 +3,7 @@ import { curate, parsePlaylist } from "./playlist.ts";
 import { BROWSER_AGENT, check } from "./check.ts";
 
 /**
- * Rebuilds the Vietnamese channel list, weekly.
+ * Rebuilds the Vietnamese channel list, every other day.
  *
  * Two playlists go in — the curated `iptv-org` file and a community
  * collection that has everything it misses — and one list comes out, with
@@ -33,9 +33,9 @@ const COUNTRY = "VN";
  * When the checking stops, whatever is left unchecked.
  *
  * The function has a wall clock to stay inside, and a run that is cut off
- * mid-way has to still produce a list — a week with no channels at all would
- * be far worse than a week with a few dead ones. Whatever has not been
- * reached by then keeps its best link and goes out unverified.
+ * mid-way has to still produce a list — two days with no channels at all
+ * would be far worse than two days with a few dead ones. Whatever has not
+ * been reached by then keeps its best link and goes out unverified.
  */
 const CHECK_BUDGET_MS = 110_000;
 
@@ -64,7 +64,7 @@ Deno.serve(async () => {
       name: entry.channel.name,
       url: entry.urls[0],
       // The spares, behind the link that played, for the app to fall back on
-      // when this one has died before the next weekly run.
+      // when this one has died before the next run.
       urls: entry.urls,
       logo: entry.channel.logo,
       categories: entry.channel.categories,

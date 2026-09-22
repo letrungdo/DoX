@@ -20,7 +20,7 @@ class TvChannel {
 
   /// One row of the `tv_channels` table.
   ///
-  /// The week's list is already sorted, deduplicated and checked by then, so
+  /// The run's list is already sorted, deduplicated and checked by then, so
   /// there is nothing to work out here — only the column names to read.
   factory TvChannel.fromRow(Map<String, dynamic> row) {
     final headers = row['headers'];
