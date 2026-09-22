@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
@@ -148,20 +147,6 @@ class _MovieDetailScreenState
   final ScrollController _episodeOverlayController = ScrollController();
   bool _showEpisodeOverlay = false;
 
-  /// Where the remote lands on the television's landing page.
-  final FocusNode _tvPrimaryActionFocusNode = FocusNode(
-    debugLabel: 'movie-tv-primary-action',
-  );
-
-  /// Television only: nothing plays until the viewer asks for it, so the page
-  /// opens on the poster and its row of actions instead of on a film already
-  /// running. Set by the first press that starts playback.
-  bool _hasStartedPlayback = false;
-
-  /// Set once the remote has been put on the landing page's first action, so
-  /// a rebuild does not snatch it back from wherever the viewer moved it.
-  bool _tvLandingFocusRequested = false;
-
   /// How many times the arrow being held has repeated, so a long press seeks
   /// further per step than a tap does.
   int _seekRepeatCount = 0;
@@ -247,10 +232,9 @@ class _MovieDetailScreenState
     widget.controller?.attach(_exitFullScreen);
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // A television opens on its landing page instead: the poster, and a row
-      // of actions saying what pressing OK will do. Dropping someone straight
-      // into a film they only moved the remote onto is what a ten-foot page
-      // is supposed to spare them.
+      // A television too: the set has nothing but the picture to show, and a
+      // film boxed into the top of a page is the one shape a ten-foot screen
+      // has no use for.
       final shouldAutoEnterFullScreen =
           deviceType.isTv ||
           kIsWeb ||
@@ -271,20 +255,10 @@ class _MovieDetailScreenState
     super.initData();
   }
 
-  /// Whether the episode the page settled on should start by itself.
-  ///
-  /// Everywhere but a television, yes: the page exists to play the film. On a
-  /// television playback waits for the landing page's Resume or Play button,
-  /// so nothing starts streaming because the remote passed over a poster.
-  ///
-  /// Written as the negation of [_showTvLanding] rather than as a second copy
-  /// of the same test. Spelled out twice they drifted apart, and the gap
-  /// between them — a page that neither plays nor shows the landing — was a
-  /// spinner that never went away.
+  /// Whether the episode the page settled on should start by itself. It
+  /// always should: the page exists to play the film.
   bool get _shouldAutoPlay =>
-      _vm.selectedEpisode != null &&
-      _videoController == null &&
-      !_showTvLanding;
+      _vm.selectedEpisode != null && _videoController == null;
 
   void _initOrientationListener() {
     if (!_supportsOrientationManager) return;
@@ -311,9 +285,6 @@ class _MovieDetailScreenState
     if (oldWidget.movieId != widget.movieId ||
         oldWidget.movieUrl != widget.movieUrl) {
       unawaited(_detachAndDisposeController());
-      // Another film: a television is back on its landing page for it.
-      _hasStartedPlayback = false;
-      _tvLandingFocusRequested = false;
       () async {
         await _vm.init(
           widget.movieUrl,
@@ -355,7 +326,6 @@ class _MovieDetailScreenState
     _episodeOverlayScope.dispose();
     _currentEpisodeFocusNode.dispose();
     _episodeOverlayController.dispose();
-    _tvPrimaryActionFocusNode.dispose();
     _progressTimer?.cancel();
     _watchdogTimer?.cancel();
     // Unconditionally, not through [_setWakelock]: the page may be leaving
@@ -1429,35 +1399,9 @@ class _MovieDetailScreenState
   void _closeEpisodeOverlay() {
     if (!_showEpisodeOverlay) return;
     setState(() => _showEpisodeOverlay = false);
-    // Back where the grid was opened from: the picture, or the landing page's
-    // row of actions when nothing is playing yet.
-    if (_showTvLanding) {
-      _tvPrimaryActionFocusNode.requestFocus();
-    } else {
-      _videoFocusNode.requestFocus();
-    }
+    // Back where the grid was opened from: the picture.
+    _videoFocusNode.requestFocus();
     _startControlsTimer();
-  }
-
-  /// Where playback would pick up from, when the page was left part way
-  /// through this very episode on this very server.
-  Duration? get _resumePosition {
-    final state = _vm.libraryState;
-    if (state == null) return null;
-    if (state.lastEpisodeName != _vm.selectedEpisode?.name ||
-        state.lastServerName != _vm.selectedServer?.name) {
-      return null;
-    }
-    final seconds = state.lastPositionSeconds ?? 0;
-    if (seconds <= 5) return null;
-    return Duration(seconds: seconds);
-  }
-
-  /// The press that starts a film on a television: full screen, then play.
-  void _startTvPlayback(MovieEpisode episode, {Duration? seekTo}) {
-    setState(() => _hasStartedPlayback = true);
-    _enterFullScreen();
-    unawaited(_playEpisode(episode, seekTo: seekTo));
   }
 
   /// The original title, shown as a strip right under the app bar so it stays
@@ -1565,10 +1509,7 @@ class _MovieDetailScreenState
                                 originalTitle,
                                 subtitleStripStyle(context, originalTitle),
                               ),
-                            if (_showTvLanding)
-                              _buildTvLanding(l10n)
-                            else
-                              _buildVideoPlayerArea(isFullScreen: false),
+                            _buildVideoPlayerArea(isFullScreen: false),
                             Expanded(child: _buildDetailBody()),
                           ],
                         ),
@@ -1610,130 +1551,7 @@ class _MovieDetailScreenState
     );
   }
 
-  /// Television only: the page opens on the poster and a row of actions, and
-  /// nothing streams until one of them is pressed.
-  ///
-  /// Embedded too: the browse page opens every film that way, so it is the one
-  /// path a viewer on a television actually takes. Exempting it would leave
-  /// the landing unreachable and a poster still streaming on the press that
-  /// only meant to open it.
-  bool get _showTvLanding => false;
-
-  /// The television landing page: the poster as the hero, and the row of
-  /// actions that decide what the OK button does — resume, start again, or
-  /// pick an episode. Nothing here streams until one of them is pressed.
-  ///
-  /// [fillParent] takes the box the player would have had, for the embedded
-  /// overlay the browse page opens a film into; on its own the landing stands
-  /// [tvLandingHeroHeight] tall.
-  Widget _buildTvLanding(AppLocalizations l10n, {bool fillParent = false}) {
-    final poster = _vm.detail?.poster ?? widget.initialMovie?.poster ?? '';
-    final episode = _vm.selectedEpisode;
-    final resumeFrom = _resumePosition;
-    final theme = Theme.of(context);
-
-    final content = LayoutBuilder(
-      builder: (context, constraints) {
-        // The embedded player collapses towards a bar the size of a thumbnail.
-        // There is no room for a row of ten-foot buttons in it, and a viewer
-        // on a television never sees that state anyway — the browse page does
-        // not minimise there. Below the height a player needs, the poster is
-        // shown on its own rather than overflowing.
-        final showActions =
-            !constraints.maxHeight.isFinite ||
-            constraints.maxHeight >= minPlayerHeight;
-
-        // The first action is where the remote lands, so the page opens on the
-        // thing the viewer came for instead of on the app bar.
-        if (showActions && !_tvLandingFocusRequested && episode != null) {
-          _tvLandingFocusRequested = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || !_showTvLanding) return;
-            _tvPrimaryActionFocusNode.requestFocus();
-          });
-        }
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            if (poster.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: poster,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => const ColoredBox(color: Colors.black),
-                errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
-              )
-            else
-              const ColoredBox(color: Colors.black),
-            // The actions sit on the poster, so the poster has to stop
-            // competing with them where they are.
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black87],
-                ),
-              ),
-            ),
-            if (showActions)
-              Align(
-                alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: Dimens.screenPadding,
-                  child: Wrap(
-                    spacing: Dimens.modalItemSpacing,
-                    runSpacing: Dimens.modalItemSpacing,
-                    children: [
-                      if (resumeFrom != null)
-                        NeuButton(
-                          focusNode: _tvPrimaryActionFocusNode,
-                          accent: theme.colorScheme.primary,
-                          onPressed: episode == null
-                              ? null
-                              : () => _startTvPlayback(
-                                  episode,
-                                  seekTo: resumeFrom,
-                                ),
-                          child: Text(
-                            l10n.resumePlayback(formatDuration(resumeFrom)),
-                          ),
-                        ),
-                      NeuButton(
-                        focusNode: resumeFrom == null
-                            ? _tvPrimaryActionFocusNode
-                            : null,
-                        accent: resumeFrom == null
-                            ? theme.colorScheme.primary
-                            : null,
-                        onPressed: episode == null
-                            ? null
-                            : () => _startTvPlayback(
-                                episode,
-                                seekTo: Duration.zero,
-                              ),
-                        child: Text(l10n.playFromStart),
-                      ),
-                      if (_isSeries)
-                        NeuButton(
-                          onPressed: _openEpisodeOverlay,
-                          child: Text(l10n.episodeLabel),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-
-    if (fillParent) return content;
-    return SizedBox(height: tvLandingHeroHeight, child: content);
-  }
-
-  /// The episode grid, over whatever is behind it — the picture in full
-  /// screen, the landing page before playback has started.
+  /// The episode grid, over the picture it will change.
   Widget _buildEpisodeOverlay(AppLocalizations l10n) {
     final episodes = _episodes;
     final selectedSlug = _vm.selectedEpisode?.slug;
@@ -1789,11 +1607,7 @@ class _MovieDetailScreenState
                                       : null,
                                   onTap: () {
                                     _closeEpisodeOverlay();
-                                    if (_hasStartedPlayback) {
-                                      unawaited(_playEpisode(episode));
-                                    } else {
-                                      _startTvPlayback(episode);
-                                    }
+                                    unawaited(_playEpisode(episode));
                                   },
                                 ),
                             ],
@@ -2008,13 +1822,11 @@ class _MovieDetailScreenState
                           onVerticalDragStart: widget.onPlayerDragStart,
                           onVerticalDragUpdate: widget.onPlayerDragUpdate,
                           onVerticalDragEnd: widget.onPlayerDragEnd,
-                          child: _showTvLanding
-                              ? _buildTvLanding(l10n, fillParent: true)
-                              : _buildVideoPlayerArea(
-                                  isFullScreen: false,
-                                  fillParent: true,
-                                  compact: t < 0.6,
-                                ),
+                          child: _buildVideoPlayerArea(
+                            isFullScreen: false,
+                            fillParent: true,
+                            compact: t < 0.6,
+                          ),
                         ),
                       ),
                       if (t < 1)
@@ -2478,120 +2290,120 @@ class _MovieDetailScreenState
                                                       onKeyEvent:
                                                           _handleTimelineKeyEvent,
                                                       child: MouseRegion(
-                                                      cursor: SystemMouseCursors
-                                                          .click,
-                                                      onEnter: (event) =>
-                                                          _updateHoverPreview(
-                                                            event
-                                                                .localPosition
-                                                                .dx,
-                                                            constraints
-                                                                .maxWidth,
-                                                          ),
-                                                      onHover: (event) =>
-                                                          _updateHoverPreview(
-                                                            event
-                                                                .localPosition
-                                                                .dx,
-                                                            constraints
-                                                                .maxWidth,
-                                                          ),
-                                                      onExit: (_) {
-                                                        if (_isTimelineHovering) {
-                                                          setState(
-                                                            () =>
-                                                                _isTimelineHovering =
-                                                                    false,
-                                                          );
-                                                        }
-                                                        _startControlsTimer();
-                                                      },
-                                                      child: GestureDetector(
-                                                        behavior:
-                                                            HitTestBehavior
-                                                                .opaque,
-                                                        onHorizontalDragStart:
-                                                            (details) {
-                                                              _resumeAfterDrag =
-                                                                  controller
-                                                                      .value
-                                                                      .isPlaying;
-                                                              unawaited(
-                                                                controller
-                                                                    .pause(),
-                                                              );
-                                                              _controlsTimer
-                                                                  ?.cancel();
-                                                              setState(
-                                                                () =>
-                                                                    _isDragging =
-                                                                        true,
-                                                              );
-                                                              _updateDragPosition(
-                                                                controller,
-                                                                details
-                                                                    .localPosition
-                                                                    .dx,
-                                                                constraints
-                                                                    .maxWidth,
-                                                              );
-                                                            },
-                                                        onHorizontalDragUpdate:
-                                                            (details) {
-                                                              _updateDragPosition(
-                                                                controller,
-                                                                details
-                                                                    .localPosition
-                                                                    .dx,
-                                                                constraints
-                                                                    .maxWidth,
-                                                              );
-                                                            },
-                                                        onHorizontalDragEnd:
-                                                            (_) =>
-                                                                _finishDragging(
-                                                                  controller,
-                                                                ),
-                                                        onHorizontalDragCancel:
-                                                            () =>
-                                                                _finishDragging(
-                                                                  controller,
-                                                                ),
-                                                        onTapDown: (details) {
-                                                          _updateDragPosition(
-                                                            controller,
-                                                            details
-                                                                .localPosition
-                                                                .dx,
-                                                            constraints
-                                                                .maxWidth,
-                                                          );
+                                                        cursor:
+                                                            SystemMouseCursors
+                                                                .click,
+                                                        onEnter: (event) =>
+                                                            _updateHoverPreview(
+                                                              event
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                            ),
+                                                        onHover: (event) =>
+                                                            _updateHoverPreview(
+                                                              event
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                            ),
+                                                        onExit: (_) {
+                                                          if (_isTimelineHovering) {
+                                                            setState(
+                                                              () =>
+                                                                  _isTimelineHovering =
+                                                                      false,
+                                                            );
+                                                          }
+                                                          _startControlsTimer();
                                                         },
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                top: 10,
-                                                                bottom: 2,
-                                                              ),
-                                                          child: VideoSeekBar(
-                                                            controller:
-                                                                controller,
-                                                            isFocused:
-                                                                _timelineFocusNode
-                                                                    .hasFocus,
-                                                            isHovered:
-                                                                _isTimelineHovering,
-                                                            isDragging:
-                                                                _isDragging,
-                                                            isScrubbing:
-                                                                _isScrubbing,
-                                                            dragFraction:
-                                                                _dragFraction,
+                                                        child: GestureDetector(
+                                                          behavior:
+                                                              HitTestBehavior
+                                                                  .opaque,
+                                                          onHorizontalDragStart: (details) {
+                                                            _resumeAfterDrag =
+                                                                controller
+                                                                    .value
+                                                                    .isPlaying;
+                                                            unawaited(
+                                                              controller
+                                                                  .pause(),
+                                                            );
+                                                            _controlsTimer
+                                                                ?.cancel();
+                                                            setState(
+                                                              () =>
+                                                                  _isDragging =
+                                                                      true,
+                                                            );
+                                                            _updateDragPosition(
+                                                              controller,
+                                                              details
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                            );
+                                                          },
+                                                          onHorizontalDragUpdate:
+                                                              (details) {
+                                                                _updateDragPosition(
+                                                                  controller,
+                                                                  details
+                                                                      .localPosition
+                                                                      .dx,
+                                                                  constraints
+                                                                      .maxWidth,
+                                                                );
+                                                              },
+                                                          onHorizontalDragEnd:
+                                                              (_) =>
+                                                                  _finishDragging(
+                                                                    controller,
+                                                                  ),
+                                                          onHorizontalDragCancel:
+                                                              () =>
+                                                                  _finishDragging(
+                                                                    controller,
+                                                                  ),
+                                                          onTapDown: (details) {
+                                                            _updateDragPosition(
+                                                              controller,
+                                                              details
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                            );
+                                                          },
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  top: 10,
+                                                                  bottom: 2,
+                                                                ),
+                                                            child: VideoSeekBar(
+                                                              controller:
+                                                                  controller,
+                                                              isFocused:
+                                                                  _timelineFocusNode
+                                                                      .hasFocus,
+                                                              isHovered:
+                                                                  _isTimelineHovering,
+                                                              isDragging:
+                                                                  _isDragging,
+                                                              isScrubbing:
+                                                                  _isScrubbing,
+                                                              dragFraction:
+                                                                  _dragFraction,
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
                                                   ),
                                                   if (_isDragging ||
                                                       _isTimelineHovering ||

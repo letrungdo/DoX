@@ -184,7 +184,15 @@ class Dimens {
   /// A television gets a wider tile than a phone for the same reason it gets
   /// a wider content column: the panel is read from a sofa, and 150dp of
   /// logo-and-name at that distance is a smudge.
-  static double get tvChannelTileMaxWidth => deviceType.isTv ? 210.0 : 150.0;
+  ///
+  /// It is also what decides how many channels fit across. A television
+  /// reports the same logical width whatever the panel measures — a 1080p
+  /// set is 960dp whether it is 43 inches or 75 — so the row does not get
+  /// wider with the screen, and this number is the only thing that changes
+  /// how much of the playlist is on show. At 170 a 1080p set fits five
+  /// channels across the space the rail leaves; the tile still lands near
+  /// 140dp, which carries a logo from a sofa.
+  static double get tvChannelTileMaxWidth => deviceType.isTv ? 170.0 : 150.0;
 
   /// The width every channel logo is decoded at, in pixels.
   ///

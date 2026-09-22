@@ -69,22 +69,36 @@ void main() {
     return picked;
   }
 
-  testWidgets('the remote walks out of the search box onto a country', (
+  testWidgets('the sheet opens on a country, not in the search box', (
     tester,
   ) async {
     await openPicker(tester);
 
     expect(find.text('🇯🇵 Japan'), findsOneWidget);
 
-    // The search field takes the remote as the sheet opens. On a television
-    // that is a trap unless the arrows are freed from the field, which is
-    // `TvShell`'s job — and it only reaches the sheet because the shell sits
-    // above the navigator.
+    // A television opens the sheet on the country already chosen: the box
+    // wants a keyboard over half the screen, and a remote that lands in it
+    // has to be walked out before it can reach a single country.
+    expect(_editing(tester), isFalse);
+    expect(_focusedLabel(tester), '🇻🇳 Vietnam');
+  });
+
+  testWidgets('the remote walks into the search box and back out', (
+    tester,
+  ) async {
+    await openPicker(tester);
+
+    // UP off the first country reaches the box, which is the only way to
+    // type on a television.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
     expect(_editing(tester), isTrue);
 
+    // And DOWN comes back out of it. A text field swallows the arrows by
+    // default, so this only works because `TvShell` frees them — and the
+    // shell only reaches the sheet because it sits above the navigator.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-
     expect(_editing(tester), isFalse);
   });
 
@@ -130,4 +144,24 @@ bool _editing(WidgetTester tester) {
       .byType(EditableText)
       .evaluate()
       .any((element) => (element.widget as EditableText).focusNode.hasFocus);
+}
+
+/// The label of the country the remote is on, or null when it is on none.
+///
+/// The node holding the focus is the one [ListTile] installs inside its own
+/// ink well, so the tile it belongs to is found by walking back up from there.
+String? _focusedLabel(WidgetTester tester) {
+  final focused = FocusManager.instance.primaryFocus?.context;
+  if (focused == null) return null;
+  ListTile? tile;
+  focused.visitAncestorElements((element) {
+    final widget = element.widget;
+    if (widget is ListTile) {
+      tile = widget;
+      return false;
+    }
+    return true;
+  });
+  final title = tile?.title;
+  return title is Text ? title.data : null;
 }

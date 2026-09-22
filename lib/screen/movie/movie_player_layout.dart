@@ -13,11 +13,6 @@ const minPlayerHeight = 220.0;
 const miniPlayerHeight = 66.0;
 const miniPlayerWidth = 116.0;
 
-/// Height of the television landing hero: the poster, with the row of primary
-/// actions over the foot of it. Tall enough to read as the page's subject from
-/// three metres away, short enough to leave the body under it on screen.
-const tvLandingHeroHeight = 300.0;
-
 /// Fixed height of the original-title strip in the overlay header.
 const embeddedSubtitleHeight = 26.0;
 
