@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:video_player/video_player.dart';
+import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/services/music_auth_service.dart';
 import 'package:do_x/services/music_service.dart';
@@ -15,11 +16,18 @@ enum MusicTab { home, search, likes, history }
 enum MusicLikeOutcome { done, signInRequired, failed }
 
 class MusicViewModel extends CoreViewModel {
-  List<MusicTrack> _trendingTracks = [];
-  List<MusicTrack> get trendingTracks => _trendingTracks;
+  /// Heading for the one row built from a plain search, for an account the
+  /// service has no selections for.
+  static const _fallbackShelfTitle = 'Trending';
 
-  List<MusicTrack> _recommendedTracks = [];
-  List<MusicTrack> get recommendedTracks => _recommendedTracks;
+  List<MusicShelf> _shelves = [];
+  List<MusicShelf> get shelves => _shelves;
+
+  /// Every Discover track in the order it is shown, which is the queue the
+  /// player walks with next/previous while the tab is Discover.
+  List<MusicTrack> get discoverTracks => [
+    for (final shelf in _shelves) ...shelf.tracks,
+  ];
 
   List<MusicTrack> _searchResults = [];
   List<MusicTrack> get searchResults => _searchResults;
@@ -107,18 +115,19 @@ class MusicViewModel extends CoreViewModel {
     _isLoading = true;
     notifyListenersSafe();
     try {
-      final results = await Future.wait([
-        musicService.getTrendingTracks(),
-        musicService.getMoreOfWhatYouLike(),
-      ]);
-      _trendingTracks = results[0];
-      _recommendedTracks = results[1];
+      // The hearts come along with the rows: a liked track has to look liked
+      // wherever it turns up, not only in the likes tab.
+      await musicService.loadLikedTrackIds();
+      _shelves = await musicService.getDiscoverShelves();
+      // An account the service has nothing personal for still gets a page.
+      if (_shelves.isEmpty) {
+        final tracks = await musicService.searchTracks('');
+        if (tracks.isNotEmpty) {
+          _shelves = [MusicShelf(title: _fallbackShelfTitle, tracks: tracks)];
+        }
+      }
     } catch (e, st) {
-      logger.e(
-        'MusicViewModel loadHomeData failed',
-        error: e,
-        stackTrace: st,
-      );
+      logger.e('MusicViewModel loadHomeData failed', error: e, stackTrace: st);
     } finally {
       _isLoading = false;
       notifyListenersSafe();
@@ -297,7 +306,7 @@ class MusicViewModel extends CoreViewModel {
     List<MusicTrack> currentList = [];
     switch (_currentTab) {
       case MusicTab.home:
-        currentList = _trendingTracks;
+        currentList = discoverTracks;
         break;
       case MusicTab.search:
         currentList = _searchResults;
@@ -309,7 +318,7 @@ class MusicViewModel extends CoreViewModel {
         currentList = _historyTracks;
         break;
     }
-    if (currentList.isEmpty) currentList = _trendingTracks;
+    if (currentList.isEmpty) currentList = discoverTracks;
 
     if (currentList.isEmpty) return;
     if (_isShuffleEnabled) {
@@ -329,7 +338,7 @@ class MusicViewModel extends CoreViewModel {
     List<MusicTrack> currentList = [];
     switch (_currentTab) {
       case MusicTab.home:
-        currentList = _trendingTracks;
+        currentList = discoverTracks;
         break;
       case MusicTab.search:
         currentList = _searchResults;
@@ -341,7 +350,7 @@ class MusicViewModel extends CoreViewModel {
         currentList = _historyTracks;
         break;
     }
-    if (currentList.isEmpty) currentList = _trendingTracks;
+    if (currentList.isEmpty) currentList = discoverTracks;
 
     if (currentList.isEmpty) return;
     final currentIndex = currentList.indexWhere(

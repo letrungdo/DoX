@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/env.dart';
+import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/services/music_auth_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -206,77 +207,127 @@ class MusicService {
     }
   }
 
-  Future<List<MusicTrack>> getTrendingTracks() async {
+  /// The Discover tab, as the service lays it out: a row per selection, each
+  /// with the title it comes with ("More of what you like", "Trending by
+  /// genre", …). Which rows arrive depends on the account and on the day,
+  /// which is the point — the page no longer hard-codes two of them.
+  ///
+  /// A selection holds playlists, and a playlist holds nothing but track ids,
+  /// so the ids from every row are collected and fetched in one go. A row
+  /// whose playlists carry no ids at all — "Recently Played" sends only a
+  /// track count — is left out rather than shown empty.
+  Future<List<MusicShelf>> getDiscoverShelves({
+    int limit = 10,
+    int tracksPerShelf = 20,
+  }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '$_baseUrl/mixed-selections',
         queryParameters: {
           'client_id': _clientId,
-          'limit': 15,
+          'limit': limit,
           'offset': 0,
           'linked_partitioning': 1,
         },
       );
 
-      final List<MusicTrack> tracks = [];
       final selections = response.data?['collection'];
-      if (selections is List) {
-        for (final selection in selections) {
-          final items = selection['items']?['collection'];
-          if (items is List) {
-            for (final item in items) {
-              if (item['kind'] == 'track') {
-                final track = _parseTrack(item);
-                if (track != null) tracks.add(track);
-              }
-            }
+      if (selections is! List) return [];
+
+      final idsByShelf = <String, List<String>>{};
+      for (final selection in selections) {
+        final title = selection['title']?.toString() ?? '';
+        if (title.isEmpty) continue;
+        final items = selection['items']?['collection'];
+        if (items is! List) continue;
+
+        final ids = <String>[];
+        for (final item in items) {
+          for (final track in (item['tracks'] as List?) ?? const []) {
+            final id = track['id']?.toString();
+            if (id != null && id.isNotEmpty && !ids.contains(id)) ids.add(id);
+            if (ids.length >= tracksPerShelf) break;
           }
+          if (ids.length >= tracksPerShelf) break;
         }
+        if (ids.isNotEmpty) idsByShelf[title] = ids;
       }
 
-      if (tracks.isEmpty) {
-        return searchTracks('Remix Hot');
-      }
-
-      return tracks;
-    } catch (e, st) {
-      logger.e(
-        'MusicService getTrendingTracks failed',
-        error: e,
-        stackTrace: st,
-      );
-      return searchTracks('Lofi Chill');
-    }
-  }
-
-  Future<List<MusicTrack>> getMoreOfWhatYouLike() async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '$_baseUrl/search',
-        queryParameters: {
-          'q': 'VinaHouse Electro EDM',
-          'client_id': _clientId,
-          'limit': 15,
-          'offset': 0,
-        },
+      // One fetch for every row: the rows overlap, and a request per row would
+      // be a dozen of them for a screen the user has not scrolled yet.
+      final tracksById = await _fetchTracksByIds(
+        {for (final ids in idsByShelf.values) ...ids}.toList(),
       );
 
-      final List<MusicTrack> tracks = [];
-      final collection = response.data?['collection'];
-      if (collection is List) {
-        for (final item in collection) {
-          final track = _parseTrack(item);
-          if (track != null) tracks.add(track);
+      final shelves = <MusicShelf>[];
+      for (final entry in idsByShelf.entries) {
+        final tracks = entry.value
+            .map((id) => tracksById[id])
+            .nonNulls
+            .toList();
+        if (tracks.isNotEmpty) {
+          shelves.add(MusicShelf(title: entry.key, tracks: tracks));
         }
       }
-      return tracks;
+      return shelves;
     } catch (e, st) {
       logger.e(
-        'MusicService getMoreOfWhatYouLike failed',
+        'MusicService getDiscoverShelves failed',
         error: e,
         stackTrace: st,
       );
       return [];
+    }
+  }
+
+  /// Turns track ids into tracks, in batches the endpoint accepts.
+  Future<Map<String, MusicTrack>> _fetchTracksByIds(List<String> ids) async {
+    const batchSize = 50;
+    final result = <String, MusicTrack>{};
+    for (var start = 0; start < ids.length; start += batchSize) {
+      final batch = ids.sublist(
+        start,
+        start + batchSize > ids.length ? ids.length : start + batchSize,
+      );
+      try {
+        final response = await _dio.get<List<dynamic>>(
+          '$_baseUrl/tracks',
+          queryParameters: {'ids': batch.join(','), 'client_id': _clientId},
+        );
+        for (final item in response.data ?? const []) {
+          final track = _parseTrack(item);
+          if (track != null) result[track.id] = track;
+        }
+      } catch (e, st) {
+        logger.e(
+          'MusicService _fetchTracksByIds failed',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+    return result;
+  }
+
+  /// Seeds the hearts from the account itself, so a track already liked shows
+  /// as liked on the Discover tab without the likes tab ever being opened.
+  Future<void> loadLikedTrackIds({int limit = 200}) async {
+    if (!musicAuth.isSignedIn) return;
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_baseUrl/me/track_likes/ids',
+        queryParameters: {'client_id': _clientId, 'limit': limit},
+      );
+      final ids = response.data?['collection'];
+      if (ids is List) {
+        _localLikedIds.addAll(ids.map((id) => id.toString()));
+      }
+    } catch (e, st) {
+      logger.e(
+        'MusicService loadLikedTrackIds failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

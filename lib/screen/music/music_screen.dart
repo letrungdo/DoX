@@ -24,10 +24,7 @@ class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
 
   @override
   Widget wrappedRoute(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MusicViewModel(),
-      child: this,
-    );
+    return ChangeNotifierProvider(create: (_) => MusicViewModel(), child: this);
   }
 }
 
@@ -293,8 +290,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
 
   Widget _buildMainBodyArea(MusicViewModel viewModel, bool isTv) {
     if (viewModel.isLoading &&
-        (viewModel.currentTab == MusicTab.home &&
-            viewModel.trendingTracks.isEmpty)) {
+        (viewModel.currentTab == MusicTab.home && viewModel.shelves.isEmpty)) {
       return const Center(child: Loading());
     }
 
@@ -324,33 +320,25 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'More of what you like',
-              style: TextStyle(
-                fontSize: isTv ? 14 : 12,
-                fontWeight: FontWeight.bold,
+        // The rows, and their headings, are whatever the service sent for this
+        // account — so the page is built from them rather than from a fixed
+        // pair of sections.
+        for (final shelf in viewModel.shelves) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                shelf.title,
+                style: TextStyle(
+                  fontSize: isTv ? 14 : 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
-        _buildSliverGrid(viewModel.recommendedTracks, isTv),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text(
-              'Trending Music & Mixes',
-              style: TextStyle(
-                fontSize: isTv ? 14 : 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        _buildSliverGrid(viewModel.trendingTracks, isTv),
-        SliverToBoxAdapter(child: const SizedBox(height: 24)),
+          _buildSliverGrid(shelf.tracks, isTv),
+        ],
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
   }
