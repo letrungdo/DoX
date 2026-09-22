@@ -42,15 +42,32 @@ void main() {
     // heights — which is what the eye reads across a grid, not the names.
     await _pumpCards(tester, ['VTV1', 'Truyền hình Vĩnh Long 1 HD']);
 
-    // The card's own plate, told apart from the scaffold's backdrop by the
-    // near-white it keeps in both themes.
-    final plates = find.byWidgetPredicate(
-      (widget) => widget is ColoredBox && widget.color.a == 1,
+    // The logo's own square, told apart from everything else in the card by
+    // the inset it is drawn in.
+    final logos = find.byWidgetPredicate(
+      (widget) =>
+          widget is Padding && widget.padding == const EdgeInsets.all(10),
     );
-    expect(plates, findsNWidgets(2));
+    expect(logos, findsNWidgets(2));
     expect(
-      tester.getSize(plates.at(0)).height,
-      tester.getSize(plates.at(1)).height,
+      tester.getSize(logos.at(0)).height,
+      tester.getSize(logos.at(1)).height,
+    );
+  });
+
+  testWidgets('the card carries no plate of its own', (tester) async {
+    await _pumpCards(tester, ['VTV1']);
+
+    // The logo sits on the card's own surface, so the tile is the colour of
+    // whichever theme is on rather than white in both.
+    expect(
+      find.descendant(
+        of: find.byType(TvChannelCard),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is ColoredBox && widget.color.a == 1,
+        ),
+      ),
+      findsNothing,
     );
   });
 

@@ -1,6 +1,7 @@
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/screen/tv/tv_player_screen.dart';
+import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +40,14 @@ bool _canPopOf(WidgetTester tester) {
       .whereType<PopScope<dynamic>>()
       .single;
   return scope.canPop;
+}
+
+/// How far up the overlay over the picture is.
+double _controlsOpacity(WidgetTester tester) {
+  return tester
+      .widgetList<AnimatedOpacity>(find.byType(AnimatedOpacity))
+      .first
+      .opacity;
 }
 
 void main() {
@@ -98,45 +107,65 @@ void main() {
 
     Future<void> pumpPlayer(WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: TvPlayerScreen(channel: _channel, playlist: _playlist),
+          home: const TvPlayerScreen(channel: _channel, playlist: _playlist),
         ),
       );
       await tester.pump();
     }
 
-    testWidgets('down brings the channel list up, without changing channel', (
+    testWidgets('an arrow brings the overlay down, not the channel grid', (
       tester,
     ) async {
+      // A channel that comes up, because the controls of one still trying
+      // stay put on purpose — they are its only way out.
+      VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
+        playing: {_channel.urls.first},
+      );
       await pumpPlayer(tester);
+      // Past the timeout the controls start on, so what is on screen is
+      // what the key brought back rather than what was already there.
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+      expect(_controlsOpacity(tester), 0);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
 
-      // The remote already has a pair of keys that change channel, so the
-      // arrows are better spent on the list, where the viewer can see what
-      // they are moving to instead of hopping blind.
-      expect(find.byType(ListView), findsOneWidget);
-      expect(find.text('VTV3'), findsWidgets);
-      expect(find.text('VTV1'), findsWidgets);
+      // OK is already the way to the grid, so the arrows are spent on the
+      // one thing the page otherwise has no key for.
+      expect(_controlsOpacity(tester), 1);
+      expect(find.byType(GridView), findsNothing);
     });
 
-    testWidgets('up brings it up too, and a second press leaves it up', (
-      tester,
-    ) async {
+    testWidgets('a second arrow hands the overlay the remote', (tester) async {
+      VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
+        playing: {_channel.urls.first},
+      );
       await pumpPlayer(tester);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();
-      expect(find.byType(ListView), findsOneWidget);
 
-      // The list holds the arrows once it is open, so a second press walks
-      // through it rather than closing it under the viewer.
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
-      expect(find.byType(ListView), findsOneWidget);
+      // The first press is for looking: the picture keeps the keys, so the
+      // grid, the channel pair and the keypad all still answer.
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-video');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-back');
+
+      // And the overlay still goes away on its own, taking the remote back
+      // to the picture with it — a button resting under the focus is no
+      // reason to leave the bar over the programme for ever.
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+      expect(_controlsOpacity(tester), 0);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-video');
     });
 
     testWidgets('CH- from the first channel wraps to the last', (tester) async {
@@ -225,6 +254,7 @@ void main() {
       ];
       await tester.pumpWidget(
         MaterialApp(
+          theme: AppTheme.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: TvPlayerScreen(channel: long.first, playlist: long),
@@ -260,6 +290,7 @@ void main() {
       ];
       await tester.pumpWidget(
         MaterialApp(
+          theme: AppTheme.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: TvPlayerScreen(channel: long.first, playlist: long),
@@ -318,6 +349,7 @@ void main() {
       final playlist = longPlaylist();
       await tester.pumpWidget(
         MaterialApp(
+          theme: AppTheme.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: TvPlayerScreen(channel: playlist[99], playlist: playlist),
@@ -342,7 +374,7 @@ void main() {
       );
     });
 
-    testWidgets('a three-digit channel number stays on one line', (
+    testWidgets('every channel is a card with its number on it', (
       tester,
     ) async {
       await pumpLongPlayer(tester);
@@ -350,39 +382,74 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();
 
-      final number = tester.widget<Text>(
-        find.descendant(of: find.byType(ListView), matching: find.text('100')),
-      );
-      expect(number.maxLines, 1);
-      expect(number.softWrap, isFalse);
-    });
-
-    testWidgets('the list keeps going past the end of the playlist', (
-      tester,
-    ) async {
-      await pumpLongPlayer(tester);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await tester.pumpAndSettle();
-
-      // Past the last channel the list starts the playlist again, the way the
-      // channel keys wrap rather than stopping dead.
+      // The number is the one the keypad dials, so it is on the card the
+      // viewer is looking at rather than only in the banner.
+      expect(find.text('100'), findsOneWidget);
       expect(
-        tester.widget<ListView>(find.byType(ListView)).semanticChildCount,
-        greaterThan(150),
+        tester.widget<GridView>(find.byType(GridView)).semanticChildCount,
+        150,
       );
-
-      // Well past channel 150 from channel 100, and there is still list left.
-      await tester.drag(find.byType(ListView), const Offset(0, -4000));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Channel '), findsWidgets);
     });
 
-    testWidgets('an open list holds the page back so Back can close it', (
+    testWidgets('the grid is laid over the picture, not on top of it', (
+      tester,
+    ) async {
+      const withQuality = [
+        TvChannel(
+          id: 'VTV1.vn',
+          name: 'VTV1',
+          urls: ['https://example.com/vtv1/index.m3u8'],
+          quality: '1080p',
+        ),
+        TvChannel(
+          id: 'VTV3.vn',
+          name: 'VTV3',
+          urls: ['https://example.com/vtv3/index.m3u8'],
+          quality: '720p',
+        ),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TvPlayerScreen(
+            channel: withQuality.first,
+            playlist: withQuality,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+
+      // Nothing opaque between the viewer and the programme: they are still
+      // watching it while they choose.
+      final opaque = find.descendant(
+        of: find.byType(GridView),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is ColoredBox && widget.color.a == 1,
+        ),
+      );
+      expect(opaque, findsNothing);
+      expect(
+        tester
+            .widgetList<ColoredBox>(find.byType(ColoredBox))
+            .every((box) => box.color.a < 1),
+        isTrue,
+      );
+      // And no resolution on the cards: this is a channel being picked, not
+      // two streams being compared.
+      expect(find.text('1080p'), findsNothing);
+      expect(find.text('720p'), findsNothing);
+    });
+
+    testWidgets('an open grid holds the page back so Back can close it', (
       tester,
     ) async {
       await pumpPlayer(tester);
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();
 
       expect(_canPopOf(tester), isFalse);
@@ -395,22 +462,20 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();
-      expect(find.byType(ListView), findsOneWidget);
+      expect(find.byType(GridView), findsOneWidget);
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 
-      // The list is gone and the channel is still on: Back was pointed at the
-      // list while it was open.
-      expect(find.byType(ListView), findsNothing);
+      // The grid is gone and the channel is still on: Back was pointed at
+      // the grid while it was open.
+      expect(find.byType(GridView), findsNothing);
       expect(find.byType(TvPlayerScreen), findsOneWidget);
     });
 
-    testWidgets('a single channel leaves the arrows to the controls', (
-      tester,
-    ) async {
-      // Opened from a link, there are no neighbouring channels to move to,
-      // so up and down go back to being the way to reach the controls.
+    testWidgets('a single channel still answers the arrows', (tester) async {
+      // Opened from a link, there is no grid to open and nothing to change
+      // channel to — the arrows still bring the overlay down.
       await tester.pumpWidget(
         const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -403,10 +403,10 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
       ),
       sliver: SliverGrid.builder(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 150,
-          childAspectRatio: 0.85,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          maxCrossAxisExtent: Dimens.tvChannelTileMaxWidth,
+          childAspectRatio: Dimens.tvChannelTileAspect,
+          crossAxisSpacing: Dimens.tvChannelTileSpacing,
+          mainAxisSpacing: Dimens.tvChannelTileSpacing,
         ),
         itemCount: viewModel.channels.length,
         itemBuilder: (context, index) {

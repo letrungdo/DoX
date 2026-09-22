@@ -35,11 +35,6 @@ class TvChannelCard extends StatelessWidget {
   /// is what the eye reads down a row of them, not the names.
   static const _nameLineHeight = 1.25;
 
-  /// Channel logos are drawn for a white background — a station's black
-  /// wordmark on the page's own dark surface is an invisible card. So the logo
-  /// tile keeps a near-white plate in both themes.
-  static const _logoPlate = Color(0xFFF4F5F7);
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -58,36 +53,37 @@ class TvChannelCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: ColoredBox(
-              color: _logoPlate,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: _buildLogo(),
+            // No plate of its own: the card's own surface carries the logo,
+            // so the tile is the colour of whichever theme is on. A logo
+            // drawn as dark artwork for a white page loses contrast in the
+            // dark theme, which is the price of the card being one colour.
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: TvChannelLogo(channel: channel),
+                ),
+                if (channel.isGeoBlocked || channel.isIntermittent)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: _Badge(
+                      icon: channel.isGeoBlocked
+                          ? Icons.public_off_rounded
+                          : Icons.schedule_rounded,
+                      tooltip: channel.isGeoBlocked
+                          ? l10n.tvGeoBlocked
+                          : l10n.tvNotAllDay,
+                    ),
                   ),
-                  if (channel.isGeoBlocked || channel.isIntermittent)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: _Badge(
-                        icon: channel.isGeoBlocked
-                            ? Icons.public_off_rounded
-                            : Icons.schedule_rounded,
-                        tooltip: channel.isGeoBlocked
-                            ? l10n.tvGeoBlocked
-                            : l10n.tvNotAllDay,
-                      ),
-                    ),
-                  if (channel.quality != null)
-                    Positioned(
-                      bottom: 4,
-                      left: 4,
-                      child: _QualityTag(quality: channel.quality!),
-                    ),
-                ],
-              ),
+                if (channel.quality != null)
+                  Positioned(
+                    bottom: 4,
+                    left: 4,
+                    child: _QualityTag(quality: channel.quality!),
+                  ),
+              ],
             ),
           ),
           Padding(
@@ -121,25 +117,46 @@ class TvChannelCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildLogo() {
-    if (!channel.hasLogo) return const _LogoFallback();
+/// A channel's logo, with the same stand-in behind it wherever it is drawn:
+/// the page's grid, and the grid the player opens over the picture.
+class TvChannelLogo extends StatelessWidget {
+  const TvChannelLogo({super.key, required this.channel, this.fallbackColor});
+
+  final TvChannel channel;
+
+  /// The colour of the stand-in icon. Left off it follows the theme, which
+  /// is what the page wants; over the picture it is given one that reads on
+  /// a moving frame.
+  final Color? fallbackColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = _LogoFallback(color: fallbackColor);
+    if (!channel.hasLogo) return fallback;
     return CachedNetworkImage(
       imageUrl: channel.logo!,
       fit: BoxFit.contain,
-      placeholder: (context, url) => const _LogoFallback(),
-      errorWidget: (context, url, error) => const _LogoFallback(),
+      placeholder: (context, url) => fallback,
+      errorWidget: (context, url, error) => fallback,
     );
   }
 }
 
 class _LogoFallback extends StatelessWidget {
-  const _LogoFallback();
+  const _LogoFallback({this.color});
+
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(Icons.live_tv_rounded, size: 32, color: Colors.black26),
+    return Center(
+      child: Icon(
+        Icons.live_tv_rounded,
+        size: 32,
+        color: color ?? context.colors.disabled,
+      ),
     );
   }
 }

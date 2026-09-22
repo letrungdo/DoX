@@ -164,21 +164,15 @@ class Dimens {
   /// pixels would otherwise be a third of it.
   static const tvFocusScaleMax = 1.08;
 
-  /// Width of the channel list the live player opens over the picture.
-  ///
-  /// Down the side rather than across the screen: the viewer is still
-  /// watching while they choose.
-  static const tvChannelListWidth = 320.0;
+  /// The channel grid, on the page and again over the picture when the
+  /// player opens its list. One set of numbers so a channel is the same card
+  /// in both places.
+  static const tvChannelTileMaxWidth = 150.0;
+  static const tvChannelTileAspect = 0.85;
+  static const tvChannelTileSpacing = 12.0;
 
-  /// Height of one row in that list.
-  ///
-  /// Fixed rather than measured, because the list repeats the playlist end to
-  /// end so it can be scrolled past either edge: a known row height is what
-  /// lets it jump straight to the channel playing without building the
-  /// thousands of rows in between.
-  static const tvChannelListRowHeight = 48.0;
-
-  /// Width of the channel number column in that list, wide enough for the
-  /// three digits a long playlist reaches.
-  static const tvChannelListNumberWidth = 44.0;
+  /// The same card over the picture is a shallower one: it is laid over a
+  /// programme the viewer is still watching, so every row of it that is not
+  /// needed is a row of programme taken away.
+  static const tvChannelOverlayTileAspect = 1.5;
 }

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/tv_channel.dart';
+import 'package:do_x/screen/tv/tv_channel_card.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
@@ -123,18 +125,16 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     debugLabel: 'tv-current-channel',
   );
 
-  /// How many times the playlist is repeated inside the open list.
-  ///
-  /// The list scrolls on past either end the way the channel keys wrap, so a
-  /// viewer who keeps pressing down never hits a wall. An odd number of
-  /// copies so the middle one — the copy the list opens on — has as much room
-  /// either side of it.
-  static const _channelListLoops = 101;
-
   bool get _controlsHaveFocus => _controlsScope.hasFocus;
 
-  /// Where the middle copy of the playlist starts inside the looping list.
-  int get _channelListBase => widget.playlist.length * (_channelListLoops ~/ 2);
+  /// The shape the open grid was last laid out at: how many cards to a row,
+  /// and how far apart the rows are.
+  ///
+  /// Worked out where the width is known and kept here for
+  /// [_centreChannelGrid], which runs a frame later and has only the height
+  /// of the viewport to go on.
+  int _gridColumns = 1;
+  double _gridRowStride = 1;
 
   /// How long the controls stay up after a tap before they fade away again.
   static const _controlsTimeout = Duration(seconds: 4);
@@ -337,16 +337,6 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _videoFocusNode.requestFocus();
   }
 
-  /// Brings the list up, and leaves it up if it already is.
-  ///
-  /// What up and down do: the remote has its own pair of channel keys for
-  /// moving one at a time, so the arrows are better spent on the list, where
-  /// the viewer can see what they are moving to.
-  void _openChannelList() {
-    if (_showChannelList) return;
-    _toggleChannelList();
-  }
-
   void _toggleChannelList() {
     if (!_canChangeChannel) return;
     setState(() => _showChannelList = !_showChannelList);
@@ -355,7 +345,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       // remote to until the frame carrying it exists.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_showChannelList) return;
-        _centreChannelList();
+        _centreChannelGrid();
         // And the row it was scrolled to is itself only built by that scroll,
         // so the remote waits one more frame for it.
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -372,17 +362,19 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _videoFocusNode.requestFocus();
   }
 
-  /// Puts the channel playing in the middle of the open list.
+  /// Puts the channel playing in the middle of the open grid.
   ///
-  /// The list is thousands of rows long, and the one that matters is the one
-  /// the viewer is on: opening at the top would leave them scrolling down to
-  /// find out where they already are.
-  void _centreChannelList() {
+  /// A long playlist is a screenful of cards several times over, and the one
+  /// that matters is the one the viewer is on: opening at the top would
+  /// leave them scrolling down to find out where they already are. It is
+  /// also what builds that card, which the remote is handed straight after.
+  void _centreChannelGrid() {
     if (!_channelListController.hasClients) return;
-    const rowHeight = Dimens.tvChannelListRowHeight;
     final position = _channelListController.position;
+    final rowHeight = _gridRowStride - Dimens.tvChannelTileSpacing;
     final target =
-        (_channelListBase + _index) * rowHeight -
+        Dimens.pagePadding +
+        (_index ~/ _gridColumns) * _gridRowStride -
         (position.viewportDimension - rowHeight) / 2;
     _channelListController.jumpTo(
       target.clamp(position.minScrollExtent, position.maxScrollExtent),
@@ -426,10 +418,12 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(_controlsTimeout, () {
       // While playback is broken the controls are the only way out of the
-      // page, so they stay put until something plays — and so does a control
-      // the remote is resting on, which would otherwise be pulled out from
-      // under the user mid-choice.
-      if (!mounted || _hasError || _isLoading || _controlsHaveFocus) return;
+      // page, so they stay put until something plays.
+      if (!mounted || _hasError || _isLoading) return;
+      // The remote goes back to the picture with the bar it was resting on.
+      // Left where it was it would be holding a button nobody can see, and
+      // the bar would have to stay up for ever to keep it reachable.
+      _releaseControlsFocus();
       setState(() => _showControls = false);
     });
   }
@@ -472,18 +466,16 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// The remote, on the picture itself.
   ///
   /// The keys are a television's, not a video player's, because that is what
-  /// this is: up, down and OK all bring the channel list up, and the way to
-  /// the controls is sideways. A live channel has no timeline and nothing to
+  /// this is: OK brings the channel grid up over the picture, and an arrow
+  /// brings the overlay down. A live channel has no timeline and nothing to
   /// pause, so there is nothing here to seek or stop with.
   ///
-  /// The arrows open the list rather than changing channel, because the
-  /// remote already has a pair of keys that change channel — and a blind hop
-  /// to the next channel is the worse of the two things an arrow could mean
-  /// when the list can show the viewer where they are going.
-  ///
-  /// Opened on a single channel — from a link, or from anywhere that has no
-  /// list to hand — there are no neighbouring channels to move to, and the
-  /// arrows go back to being the way to the controls.
+  /// An arrow shows the overlay rather than changing channel, because the
+  /// remote already has a pair of keys that change channel — and OK is
+  /// already the way to the grid, so nothing is lost by giving the arrows
+  /// the one thing the page otherwise has no key for. Pressed again while
+  /// the overlay is up, the arrow hands it the remote: the first press is
+  /// for looking, the second for reaching.
   KeyEventResult _handleVideoKeyEvent(FocusNode node, KeyEvent event) {
     // The controls are inside this node, so their keys walk up through here.
     // Claiming them would swallow the OK meant for the focused button.
@@ -492,34 +484,26 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     }
 
     final key = event.logicalKey;
-    if (_canChangeChannel) {
-      if (key == LogicalKeyboardKey.arrowUp ||
-          key == LogicalKeyboardKey.arrowDown) {
-        _openChannelList();
-        return KeyEventResult.handled;
-      }
-      if (_isSelectKey(key)) {
-        _toggleChannelList();
-        return KeyEventResult.handled;
-      }
+    if (_canChangeChannel && _isSelectKey(key)) {
+      _toggleChannelList();
+      return KeyEventResult.handled;
     }
 
-    final wakesControls = _canChangeChannel
-        ? key == LogicalKeyboardKey.arrowLeft ||
-              key == LogicalKeyboardKey.arrowRight
-        : key == LogicalKeyboardKey.arrowUp ||
-              key == LogicalKeyboardKey.arrowDown;
-    if (wakesControls) {
+    final isArrow =
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight;
+    if (isArrow) {
       final wasVisible = _showControls;
       if (!wasVisible) setState(() => _showControls = true);
       _scheduleHideControls();
-      // On a television the bar is shown and nothing more. Handing the
-      // remote to the back button inside it would take the picture's keys
-      // away with it — and the channel list, the channel buttons and the
-      // keypad are the point of this page. The remote's own Back key is the way out, which is
-      // where a viewer reaches for it anyway.
-      if (deviceType.isTv && !_canChangeChannel) {
-        _enterControls(afterFrame: !wasVisible);
+      // The remote only goes into the overlay once the overlay is already
+      // up. Handed it on the press that revealed it, the picture would lose
+      // the keys — the grid, the channel pair and the keypad are all the
+      // picture's — before the viewer had seen what they were reaching for.
+      if (deviceType.isTv && wasVisible) {
+        _enterControls(afterFrame: false);
       }
       return KeyEventResult.handled;
     }
@@ -806,14 +790,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     );
   }
 
-  /// The channel list, over the picture that keeps playing behind it.
+  /// The channel grid, over the picture that keeps playing behind it.
   ///
-  /// Down the side rather than across the screen: a viewer opening it is
-  /// still watching, and a list that covered the programme would be a list
-  /// they had to close before they could decide.
+  /// The whole screen rather than a strip down the side: the viewer has
+  /// asked to choose, and the cards they choose from are the ones they know
+  /// from the page — logo, name and the number the keypad goes by. The
+  /// picture keeps playing underneath, which is what the surface is left
+  /// short of opaque for.
   Widget _buildChannelList(AppLocalizations l10n) {
-    return Align(
-      alignment: AlignmentDirectional.centerEnd,
+    return Positioned.fill(
       child: FocusScope(
         node: _channelListScope,
         child: Shortcuts(
@@ -829,42 +814,59 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                 },
               ),
             },
-            child: Container(
-              width: Dimens.tvChannelListWidth,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: AlignmentDirectional.centerEnd,
-                  end: AlignmentDirectional.centerStart,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.92),
-                    Colors.black.withValues(alpha: 0.55),
-                  ],
-                ),
-              ),
+            // Barely there: the grid is laid over a programme that is
+            // still running, and a surface that hid it would make choosing a
+            // channel something the viewer had to stop watching to do. Just
+            // enough black to hold the cards apart from a bright frame.
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: 0.32),
               child: SafeArea(
-                child: ListView.builder(
-                  controller: _channelListController,
-                  // No page padding down the sides: the row it would inset is
-                  // the one the remote lifts, and the lift needs the room.
-                  padding: EdgeInsets.zero,
-                  // A known row height is what lets the list jump straight to
-                  // the channel playing, thousands of rows in, without
-                  // building everything above it.
-                  itemExtent: Dimens.tvChannelListRowHeight,
-                  itemCount: widget.playlist.length * _channelListLoops,
-                  itemBuilder: (context, index) {
-                    final position = index % widget.playlist.length;
-                    final isPlaying = position == _index;
-                    return _ChannelRow(
-                      position: position + 1,
-                      channel: widget.playlist[position],
-                      isPlaying: isPlaying,
-                      // Only the middle copy's row is the one the list opens
-                      // on; the others are the same channel further along.
-                      focusNode: index == _channelListBase + _index
-                          ? _currentChannelFocusNode
-                          : null,
-                      onTap: () => _playFromList(position),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth - Dimens.pagePadding * 2;
+                    // The same arithmetic `SliverGridDelegateWithMaxCross
+                    // AxisExtent` does on the page, spelled out because the
+                    // scroll to the channel playing needs the answer too.
+                    final columns =
+                        (width /
+                                (Dimens.tvChannelTileMaxWidth +
+                                    Dimens.tvChannelTileSpacing))
+                            .ceil()
+                            .clamp(1, widget.playlist.length);
+                    final tileWidth =
+                        (width - Dimens.tvChannelTileSpacing * (columns - 1)) /
+                        columns;
+                    _gridColumns = columns;
+                    _gridRowStride =
+                        tileWidth / Dimens.tvChannelOverlayTileAspect +
+                        Dimens.tvChannelTileSpacing;
+
+                    return GridView.builder(
+                      controller: _channelListController,
+                      padding: const EdgeInsets.all(Dimens.pagePadding),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        childAspectRatio: Dimens.tvChannelOverlayTileAspect,
+                        crossAxisSpacing: Dimens.tvChannelTileSpacing,
+                        mainAxisSpacing: Dimens.tvChannelTileSpacing,
+                      ),
+                      itemCount: widget.playlist.length,
+                      itemBuilder: (context, index) {
+                        final channel = widget.playlist[index];
+                        return _ChannelTile(
+                          key: ValueKey(channel.url),
+                          channel: channel,
+                          // The place in the list, which is the closest
+                          // thing these playlists have to a channel number
+                          // — and the number the keypad already dials.
+                          number: index + 1,
+                          isPlaying: index == _index,
+                          focusNode: index == _index
+                              ? _currentChannelFocusNode
+                              : null,
+                          onTap: () => _playFromList(index),
+                        );
+                      },
                     );
                   },
                 ),
@@ -935,21 +937,18 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                 child: Row(
                   spacing: 8,
                   children: [
-                    ExcludeFocus(
-                      // The remote has a Back key of its own, so the button
-                      // is a label for it rather than a stop on the way
-                      // round the page — and leaving it out of the focus
-                      // tree is what keeps the picture holding the keys.
-                      excluding: deviceType.isTv && _canChangeChannel,
-                      child: FocusableTap(
-                        focusNode: _backFocusNode,
-                        onTap: () => Navigator.of(context).pop(_channel),
-                        child: const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Icon(
-                            Icons.arrow_back_rounded,
-                            color: Colors.white,
-                          ),
+                    // Reachable on a television too, now that the remote
+                    // only comes in here on the second press of an arrow:
+                    // the first press leaves the keys with the picture,
+                    // where the grid, the channel pair and the keypad are.
+                    FocusableTap(
+                      focusNode: _backFocusNode,
+                      onTap: () => Navigator.of(context).pop(_channel),
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.arrow_back_rounded,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -976,74 +975,109 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   }
 }
 
-/// One channel in the list the player opens over the picture.
-class _ChannelRow extends StatelessWidget {
-  const _ChannelRow({
-    required this.position,
+/// One channel in the grid the player opens over the picture.
+///
+/// See-through, like the grid it sits in: the logo and the number are drawn
+/// on the programme itself rather than on a card that covers it. Shallower
+/// than the page's card, and with no quality badge — the viewer is choosing
+/// a channel here, not comparing streams.
+class _ChannelTile extends StatelessWidget {
+  const _ChannelTile({
+    super.key,
     required this.channel,
+    required this.number,
     required this.isPlaying,
     required this.onTap,
     this.focusNode,
   });
 
-  final int position;
   final TvChannel channel;
 
-  /// The channel behind the list, marked so the viewer can see where they
-  /// are before they start moving.
+  /// The channel's place in the list, which is the number the keypad dials.
+  final int number;
+
+  /// Whether this is the channel playing behind the grid.
   final bool isPlaying;
 
   final VoidCallback onTap;
 
-  /// Set on the row of the channel playing, which is where the remote is put
-  /// when the list opens.
+  /// Set on the channel playing, which is where the remote is put when the
+  /// grid opens.
   final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = context.theme.colorScheme;
     return FocusableTap(
       focusNode: focusNode,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Dimens.pagePadding,
-          vertical: 4,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: isPlaying ? 0.5 : 0.28),
+          borderRadius: BorderRadius.circular(Dimens.radiusCard),
+          border: isPlaying
+              ? Border.all(color: scheme.primary, width: 2)
+              : null,
         ),
-        child: Row(
-          spacing: 12,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              width: Dimens.tvChannelListNumberWidth,
-              child: Text(
-                '$position',
-                textAlign: TextAlign.end,
-                // Three digits stay on the line they belong to rather than
-                // breaking under the first two.
-                maxLines: 1,
-                softWrap: false,
-                style: const TextStyle(
-                  color: Colors.white38,
-                  fontWeight: FontWeight.w700,
-                ),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
+                    child: TvChannelLogo(
+                      channel: channel,
+                      fallbackColor: Colors.white54,
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    // On its own plate, because what is behind it is a
+                    // logo on one card and a moving programme on the next:
+                    // a bare figure is legible over neither.
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(Dimens.radiusTiny),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        child: Text(
+                          '$number',
+                          style: TextStyle(
+                            color: isPlaying ? scheme.primary : Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
               child: Text(
                 channel.name,
                 maxLines: 1,
+                textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isPlaying ? Colors.white : Colors.white70,
+                  color: Colors.white,
+                  fontSize: 12,
                   fontWeight: isPlaying ? FontWeight.w700 : FontWeight.w500,
+                  shadows: const [Shadow(blurRadius: 4)],
                 ),
               ),
             ),
-            if (isPlaying)
-              const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
           ],
         ),
       ),
