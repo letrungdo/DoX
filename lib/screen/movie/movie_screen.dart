@@ -674,13 +674,12 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       canPop: _playingMovie == null,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop || _playingMovie == null) return;
-        // Back out of full screen first, wherever the app is running: the
-        // film is still playing, and the page it came from is the next thing
-        // behind it, not the one after that.
-        if (_isDetailFullScreen) {
-          _detailController.exitFullScreen();
-          return;
-        }
+        // The detail screen has the first say: it climbs its own ladder — the
+        // episode grid, then the control overlay, then full screen — and the
+        // overlay only gives way once that ladder has run out. The film is
+        // still playing, and the page it came from is the next thing behind
+        // it, not the one after that.
+        if (_detailController.handleBack()) return;
         if (_canMinimize && _overlayController.value > 0) {
           _minimizeOverlay();
         } else {
@@ -724,7 +723,8 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                   builder: (context, child) => ExcludeFocus(
                     // Minimised, the player is a bar at the bottom and the
                     // browser is back in charge, so it takes the remote again.
-                    excluding: !_isClosingOverlay &&
+                    excluding:
+                        !_isClosingOverlay &&
                         _playingMovie != null &&
                         _overlayController.value > _miniThreshold,
                     child: child!,

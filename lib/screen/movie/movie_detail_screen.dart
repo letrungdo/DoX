@@ -229,7 +229,7 @@ class _MovieDetailScreenState
   void initState() {
     super.initState();
     logger.d('MovieDetailScreen: initState');
-    widget.controller?.attach(_exitFullScreen);
+    widget.controller?.attach(_handleBackPress);
     _initOrientationListener();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // A television too: the set has nothing but the picture to show, and a
@@ -279,8 +279,8 @@ class _MovieDetailScreenState
   void didUpdateWidget(MovieDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?.detach(_exitFullScreen);
-      widget.controller?.attach(_exitFullScreen);
+      oldWidget.controller?.detach(_handleBackPress);
+      widget.controller?.attach(_handleBackPress);
     }
     if (oldWidget.movieId != widget.movieId ||
         oldWidget.movieUrl != widget.movieUrl) {
@@ -300,7 +300,7 @@ class _MovieDetailScreenState
   @override
   void dispose() {
     logger.d('MovieDetailScreen: dispose');
-    widget.controller?.detach(_exitFullScreen);
+    widget.controller?.detach(_handleBackPress);
     _controllerGeneration++;
     final controller = _videoController;
     final listener = _videoValueListener;
@@ -780,16 +780,21 @@ class _MovieDetailScreenState
     _controlsTimer?.cancel();
     if (_isPlaying && !_showVolumeControl) {
       _controlsTimer = Timer(Dimens.playerControlsTimeout, () {
-        // A bar the remote is resting on stays: the user is part way through
-        // choosing something, and pulling it away would drop their place and
-        // the focus with it.
+        // An idle timer, not a mouse-only one: on a television the remote is
+        // *always* resting on a bar, so a bar the focus is on has to go too,
+        // or it never goes at all. Every press restarts the countdown from
+        // [_handlePageKeyEvent], so this only fires once the viewer has
+        // actually stopped, and [_hideControls] hands the remote back to the
+        // picture before the bars leave the focus tree under it.
+        //
+        // A gesture part way through is the one thing that still holds them:
+        // a position being dragged or scrubbed is a choice not yet made.
         if (mounted &&
             !_isTimelineHovering &&
             !_isDragging &&
             !_isScrubbing &&
-            !_showEpisodeOverlay &&
-            !_controlsHaveFocus) {
-          setState(() => _showControls = false);
+            !_showEpisodeOverlay) {
+          _hideControls();
         }
       });
     }
@@ -801,6 +806,28 @@ class _MovieDetailScreenState
   void _wakeControls() {
     if (!_showControls) setState(() => _showControls = true);
     _startControlsTimer();
+  }
+
+  /// The ladder BACK climbs: the episode grid first, then the control overlay,
+  /// and only then the picture itself. True when the press was used up here
+  /// and whatever this screen is sitting in should stay where it is.
+  bool _handleBackPress() {
+    if (_showEpisodeOverlay) {
+      _closeEpisodeOverlay();
+      return true;
+    }
+    if (deviceType.isTv &&
+        _isFullScreen &&
+        _showControls &&
+        _videoController != null) {
+      _hideControls();
+      return true;
+    }
+    if (_isFullScreen) {
+      _exitFullScreen();
+      return true;
+    }
+    return false;
   }
 
   /// Hides the overlay and takes the remote off it, which is what the first
@@ -1024,6 +1051,12 @@ class _MovieDetailScreenState
   /// happens to be resting — on a chip in the body, on the transport bar, in
   /// the episode grid.
   KeyEventResult _handlePageKeyEvent(FocusNode node, KeyEvent event) {
+    // Wherever the remote is resting — the picture, a bar, the seek bar — a
+    // press means the viewer is still there, so the overlay's countdown starts
+    // again. Every key reaches this node on its way up, which is what makes
+    // one restart here enough for all of them; a held key counts too, or a
+    // long walk along a bar would time out part way.
+    if (_showControls && event is! KeyUpEvent) _startControlsTimer();
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final controller = _videoController;
     final key = event.logicalKey;
@@ -1520,21 +1553,13 @@ class _MovieDetailScreenState
           canPop: (widget.embedded || !_isFullScreen) && !_showEpisodeOverlay,
           onPopInvokedWithResult: (didPop, result) {
             if (didPop) return;
-            // The ladder BACK climbs on a television: the grid first, then the
-            // control overlay, and only then the picture itself.
-            if (_showEpisodeOverlay) {
-              _closeEpisodeOverlay();
-              return;
-            }
+            // Embedded, the browse page owns BACK and asks this screen first
+            // through [MovieDetailController]. Both scopes sit on the one
+            // route, so both are told of every press — climbing the ladder
+            // here as well would take two rungs at a time, which is what shut
+            // the episode grid and left full screen on the same press.
             if (widget.embedded) return;
-            if (deviceType.isTv &&
-                _isFullScreen &&
-                _showControls &&
-                _videoController != null) {
-              _hideControls();
-              return;
-            }
-            if (_isFullScreen) _toggleFullScreen();
+            _handleBackPress();
           },
           // Watching the whole page, taking no turn of its own: the transport
           // keys below are read wherever the remote happens to be resting.
@@ -2282,124 +2307,130 @@ class _MovieDetailScreenState
                                                   // can stand on it: the
                                                   // arrows walk a marker
                                                   // along it and OK commits.
-                                                  TvFocusSurface(
-                                                    node: _timelineFocusNode,
-                                                    child: Focus(
-                                                      focusNode:
-                                                          _timelineFocusNode,
-                                                      onKeyEvent:
-                                                          _handleTimelineKeyEvent,
-                                                      child: MouseRegion(
-                                                        cursor:
-                                                            SystemMouseCursors
-                                                                .click,
-                                                        onEnter: (event) =>
-                                                            _updateHoverPreview(
-                                                              event
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            ),
-                                                        onHover: (event) =>
-                                                            _updateHoverPreview(
-                                                              event
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            ),
-                                                        onExit: (_) {
-                                                          if (_isTimelineHovering) {
-                                                            setState(
-                                                              () =>
-                                                                  _isTimelineHovering =
-                                                                      false,
-                                                            );
-                                                          }
-                                                          _startControlsTimer();
-                                                        },
-                                                        child: GestureDetector(
-                                                          behavior:
-                                                              HitTestBehavior
-                                                                  .opaque,
-                                                          onHorizontalDragStart: (details) {
-                                                            _resumeAfterDrag =
+                                                  Focus(
+                                                    focusNode:
+                                                        _timelineFocusNode,
+                                                    onKeyEvent:
+                                                        _handleTimelineKeyEvent,
+                                                    // The bar thickens and
+                                                    // grows its handle when
+                                                    // the remote lands on it,
+                                                    // and it is built from
+                                                    // here — so the frame that
+                                                    // moves the focus has to
+                                                    // rebuild this one too.
+                                                    onFocusChange: (_) =>
+                                                        setState(() {}),
+                                                    child: MouseRegion(
+                                                      cursor: SystemMouseCursors
+                                                          .click,
+                                                      onEnter: (event) =>
+                                                          _updateHoverPreview(
+                                                            event
+                                                                .localPosition
+                                                                .dx,
+                                                            constraints
+                                                                .maxWidth,
+                                                          ),
+                                                      onHover: (event) =>
+                                                          _updateHoverPreview(
+                                                            event
+                                                                .localPosition
+                                                                .dx,
+                                                            constraints
+                                                                .maxWidth,
+                                                          ),
+                                                      onExit: (_) {
+                                                        if (_isTimelineHovering) {
+                                                          setState(
+                                                            () =>
+                                                                _isTimelineHovering =
+                                                                    false,
+                                                          );
+                                                        }
+                                                        _startControlsTimer();
+                                                      },
+                                                      child: GestureDetector(
+                                                        behavior:
+                                                            HitTestBehavior
+                                                                .opaque,
+                                                        onHorizontalDragStart:
+                                                            (details) {
+                                                              _resumeAfterDrag =
+                                                                  controller
+                                                                      .value
+                                                                      .isPlaying;
+                                                              unawaited(
                                                                 controller
-                                                                    .value
-                                                                    .isPlaying;
-                                                            unawaited(
-                                                              controller
-                                                                  .pause(),
-                                                            );
-                                                            _controlsTimer
-                                                                ?.cancel();
-                                                            setState(
-                                                              () =>
-                                                                  _isDragging =
-                                                                      true,
-                                                            );
-                                                            _updateDragPosition(
-                                                              controller,
-                                                              details
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            );
-                                                          },
-                                                          onHorizontalDragUpdate:
-                                                              (details) {
-                                                                _updateDragPosition(
+                                                                    .pause(),
+                                                              );
+                                                              _controlsTimer
+                                                                  ?.cancel();
+                                                              setState(
+                                                                () =>
+                                                                    _isDragging =
+                                                                        true,
+                                                              );
+                                                              _updateDragPosition(
+                                                                controller,
+                                                                details
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
+                                                              );
+                                                            },
+                                                        onHorizontalDragUpdate:
+                                                            (details) {
+                                                              _updateDragPosition(
+                                                                controller,
+                                                                details
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
+                                                              );
+                                                            },
+                                                        onHorizontalDragEnd:
+                                                            (_) =>
+                                                                _finishDragging(
                                                                   controller,
-                                                                  details
-                                                                      .localPosition
-                                                                      .dx,
-                                                                  constraints
-                                                                      .maxWidth,
-                                                                );
-                                                              },
-                                                          onHorizontalDragEnd:
-                                                              (_) =>
-                                                                  _finishDragging(
-                                                                    controller,
-                                                                  ),
-                                                          onHorizontalDragCancel:
-                                                              () =>
-                                                                  _finishDragging(
-                                                                    controller,
-                                                                  ),
-                                                          onTapDown: (details) {
-                                                            _updateDragPosition(
-                                                              controller,
-                                                              details
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            );
-                                                          },
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets.only(
-                                                                  top: 10,
-                                                                  bottom: 2,
                                                                 ),
-                                                            child: VideoSeekBar(
-                                                              controller:
+                                                        onHorizontalDragCancel:
+                                                            () =>
+                                                                _finishDragging(
                                                                   controller,
-                                                              isFocused:
-                                                                  _timelineFocusNode
-                                                                      .hasFocus,
-                                                              isHovered:
-                                                                  _isTimelineHovering,
-                                                              isDragging:
-                                                                  _isDragging,
-                                                              isScrubbing:
-                                                                  _isScrubbing,
-                                                              dragFraction:
-                                                                  _dragFraction,
-                                                            ),
+                                                                ),
+                                                        onTapDown: (details) {
+                                                          _updateDragPosition(
+                                                            controller,
+                                                            details
+                                                                .localPosition
+                                                                .dx,
+                                                            constraints
+                                                                .maxWidth,
+                                                          );
+                                                        },
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.only(
+                                                                top: 10,
+                                                                bottom: 2,
+                                                              ),
+                                                          child: VideoSeekBar(
+                                                            controller:
+                                                                controller,
+                                                            isFocused:
+                                                                _timelineFocusNode
+                                                                    .hasFocus,
+                                                            isHovered:
+                                                                _isTimelineHovering,
+                                                            isDragging:
+                                                                _isDragging,
+                                                            isScrubbing:
+                                                                _isScrubbing,
+                                                            dragFraction:
+                                                                _dragFraction,
                                                           ),
                                                         ),
                                                       ),

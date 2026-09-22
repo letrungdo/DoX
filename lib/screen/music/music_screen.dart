@@ -9,6 +9,7 @@ import 'package:do_x/screen/music/music_track_card.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
+import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
@@ -17,6 +18,10 @@ import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+/// Top level so the sync badge can be `const`: a closure written inline is a
+/// new object every build, and the badge would rebuild with it.
+bool _isLoading(MusicViewModel vm) => vm.isLoading;
 
 @RoutePage()
 class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
@@ -133,23 +138,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       appBar: DoAppBar(
         title: pageTitle,
         actions: [_buildAccountAction(viewModel)],
-        titleSuffix: viewModel.isLoading
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: context.theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(Dimens.radiusTiny),
-                ),
-                child: const Text(
-                  'CLOUD LIVE',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
+        titleSuffix: const AppBarSyncIcon<MusicViewModel>(selector: _isLoading),
       ),
       body: mainContent,
     );
