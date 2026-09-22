@@ -34,11 +34,6 @@ class _TvChannelService {
   /// catalogue.
   static const curatedCountryCode = 'vn';
 
-  /// How long a downloaded playlist is served before it is fetched again. The
-  /// upstream list is rebuilt daily, and a stream URL that rotates faster than
-  /// that fails at playback anyway, where pull-to-refresh is one gesture away.
-  static const cacheTtl = Duration(hours: 12);
-
   final _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 15),
@@ -51,12 +46,16 @@ class _TvChannelService {
   /// Channels by country code, for the countries visited this run.
   final _channels = <String, List<TvChannel>>{};
 
-  /// The channel list of [countryCode], from memory, from the stored copy, or
-  /// from the network — in that order, unless [forceRefresh] sends it straight
-  /// to the network.
+  /// The channel list of [countryCode], from memory if this run has already
+  /// read it and from the network otherwise.
   ///
-  /// Throws only when there is nothing at all to show: a failed refresh with a
-  /// stored copy behind it keeps serving that copy.
+  /// The first read of a country in an app run always goes out, so that
+  /// closing the app and opening it again is all anyone has to do to get the
+  /// list as it stands — a television has no pull-to-refresh, and a list a
+  /// day old there is a list of channels that have since moved.
+  ///
+  /// Throws only when there is nothing at all to show: a fetch that fails
+  /// with a stored copy behind it serves that copy.
   Future<List<TvChannel>> getChannels(
     String countryCode, {
     bool forceRefresh = false,
@@ -65,12 +64,6 @@ class _TvChannelService {
     if (!forceRefresh) {
       final inMemory = _channels[code];
       if (inMemory != null) return inMemory;
-
-      final stored = _readStoredPlaylist(code);
-      if (stored != null) {
-        final channels = parseChannels(stored);
-        if (channels.isNotEmpty) return _channels[code] = channels;
-      }
     }
 
     try {
@@ -92,8 +85,7 @@ class _TvChannelService {
       }
       // Whatever is on disk beats an error screen: a day-old channel list still
       // plays, and the user asked to watch television, not to see a refresh fail.
-      final fallback =
-          _channels[code] ?? _parseStoredPlaylist(code, ignoreExpiry: true);
+      final fallback = _channels[code] ?? _parseStoredPlaylist(code);
       if (fallback != null && fallback.isNotEmpty) {
         return _channels[code] = fallback;
       }
@@ -101,22 +93,21 @@ class _TvChannelService {
     }
   }
 
-  /// The stored playlist of [countryCode] while it is still fresh enough to
-  /// serve.
-  String? _readStoredPlaylist(String countryCode) {
-    final savedAt = storageService.getTvPlaylistSavedAt(countryCode);
-    if (savedAt == null) return null;
-    if (DateTime.now().difference(savedAt) > cacheTtl) return null;
-    return storageService.getTvPlaylist(countryCode);
+  /// The last list of [countryCode] that reached the app, for the page to
+  /// draw while this run's fetch is still out, or null when there is none.
+  List<TvChannel>? storedChannels(String countryCode) {
+    final code = countryCode.toLowerCase();
+    return _channels[code] ?? _parseStoredPlaylist(code);
   }
 
-  List<TvChannel>? _parseStoredPlaylist(
-    String countryCode, {
-    bool ignoreExpiry = false,
-  }) {
-    final raw = ignoreExpiry
-        ? storageService.getTvPlaylist(countryCode)
-        : _readStoredPlaylist(countryCode);
+  /// The last list of [countryCode] that reached the app, which is what it
+  /// falls back on when this run's fetch does not.
+  ///
+  /// It is kept without a lifetime of its own: it is never served while the
+  /// network can be reached, and when it cannot, how old it is changes
+  /// nothing — it is still the only television there is.
+  List<TvChannel>? _parseStoredPlaylist(String countryCode) {
+    final raw = storageService.getTvPlaylist(countryCode);
     if (raw == null || raw.isEmpty) return null;
     return parseChannels(raw);
   }

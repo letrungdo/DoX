@@ -72,6 +72,12 @@ class TvViewModel extends CoreViewModel {
     _hasError = false;
     notifyListenersSafe();
 
+    // The list this run fetches is the one that counts, but it is a round
+    // trip away and the copy on disk is already here. It goes up first, so
+    // that opening the app shows television rather than a spinner — and on a
+    // line that is down, shows it at all.
+    if (_isLoading) _showStoredChannels();
+
     try {
       await _loadCatalog();
       if (isDispose) return;
@@ -96,6 +102,19 @@ class TvViewModel extends CoreViewModel {
       _isRefreshing = false;
       notifyListenersSafe();
     }
+  }
+
+  /// Puts the last list that reached the app on screen, with the fetch that
+  /// will replace it still out — the app bar's spinner says as much.
+  void _showStoredChannels() {
+    final stored = tvChannelService.storedChannels(_country.playlistCode);
+    if (stored == null || stored.isEmpty) return;
+    _channels = stored;
+    _groups = _collectGroups(stored);
+    _applyFilters();
+    _isLoading = false;
+    _isRefreshing = true;
+    notifyListenersSafe();
   }
 
   Future<void> onRefresh() => load(forceRefresh: true);

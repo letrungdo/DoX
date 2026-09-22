@@ -1,5 +1,7 @@
+import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/tv_channel_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Entries in the exact shape `iptv-org/iptv` publishes them for Vietnam, so a
 /// change in that playlist's format shows up here rather than as an empty page.
@@ -16,6 +18,31 @@ https://example.com/sport/playlist.m3u8
 ''';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('The list kept on disk', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await storageService.init();
+    });
+
+    test('is what the page draws while the fetch is still out', () async {
+      await storageService.setTvPlaylist('vn', _playlist);
+
+      // No lifetime of its own any more: the run fetches the list again
+      // whatever the age of this copy, and this copy is only what goes up
+      // in the meantime — and what stays up when the fetch fails.
+      final stored = tvChannelService.storedChannels('VN');
+
+      expect(stored, isNotNull);
+      expect(stored!.map((c) => c.name), contains('An Ninh TV HD'));
+    });
+
+    test('is nothing at all before a list has ever arrived', () {
+      expect(tvChannelService.storedChannels('kr'), isNull);
+    });
+  });
+
   group('TV playlist parsing', () {
     test('reads the fields the channel grid shows', () {
       final channels = tvChannelService.parsePlaylist(_playlist);
