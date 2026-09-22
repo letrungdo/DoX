@@ -9,18 +9,18 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:io' as _i43;
+import 'dart:io' as _i45;
 
-import 'package:auto_route/auto_route.dart' as _i34;
-import 'package:collection/collection.dart' as _i45;
-import 'package:do_x/constants/enum/market_code.dart' as _i38;
-import 'package:do_x/model/movie_model.dart' as _i40;
-import 'package:do_x/model/tv_channel.dart' as _i44;
+import 'package:auto_route/auto_route.dart' as _i36;
+import 'package:collection/collection.dart' as _i47;
+import 'package:do_x/constants/enum/market_code.dart' as _i40;
+import 'package:do_x/model/movie_model.dart' as _i42;
+import 'package:do_x/model/tv_channel.dart' as _i46;
 import 'package:do_x/screen/account/app_account_screen.dart' deferred as _i2;
 import 'package:do_x/screen/account/app_login_screen.dart' deferred as _i3;
 import 'package:do_x/screen/account/update_password_screen.dart'
-    deferred as _i31;
-import 'package:do_x/screen/account/verify_otp_screen.dart' deferred as _i32;
+    deferred as _i33;
+import 'package:do_x/screen/account/verify_otp_screen.dart' deferred as _i34;
 import 'package:do_x/screen/asset/asset_screen.dart' deferred as _i4;
 import 'package:do_x/screen/asset/asset_summary_screen.dart' deferred as _i5;
 import 'package:do_x/screen/chicken/chicken_batch_detail_screen.dart'
@@ -41,44 +41,46 @@ import 'package:do_x/screen/image_editor/image_editor_screen.dart'
 import 'package:do_x/screen/lunar_screen.dart' deferred as _i17;
 import 'package:do_x/screen/main_screen.dart' deferred as _i18;
 import 'package:do_x/screen/menu_screen.dart' deferred as _i20;
-import 'package:do_x/screen/movie/movie_detail_controller.dart' as _i41;
+import 'package:do_x/screen/movie/movie_detail_controller.dart' as _i43;
 import 'package:do_x/screen/movie/movie_detail_screen.dart' deferred as _i21;
 import 'package:do_x/screen/movie/movie_screen.dart' deferred as _i22;
 import 'package:do_x/screen/movie/movie_search_screen.dart' deferred as _i23;
 import 'package:do_x/screen/my_life/account_screen.dart' deferred as _i1;
 import 'package:do_x/screen/my_life/login_screen.dart' deferred as _i16;
-import 'package:do_x/screen/my_life/my_life_screen.dart' deferred as _i24;
-import 'package:do_x/screen/my_life/trimmer_screen.dart' deferred as _i27;
+import 'package:do_x/screen/my_life/my_life_screen.dart' deferred as _i25;
+import 'package:do_x/screen/my_life/trimmer_screen.dart' deferred as _i28;
 import 'package:do_x/screen/network/wifi_management_screen.dart'
-    deferred as _i33;
+    deferred as _i35;
 import 'package:do_x/screen/news/market_detail_screen.dart' deferred as _i19;
-import 'package:do_x/screen/news/news_screen.dart' deferred as _i25;
-import 'package:do_x/screen/settings_screen.dart' deferred as _i26;
-import 'package:do_x/screen/tv/tv_player_screen.dart' deferred as _i28;
-import 'package:do_x/screen/tv/tv_screen.dart' deferred as _i29;
-import 'package:do_x/screen/tv/tv_search_screen.dart' deferred as _i30;
-import 'package:do_x/view_model/asset_view_model.dart' as _i36;
-import 'package:do_x/view_model/electric_view_model.dart' as _i37;
-import 'package:do_x/view_model/movie/movie_view_model.dart' as _i42;
-import 'package:do_x/view_model/tv/tv_view_model.dart' as _i46;
-import 'package:do_x/view_model/verify_otp_view_model.dart' as _i47;
-import 'package:flutter/foundation.dart' as _i39;
-import 'package:flutter/material.dart' as _i35;
+import 'package:do_x/screen/news/news_screen.dart' deferred as _i26;
+import 'package:do_x/screen/settings_screen.dart' deferred as _i27;
+import 'package:do_x/screen/tv/music_login_screen.dart' deferred as _i24;
+import 'package:do_x/screen/tv/tv_music_screen.dart' deferred as _i29;
+import 'package:do_x/screen/tv/tv_player_screen.dart' deferred as _i30;
+import 'package:do_x/screen/tv/tv_screen.dart' deferred as _i31;
+import 'package:do_x/screen/tv/tv_search_screen.dart' deferred as _i32;
+import 'package:do_x/view_model/asset_view_model.dart' as _i38;
+import 'package:do_x/view_model/electric_view_model.dart' as _i39;
+import 'package:do_x/view_model/movie/movie_view_model.dart' as _i44;
+import 'package:do_x/view_model/tv/tv_view_model.dart' as _i48;
+import 'package:do_x/view_model/verify_otp_view_model.dart' as _i49;
+import 'package:flutter/foundation.dart' as _i41;
+import 'package:flutter/material.dart' as _i37;
 
 /// generated route for
 /// [_i1.AccountScreen]
-class AccountRoute extends _i34.PageRouteInfo<void> {
-  const AccountRoute({List<_i34.PageRouteInfo>? children})
+class AccountRoute extends _i36.PageRouteInfo<void> {
+  const AccountRoute({List<_i36.PageRouteInfo>? children})
     : super(AccountRoute.name, initialChildren: children);
 
   static const String name = 'AccountRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i1.loadLibrary,
-        () => _i34.WrappedRoute(child: _i1.AccountScreen()),
+        () => _i36.WrappedRoute(child: _i1.AccountScreen()),
       );
     },
   );
@@ -86,18 +88,18 @@ class AccountRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i2.AppAccountScreen]
-class AppAccountRoute extends _i34.PageRouteInfo<void> {
-  const AppAccountRoute({List<_i34.PageRouteInfo>? children})
+class AppAccountRoute extends _i36.PageRouteInfo<void> {
+  const AppAccountRoute({List<_i36.PageRouteInfo>? children})
     : super(AppAccountRoute.name, initialChildren: children);
 
   static const String name = 'AppAccountRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i2.loadLibrary,
-        () => _i34.WrappedRoute(child: _i2.AppAccountScreen()),
+        () => _i36.WrappedRoute(child: _i2.AppAccountScreen()),
       );
     },
   );
@@ -105,18 +107,18 @@ class AppAccountRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i3.AppLoginScreen]
-class AppLoginRoute extends _i34.PageRouteInfo<void> {
-  const AppLoginRoute({List<_i34.PageRouteInfo>? children})
+class AppLoginRoute extends _i36.PageRouteInfo<void> {
+  const AppLoginRoute({List<_i36.PageRouteInfo>? children})
     : super(AppLoginRoute.name, initialChildren: children);
 
   static const String name = 'AppLoginRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i3.loadLibrary,
-        () => _i34.WrappedRoute(child: _i3.AppLoginScreen()),
+        () => _i36.WrappedRoute(child: _i3.AppLoginScreen()),
       );
     },
   );
@@ -124,18 +126,18 @@ class AppLoginRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i4.AssetScreen]
-class AssetRoute extends _i34.PageRouteInfo<void> {
-  const AssetRoute({List<_i34.PageRouteInfo>? children})
+class AssetRoute extends _i36.PageRouteInfo<void> {
+  const AssetRoute({List<_i36.PageRouteInfo>? children})
     : super(AssetRoute.name, initialChildren: children);
 
   static const String name = 'AssetRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i4.loadLibrary,
-        () => _i34.WrappedRoute(child: _i4.AssetScreen()),
+        () => _i36.WrappedRoute(child: _i4.AssetScreen()),
       );
     },
   );
@@ -143,11 +145,11 @@ class AssetRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i5.AssetSummaryScreen]
-class AssetSummaryRoute extends _i34.PageRouteInfo<AssetSummaryRouteArgs> {
+class AssetSummaryRoute extends _i36.PageRouteInfo<AssetSummaryRouteArgs> {
   AssetSummaryRoute({
-    _i35.Key? key,
-    required _i36.AssetViewModel assetVm,
-    List<_i34.PageRouteInfo>? children,
+    _i37.Key? key,
+    required _i38.AssetViewModel assetVm,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          AssetSummaryRoute.name,
          args: AssetSummaryRouteArgs(key: key, assetVm: assetVm),
@@ -156,13 +158,13 @@ class AssetSummaryRoute extends _i34.PageRouteInfo<AssetSummaryRouteArgs> {
 
   static const String name = 'AssetSummaryRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<AssetSummaryRouteArgs>();
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i5.loadLibrary,
-        () => _i34.WrappedRoute(
+        () => _i36.WrappedRoute(
           child: _i5.AssetSummaryScreen(key: args.key, assetVm: args.assetVm),
         ),
       );
@@ -173,9 +175,9 @@ class AssetSummaryRoute extends _i34.PageRouteInfo<AssetSummaryRouteArgs> {
 class AssetSummaryRouteArgs {
   const AssetSummaryRouteArgs({this.key, required this.assetVm});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
-  final _i36.AssetViewModel assetVm;
+  final _i38.AssetViewModel assetVm;
 
   @override
   String toString() {
@@ -196,11 +198,11 @@ class AssetSummaryRouteArgs {
 /// generated route for
 /// [_i6.ChickenBatchDetailScreen]
 class ChickenBatchDetailRoute
-    extends _i34.PageRouteInfo<ChickenBatchDetailRouteArgs> {
+    extends _i36.PageRouteInfo<ChickenBatchDetailRouteArgs> {
   ChickenBatchDetailRoute({
-    _i35.Key? key,
+    _i37.Key? key,
     required String batchId,
-    List<_i34.PageRouteInfo>? children,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          ChickenBatchDetailRoute.name,
          args: ChickenBatchDetailRouteArgs(key: key, batchId: batchId),
@@ -209,13 +211,13 @@ class ChickenBatchDetailRoute
 
   static const String name = 'ChickenBatchDetailRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<ChickenBatchDetailRouteArgs>();
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i6.loadLibrary,
-        () => _i34.WrappedRoute(
+        () => _i36.WrappedRoute(
           child: _i6.ChickenBatchDetailScreen(
             key: args.key,
             batchId: args.batchId,
@@ -229,7 +231,7 @@ class ChickenBatchDetailRoute
 class ChickenBatchDetailRouteArgs {
   const ChickenBatchDetailRouteArgs({this.key, required this.batchId});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
   final String batchId;
 
@@ -251,18 +253,18 @@ class ChickenBatchDetailRouteArgs {
 
 /// generated route for
 /// [_i7.ChickenScreen]
-class ChickenRoute extends _i34.PageRouteInfo<void> {
-  const ChickenRoute({List<_i34.PageRouteInfo>? children})
+class ChickenRoute extends _i36.PageRouteInfo<void> {
+  const ChickenRoute({List<_i36.PageRouteInfo>? children})
     : super(ChickenRoute.name, initialChildren: children);
 
   static const String name = 'ChickenRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i7.loadLibrary,
-        () => _i34.WrappedRoute(child: _i7.ChickenScreen()),
+        () => _i36.WrappedRoute(child: _i7.ChickenScreen()),
       );
     },
   );
@@ -270,18 +272,18 @@ class ChickenRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i8.ChickenSettingsScreen]
-class ChickenSettingsRoute extends _i34.PageRouteInfo<void> {
-  const ChickenSettingsRoute({List<_i34.PageRouteInfo>? children})
+class ChickenSettingsRoute extends _i36.PageRouteInfo<void> {
+  const ChickenSettingsRoute({List<_i36.PageRouteInfo>? children})
     : super(ChickenSettingsRoute.name, initialChildren: children);
 
   static const String name = 'ChickenSettingsRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i8.loadLibrary,
-        () => _i34.WrappedRoute(child: _i8.ChickenSettingsScreen()),
+        () => _i36.WrappedRoute(child: _i8.ChickenSettingsScreen()),
       );
     },
   );
@@ -289,18 +291,18 @@ class ChickenSettingsRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i9.ChickenStatisticsScreen]
-class ChickenStatisticsRoute extends _i34.PageRouteInfo<void> {
-  const ChickenStatisticsRoute({List<_i34.PageRouteInfo>? children})
+class ChickenStatisticsRoute extends _i36.PageRouteInfo<void> {
+  const ChickenStatisticsRoute({List<_i36.PageRouteInfo>? children})
     : super(ChickenStatisticsRoute.name, initialChildren: children);
 
   static const String name = 'ChickenStatisticsRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i9.loadLibrary,
-        () => _i34.WrappedRoute(child: _i9.ChickenStatisticsScreen()),
+        () => _i36.WrappedRoute(child: _i9.ChickenStatisticsScreen()),
       );
     },
   );
@@ -308,18 +310,18 @@ class ChickenStatisticsRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i10.CockSalesScreen]
-class CockSalesRoute extends _i34.PageRouteInfo<void> {
-  const CockSalesRoute({List<_i34.PageRouteInfo>? children})
+class CockSalesRoute extends _i36.PageRouteInfo<void> {
+  const CockSalesRoute({List<_i36.PageRouteInfo>? children})
     : super(CockSalesRoute.name, initialChildren: children);
 
   static const String name = 'CockSalesRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i10.loadLibrary,
-        () => _i34.WrappedRoute(child: _i10.CockSalesScreen()),
+        () => _i36.WrappedRoute(child: _i10.CockSalesScreen()),
       );
     },
   );
@@ -327,18 +329,18 @@ class CockSalesRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i11.ElectricScreen]
-class ElectricRoute extends _i34.PageRouteInfo<void> {
-  const ElectricRoute({List<_i34.PageRouteInfo>? children})
+class ElectricRoute extends _i36.PageRouteInfo<void> {
+  const ElectricRoute({List<_i36.PageRouteInfo>? children})
     : super(ElectricRoute.name, initialChildren: children);
 
   static const String name = 'ElectricRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i11.loadLibrary,
-        () => _i34.WrappedRoute(child: _i11.ElectricScreen()),
+        () => _i36.WrappedRoute(child: _i11.ElectricScreen()),
       );
     },
   );
@@ -347,11 +349,11 @@ class ElectricRoute extends _i34.PageRouteInfo<void> {
 /// generated route for
 /// [_i12.ElectricSettingsScreen]
 class ElectricSettingsRoute
-    extends _i34.PageRouteInfo<ElectricSettingsRouteArgs> {
+    extends _i36.PageRouteInfo<ElectricSettingsRouteArgs> {
   ElectricSettingsRoute({
-    _i35.Key? key,
-    required _i37.ElectricViewModel electricVm,
-    List<_i34.PageRouteInfo>? children,
+    _i37.Key? key,
+    required _i39.ElectricViewModel electricVm,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          ElectricSettingsRoute.name,
          args: ElectricSettingsRouteArgs(key: key, electricVm: electricVm),
@@ -360,13 +362,13 @@ class ElectricSettingsRoute
 
   static const String name = 'ElectricSettingsRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<ElectricSettingsRouteArgs>();
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i12.loadLibrary,
-        () => _i34.WrappedRoute(
+        () => _i36.WrappedRoute(
           child: _i12.ElectricSettingsScreen(
             key: args.key,
             electricVm: args.electricVm,
@@ -380,9 +382,9 @@ class ElectricSettingsRoute
 class ElectricSettingsRouteArgs {
   const ElectricSettingsRouteArgs({this.key, required this.electricVm});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
-  final _i37.ElectricViewModel electricVm;
+  final _i39.ElectricViewModel electricVm;
 
   @override
   String toString() {
@@ -402,16 +404,16 @@ class ElectricSettingsRouteArgs {
 
 /// generated route for
 /// [_i13.FengShuiCompassScreen]
-class FengShuiCompassRoute extends _i34.PageRouteInfo<void> {
-  const FengShuiCompassRoute({List<_i34.PageRouteInfo>? children})
+class FengShuiCompassRoute extends _i36.PageRouteInfo<void> {
+  const FengShuiCompassRoute({List<_i36.PageRouteInfo>? children})
     : super(FengShuiCompassRoute.name, initialChildren: children);
 
   static const String name = 'FengShuiCompassRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i13.loadLibrary,
         () => _i13.FengShuiCompassScreen(),
       );
@@ -421,18 +423,18 @@ class FengShuiCompassRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i14.GlobalExpensesScreen]
-class GlobalExpensesRoute extends _i34.PageRouteInfo<void> {
-  const GlobalExpensesRoute({List<_i34.PageRouteInfo>? children})
+class GlobalExpensesRoute extends _i36.PageRouteInfo<void> {
+  const GlobalExpensesRoute({List<_i36.PageRouteInfo>? children})
     : super(GlobalExpensesRoute.name, initialChildren: children);
 
   static const String name = 'GlobalExpensesRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i14.loadLibrary,
-        () => _i34.WrappedRoute(child: _i14.GlobalExpensesScreen()),
+        () => _i36.WrappedRoute(child: _i14.GlobalExpensesScreen()),
       );
     },
   );
@@ -440,18 +442,18 @@ class GlobalExpensesRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i15.ImageEditorScreen]
-class ImageEditorRoute extends _i34.PageRouteInfo<void> {
-  const ImageEditorRoute({List<_i34.PageRouteInfo>? children})
+class ImageEditorRoute extends _i36.PageRouteInfo<void> {
+  const ImageEditorRoute({List<_i36.PageRouteInfo>? children})
     : super(ImageEditorRoute.name, initialChildren: children);
 
   static const String name = 'ImageEditorRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i15.loadLibrary,
-        () => _i34.WrappedRoute(child: _i15.ImageEditorScreen()),
+        () => _i36.WrappedRoute(child: _i15.ImageEditorScreen()),
       );
     },
   );
@@ -459,18 +461,18 @@ class ImageEditorRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i16.LoginScreen]
-class LoginRoute extends _i34.PageRouteInfo<void> {
-  const LoginRoute({List<_i34.PageRouteInfo>? children})
+class LoginRoute extends _i36.PageRouteInfo<void> {
+  const LoginRoute({List<_i36.PageRouteInfo>? children})
     : super(LoginRoute.name, initialChildren: children);
 
   static const String name = 'LoginRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i16.loadLibrary,
-        () => _i34.WrappedRoute(child: _i16.LoginScreen()),
+        () => _i36.WrappedRoute(child: _i16.LoginScreen()),
       );
     },
   );
@@ -478,34 +480,34 @@ class LoginRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i17.LunarScreen]
-class LunarRoute extends _i34.PageRouteInfo<void> {
-  const LunarRoute({List<_i34.PageRouteInfo>? children})
+class LunarRoute extends _i36.PageRouteInfo<void> {
+  const LunarRoute({List<_i36.PageRouteInfo>? children})
     : super(LunarRoute.name, initialChildren: children);
 
   static const String name = 'LunarRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(_i17.loadLibrary, () => _i17.LunarScreen());
+      return _i36.DeferredWidget(_i17.loadLibrary, () => _i17.LunarScreen());
     },
   );
 }
 
 /// generated route for
 /// [_i18.MainScreen]
-class MainRoute extends _i34.PageRouteInfo<void> {
-  const MainRoute({List<_i34.PageRouteInfo>? children})
+class MainRoute extends _i36.PageRouteInfo<void> {
+  const MainRoute({List<_i36.PageRouteInfo>? children})
     : super(MainRoute.name, initialChildren: children);
 
   static const String name = 'MainRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i18.loadLibrary,
-        () => _i34.WrappedRoute(child: _i18.MainScreen()),
+        () => _i36.WrappedRoute(child: _i18.MainScreen()),
       );
     },
   );
@@ -513,11 +515,11 @@ class MainRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i19.MarketDetailScreen]
-class MarketDetailRoute extends _i34.PageRouteInfo<MarketDetailRouteArgs> {
+class MarketDetailRoute extends _i36.PageRouteInfo<MarketDetailRouteArgs> {
   MarketDetailRoute({
-    _i35.Key? key,
-    required _i38.MarketCode code,
-    List<_i34.PageRouteInfo>? children,
+    _i37.Key? key,
+    required _i40.MarketCode code,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          MarketDetailRoute.name,
          args: MarketDetailRouteArgs(key: key, code: code),
@@ -526,13 +528,13 @@ class MarketDetailRoute extends _i34.PageRouteInfo<MarketDetailRouteArgs> {
 
   static const String name = 'MarketDetailRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<MarketDetailRouteArgs>();
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i19.loadLibrary,
-        () => _i34.WrappedRoute(
+        () => _i36.WrappedRoute(
           child: _i19.MarketDetailScreen(key: args.key, code: args.code),
         ),
       );
@@ -543,9 +545,9 @@ class MarketDetailRoute extends _i34.PageRouteInfo<MarketDetailRouteArgs> {
 class MarketDetailRouteArgs {
   const MarketDetailRouteArgs({this.key, required this.code});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
-  final _i38.MarketCode code;
+  final _i40.MarketCode code;
 
   @override
   String toString() {
@@ -565,18 +567,18 @@ class MarketDetailRouteArgs {
 
 /// generated route for
 /// [_i20.MenuScreen]
-class MenuRoute extends _i34.PageRouteInfo<void> {
-  const MenuRoute({List<_i34.PageRouteInfo>? children})
+class MenuRoute extends _i36.PageRouteInfo<void> {
+  const MenuRoute({List<_i36.PageRouteInfo>? children})
     : super(MenuRoute.name, initialChildren: children);
 
   static const String name = 'MenuRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i20.loadLibrary,
-        () => _i34.WrappedRoute(child: _i20.MenuScreen()),
+        () => _i36.WrappedRoute(child: _i20.MenuScreen()),
       );
     },
   );
@@ -584,23 +586,23 @@ class MenuRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i21.MovieDetailScreen]
-class MovieDetailRoute extends _i34.PageRouteInfo<MovieDetailRouteArgs> {
+class MovieDetailRoute extends _i36.PageRouteInfo<MovieDetailRouteArgs> {
   MovieDetailRoute({
-    _i39.Key? key,
+    _i41.Key? key,
     required String movieUrl,
     required String movieId,
-    _i40.Movie? initialMovie,
+    _i42.Movie? initialMovie,
     bool embedded = false,
     double minimizeProgress = 1,
-    _i39.ValueChanged<bool>? onFullScreenChanged,
-    _i41.MovieDetailController? controller,
-    _i39.ValueChanged<_i40.Movie>? onRelatedMovieTap,
-    _i39.VoidCallback? onClose,
-    _i39.VoidCallback? onMinimize,
-    _i35.GestureDragStartCallback? onPlayerDragStart,
-    _i35.GestureDragUpdateCallback? onPlayerDragUpdate,
-    _i35.GestureDragEndCallback? onPlayerDragEnd,
-    List<_i34.PageRouteInfo>? children,
+    _i41.ValueChanged<bool>? onFullScreenChanged,
+    _i43.MovieDetailController? controller,
+    _i41.ValueChanged<_i42.Movie>? onRelatedMovieTap,
+    _i41.VoidCallback? onClose,
+    _i41.VoidCallback? onMinimize,
+    _i37.GestureDragStartCallback? onPlayerDragStart,
+    _i37.GestureDragUpdateCallback? onPlayerDragUpdate,
+    _i37.GestureDragEndCallback? onPlayerDragEnd,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          MovieDetailRoute.name,
          args: MovieDetailRouteArgs(
@@ -624,13 +626,13 @@ class MovieDetailRoute extends _i34.PageRouteInfo<MovieDetailRouteArgs> {
 
   static const String name = 'MovieDetailRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<MovieDetailRouteArgs>();
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i21.loadLibrary,
-        () => _i34.WrappedRoute(
+        () => _i36.WrappedRoute(
           child: _i21.MovieDetailScreen(
             key: args.key,
             movieUrl: args.movieUrl,
@@ -671,33 +673,33 @@ class MovieDetailRouteArgs {
     this.onPlayerDragEnd,
   });
 
-  final _i39.Key? key;
+  final _i41.Key? key;
 
   final String movieUrl;
 
   final String movieId;
 
-  final _i40.Movie? initialMovie;
+  final _i42.Movie? initialMovie;
 
   final bool embedded;
 
   final double minimizeProgress;
 
-  final _i39.ValueChanged<bool>? onFullScreenChanged;
+  final _i41.ValueChanged<bool>? onFullScreenChanged;
 
-  final _i41.MovieDetailController? controller;
+  final _i43.MovieDetailController? controller;
 
-  final _i39.ValueChanged<_i40.Movie>? onRelatedMovieTap;
+  final _i41.ValueChanged<_i42.Movie>? onRelatedMovieTap;
 
-  final _i39.VoidCallback? onClose;
+  final _i41.VoidCallback? onClose;
 
-  final _i39.VoidCallback? onMinimize;
+  final _i41.VoidCallback? onMinimize;
 
-  final _i35.GestureDragStartCallback? onPlayerDragStart;
+  final _i37.GestureDragStartCallback? onPlayerDragStart;
 
-  final _i35.GestureDragUpdateCallback? onPlayerDragUpdate;
+  final _i37.GestureDragUpdateCallback? onPlayerDragUpdate;
 
-  final _i35.GestureDragEndCallback? onPlayerDragEnd;
+  final _i37.GestureDragEndCallback? onPlayerDragEnd;
 
   @override
   String toString() {
@@ -744,18 +746,18 @@ class MovieDetailRouteArgs {
 
 /// generated route for
 /// [_i22.MovieScreen]
-class MovieRoute extends _i34.PageRouteInfo<void> {
-  const MovieRoute({List<_i34.PageRouteInfo>? children})
+class MovieRoute extends _i36.PageRouteInfo<void> {
+  const MovieRoute({List<_i36.PageRouteInfo>? children})
     : super(MovieRoute.name, initialChildren: children);
 
   static const String name = 'MovieRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i22.loadLibrary,
-        () => _i34.WrappedRoute(child: _i22.MovieScreen()),
+        () => _i36.WrappedRoute(child: _i22.MovieScreen()),
       );
     },
   );
@@ -763,11 +765,11 @@ class MovieRoute extends _i34.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i23.MovieSearchScreen]
-class MovieSearchRoute extends _i34.PageRouteInfo<MovieSearchRouteArgs> {
+class MovieSearchRoute extends _i36.PageRouteInfo<MovieSearchRouteArgs> {
   MovieSearchRoute({
-    _i35.Key? key,
-    required _i42.MovieViewModel movieVm,
-    List<_i34.PageRouteInfo>? children,
+    _i37.Key? key,
+    required _i44.MovieViewModel movieVm,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          MovieSearchRoute.name,
          args: MovieSearchRouteArgs(key: key, movieVm: movieVm),
@@ -776,13 +778,13 @@ class MovieSearchRoute extends _i34.PageRouteInfo<MovieSearchRouteArgs> {
 
   static const String name = 'MovieSearchRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<MovieSearchRouteArgs>();
-      return _i34.DeferredWidget(
+      return _i36.DeferredWidget(
         _i23.loadLibrary,
-        () => _i34.WrappedRoute(
+        () => _i36.WrappedRoute(
           child: _i23.MovieSearchScreen(key: args.key, movieVm: args.movieVm),
         ),
       );
@@ -793,9 +795,9 @@ class MovieSearchRoute extends _i34.PageRouteInfo<MovieSearchRouteArgs> {
 class MovieSearchRouteArgs {
   const MovieSearchRouteArgs({this.key, required this.movieVm});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
-  final _i42.MovieViewModel movieVm;
+  final _i44.MovieViewModel movieVm;
 
   @override
   String toString() {
@@ -814,66 +816,85 @@ class MovieSearchRouteArgs {
 }
 
 /// generated route for
-/// [_i24.MyLifeScreen]
-class MyLifeRoute extends _i34.PageRouteInfo<void> {
-  const MyLifeRoute({List<_i34.PageRouteInfo>? children})
+/// [_i24.MusicLoginScreen]
+class MusicLoginRoute extends _i36.PageRouteInfo<void> {
+  const MusicLoginRoute({List<_i36.PageRouteInfo>? children})
+    : super(MusicLoginRoute.name, initialChildren: children);
+
+  static const String name = 'MusicLoginRoute';
+
+  static _i36.PageInfo page = _i36.PageInfo(
+    name,
+    builder: (data) {
+      return _i36.DeferredWidget(
+        _i24.loadLibrary,
+        () => _i36.WrappedRoute(child: _i24.MusicLoginScreen()),
+      );
+    },
+  );
+}
+
+/// generated route for
+/// [_i25.MyLifeScreen]
+class MyLifeRoute extends _i36.PageRouteInfo<void> {
+  const MyLifeRoute({List<_i36.PageRouteInfo>? children})
     : super(MyLifeRoute.name, initialChildren: children);
 
   static const String name = 'MyLifeRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
-        _i24.loadLibrary,
-        () => _i34.WrappedRoute(child: _i24.MyLifeScreen()),
+      return _i36.DeferredWidget(
+        _i25.loadLibrary,
+        () => _i36.WrappedRoute(child: _i25.MyLifeScreen()),
       );
     },
   );
 }
 
 /// generated route for
-/// [_i25.NewsScreen]
-class NewsRoute extends _i34.PageRouteInfo<void> {
-  const NewsRoute({List<_i34.PageRouteInfo>? children})
+/// [_i26.NewsScreen]
+class NewsRoute extends _i36.PageRouteInfo<void> {
+  const NewsRoute({List<_i36.PageRouteInfo>? children})
     : super(NewsRoute.name, initialChildren: children);
 
   static const String name = 'NewsRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
-        _i25.loadLibrary,
-        () => _i34.WrappedRoute(child: _i25.NewsScreen()),
+      return _i36.DeferredWidget(
+        _i26.loadLibrary,
+        () => _i36.WrappedRoute(child: _i26.NewsScreen()),
       );
     },
   );
 }
 
 /// generated route for
-/// [_i26.SettingsScreen]
-class SettingsRoute extends _i34.PageRouteInfo<void> {
-  const SettingsRoute({List<_i34.PageRouteInfo>? children})
+/// [_i27.SettingsScreen]
+class SettingsRoute extends _i36.PageRouteInfo<void> {
+  const SettingsRoute({List<_i36.PageRouteInfo>? children})
     : super(SettingsRoute.name, initialChildren: children);
 
   static const String name = 'SettingsRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(_i26.loadLibrary, () => _i26.SettingsScreen());
+      return _i36.DeferredWidget(_i27.loadLibrary, () => _i27.SettingsScreen());
     },
   );
 }
 
 /// generated route for
-/// [_i27.TrimmerScreen]
-class TrimmerRoute extends _i34.PageRouteInfo<TrimmerRouteArgs> {
+/// [_i28.TrimmerScreen]
+class TrimmerRoute extends _i36.PageRouteInfo<TrimmerRouteArgs> {
   TrimmerRoute({
-    required _i43.File file,
-    _i35.Key? key,
-    List<_i34.PageRouteInfo>? children,
+    required _i45.File file,
+    _i37.Key? key,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          TrimmerRoute.name,
          args: TrimmerRouteArgs(file: file, key: key),
@@ -882,13 +903,13 @@ class TrimmerRoute extends _i34.PageRouteInfo<TrimmerRouteArgs> {
 
   static const String name = 'TrimmerRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<TrimmerRouteArgs>();
-      return _i34.DeferredWidget(
-        _i27.loadLibrary,
-        () => _i27.TrimmerScreen(args.file, key: args.key),
+      return _i36.DeferredWidget(
+        _i28.loadLibrary,
+        () => _i28.TrimmerScreen(args.file, key: args.key),
       );
     },
   );
@@ -897,9 +918,9 @@ class TrimmerRoute extends _i34.PageRouteInfo<TrimmerRouteArgs> {
 class TrimmerRouteArgs {
   const TrimmerRouteArgs({required this.file, this.key});
 
-  final _i43.File file;
+  final _i45.File file;
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
   @override
   String toString() {
@@ -918,13 +939,32 @@ class TrimmerRouteArgs {
 }
 
 /// generated route for
-/// [_i28.TvPlayerScreen]
-class TvPlayerRoute extends _i34.PageRouteInfo<TvPlayerRouteArgs> {
+/// [_i29.TvMusicScreen]
+class TvMusicRoute extends _i36.PageRouteInfo<void> {
+  const TvMusicRoute({List<_i36.PageRouteInfo>? children})
+    : super(TvMusicRoute.name, initialChildren: children);
+
+  static const String name = 'TvMusicRoute';
+
+  static _i36.PageInfo page = _i36.PageInfo(
+    name,
+    builder: (data) {
+      return _i36.DeferredWidget(
+        _i29.loadLibrary,
+        () => _i36.WrappedRoute(child: _i29.TvMusicScreen()),
+      );
+    },
+  );
+}
+
+/// generated route for
+/// [_i30.TvPlayerScreen]
+class TvPlayerRoute extends _i36.PageRouteInfo<TvPlayerRouteArgs> {
   TvPlayerRoute({
-    _i35.Key? key,
-    required _i44.TvChannel channel,
-    List<_i44.TvChannel> playlist = const [],
-    List<_i34.PageRouteInfo>? children,
+    _i37.Key? key,
+    required _i46.TvChannel channel,
+    List<_i46.TvChannel> playlist = const [],
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          TvPlayerRoute.name,
          args: TvPlayerRouteArgs(
@@ -937,13 +977,13 @@ class TvPlayerRoute extends _i34.PageRouteInfo<TvPlayerRouteArgs> {
 
   static const String name = 'TvPlayerRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<TvPlayerRouteArgs>();
-      return _i34.DeferredWidget(
-        _i28.loadLibrary,
-        () => _i28.TvPlayerScreen(
+      return _i36.DeferredWidget(
+        _i30.loadLibrary,
+        () => _i30.TvPlayerScreen(
           key: args.key,
           channel: args.channel,
           playlist: args.playlist,
@@ -960,11 +1000,11 @@ class TvPlayerRouteArgs {
     this.playlist = const [],
   });
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
-  final _i44.TvChannel channel;
+  final _i46.TvChannel channel;
 
-  final List<_i44.TvChannel> playlist;
+  final List<_i46.TvChannel> playlist;
 
   @override
   String toString() {
@@ -977,7 +1017,7 @@ class TvPlayerRouteArgs {
     if (other is! TvPlayerRouteArgs) return false;
     return key == other.key &&
         channel == other.channel &&
-        const _i45.ListEquality<_i44.TvChannel>().equals(
+        const _i47.ListEquality<_i46.TvChannel>().equals(
           playlist,
           other.playlist,
         );
@@ -987,35 +1027,35 @@ class TvPlayerRouteArgs {
   int get hashCode =>
       key.hashCode ^
       channel.hashCode ^
-      const _i45.ListEquality<_i44.TvChannel>().hash(playlist);
+      const _i47.ListEquality<_i46.TvChannel>().hash(playlist);
 }
 
 /// generated route for
-/// [_i29.TvScreen]
-class TvRoute extends _i34.PageRouteInfo<void> {
-  const TvRoute({List<_i34.PageRouteInfo>? children})
+/// [_i31.TvScreen]
+class TvRoute extends _i36.PageRouteInfo<void> {
+  const TvRoute({List<_i36.PageRouteInfo>? children})
     : super(TvRoute.name, initialChildren: children);
 
   static const String name = 'TvRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
-        _i29.loadLibrary,
-        () => _i34.WrappedRoute(child: _i29.TvScreen()),
+      return _i36.DeferredWidget(
+        _i31.loadLibrary,
+        () => _i36.WrappedRoute(child: _i31.TvScreen()),
       );
     },
   );
 }
 
 /// generated route for
-/// [_i30.TvSearchScreen]
-class TvSearchRoute extends _i34.PageRouteInfo<TvSearchRouteArgs> {
+/// [_i32.TvSearchScreen]
+class TvSearchRoute extends _i36.PageRouteInfo<TvSearchRouteArgs> {
   TvSearchRoute({
-    _i35.Key? key,
-    required _i46.TvViewModel tvVm,
-    List<_i34.PageRouteInfo>? children,
+    _i37.Key? key,
+    required _i48.TvViewModel tvVm,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          TvSearchRoute.name,
          args: TvSearchRouteArgs(key: key, tvVm: tvVm),
@@ -1024,14 +1064,14 @@ class TvSearchRoute extends _i34.PageRouteInfo<TvSearchRouteArgs> {
 
   static const String name = 'TvSearchRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<TvSearchRouteArgs>();
-      return _i34.DeferredWidget(
-        _i30.loadLibrary,
-        () => _i34.WrappedRoute(
-          child: _i30.TvSearchScreen(key: args.key, tvVm: args.tvVm),
+      return _i36.DeferredWidget(
+        _i32.loadLibrary,
+        () => _i36.WrappedRoute(
+          child: _i32.TvSearchScreen(key: args.key, tvVm: args.tvVm),
         ),
       );
     },
@@ -1041,9 +1081,9 @@ class TvSearchRoute extends _i34.PageRouteInfo<TvSearchRouteArgs> {
 class TvSearchRouteArgs {
   const TvSearchRouteArgs({this.key, required this.tvVm});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
-  final _i46.TvViewModel tvVm;
+  final _i48.TvViewModel tvVm;
 
   @override
   String toString() {
@@ -1062,12 +1102,12 @@ class TvSearchRouteArgs {
 }
 
 /// generated route for
-/// [_i31.UpdatePasswordScreen]
-class UpdatePasswordRoute extends _i34.PageRouteInfo<UpdatePasswordRouteArgs> {
+/// [_i33.UpdatePasswordScreen]
+class UpdatePasswordRoute extends _i36.PageRouteInfo<UpdatePasswordRouteArgs> {
   UpdatePasswordRoute({
-    _i35.Key? key,
+    _i37.Key? key,
     bool isRecovery = false,
-    List<_i34.PageRouteInfo>? children,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          UpdatePasswordRoute.name,
          args: UpdatePasswordRouteArgs(key: key, isRecovery: isRecovery),
@@ -1076,16 +1116,16 @@ class UpdatePasswordRoute extends _i34.PageRouteInfo<UpdatePasswordRouteArgs> {
 
   static const String name = 'UpdatePasswordRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<UpdatePasswordRouteArgs>(
         orElse: () => const UpdatePasswordRouteArgs(),
       );
-      return _i34.DeferredWidget(
-        _i31.loadLibrary,
-        () => _i34.WrappedRoute(
-          child: _i31.UpdatePasswordScreen(
+      return _i36.DeferredWidget(
+        _i33.loadLibrary,
+        () => _i36.WrappedRoute(
+          child: _i33.UpdatePasswordScreen(
             key: args.key,
             isRecovery: args.isRecovery,
           ),
@@ -1098,7 +1138,7 @@ class UpdatePasswordRoute extends _i34.PageRouteInfo<UpdatePasswordRouteArgs> {
 class UpdatePasswordRouteArgs {
   const UpdatePasswordRouteArgs({this.key, this.isRecovery = false});
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
   final bool isRecovery;
 
@@ -1119,13 +1159,13 @@ class UpdatePasswordRouteArgs {
 }
 
 /// generated route for
-/// [_i32.VerifyOtpScreen]
-class VerifyOtpRoute extends _i34.PageRouteInfo<VerifyOtpRouteArgs> {
+/// [_i34.VerifyOtpScreen]
+class VerifyOtpRoute extends _i36.PageRouteInfo<VerifyOtpRouteArgs> {
   VerifyOtpRoute({
-    _i35.Key? key,
+    _i37.Key? key,
     required String email,
-    required _i47.OtpPurpose purpose,
-    List<_i34.PageRouteInfo>? children,
+    required _i49.OtpPurpose purpose,
+    List<_i36.PageRouteInfo>? children,
   }) : super(
          VerifyOtpRoute.name,
          args: VerifyOtpRouteArgs(key: key, email: email, purpose: purpose),
@@ -1134,14 +1174,14 @@ class VerifyOtpRoute extends _i34.PageRouteInfo<VerifyOtpRouteArgs> {
 
   static const String name = 'VerifyOtpRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<VerifyOtpRouteArgs>();
-      return _i34.DeferredWidget(
-        _i32.loadLibrary,
-        () => _i34.WrappedRoute(
-          child: _i32.VerifyOtpScreen(
+      return _i36.DeferredWidget(
+        _i34.loadLibrary,
+        () => _i36.WrappedRoute(
+          child: _i34.VerifyOtpScreen(
             key: args.key,
             email: args.email,
             purpose: args.purpose,
@@ -1159,11 +1199,11 @@ class VerifyOtpRouteArgs {
     required this.purpose,
   });
 
-  final _i35.Key? key;
+  final _i37.Key? key;
 
   final String email;
 
-  final _i47.OtpPurpose purpose;
+  final _i49.OtpPurpose purpose;
 
   @override
   String toString() {
@@ -1182,19 +1222,19 @@ class VerifyOtpRouteArgs {
 }
 
 /// generated route for
-/// [_i33.WifiManagementScreen]
-class WifiManagementRoute extends _i34.PageRouteInfo<void> {
-  const WifiManagementRoute({List<_i34.PageRouteInfo>? children})
+/// [_i35.WifiManagementScreen]
+class WifiManagementRoute extends _i36.PageRouteInfo<void> {
+  const WifiManagementRoute({List<_i36.PageRouteInfo>? children})
     : super(WifiManagementRoute.name, initialChildren: children);
 
   static const String name = 'WifiManagementRoute';
 
-  static _i34.PageInfo page = _i34.PageInfo(
+  static _i36.PageInfo page = _i36.PageInfo(
     name,
     builder: (data) {
-      return _i34.DeferredWidget(
-        _i33.loadLibrary,
-        () => _i34.WrappedRoute(child: _i33.WifiManagementScreen()),
+      return _i36.DeferredWidget(
+        _i35.loadLibrary,
+        () => _i36.WrappedRoute(child: _i35.WifiManagementScreen()),
       );
     },
   );

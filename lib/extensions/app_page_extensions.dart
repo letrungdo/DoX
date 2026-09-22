@@ -15,6 +15,7 @@ extension AppPageX on AppPage {
     AppPage.lunar => l10n.lunarTab,
     AppPage.imageEditor => l10n.imageEditorTab,
     AppPage.tv => l10n.tvTab,
+    AppPage.music => 'Âm nhạc',
     _ => label(l10n),
   };
 
@@ -29,6 +30,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => l10n.fengShuiCompass,
     AppPage.movie => l10n.movie,
     AppPage.tv => l10n.tvChannels,
+    AppPage.music => 'Music',
     AppPage.imageEditor => l10n.imageEditor,
     AppPage.asset => l10n.asset,
     AppPage.menu => l10n.menu,
@@ -44,6 +46,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => Icons.explore_rounded,
     AppPage.movie => Icons.movie_rounded,
     AppPage.tv => Icons.live_tv_rounded,
+    AppPage.music => Icons.music_note_rounded,
     AppPage.imageEditor => Icons.auto_fix_high_rounded,
     AppPage.asset => Icons.account_balance_wallet_rounded,
     AppPage.menu => Icons.menu_rounded,
@@ -62,6 +65,7 @@ extension AppPageX on AppPage {
     AppPage.fengShui => const FengShuiCompassRoute(),
     AppPage.movie => const MovieRoute(),
     AppPage.tv => const TvRoute(),
+    AppPage.music => const TvMusicRoute(),
     AppPage.imageEditor => const ImageEditorRoute(),
     AppPage.asset => const AssetRoute(),
     AppPage.menu => const MenuRoute(),

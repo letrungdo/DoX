@@ -2520,4 +2520,46 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get tvCategoryWeather => 'Thời tiết';
+
+  @override
+  String get musicLoginTitle => 'Đăng nhập Music';
+
+  @override
+  String get musicSearchHint => 'Tìm kiếm nhạc…';
+
+  @override
+  String get musicLoginSubtitle =>
+      'Đăng nhập tài khoản Music để thích bài hát và xem danh sách yêu thích, lịch sử nghe.';
+
+  @override
+  String get musicLoginRejected =>
+      'Music không chấp nhận lần đăng nhập này. Vui lòng thử lại.';
+
+  @override
+  String get musicLoginWebUnsupported =>
+      'Đăng nhập Music chỉ dùng được trong ứng dụng.';
+
+  @override
+  String get musicSwitchAccount => 'Dùng tài khoản khác';
+
+  @override
+  String get musicLoginNetwork =>
+      'Không kết nối được Music. Kiểm tra lại mạng.';
+
+  @override
+  String get musicLoginFailed => 'Đăng nhập thất bại. Vui lòng thử lại.';
+
+  @override
+  String musicSignedInAs(String name) {
+    return 'Đang đăng nhập: $name';
+  }
+
+  @override
+  String get musicSignInRequired => 'Đăng nhập Music để thích bài hát này.';
+
+  @override
+  String get musicLikeFailed => 'Không lưu được lượt thích.';
+
+  @override
+  String get musicSignedOut => 'Chưa đăng nhập Music.';
 }

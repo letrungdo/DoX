@@ -19,6 +19,7 @@ enum AppPage {
   fengShui,
   movie,
   tv,
+  music,
   imageEditor,
   asset,
   menu;

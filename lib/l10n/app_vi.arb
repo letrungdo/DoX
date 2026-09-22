@@ -1399,5 +1399,22 @@
   "tvCategoryShop": "Mua sắm",
   "tvCategorySports": "Thể thao",
   "tvCategoryTravel": "Du lịch",
-  "tvCategoryWeather": "Thời tiết"
+  "tvCategoryWeather": "Thời tiết",
+  "musicLoginTitle": "Đăng nhập Music",
+  "musicSearchHint": "Tìm kiếm nhạc…",
+  "musicLoginSubtitle": "Đăng nhập tài khoản Music để thích bài hát và xem danh sách yêu thích, lịch sử nghe.",
+  "musicLoginRejected": "Music không chấp nhận lần đăng nhập này. Vui lòng thử lại.",
+  "musicLoginWebUnsupported": "Đăng nhập Music chỉ dùng được trong ứng dụng.",
+  "musicSwitchAccount": "Dùng tài khoản khác",
+  "musicLoginNetwork": "Không kết nối được Music. Kiểm tra lại mạng.",
+  "musicLoginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+  "musicSignedInAs": "Đang đăng nhập: {name}",
+  "@musicSignedInAs": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "musicSignInRequired": "Đăng nhập Music để thích bài hát này.",
+  "musicLikeFailed": "Không lưu được lượt thích.",
+  "musicSignedOut": "Chưa đăng nhập Music."
 }

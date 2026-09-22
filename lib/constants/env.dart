@@ -41,6 +41,11 @@ class Envs {
   /// page. Both the `api` and the `iptv` repositories are published under it.
   static const tvApiUrl = String.fromEnvironment('TV_API_URL');
 
+  /// Host of the music service behind the Music page. Its catalogue, its
+  /// sign-in page and its token endpoint are all subdomains of this one name,
+  /// so every music URL is built from it rather than spelled out.
+  static const musicApiDomain = String.fromEnvironment('MUSIC_API_DOMAIN');
+
   /// MyLife's own API key. It is the key their iOS client ships, and every
   /// platform authenticates with it — the app talks to MyLife's servers, not to
   /// a per-platform Firebase project of ours.

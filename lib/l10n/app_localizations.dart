@@ -4560,6 +4560,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weather'**
   String get tvCategoryWeather;
+
+  /// No description provided for @musicLoginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Music sign-in'**
+  String get musicLoginTitle;
+
+  /// No description provided for @musicSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for music…'**
+  String get musicSearchHint;
+
+  /// No description provided for @musicLoginSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with your Music account to like tracks and to see your likes and listening history.'**
+  String get musicLoginSubtitle;
+
+  /// No description provided for @musicLoginRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Music did not accept this sign-in. Please try again.'**
+  String get musicLoginRejected;
+
+  /// No description provided for @musicLoginWebUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in to Music is only available in the app.'**
+  String get musicLoginWebUnsupported;
+
+  /// No description provided for @musicSwitchAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Use another account'**
+  String get musicSwitchAccount;
+
+  /// No description provided for @musicLoginNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach Music. Check your connection.'**
+  String get musicLoginNetwork;
+
+  /// No description provided for @musicLoginFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed. Please try again.'**
+  String get musicLoginFailed;
+
+  /// No description provided for @musicSignedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {name}'**
+  String musicSignedInAs(String name);
+
+  /// No description provided for @musicSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Music to like this track.'**
+  String get musicSignInRequired;
+
+  /// No description provided for @musicLikeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the like.'**
+  String get musicLikeFailed;
+
+  /// No description provided for @musicSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed in to Music.'**
+  String get musicSignedOut;
 }
 
 class _AppLocalizationsDelegate

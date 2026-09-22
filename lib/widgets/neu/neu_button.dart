@@ -113,6 +113,7 @@ class NeuIconButton extends StatelessWidget {
     this.color,
     this.tooltip,
     this.depth = 0.6,
+    this.focusNode,
   });
 
   final IconData icon;
@@ -121,6 +122,7 @@ class NeuIconButton extends StatelessWidget {
   final double iconSize;
   final Color? color;
   final String? tooltip;
+  final FocusNode? focusNode;
 
   /// How far the button sits above the surface. Lower it where the shadow has
   /// little room to spread, e.g. inside a short app bar.
@@ -133,6 +135,7 @@ class NeuIconButton extends StatelessWidget {
       radius: 14,
       depth: depth,
       padding: EdgeInsets.zero,
+      focusNode: focusNode,
       child: SizedBox.square(
         dimension: size,
         child: Center(

@@ -1441,5 +1441,22 @@
   "tvCategoryShop": "Shopping",
   "tvCategorySports": "Sports",
   "tvCategoryTravel": "Travel",
-  "tvCategoryWeather": "Weather"
+  "tvCategoryWeather": "Weather",
+  "musicLoginTitle": "Music sign-in",
+  "musicSearchHint": "Search for music…",
+  "musicLoginSubtitle": "Sign in with your Music account to like tracks and to see your likes and listening history.",
+  "musicLoginRejected": "Music did not accept this sign-in. Please try again.",
+  "musicLoginWebUnsupported": "Signing in to Music is only available in the app.",
+  "musicSwitchAccount": "Use another account",
+  "musicLoginNetwork": "Could not reach Music. Check your connection.",
+  "musicLoginFailed": "Sign-in failed. Please try again.",
+  "musicSignedInAs": "Signed in as {name}",
+  "@musicSignedInAs": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "musicSignInRequired": "Sign in to Music to like this track.",
+  "musicLikeFailed": "Could not save the like.",
+  "musicSignedOut": "Not signed in to Music."
 }

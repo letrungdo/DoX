@@ -2532,4 +2532,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tvCategoryWeather => 'Weather';
+
+  @override
+  String get musicLoginTitle => 'Music sign-in';
+
+  @override
+  String get musicSearchHint => 'Search for music…';
+
+  @override
+  String get musicLoginSubtitle =>
+      'Sign in with your Music account to like tracks and to see your likes and listening history.';
+
+  @override
+  String get musicLoginRejected =>
+      'Music did not accept this sign-in. Please try again.';
+
+  @override
+  String get musicLoginWebUnsupported =>
+      'Signing in to Music is only available in the app.';
+
+  @override
+  String get musicSwitchAccount => 'Use another account';
+
+  @override
+  String get musicLoginNetwork =>
+      'Could not reach Music. Check your connection.';
+
+  @override
+  String get musicLoginFailed => 'Sign-in failed. Please try again.';
+
+  @override
+  String musicSignedInAs(String name) {
+    return 'Signed in as $name';
+  }
+
+  @override
+  String get musicSignInRequired => 'Sign in to Music to like this track.';
+
+  @override
+  String get musicLikeFailed => 'Could not save the like.';
+
+  @override
+  String get musicSignedOut => 'Not signed in to Music.';
 }

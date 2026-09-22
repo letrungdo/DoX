@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:do_x/constants/storage.dart';
 import 'package:do_x/model/electric/electric_account.dart';
 import 'package:do_x/model/response/user_model.dart';
+import 'package:do_x/model/music_account.dart';
 import 'package:do_x/model/supabase_account.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -127,6 +128,30 @@ class _SecureStorageService {
       key: key,
       value: jsonEncode(accounts.map((e) => e.toJson()).toList()),
     );
+  }
+
+  Future<MusicAccount?> getMusicAccount() async {
+    try {
+      final raw = await _secureStorage.read(key: StorageKey.musicAccount);
+      if (raw == null) return null;
+      final account = MusicAccount.fromJson(
+        Map<String, dynamic>.from(jsonDecode(raw) as Map),
+      );
+      return account.isValid ? account : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveMusicAccount(MusicAccount account) {
+    return _secureStorage.write(
+      key: StorageKey.musicAccount,
+      value: jsonEncode(account.toJson()),
+    );
+  }
+
+  Future<void> clearMusicAccount() {
+    return _secureStorage.delete(key: StorageKey.musicAccount);
   }
 
   Future<String?> getRouterPassword() {

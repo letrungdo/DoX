@@ -10,6 +10,9 @@ class StorageKey {
   /// can be picked again without retyping the password.
   static const cpcSavedAccounts = "cpcSavedAccounts";
 
+  /// The music service token the Music page calls the personal endpoints with.
+  static const musicAccount = "musicAccount";
+
   // SharedPreferences
   static const themeMode = "themeMode";
 
