@@ -13,6 +13,7 @@ import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/player_controls_focus.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
@@ -216,6 +217,14 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
         return;
       }
 
+      // What the page draws off the controller, and nothing else: the
+      // player reports a new position several times a second, and a page
+      // that rebuilt on each of them would be rebuilding the open channel
+      // grid — every tile, every logo — under a television already busy
+      // decoding video.
+      var wasInitialized = controller.value.isInitialized;
+      var lastAspectRatio = controller.value.aspectRatio;
+
       void listener() {
         if (!mounted || !identical(_controller, controller)) return;
         // A live stream that drops surfaces only here; left alone the last
@@ -228,6 +237,13 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
           unawaited(_onSourceFailed());
           return;
         }
+        final isInitialized = controller.value.isInitialized;
+        final aspectRatio = controller.value.aspectRatio;
+        if (isInitialized == wasInitialized && aspectRatio == lastAspectRatio) {
+          return;
+        }
+        wasInitialized = isInitialized;
+        lastAspectRatio = aspectRatio;
         setState(() {});
       }
 
@@ -844,6 +860,14 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                     return GridView.builder(
                       controller: _channelListController,
                       padding: const EdgeInsets.all(Dimens.pagePadding),
+                      // One row beyond the screen rather than the several
+                      // the default reaches for: every row built here is a
+                      // row of logos to decode, and they are being decoded
+                      // over a running programme on hardware that has
+                      // little to spare.
+                      scrollCacheExtent: ScrollCacheExtent.pixels(
+                        _gridRowStride,
+                      ),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: columns,
                         childAspectRatio: Dimens.tvChannelOverlayTileAspect,

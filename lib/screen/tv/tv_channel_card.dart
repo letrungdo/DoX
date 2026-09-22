@@ -202,6 +202,14 @@ class TvChannelLogo extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: channel.logo!,
       fit: BoxFit.contain,
+      // Decoded once, at the size it is drawn, and shared from there — see
+      // [Dimens.tvChannelLogoDecodeWidth].
+      memCacheWidth: Dimens.tvChannelLogoDecodeWidth,
+      // A grid brings a screenful of logos up at once, and a fade each is
+      // a screenful of animations running on a television that has a live
+      // stream to decode. They appear as they arrive instead.
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
       placeholder: (context, url) => fallback,
       errorWidget: (context, url, error) => fallback,
     );

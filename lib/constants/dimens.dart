@@ -173,6 +173,17 @@ class Dimens {
   /// above and below it as there is logo. Half that height is what the
   /// picture actually needs, and the rows it saves are rows of channels.
   static const tvChannelTileMaxWidth = 150.0;
+
+  /// The width every channel logo is decoded at, in pixels.
+  ///
+  /// A station publishes its logo at whatever size it likes — half a
+  /// megapixel is common — and a television has to turn that into a bitmap
+  /// before it can draw it in a box a hundred pixels wide. Decoding it down
+  /// to the size it is actually drawn at is most of the work saved, and
+  /// because the page and the player's grid both ask for the same size,
+  /// the grid opens on the bitmaps the page has already decoded rather
+  /// than decoding a screenful again over a running programme.
+  static const tvChannelLogoDecodeWidth = 256;
   static const tvChannelTileAspect = 1.4;
   static const tvChannelTileSpacing = 12.0;
 
