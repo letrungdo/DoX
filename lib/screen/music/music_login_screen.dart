@@ -87,6 +87,21 @@ class _MusicLoginScreenState
   /// several seconds and looks broken.
   bool _isPageLoading = true;
 
+  /// The window the sign-in page opened for a social provider, if one is up.
+  /// "Continue with Google" and its neighbours are `window.open` calls: left
+  /// unhandled, the page they ask for lands in the web view that opened them
+  /// and the sign-in form is replaced by an empty `about:blank`.
+  int? _popupWindowId;
+
+  /// The provider's window opens on a blank page and reaches its own sign-in
+  /// screen a moment later, so it needs the same cover as the page below it.
+  bool _isPopupLoading = true;
+
+  void _setPopupLoading(bool value) {
+    if (!mounted || _isPopupLoading == value) return;
+    setState(() => _isPopupLoading = value);
+  }
+
   void _setPageLoading(bool value) {
     if (!mounted || _isPageLoading == value) return;
     setState(() => _isPageLoading = value);
@@ -232,6 +247,11 @@ class _MusicLoginScreenState
                     // the page works fine as whatever the device really is.
                     javaScriptEnabled: true,
                     thirdPartyCookiesEnabled: true,
+                    // A social provider is signed in to through a window the
+                    // page opens; Android serves one only when the web view is
+                    // told to expect it.
+                    supportMultipleWindows: true,
+                    javaScriptCanOpenWindowsAutomatically: true,
                     // Until the page has been styled — and while it loads at
                     // all — what shows through is the app's own surface, not a
                     // white rectangle.
@@ -263,6 +283,16 @@ class _MusicLoginScreenState
                     await _claimToken();
                   },
                   onLoadStart: (_, _) => _setPageLoading(true),
+                  onCreateWindow: (_, action) async {
+                    setState(() {
+                      _popupWindowId = action.windowId;
+                      _isPopupLoading = true;
+                    });
+                    return true;
+                  },
+                  // The provider closes its own window when it is done, which is
+                  // the sign-in page's cue to carry on underneath.
+                  onCloseWindow: (_) => _closePopup(),
                   // Both failures still end the wait: an error page is a page,
                   // and leaving the spinner up over it hides what went wrong.
                   onReceivedError: (_, _, _) => _setPageLoading(false),
@@ -275,12 +305,86 @@ class _MusicLoginScreenState
                       child: const Center(child: Loading()),
                     ),
                   ),
+                if (_popupWindowId != null)
+                  Positioned.fill(child: _buildPopup(pageBackground)),
               ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  /// The provider's own window, on top of the sign-in page that opened it.
+  /// Closed by the provider itself, or by the user when they change their mind
+  /// — without a way out, a provider that refuses to sign in inside an app's
+  /// web view leaves the screen stuck on its error.
+  Widget _buildPopup(Color background) {
+    return ColoredBox(
+      color: background,
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: context.l10n.close,
+              icon: const Icon(Icons.close_rounded),
+              onPressed: _closePopup,
+            ),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                InAppWebView(
+                  windowId: _popupWindowId,
+                  initialSettings: InAppWebViewSettings(
+                    javaScriptEnabled: true,
+                    thirdPartyCookiesEnabled: true,
+                    transparentBackground: true,
+                  ),
+                  // The provider can hand the code straight back, without the
+                  // page underneath ever seeing the redirect.
+                  shouldOverrideUrlLoading: (_, action) async {
+                    final url = action.request.url?.toString() ?? '';
+                    if (await _claimCode(url)) {
+                      return NavigationActionPolicy.CANCEL;
+                    }
+                    return NavigationActionPolicy.ALLOW;
+                  },
+                  onLoadStart: (_, _) => _setPopupLoading(true),
+                  onLoadStop: (_, url) async {
+                    final current = url?.toString() ?? '';
+                    // The window is opened blank and told where to go a moment
+                    // later, so that first load settling is not the provider's
+                    // page arriving — uncovering it there shows nothing at all.
+                    if (current.isNotEmpty && current != 'about:blank') {
+                      _setPopupLoading(false);
+                    }
+                    if (await _claimCode(current)) return;
+                    await _claimToken();
+                  },
+                  onReceivedError: (_, _, _) => _setPopupLoading(false),
+                  onReceivedHttpError: (_, _, _) => _setPopupLoading(false),
+                  onCloseWindow: (_) => _closePopup(),
+                ),
+                if (_isPopupLoading)
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: background,
+                      child: const Center(child: Loading()),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _closePopup() {
+    if (!mounted || _popupWindowId == null) return;
+    setState(() => _popupWindowId = null);
   }
 
   /// True once [url] has been recognised as the redirect the sign-in ends on
@@ -343,6 +447,7 @@ class _MusicLoginScreenState
   Future<void> _clearSignInPage() async {
     _claimingToken = false;
     _signInRequest = null;
+    _popupWindowId = null;
     if (kIsWeb) return;
     await CookieManager.instance().deleteCookies(
       url: WebUri(MusicAuthService.siteUrl),
