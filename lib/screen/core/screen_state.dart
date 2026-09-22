@@ -52,6 +52,18 @@ abstract class ScreenState<S extends StatefulScreen, V extends CoreViewModel>
   /// scope, so every press walks the page hidden underneath and the login form
   /// can never be reached. Nothing looks wrong — the focus is simply somewhere
   /// the user cannot see.
+  ///
+  /// A page pushed *inside* a tab — a market from the news list, a batch from
+  /// the flock — has the same problem the other way round. The control the
+  /// viewer pressed goes out of the focus tree with the page it was on, focus
+  /// falls back to the scope it sat in, and no arrow key finds anything from
+  /// there: the new page is on screen with a dead remote, and nothing on it
+  /// can be reached or scrolled to. So every page claims the remote, not only
+  /// the ones on the root navigator — and whether another page covers this one
+  /// is read from the focus tree instead of from the navigator it belongs to.
+  /// [AppScaffold] takes a covered page out of that tree, which is the same
+  /// answer for a tab's page under a pushed login screen as for a tab's page
+  /// under another page of its own tab.
   void _setUpRemoteNavigation() {
     if (!mounted || !deviceType.isTv) return;
     final scope = FocusScope.of(context);
@@ -59,12 +71,8 @@ abstract class ScreenState<S extends StatefulScreen, V extends CoreViewModel>
 
     final route = ModalRoute.of(context);
     if (route == null || !route.isCurrent) return;
-    // Only the screen holding the top of the *root* navigator. A tab's nested
-    // route is "current" within its own navigator even while another route
-    // covers the whole app, and letting that one claim the remote is the bug.
-    if (route.navigator != Navigator.maybeOf(context, rootNavigator: true)) {
-      return;
-    }
+    // Covered by a page somewhere above this one, which has the remote.
+    if (!scope.canRequestFocus) return;
     scope.requestFocus();
   }
 

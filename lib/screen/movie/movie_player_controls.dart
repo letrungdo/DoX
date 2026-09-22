@@ -3,6 +3,7 @@ import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 /// Round translucent button used for play/pause in the middle of the player.
 class PlayerCenterButton extends StatelessWidget {
@@ -374,20 +375,167 @@ class _RoundIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Dimens.radiusPill),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Colors.black26,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: Colors.white, size: size),
+    return FocusableTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: const BoxDecoration(
+          color: Colors.black26,
+          shape: BoxShape.circle,
         ),
+        child: Icon(icon, color: Colors.white, size: size),
       ),
+    );
+  }
+}
+
+/// Sleek seek bar with animated track expansion and glowing thumb handle.
+class VideoSeekBar extends StatelessWidget {
+  const VideoSeekBar({
+    super.key,
+    required this.controller,
+    required this.isFocused,
+    required this.isHovered,
+    required this.isDragging,
+    required this.isScrubbing,
+    this.dragFraction,
+    this.playedColor = Colors.pinkAccent,
+    this.bufferedColor = Colors.white30,
+    this.backgroundColor = Colors.white12,
+  });
+
+  final VideoPlayerController? controller;
+  final bool isFocused;
+  final bool isHovered;
+  final bool isDragging;
+  final bool isScrubbing;
+  final double? dragFraction;
+  final Color playedColor;
+  final Color bufferedColor;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeController = controller;
+    if (activeController == null || !activeController.value.isInitialized) {
+      return SizedBox(
+        height: 20,
+        child: Center(
+          child: Container(
+            height: 4,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isActive = isFocused || isHovered || isDragging || isScrubbing;
+    final trackHeight = isActive ? 6.0 : 4.0;
+    final thumbSize = isActive ? 14.0 : 10.0;
+
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: activeController,
+      builder: (context, value, child) {
+        final duration = value.duration;
+        final totalMs = duration.inMilliseconds;
+        final positionMs = value.position.inMilliseconds;
+
+        double playedFraction = 0.0;
+        if (totalMs > 0) {
+          if ((isDragging || isScrubbing) && dragFraction != null) {
+            playedFraction = dragFraction!.clamp(0.0, 1.0);
+          } else {
+            playedFraction = (positionMs / totalMs).clamp(0.0, 1.0);
+          }
+        }
+
+        double bufferedFraction = 0.0;
+        if (totalMs > 0 && value.buffered.isNotEmpty) {
+          final bufferedEnd = value.buffered.last.end.inMilliseconds;
+          bufferedFraction = (bufferedEnd / totalMs).clamp(0.0, 1.0);
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final playedWidth = (width * playedFraction).clamp(0.0, width);
+            final bufferedWidth = (width * bufferedFraction).clamp(0.0, width);
+
+            return SizedBox(
+              height: 20,
+              width: width,
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                clipBehavior: Clip.none,
+                children: [
+                  // Track Background
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: trackHeight,
+                    width: width,
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(trackHeight / 2),
+                    ),
+                  ),
+                  // Buffered Bar
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: trackHeight,
+                    width: bufferedWidth,
+                    decoration: BoxDecoration(
+                      color: bufferedColor,
+                      borderRadius: BorderRadius.circular(trackHeight / 2),
+                    ),
+                  ),
+                  // Played Bar
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: trackHeight,
+                    width: playedWidth,
+                    decoration: BoxDecoration(
+                      color: playedColor,
+                      borderRadius: BorderRadius.circular(trackHeight / 2),
+                    ),
+                  ),
+                  // Thumb Handle / Highlight Dot
+                  Positioned(
+                    left: (playedWidth - thumbSize / 2).clamp(
+                      0.0,
+                      width - thumbSize,
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: thumbSize,
+                      height: thumbSize,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: playedColor,
+                          width: isActive ? 3 : 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: playedColor.withValues(
+                              alpha: isActive ? 0.8 : 0.4,
+                            ),
+                            blurRadius: isActive ? 8 : 4,
+                            spreadRadius: isActive ? 2 : 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

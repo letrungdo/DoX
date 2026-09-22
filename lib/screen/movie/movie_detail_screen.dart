@@ -972,7 +972,7 @@ class _MovieDetailScreenState
         // list under an inline player are reached at all. Full screen has no
         // page under the picture, so there down means the transport bar too.
         if (isUp || _isFullScreen) {
-          _enterControls(false, afterFrame: false);
+          _enterControls(isUp, afterFrame: false);
           return KeyEventResult.handled;
         }
         _startControlsTimer();
@@ -1264,7 +1264,9 @@ class _MovieDetailScreenState
         onRotationLockToggled: _toggleRotationLock,
       ),
     );
-    if (!mounted || action == null) return;
+    if (!mounted) return;
+    _startControlsTimer();
+    if (action == null) return;
 
     // The follow-up picker is opened from here, not from inside the sheet: by
     // the time it is needed the sheet's own context is gone.
@@ -2181,6 +2183,7 @@ class _MovieDetailScreenState
                 setState(() {
                   _showControls = false;
                   _showVolumeControl = false;
+                  _isTimelineHovering = false;
                 });
                 _releaseControlsFocus();
                 _controlsTimer?.cancel();
@@ -2561,23 +2564,23 @@ class _MovieDetailScreenState
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets.only(
-                                                                top: 14,
+                                                                top: 10,
                                                                 bottom: 2,
                                                               ),
-                                                          child: VideoProgressIndicator(
-                                                            controller,
-                                                            allowScrubbing:
-                                                                false,
-                                                            colors: const VideoProgressColors(
-                                                              playedColor: Colors
-                                                                  .pinkAccent,
-                                                              bufferedColor:
-                                                                  Colors
-                                                                      .white30,
-                                                              backgroundColor:
-                                                                  Colors
-                                                                      .white12,
-                                                            ),
+                                                          child: VideoSeekBar(
+                                                            controller:
+                                                                controller,
+                                                            isFocused:
+                                                                _timelineFocusNode
+                                                                    .hasFocus,
+                                                            isHovered:
+                                                                _isTimelineHovering,
+                                                            isDragging:
+                                                                _isDragging,
+                                                            isScrubbing:
+                                                                _isScrubbing,
+                                                            dragFraction:
+                                                                _dragFraction,
                                                           ),
                                                         ),
                                                       ),
@@ -2720,6 +2723,7 @@ class _MovieDetailScreenState
                                                                       _showVolumeControl =
                                                                           false,
                                                                 );
+                                                                _startControlsTimer();
                                                               }
                                                             },
                                                           );
@@ -2846,6 +2850,7 @@ class _MovieDetailScreenState
                                           setState(
                                             () => _showVolumeControl = false,
                                           );
+                                          _startControlsTimer();
                                         },
                                         child: PlayerVolumePopup(
                                           volume: _volume,
