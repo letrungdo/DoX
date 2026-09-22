@@ -275,10 +275,15 @@ class _MovieDetailScreenState
   /// Everywhere but a television, yes: the page exists to play the film. On a
   /// television playback waits for the landing page's Resume or Play button,
   /// so nothing starts streaming because the remote passed over a poster.
+  ///
+  /// Written as the negation of [_showTvLanding] rather than as a second copy
+  /// of the same test. Spelled out twice they drifted apart, and the gap
+  /// between them — a page that neither plays nor shows the landing — was a
+  /// spinner that never went away.
   bool get _shouldAutoPlay =>
       _vm.selectedEpisode != null &&
       _videoController == null &&
-      (!deviceType.isTv || _hasStartedPlayback);
+      !_showTvLanding;
 
   void _initOrientationListener() {
     if (!_supportsOrientationManager) return;
@@ -1565,15 +1570,16 @@ class _MovieDetailScreenState
               );
 
         return PopScope(
-          canPop: widget.embedded || (!_isFullScreen && !_showEpisodeOverlay),
+          canPop: (widget.embedded || !_isFullScreen) && !_showEpisodeOverlay,
           onPopInvokedWithResult: (didPop, result) {
-            if (didPop || widget.embedded) return;
+            if (didPop) return;
             // The ladder BACK climbs on a television: the grid first, then the
             // control overlay, and only then the picture itself.
             if (_showEpisodeOverlay) {
               _closeEpisodeOverlay();
               return;
             }
+            if (widget.embedded) return;
             if (deviceType.isTv &&
                 _isFullScreen &&
                 _showControls &&
@@ -1600,97 +1606,124 @@ class _MovieDetailScreenState
 
   /// Television only: the page opens on the poster and a row of actions, and
   /// nothing streams until one of them is pressed.
-  bool get _showTvLanding =>
-      deviceType.isTv && !widget.embedded && !_hasStartedPlayback;
+  ///
+  /// Embedded too: the browse page opens every film that way, so it is the one
+  /// path a viewer on a television actually takes. Exempting it would leave
+  /// the landing unreachable and a poster still streaming on the press that
+  /// only meant to open it.
+  bool get _showTvLanding => deviceType.isTv && !_hasStartedPlayback;
 
   /// The television landing page: the poster as the hero, and the row of
   /// actions that decide what the OK button does — resume, start again, or
   /// pick an episode. Nothing here streams until one of them is pressed.
-  Widget _buildTvLanding(AppLocalizations l10n) {
+  ///
+  /// [fillParent] takes the box the player would have had, for the embedded
+  /// overlay the browse page opens a film into; on its own the landing stands
+  /// [tvLandingHeroHeight] tall.
+  Widget _buildTvLanding(AppLocalizations l10n, {bool fillParent = false}) {
     final poster = _vm.detail?.poster ?? widget.initialMovie?.poster ?? '';
     final episode = _vm.selectedEpisode;
     final resumeFrom = _resumePosition;
     final theme = Theme.of(context);
 
-    // The first action is where the remote lands, so the page opens on the
-    // thing the viewer came for instead of on the app bar.
-    if (!_tvLandingFocusRequested && episode != null) {
-      _tvLandingFocusRequested = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_showTvLanding) return;
-        _tvPrimaryActionFocusNode.requestFocus();
-      });
-    }
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        // The embedded player collapses towards a bar the size of a thumbnail.
+        // There is no room for a row of ten-foot buttons in it, and a viewer
+        // on a television never sees that state anyway — the browse page does
+        // not minimise there. Below the height a player needs, the poster is
+        // shown on its own rather than overflowing.
+        final showActions =
+            !constraints.maxHeight.isFinite ||
+            constraints.maxHeight >= minPlayerHeight;
 
-    return SizedBox(
-      height: tvLandingHeroHeight,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (poster.isNotEmpty)
-            CachedNetworkImage(
-              imageUrl: poster,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => const ColoredBox(color: Colors.black),
-              errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
-            )
-          else
-            const ColoredBox(color: Colors.black),
-          // The actions sit on the poster, so the poster has to stop competing
-          // with them where they are.
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black87],
+        // The first action is where the remote lands, so the page opens on the
+        // thing the viewer came for instead of on the app bar.
+        if (showActions && !_tvLandingFocusRequested && episode != null) {
+          _tvLandingFocusRequested = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || !_showTvLanding) return;
+            _tvPrimaryActionFocusNode.requestFocus();
+          });
+        }
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            if (poster.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: poster,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => const ColoredBox(color: Colors.black),
+                errorWidget: (_, _, _) => const ColoredBox(color: Colors.black),
+              )
+            else
+              const ColoredBox(color: Colors.black),
+            // The actions sit on the poster, so the poster has to stop
+            // competing with them where they are.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black87],
+                ),
               ),
             ),
-          ),
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: Dimens.screenPadding,
-              child: Wrap(
-                spacing: Dimens.modalItemSpacing,
-                runSpacing: Dimens.modalItemSpacing,
-                children: [
-                  if (resumeFrom != null)
-                    NeuButton(
-                      focusNode: _tvPrimaryActionFocusNode,
-                      accent: theme.colorScheme.primary,
-                      onPressed: episode == null
-                          ? null
-                          : () => _startTvPlayback(episode, seekTo: resumeFrom),
-                      child: Text(
-                        l10n.resumePlayback(formatDuration(resumeFrom)),
+            if (showActions)
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: Dimens.screenPadding,
+                  child: Wrap(
+                    spacing: Dimens.modalItemSpacing,
+                    runSpacing: Dimens.modalItemSpacing,
+                    children: [
+                      if (resumeFrom != null)
+                        NeuButton(
+                          focusNode: _tvPrimaryActionFocusNode,
+                          accent: theme.colorScheme.primary,
+                          onPressed: episode == null
+                              ? null
+                              : () => _startTvPlayback(
+                                  episode,
+                                  seekTo: resumeFrom,
+                                ),
+                          child: Text(
+                            l10n.resumePlayback(formatDuration(resumeFrom)),
+                          ),
+                        ),
+                      NeuButton(
+                        focusNode: resumeFrom == null
+                            ? _tvPrimaryActionFocusNode
+                            : null,
+                        accent: resumeFrom == null
+                            ? theme.colorScheme.primary
+                            : null,
+                        onPressed: episode == null
+                            ? null
+                            : () => _startTvPlayback(
+                                episode,
+                                seekTo: Duration.zero,
+                              ),
+                        child: Text(l10n.playFromStart),
                       ),
-                    ),
-                  NeuButton(
-                    focusNode: resumeFrom == null
-                        ? _tvPrimaryActionFocusNode
-                        : null,
-                    accent: resumeFrom == null
-                        ? theme.colorScheme.primary
-                        : null,
-                    onPressed: episode == null
-                        ? null
-                        : () =>
-                              _startTvPlayback(episode, seekTo: Duration.zero),
-                    child: Text(l10n.playFromStart),
+                      if (_isSeries)
+                        NeuButton(
+                          onPressed: _openEpisodeOverlay,
+                          child: Text(l10n.episodeLabel),
+                        ),
+                    ],
                   ),
-                  if (_isSeries)
-                    NeuButton(
-                      onPressed: _openEpisodeOverlay,
-                      child: Text(l10n.episodeLabel),
-                    ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
+
+    if (fillParent) return content;
+    return SizedBox(height: tvLandingHeroHeight, child: content);
   }
 
   /// The episode grid, over whatever is behind it — the picture in full
@@ -1969,11 +2002,13 @@ class _MovieDetailScreenState
                           onVerticalDragStart: widget.onPlayerDragStart,
                           onVerticalDragUpdate: widget.onPlayerDragUpdate,
                           onVerticalDragEnd: widget.onPlayerDragEnd,
-                          child: _buildVideoPlayerArea(
-                            isFullScreen: false,
-                            fillParent: true,
-                            compact: t < 0.6,
-                          ),
+                          child: _showTvLanding
+                              ? _buildTvLanding(l10n, fillParent: true)
+                              : _buildVideoPlayerArea(
+                                  isFullScreen: false,
+                                  fillParent: true,
+                                  compact: t < 0.6,
+                                ),
                         ),
                       ),
                       if (t < 1)
