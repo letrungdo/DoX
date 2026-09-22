@@ -1,9 +1,23 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/services/music_auth_service.dart';
+import 'package:do_x/services/music_web_session.dart';
 import 'package:do_x/utils/logger.dart';
+
+/// Thrown when the service refused a write, with the status it refused it
+/// with — the music page has no use for the number, but a log does.
+class MusicRequestFailed implements Exception {
+  const MusicRequestFailed(this.status);
+
+  final int status;
+
+  @override
+  String toString() => 'MusicRequestFailed(HTTP $status)';
+}
 
 /// Thrown by an endpoint that only answers for a signed-in account. The music
 /// page turns it into an invitation to sign in, which is the one thing that
@@ -17,7 +31,10 @@ class MusicService {
     // Likes belong to the account that fetched them, so a sign-out has to take
     // them with it or the next account inherits the wrong hearts.
     musicAuth.addListener(() {
-      if (!musicAuth.isSignedIn) _localLikedIds.clear();
+      if (!musicAuth.isSignedIn) {
+        _localLikedIds.clear();
+        unawaited(musicWebSession.reset());
+      }
     });
   }
 
@@ -33,6 +50,10 @@ class MusicService {
               'User-Agent':
                   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'Accept': 'application/json',
+              // The API only ever sees requests from its own web player, and
+              // answers some of them by where they claim to come from.
+              'Origin': 'https://${Envs.musicApiDomain}',
+              'Referer': 'https://${Envs.musicApiDomain}/',
             },
           ),
         )
@@ -59,20 +80,82 @@ class MusicService {
   /// The local set is only updated once the service has accepted the change: a
   /// heart that fills in on a request that failed is a lie the user finds out
   /// about on the next refresh.
+  /// Likes or unlikes [track] for the signed-in account.
+  ///
+  /// Sent from the web view the user signed in with, because the service's bot
+  /// protection answers `403` to a like sent by an HTTP client of ours — see
+  /// [MusicWebSession]. Plain HTTP stays as the way back for a platform with
+  /// no web view, where the delete still goes through.
+  ///
+  /// The local set is only updated once the service has accepted the change: a
+  /// heart that fills in on a request that failed is a lie the user finds out
+  /// about on the next refresh.
   Future<void> toggleLikeTrack(MusicTrack track) async {
     final userId = musicAuth.account?.userId;
     if (userId == null) throw const MusicSignInRequired();
 
-    final isLiked = _localLikedIds.contains(track.id);
-    final url = '$_baseUrl/users/$userId/track_likes/${track.id}';
+    final like = !_localLikedIds.contains(track.id);
+    final method = like ? 'PUT' : 'DELETE';
+    final url =
+        '$_baseUrl/users/$userId/track_likes/${track.id}'
+        '?client_id=$_clientId';
 
-    if (isLiked) {
-      await _dio.delete(url, queryParameters: {'client_id': _clientId});
-      _localLikedIds.remove(track.id);
-    } else {
-      await _dio.put(url, queryParameters: {'client_id': _clientId});
-      _localLikedIds.add(track.id);
+    final status = await musicWebSession.send(method: method, url: url);
+    if (status == null) {
+      await _writeLikeOverHttp(userId, track.id, like: like);
+    } else if (status == 401) {
+      throw const MusicSignInRequired();
+    } else if (status < 200 || status >= 300) {
+      throw MusicRequestFailed(status);
     }
+
+    if (like) {
+      _localLikedIds.add(track.id);
+    } else {
+      _localLikedIds.remove(track.id);
+    }
+  }
+
+  Future<void> _writeLikeOverHttp(
+    String userId,
+    String trackId, {
+    required bool like,
+  }) async {
+    final url = '$_baseUrl/users/$userId/track_likes/$trackId';
+    final query = {'client_id': _clientId};
+    try {
+      if (like) {
+        // An empty body, declared as one: a `put` with no data at all sends
+        // neither a body nor a length, and is refused for it.
+        await _dio.put(
+          url,
+          data: '',
+          queryParameters: query,
+          options: Options(headers: {Headers.contentLengthHeader: 0}),
+        );
+      } else {
+        await _dio.delete(url, queryParameters: query);
+      }
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      // A token the service no longer accepts is not a failed like: the one
+      // thing that fixes it is signing in again, so say so.
+      if (status == 401) throw const MusicSignInRequired();
+      logger.e(
+        'MusicService like refused with HTTP $status: '
+        '${_briefly(e.response?.data)}',
+        error: e,
+        stackTrace: e.stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Enough of a response body to tell one refusal from another, without
+  /// filling the log with a page of HTML.
+  String _briefly(Object? body) {
+    final text = body?.toString() ?? '';
+    return text.length <= 300 ? text : '${text.substring(0, 300)}…';
   }
 
   Future<List<MusicTrack>> getLikedTracks() async {
