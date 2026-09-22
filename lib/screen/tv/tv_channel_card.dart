@@ -23,16 +23,20 @@ class TvChannelCard extends StatelessWidget {
   /// name is drawn at the 18sp the leanback guidance asks for.
   static const _tvNameSize = 18 / Dimens.tvTextScale;
 
-  /// Two lines of name, always — see [_nameLineHeight].
-  static const _nameLines = 2;
+  /// One line of name, cut where it runs out.
+  ///
+  /// A grid of stations is read by their logos; the name underneath is there
+  /// to settle which of two similar ones this is, and a second line of it
+  /// only takes room from the logo that does the work.
+  static const _nameLines = 1;
 
   /// The line box of the name, as a multiple of its font size.
   ///
   /// Spelled out rather than left to the font because the strip below the
   /// logo reserves room for [_nameLines] of it whatever the name is. A strip
   /// that grew with the name would take the room out of the logo above it,
-  /// and the plates would then be a different height on every card — which
-  /// is what the eye reads down a row of them, not the names.
+  /// and the logos would then be a different size on every card — which is
+  /// what the eye reads down a row of them, not the names.
   static const _nameLineHeight = 1.25;
 
   @override
@@ -77,12 +81,6 @@ class TvChannelCard extends StatelessWidget {
                           : l10n.tvNotAllDay,
                     ),
                   ),
-                if (channel.quality != null)
-                  Positioned(
-                    bottom: 4,
-                    left: 4,
-                    child: _QualityTag(quality: channel.quality!),
-                  ),
               ],
             ),
           ),
@@ -90,11 +88,8 @@ class TvChannelCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
             child: SizedBox(
               height: lineHeight * _nameLines,
-              child: Text(
-                channel.name,
-                maxLines: _nameLines,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
+              child: TvChannelName(
+                name: channel.name,
                 style: TextStyle(
                   // The one label on this page that has to be read from a
                   // sofa. The television's own text scale carries the rest of
@@ -105,6 +100,9 @@ class TvChannelCard extends StatelessWidget {
                   height: _nameLineHeight,
                   fontWeight: FontWeight.w600,
                 ),
+                // The strut keeps the base size whatever the name shrinks
+                // to, so a card with a long name is the same height as the
+                // one beside it.
                 strutStyle: StrutStyle(
                   fontSize: fontSize,
                   height: _nameLineHeight,
@@ -115,6 +113,72 @@ class TvChannelCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A channel's name on one line, shrunk to fit before it is cut.
+///
+/// Station names run from `HTV7` to `Báo và Phát thanh – Truyền hình Lâm
+/// Đồng`, and a grid has one width for all of them. Cutting every long one
+/// at the same place leaves a column of cards ending in `…`, which says
+/// nothing about which channel it is; shrinking the type a little says the
+/// whole name instead. Only a little, though — past [_minScale] the name is
+/// smaller than a sofa can read, and three dots are the better answer.
+class TvChannelName extends StatelessWidget {
+  const TvChannelName({
+    super.key,
+    required this.name,
+    required this.style,
+    this.strutStyle,
+    this.textAlign = TextAlign.center,
+  });
+
+  final String name;
+
+  /// The size the name is drawn at when it fits, and the largest it is ever
+  /// drawn at.
+  final TextStyle style;
+
+  final StrutStyle? strutStyle;
+  final TextAlign textAlign;
+
+  /// How far the type may be taken down before the name is cut instead.
+  ///
+  /// A fifth of the size is as much as a sofa can give up: below that the
+  /// name is no longer being read across a room, which is the only reason
+  /// it was being kept whole.
+  static const minScale = 0.8;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(text: name, style: style),
+          maxLines: 1,
+          textDirection: Directionality.of(context),
+          textScaler: scaler,
+        )..layout();
+        final width = constraints.maxWidth;
+        // One measurement is enough: type laid out on one line is as wide
+        // as its size, so the size that fits is the size it has now times
+        // how much of the room it is over by.
+        final scale = width <= 0 || painter.width <= width
+            ? 1.0
+            : (width / painter.width).clamp(minScale, 1.0);
+        final fontSize = (style.fontSize ?? 14) * scale;
+
+        return Text(
+          name,
+          maxLines: 1,
+          textAlign: textAlign,
+          overflow: TextOverflow.ellipsis,
+          style: style.copyWith(fontSize: fontSize),
+          strutStyle: strutStyle,
+        );
+      },
     );
   }
 }
@@ -178,31 +242,6 @@ class _Badge extends StatelessWidget {
           borderRadius: BorderRadius.circular(Dimens.radiusSmall),
         ),
         child: Icon(icon, size: 13, color: Colors.white),
-      ),
-    );
-  }
-}
-
-class _QualityTag extends StatelessWidget {
-  const _QualityTag({required this.quality});
-
-  final String quality;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(Dimens.radiusTiny),
-      ),
-      child: Text(
-        quality,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }

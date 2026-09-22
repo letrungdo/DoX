@@ -814,12 +814,12 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                 },
               ),
             },
-            // Barely there: the grid is laid over a programme that is
-            // still running, and a surface that hid it would make choosing a
-            // channel something the viewer had to stop watching to do. Just
-            // enough black to hold the cards apart from a bright frame.
+            // Dimmed rather than hidden: the programme keeps running under
+            // the grid, but a white logo on a bright frame is a card that
+            // cannot be read at all — so the picture is taken down far
+            // enough for the cards to carry, and no further.
             child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.32),
+              color: Colors.black.withValues(alpha: 0.7),
               child: SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -978,9 +978,9 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 /// One channel in the grid the player opens over the picture.
 ///
 /// See-through, like the grid it sits in: the logo and the number are drawn
-/// on the programme itself rather than on a card that covers it. Shallower
-/// than the page's card, and with no quality badge — the viewer is choosing
-/// a channel here, not comparing streams.
+/// on the programme itself rather than on a card that covers it, and the
+/// tile is shallower than the page's card so that less of the programme
+/// goes under it.
 class _ChannelTile extends StatelessWidget {
   const _ChannelTile({
     super.key,
@@ -1013,7 +1013,7 @@ class _ChannelTile extends StatelessWidget {
       onTap: onTap,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: isPlaying ? 0.5 : 0.28),
+          color: Colors.black.withValues(alpha: isPlaying ? 0.55 : 0.35),
           borderRadius: BorderRadius.circular(Dimens.radiusCard),
           border: isPlaying
               ? Border.all(color: scheme.primary, width: 2)
@@ -1065,11 +1065,8 @@ class _ChannelTile extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-              child: Text(
-                channel.name,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
+              child: TvChannelName(
+                name: channel.name,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,

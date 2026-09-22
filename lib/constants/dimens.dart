@@ -167,12 +167,17 @@ class Dimens {
   /// The channel grid, on the page and again over the picture when the
   /// player opens its list. One set of numbers so a channel is the same card
   /// in both places.
+  ///
+  /// Wider than it is tall, because a station's logo is: drawn to fit inside
+  /// a square the artwork ends up a band across the middle with as much air
+  /// above and below it as there is logo. Half that height is what the
+  /// picture actually needs, and the rows it saves are rows of channels.
   static const tvChannelTileMaxWidth = 150.0;
-  static const tvChannelTileAspect = 0.85;
+  static const tvChannelTileAspect = 1.4;
   static const tvChannelTileSpacing = 12.0;
 
-  /// The same card over the picture is a shallower one: it is laid over a
-  /// programme the viewer is still watching, so every row of it that is not
-  /// needed is a row of programme taken away.
-  static const tvChannelOverlayTileAspect = 1.5;
+  /// The same card over the picture is a shallower one again: it is laid
+  /// over a programme the viewer is still watching, so every row of it that
+  /// is not needed is a row of programme taken away.
+  static const tvChannelOverlayTileAspect = 2.4;
 }

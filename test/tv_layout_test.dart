@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/screen/tv/tv_channel_card.dart';
 import 'package:do_x/screen/tv/tv_screen.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/theme/app_theme.dart';
@@ -104,7 +105,13 @@ void main() {
       // Google's leanback guidance puts the floor for television body text at
       // 18sp. The card asks for 12, which is a phone size — the whole point
       // of the scale is that nobody has to remember to write a second one.
-      expect(drawnAt, greaterThanOrEqualTo(18));
+      //
+      // A name too long for its card is shrunk to fit before it is cut, so
+      // what a long one has to clear is that floor less the little the
+      // shrinking is allowed to take off it.
+      // The tolerance is for the arithmetic, not the design: a name that
+      // shrinks exactly as far as it is allowed to lands a hair under.
+      expect(drawnAt, greaterThanOrEqualTo(18 * TvChannelName.minScale - 0.01));
     });
 
     testWidgets('the category chips still fit the row they sit in', (
