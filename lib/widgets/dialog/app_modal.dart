@@ -21,6 +21,28 @@ import 'package:flutter/scheduler.dart';
 // Dialogs
 // ---------------------------------------------------------------------------
 
+/// Restores focus to the control that opened the modal on a television, or
+/// falls back to the current page scope so focus never leaks to the left nav rail.
+void _restoreFocusAfterModal(FocusNode? previousFocus, BuildContext context) {
+  if (!deviceType.isTv) return;
+
+  void doRestore() {
+    if (previousFocus != null &&
+        previousFocus.canRequestFocus &&
+        previousFocus.context != null &&
+        previousFocus.context!.mounted) {
+      previousFocus.requestFocus();
+      return;
+    }
+    final pageScope = FocusScope.of(context);
+    if (pageScope.canRequestFocus) {
+      pageScope.requestFocus();
+    }
+  }
+
+  WidgetsBinding.instance.addPostFrameCallback((_) => doRestore());
+}
+
 /// Shows [builder]'s widget as a dialog.
 ///
 /// `useSafeArea` is what keeps the dialog clear of the display cutout, which in
@@ -29,13 +51,18 @@ Future<T?> showAppModal<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool barrierDismissible = true,
-}) {
-  return showDialog<T>(
+}) async {
+  final previousFocus = FocusManager.instance.primaryFocus;
+  final result = await showDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
     useSafeArea: true,
     builder: (dialogContext) => TvModalFocus(child: builder(dialogContext)),
   );
+  if (context.mounted) {
+    _restoreFocusAfterModal(previousFocus, context);
+  }
+  return result;
 }
 
 /// Hands the remote to the first control inside a modal, on a television.
@@ -255,8 +282,9 @@ Future<T?> showAppBottomSheet<T>(
   bool showCloseButton = true,
   double maxHeightFactor = Dimens.sheetMaxHeightFactor,
   EdgeInsets padding = Dimens.sheetPadding,
-}) {
-  return showModalBottomSheet<T>(
+}) async {
+  final previousFocus = FocusManager.instance.primaryFocus;
+  final result = await showModalBottomSheet<T>(
     context: context,
     // Always on: without it the sheet is capped at half the screen, which in
     // landscape is a couple of finger-widths.
@@ -285,6 +313,10 @@ Future<T?> showAppBottomSheet<T>(
       ),
     ),
   );
+  if (context.mounted) {
+    _restoreFocusAfterModal(previousFocus, context);
+  }
+  return result;
 }
 
 /// The app's bottom sheet surface: drag handle, optional title, then the body.
@@ -536,7 +568,11 @@ Future<T?> showAppOptionSheet<T>(
           itemBuilder: (context, index) {
             final option = options[index];
             final isSelected = option == selected;
+            final isInitialTvFocus =
+                deviceType.isTv &&
+                (isSelected || (selected == null && index == 0));
             return ListTile(
+              autofocus: isInitialTvFocus,
               title: Text(
                 labelBuilder?.call(option) ?? '$option',
                 style: TextStyle(
@@ -660,7 +696,7 @@ class _SearchSheetBodyState<T> extends State<_SearchSheetBody<T>> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
               controller: _controller,
-              autofocus: true,
+              autofocus: !deviceType.isTv,
               textInputAction: TextInputAction.search,
               onChanged: _onQueryChanged,
               decoration: InputDecoration(
@@ -703,8 +739,12 @@ class _SearchSheetBodyState<T> extends State<_SearchSheetBody<T>> {
                   final option = _visible[index];
                   final isSelected = option == widget.selected;
                   final subtitle = widget.subtitleBuilder?.call(option);
+                  final isInitialTvFocus =
+                      deviceType.isTv &&
+                      (isSelected || (widget.selected == null && index == 0));
 
                   return ListTile(
+                    autofocus: isInitialTvFocus,
                     leading: widget.leadingBuilder?.call(option),
                     title: Text(
                       widget.labelBuilder(option),

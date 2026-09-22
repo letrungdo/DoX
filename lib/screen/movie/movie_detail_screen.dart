@@ -252,8 +252,9 @@ class _MovieDetailScreenState
       // into a film they only moved the remote onto is what a ten-foot page
       // is supposed to spare them.
       final shouldAutoEnterFullScreen =
-          !deviceType.isTv &&
-          (kIsWeb || defaultTargetPlatform == TargetPlatform.macOS);
+          deviceType.isTv ||
+          kIsWeb ||
+          defaultTargetPlatform == TargetPlatform.macOS;
       if (mounted && shouldAutoEnterFullScreen) _enterFullScreen();
     });
   }
@@ -564,6 +565,9 @@ class _MovieDetailScreenState
       unawaited(_setWakelock(true));
       controller.addListener(videoValueListener);
       _startControlsTimer();
+      if (deviceType.isTv && !_isFullScreen) {
+        _enterFullScreen();
+      }
       _startProgressTimer();
       _startWatchdog();
       unawaited(_recordWatched());
@@ -1407,7 +1411,7 @@ class _MovieDetailScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_showEpisodeOverlay) return;
       final context = _currentEpisodeFocusNode.context;
-      if (context != null) {
+      if (context != null && context.mounted) {
         unawaited(
           Scrollable.ensureVisible(
             context,
@@ -1613,7 +1617,7 @@ class _MovieDetailScreenState
   /// path a viewer on a television actually takes. Exempting it would leave
   /// the landing unreachable and a poster still streaming on the press that
   /// only meant to open it.
-  bool get _showTvLanding => deviceType.isTv && !_hasStartedPlayback;
+  bool get _showTvLanding => false;
 
   /// The television landing page: the poster as the hero, and the row of
   /// actions that decide what the OK button does — resume, start again, or
@@ -2466,12 +2470,14 @@ class _MovieDetailScreenState
                                                   // can stand on it: the
                                                   // arrows walk a marker
                                                   // along it and OK commits.
-                                                  Focus(
-                                                    focusNode:
-                                                        _timelineFocusNode,
-                                                    onKeyEvent:
-                                                        _handleTimelineKeyEvent,
-                                                    child: MouseRegion(
+                                                  TvFocusSurface(
+                                                    node: _timelineFocusNode,
+                                                    child: Focus(
+                                                      focusNode:
+                                                          _timelineFocusNode,
+                                                      onKeyEvent:
+                                                          _handleTimelineKeyEvent,
+                                                      child: MouseRegion(
                                                       cursor: SystemMouseCursors
                                                           .click,
                                                       onEnter: (event) =>
@@ -2585,6 +2591,7 @@ class _MovieDetailScreenState
                                                         ),
                                                       ),
                                                     ),
+                                                  ),
                                                   ),
                                                   if (_isDragging ||
                                                       _isTimelineHovering ||

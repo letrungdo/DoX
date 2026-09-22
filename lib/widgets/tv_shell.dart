@@ -491,6 +491,10 @@ RenderBox? _focusedBox() {
   final context = FocusManager.instance.primaryFocus?.context;
   final node = FocusManager.instance.primaryFocus;
   if (node == null || node is FocusScopeNode || context == null) return null;
+  // If the node can no longer request focus (e.g. it's inside an ExcludeFocus 
+  // because an overlay is opening), stop drawing the ring. This prevents 
+  // the border from lingering on covered cards during animations.
+  if (!node.canRequestFocus) return null;
   if (!context.mounted) return null;
   final box = context.findRenderObject();
   if (box is! RenderBox || !box.attached || !box.hasSize) return null;
@@ -558,6 +562,14 @@ bool _isSurface(FocusNode node, BuildContext context) {
 Rect? _ringOf(_FocusTarget target) {
   final box = target.box;
   if (!box.attached || !box.hasSize) return null;
+
+  // The node still holds the primary focus (to prevent it jumping to the 
+  // app bar), but it has been shut out of the focus tree by an overlay 
+  // zooming in. If it can no longer be reached, the ring should not be 
+  // drawn over the screen either.
+  final node = FocusManager.instance.primaryFocus;
+  if (node == null || !node.canRequestFocus) return null;
+
   // Where the control is *painted*, not where it was laid out. On a television
   // the focused control is drawn larger than its slot, and `FocusNode.rect`
   // reports the slot — a ring traced on that sits inside the card it is meant

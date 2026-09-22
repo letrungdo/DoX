@@ -95,6 +95,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// once the overlay has finished expanding.
   Rect? _entryRect;
   bool _isDetailFullScreen = false;
+  bool _isClosingOverlay = false;
 
   /// True from the moment a drag starts on the mini bar until it ends, so the
   /// recognizer is not torn down the instant the bar stops being mini.
@@ -464,9 +465,10 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// back to the top. Focusing the poster the viewer came from keeps the place
   /// they had. [movieId] of `null`, or a film no longer in the list, lands on
   /// the first tile, which is where a refreshed list has been scrolled anyway.
-  void _restoreGridFocus(String? movieId) {
+  void _restoreGridFocus(String? movieId, {bool immediate = false}) {
     if (!deviceType.isTv) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    void doFocus() {
       if (!mounted) return;
       final found = movieId == null
           ? -1
@@ -475,7 +477,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       if (node == null || !node.canRequestFocus) return;
       node.requestFocus();
       final nodeContext = node.context;
-      if (nodeContext == null) return;
+      if (nodeContext == null || !nodeContext.mounted) return;
       unawaited(
         Scrollable.ensureVisible(
           nodeContext,
@@ -483,7 +485,13 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           duration: Dimens.tvFocusScrollDuration,
         ),
       );
-    });
+    }
+
+    if (immediate) {
+      doFocus();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => doFocus());
+    }
   }
 
   Future<void> _handleMovieLongPress(Movie movie) async {
@@ -552,20 +560,51 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   Future<void> _closeOverlay() async {
     if (_playingMovie == null) return;
     immersiveMode.value = false;
-    setState(() {
-      _playingMovie = null;
-      _entryRect = null;
-      _isDetailFullScreen = false;
-    });
-    _overlayController.value = 0;
-    // The library may have gained a watch/favourite entry while it was open.
-    if (vm.collection == MovieCollection.browse) {
-      await _refreshLibraryStates();
+    final lastMovieId = _lastOpenedMovieId;
+
+    if (deviceType.isTv) {
+      // On TV, use a two-step closure to prevent focus flickering to the App Bar title.
+      // Step 1: Enable focus on the browser grid while keeping the detail overlay mounted.
+      setState(() {
+        _isClosingOverlay = true;
+        _isDetailFullScreen = false;
+      });
+      _overlayController.value = 0;
+
+      // Wait for the next frame where ExcludeFocus is disabled, then safely move focus to the movie item.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        _restoreGridFocus(lastMovieId, immediate: true);
+
+        // Step 2: Now that focus is safely on the movie item, unmount the detail overlay.
+        setState(() {
+          _playingMovie = null;
+          _entryRect = null;
+          _isClosingOverlay = false;
+        });
+
+        if (vm.collection == MovieCollection.browse) {
+          await _refreshLibraryStates();
+        } else {
+          await vm.loadMovies(refresh: true, silent: true);
+        }
+        if (!mounted) return;
+        _restoreGridFocus(lastMovieId);
+      });
     } else {
-      await vm.loadMovies(refresh: true, silent: true);
+      setState(() {
+        _playingMovie = null;
+        _entryRect = null;
+        _isDetailFullScreen = false;
+      });
+      _overlayController.value = 0;
+
+      if (vm.collection == MovieCollection.browse) {
+        await _refreshLibraryStates();
+      } else {
+        await vm.loadMovies(refresh: true, silent: true);
+      }
     }
-    if (!mounted) return;
-    _restoreGridFocus(_lastOpenedMovieId);
   }
 
   void _onOverlayDragUpdate(DragUpdateDetails details, double travel) {
@@ -685,7 +724,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                   builder: (context, child) => ExcludeFocus(
                     // Minimised, the player is a bar at the bottom and the
                     // browser is back in charge, so it takes the remote again.
-                    excluding:
+                    excluding: !_isClosingOverlay &&
                         _playingMovie != null &&
                         _overlayController.value > _miniThreshold,
                     child: child!,
