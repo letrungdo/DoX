@@ -100,10 +100,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// On a phone, where the video is between the small picture in the player
   /// (0) and the whole screen (1). A drag moves it; letting go, a tap or
   /// back finishes the run.
-  late final _videoExpansion = AnimationController(
-    vsync: this,
-    duration: Dimens.musicVideoExpandDuration,
-  );
+  ///
+  /// Built in [initState], not lazily: a TV never touches it, and its first
+  /// read would then be in [dispose], where `vsync: this` looks up the tree
+  /// of an element that has already left it.
+  late final AnimationController _videoExpansion;
 
   /// A drag on the video is under way: the picture follows the finger, and
   /// the full-screen player waits for it to be let go.
@@ -125,6 +126,15 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     return _likeFocusNodes.putIfAbsent(
       id,
       () => FocusNode(debugLabel: 'tv-track-like-$id'),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _videoExpansion = AnimationController(
+      vsync: this,
+      duration: Dimens.musicVideoExpandDuration,
     );
   }
 
