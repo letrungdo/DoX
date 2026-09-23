@@ -5,6 +5,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/music/music_challenge_sheet.dart';
 import 'package:do_x/screen/music/music_track_card.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
@@ -181,6 +182,17 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
         context.showToast(l10n.musicSignInRequired);
         final signedIn = await _openMusicLogin();
         if (signedIn && mounted) await vm.toggleLike(track);
+      case MusicLikeOutcome.challengeRequired:
+        // Once: a like still refused after the check is a failure to report,
+        // not a reason to put the check up again.
+        final url = vm.likeChallengeUrl;
+        if (url == null) return;
+        final passed = await showMusicChallengeSheet(context, url);
+        if (!passed || !mounted) return;
+        final retried = await vm.toggleLike(track);
+        if (retried != MusicLikeOutcome.done && mounted) {
+          context.showToast(l10n.musicLikeFailed, isError: true);
+        }
       case MusicLikeOutcome.failed:
         context.showToast(l10n.musicLikeFailed, isError: true);
     }

@@ -19,6 +19,17 @@ class MusicRequestFailed implements Exception {
   String toString() => 'MusicRequestFailed(HTTP $status)';
 }
 
+/// Thrown when the service's bot protection stopped a write and wants its
+/// check passed first — [url] is the page that check is on.
+class MusicChallengeRequired implements Exception {
+  const MusicChallengeRequired(this.url);
+
+  final String url;
+
+  @override
+  String toString() => 'MusicChallengeRequired($url)';
+}
+
 /// Thrown by an endpoint that only answers for a signed-in account. The music
 /// page turns it into an invitation to sign in, which is the one thing that
 /// makes the call work.
@@ -100,11 +111,15 @@ class MusicService {
         '$_baseUrl/users/$userId/track_likes/${track.id}'
         '?client_id=$_clientId';
 
-    final status = await musicWebSession.send(method: method, url: url);
+    final response = await musicWebSession.send(method: method, url: url);
+    final status = response?.status;
+    final challengeUrl = response?.challengeUrl;
     if (status == null) {
       await _writeLikeOverHttp(userId, track.id, like: like);
     } else if (status == 401) {
       throw const MusicSignInRequired();
+    } else if (challengeUrl != null) {
+      throw MusicChallengeRequired(challengeUrl);
     } else if (status < 200 || status >= 300) {
       throw MusicRequestFailed(status);
     }

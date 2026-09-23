@@ -4782,6 +4782,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Music playback'**
   String get musicPlaybackChannel;
+
+  /// No description provided for @musicChallengeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick check'**
+  String get musicChallengeTitle;
+
+  /// No description provided for @musicChallengeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Music wants to make sure you are not a bot. Complete the check and your like will be saved.'**
+  String get musicChallengeHint;
 }
 
 class _AppLocalizationsDelegate

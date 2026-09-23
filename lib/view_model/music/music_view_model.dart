@@ -16,8 +16,9 @@ enum MusicTab { home, search, likes, history }
 
 /// How a tap on a heart ended. A like is the one action on this page that
 /// needs an account, so "you are not signed in" is an outcome of its own and
-/// not just another failure.
-enum MusicLikeOutcome { done, signInRequired, failed }
+/// not just another failure. The bot protection's check is another: it is
+/// the user, not the app, who can get past it.
+enum MusicLikeOutcome { done, signInRequired, challengeRequired, failed }
 
 class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Heading for the one row built from a plain search, for an account the
@@ -193,11 +194,20 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     });
   }
 
+  /// The check the last like was stopped by, once [toggleLike] has answered
+  /// [MusicLikeOutcome.challengeRequired].
+  String? _likeChallengeUrl;
+  String? get likeChallengeUrl => _likeChallengeUrl;
+
   Future<MusicLikeOutcome> toggleLike(MusicTrack track) async {
+    _likeChallengeUrl = null;
     try {
       await musicService.toggleLikeTrack(track);
     } on MusicSignInRequired {
       return MusicLikeOutcome.signInRequired;
+    } on MusicChallengeRequired catch (e) {
+      _likeChallengeUrl = e.url;
+      return MusicLikeOutcome.challengeRequired;
     } catch (e, st) {
       logger.e('MusicViewModel toggleLike failed', error: e, stackTrace: st);
       notifyListenersSafe();

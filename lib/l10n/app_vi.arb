@@ -1441,5 +1441,7 @@
   "musicTvQrNewCode": "Mã mới",
   "musicTvQrSigningIn": "Đang đăng nhập…",
   "musicTvQrBrowserMessage": "Mở Do X trên điện thoại này: Music → đăng nhập → biểu tượng tài khoản → Đăng nhập trên TV, rồi quét lại mã.",
-  "musicPlaybackChannel": "Phát nhạc"
+  "musicPlaybackChannel": "Phát nhạc",
+  "musicChallengeTitle": "Xác minh nhanh",
+  "musicChallengeHint": "Music cần xác minh bạn không phải bot. Hoàn tất bước kiểm tra để lưu lượt thích."
 }

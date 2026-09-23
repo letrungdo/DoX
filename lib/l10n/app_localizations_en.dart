@@ -2660,4 +2660,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicPlaybackChannel => 'Music playback';
+
+  @override
+  String get musicChallengeTitle => 'Quick check';
+
+  @override
+  String get musicChallengeHint =>
+      'Music wants to make sure you are not a bot. Complete the check and your like will be saved.';
 }

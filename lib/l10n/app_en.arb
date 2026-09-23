@@ -1497,5 +1497,7 @@
   "musicTvQrNewCode": "New code",
   "musicTvQrSigningIn": "Signing in…",
   "musicTvQrBrowserMessage": "Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again.",
-  "musicPlaybackChannel": "Music playback"
+  "musicPlaybackChannel": "Music playback",
+  "musicChallengeTitle": "Quick check",
+  "musicChallengeHint": "Music wants to make sure you are not a bot. Complete the check and your like will be saved."
 }

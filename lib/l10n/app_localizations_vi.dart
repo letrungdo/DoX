@@ -2650,4 +2650,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicPlaybackChannel => 'Phát nhạc';
+
+  @override
+  String get musicChallengeTitle => 'Xác minh nhanh';
+
+  @override
+  String get musicChallengeHint =>
+      'Music cần xác minh bạn không phải bot. Hoàn tất bước kiểm tra để lưu lượt thích.';
 }

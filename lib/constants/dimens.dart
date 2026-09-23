@@ -227,6 +227,10 @@ class Dimens {
   /// dark code on a light plate and nothing else.
   static const musicPairingQrPadding = 14.0;
 
+  /// The music service's bot check, framed in a sheet: tall enough for its
+  /// puzzle without the sheet having to scroll.
+  static const musicChallengeHeight = 460.0;
+
   /// The phone's camera window onto that code.
   static const musicPairingScannerMaxSize = 320.0;
 

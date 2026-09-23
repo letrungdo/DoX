@@ -29,9 +29,18 @@ class MusicWebSession {
   HeadlessInAppWebView? _page;
   Future<InAppWebViewController?>? _pending;
 
-  /// The status the service answered with, or `null` when no web view can be
-  /// had — the web build has none, and the caller falls back to plain HTTP.
-  Future<int?> send({required String method, required String url}) async {
+  /// What the service answered with, or `null` when no web view can be had —
+  /// the web build has none, and the caller falls back to plain HTTP.
+  ///
+  /// The request is sent the way the site's own client sends it to a path its
+  /// bot protection watches: the protection's session goes along in the
+  /// `X-Datadome-ClientId` header (the site runs it header-based, not by
+  /// cookie, because the API is on another origin), and a renewed one comes
+  /// back in `X-Set-Cookie`, which is kept for the next request.
+  Future<MusicWebResponse?> send({
+    required String method,
+    required String url,
+  }) async {
     if (kIsWeb) return null;
     final controller = await _controller();
     if (controller == null) return null;
@@ -39,12 +48,34 @@ class MusicWebSession {
     try {
       final result = await controller.callAsyncJavaScript(
         functionBody: '''
+          const headers = { 'Authorization': authorization };
+          const session = document.cookie.split('; ')
+              .find((c) => c.startsWith('datadome='));
+          if (session) {
+            headers['X-Datadome-ClientId'] = session.slice('datadome='.length);
+          }
           const response = await fetch(url, {
             method: method,
             credentials: 'include',
-            headers: { 'Authorization': authorization },
+            headers: headers,
           });
-          return response.status;
+          const renewed = response.headers.get('x-set-cookie');
+          if (renewed && renewed.startsWith('datadome=')) {
+            document.cookie = renewed;
+          }
+          let challenge = null;
+          if (response.status === 403) {
+            // The bot protection's refusal carries the page to pass its check
+            // on; the API's own 403 does not.
+            try {
+              const body = await response.json();
+              if (body && typeof body.url === 'string'
+                  && body.url.indexOf('captcha-delivery.com') !== -1) {
+                challenge = body.url;
+              }
+            } catch (_) {}
+          }
+          return { status: response.status, challenge: challenge };
         ''',
         arguments: {
           'url': url,
@@ -56,8 +87,15 @@ class MusicWebSession {
         logger.e('MusicWebSession $method failed: ${result?.error}');
         return null;
       }
-      final status = result?.value;
-      return status is num ? status.toInt() : null;
+      final value = result?.value;
+      if (value is! Map) return null;
+      final status = value['status'];
+      if (status is! num) return null;
+      final challenge = value['challenge'];
+      return MusicWebResponse(
+        status: status.toInt(),
+        challengeUrl: challenge is String ? challenge : null,
+      );
     } on Object catch (e, st) {
       logger.e('MusicWebSession $method threw', error: e, stackTrace: st);
       return null;
@@ -85,6 +123,8 @@ class MusicWebSession {
         javaScriptEnabled: true,
         thirdPartyCookiesEnabled: true,
       ),
+      onConsoleMessage: (_, message) =>
+          logger.d('MusicWebSession page: ${message.message}'),
       onLoadStop: (controller, _) {
         if (!loaded.isCompleted) loaded.complete(controller);
       },
@@ -110,3 +150,14 @@ class MusicWebSession {
 }
 
 final musicWebSession = MusicWebSession();
+
+/// The service's answer to a request sent from the web session.
+class MusicWebResponse {
+  const MusicWebResponse({required this.status, this.challengeUrl});
+
+  final int status;
+
+  /// The bot protection's check, when that is what refused the request. The
+  /// user has to pass it before the request can go through.
+  final String? challengeUrl;
+}
