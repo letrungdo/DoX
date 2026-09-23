@@ -21,6 +21,19 @@ enum MusicTab { home, search, likes, history }
 enum MusicLikeOutcome { done, signInRequired, challengeRequired, failed }
 
 class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
+  MusicViewModel({
+    Future<String> Function(String transcodingUrl)? resolveStream,
+    MusicPlaybackSession? playback,
+  }) : _resolveStream = resolveStream ?? musicService.resolvePlayableStream,
+       _playback = playback ?? musicPlayback;
+
+  /// Turns a track's transcoding link into one a player can open. Replaceable
+  /// so a test can decide when each answer arrives.
+  final Future<String> Function(String transcodingUrl) _resolveStream;
+
+  /// Where the system's media controls are kept up to date.
+  final MusicPlaybackSession _playback;
+
   /// Heading for the one row built from a plain search, for an account the
   /// service has no selections for.
   static const _fallbackShelfTitle = 'Trending';
@@ -227,20 +240,37 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   bool isLiked(String trackId) => musicService.isTrackLiked(trackId);
 
+  /// Bumped by every tap on a track and by the page going away. A track
+  /// takes a couple of round trips to come up, and whatever was asked for in
+  /// the meantime wins: a load that finds the number moved on throws its
+  /// player away instead of starting it, or two tracks play over each other
+  /// and one of them belongs to nobody — nothing can stop it but killing the
+  /// app.
+  int _playGeneration = 0;
+
+  bool _isCurrentPlay(int generation) =>
+      generation == _playGeneration && !isDispose;
+
   Future<void> playTrack(MusicTrack track) async {
     if (_currentTrack?.id == track.id && _audioController != null) {
       togglePlay();
       return;
     }
 
+    final generation = ++_playGeneration;
     // Read before the first await, while the page is certainly still there.
     final channelName = context.l10n.musicPlaybackChannel;
     _positionTimer?.cancel();
+    // Let go of it before waiting on it: a tap that lands during the wait
+    // must not find it still here and stop it a second time.
     final oldController = _audioController;
+    _audioController = null;
     if (oldController != null) {
+      oldController.removeListener(_videoPlayerListener);
       await oldController.pause();
       await oldController.dispose();
     }
+    if (!_isCurrentPlay(generation)) return;
 
     _currentTrack = track;
     _isPlaying = false;
@@ -249,41 +279,49 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     notifyListenersSafe();
     // Here rather than in initState, which is too early to read the
     // translation the notification channel is named with.
-    musicPlayback.attach(this, channelName: channelName);
-    musicPlayback.updateTrack(track, _duration);
-    musicPlayback.updateState(
+    _playback.attach(this, channelName: channelName);
+    _playback.updateTrack(track, _duration);
+    _playback.updateState(
       playing: false,
       position: Duration.zero,
       loading: true,
     );
 
+    VideoPlayerController? controller;
     try {
-      final mediaStreamUrl = await musicService.resolvePlayableStream(
-        track.streamUrl,
-      );
+      final mediaStreamUrl = await _resolveStream(track.streamUrl);
+      if (!_isCurrentPlay(generation)) return;
       if (mediaStreamUrl.isEmpty) {
         throw Exception('Could not resolve playable dynamic media link');
       }
 
       // The plugin pauses itself when the app is backgrounded unless told
       // otherwise; the music carrying on is the point of a music player.
-      final controller = VideoPlayerController.networkUrl(
+      controller = VideoPlayerController.networkUrl(
         Uri.parse(mediaStreamUrl),
         videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
       );
-      _audioController = controller;
-
       await controller.initialize();
+      if (!_isCurrentPlay(generation)) {
+        await controller.dispose();
+        return;
+      }
+      _audioController = controller;
       _duration = controller.value.duration;
       await controller.play();
       _isPlaying = true;
       unawaited(_setWakelock(true));
-      musicPlayback.updateTrack(track, _duration);
-      musicPlayback.updateState(playing: true, position: Duration.zero);
+      _playback.updateTrack(track, _duration);
+      _playback.updateState(playing: true, position: Duration.zero);
 
       controller.addListener(_videoPlayerListener);
       _startPositionTimer();
     } catch (e, st) {
+      if (!_isCurrentPlay(generation)) {
+        // Superseded while it failed: the player it half opened is nobody's.
+        if (controller != _audioController) await controller?.dispose();
+        return;
+      }
       logger.e(
         'MusicViewModel playTrack network failure',
         error: e,
@@ -291,7 +329,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       );
       _isPlaying = false;
       unawaited(_setWakelock(false));
-      musicPlayback.updateState(playing: false, position: Duration.zero);
+      _playback.updateState(playing: false, position: Duration.zero);
     }
     notifyListenersSafe();
   }
@@ -343,7 +381,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   void _onPlayingChanged(VideoPlayerController controller) {
     unawaited(_setWakelock(_isPlaying));
-    musicPlayback.updateState(
+    _playback.updateState(
       playing: _isPlaying,
       position: controller.value.position,
     );
@@ -452,7 +490,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     if (controller == null || !controller.value.isInitialized) return;
     controller.seekTo(position);
     _position = position;
-    musicPlayback.updateState(playing: _isPlaying, position: position);
+    _playback.updateState(playing: _isPlaying, position: position);
     notifyListenersSafe();
   }
 
@@ -482,8 +520,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     // Never left behind: the page can go away mid-track, and a lock still held
     // is a television that never sleeps again.
     unawaited(_setWakelock(false));
+    // Any track still loading finds this and drops its player.
+    _playGeneration++;
     musicAuth.removeListener(_onAccountChanged);
-    musicPlayback.detach(this);
+    _playback.detach(this);
     _positionTimer?.cancel();
     _debounceTimer?.cancel();
     _audioController?.removeListener(_videoPlayerListener);

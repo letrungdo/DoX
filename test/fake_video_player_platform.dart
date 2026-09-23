@@ -23,6 +23,10 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   /// Every stream the page has asked for, in the order it asked.
   final opened = <String>[];
 
+  /// The players currently making sound: played, and neither paused nor
+  /// disposed since.
+  final sounding = <int>{};
+
   final _events = <int, StreamController<VideoEvent>>{};
   int _nextId = 0;
 
@@ -59,17 +63,21 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
 
   @override
   Future<void> dispose(int playerId) async {
+    sounding.remove(playerId);
     await _events.remove(playerId)?.close();
   }
+
+  @override
+  Future<void> setMixWithOthers(bool mixWithOthers) async {}
 
   @override
   Future<void> setLooping(int playerId, bool looping) async {}
 
   @override
-  Future<void> play(int playerId) async {}
+  Future<void> play(int playerId) async => sounding.add(playerId);
 
   @override
-  Future<void> pause(int playerId) async {}
+  Future<void> pause(int playerId) async => sounding.remove(playerId);
 
   @override
   Future<void> setVolume(int playerId, double volume) async {}
