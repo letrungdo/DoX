@@ -8,6 +8,7 @@ import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/screen/tv/tv_channel_card.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:do_x/utils/video_view.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/player_controls_focus.dart';
@@ -228,6 +229,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
       httpHeaders: _channel.headers,
+      viewType: pictureViewType,
     );
 
     try {

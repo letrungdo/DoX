@@ -16,6 +16,7 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/youtube_music_service.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:do_x/utils/video_view.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
 enum MusicTab { home, search, likes }
@@ -580,10 +581,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         mixWithOthers:
             !background && defaultTargetPlatform == TargetPlatform.android,
       ),
-      // On a television the picture goes to a SurfaceView the display
-      // composites by itself, rather than through a texture Flutter redraws
-      // every frame on the weakest GPU the app runs on.
-      viewType: hasPicture ? _pictureViewType : VideoViewType.textureView,
+      viewType: hasPicture ? pictureViewType : VideoViewType.textureView,
     );
     try {
       await controller.initialize();
@@ -595,11 +593,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     }
     return controller;
   }
-
-  static VideoViewType get _pictureViewType =>
-      deviceType.isTv && defaultTargetPlatform == TargetPlatform.android
-      ? VideoViewType.platformView
-      : VideoViewType.textureView;
 
   Future<MusicVideo?> _findVideoSafely(MusicTrack track) =>
       _findVideo(track).catchError((Object _) => null);

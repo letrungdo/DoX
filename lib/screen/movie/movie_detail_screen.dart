@@ -17,6 +17,7 @@ import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:do_x/utils/video_view.dart';
 import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -425,6 +426,7 @@ class _MovieDetailScreenState
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
       httpHeaders: {'Referer': '${movieService.effectiveBaseUrl}/'},
+      viewType: pictureViewType,
     );
 
     try {
@@ -2449,9 +2451,18 @@ class _MovieDetailScreenState
                                                         width: previewWidth,
                                                         referer:
                                                             '${movieService.effectiveBaseUrl}/',
-                                                        fallback: VideoPlayer(
-                                                          controller,
-                                                        ),
+                                                        // No sprite: the live frame, where a
+                                                        // second view of it can be had. A
+                                                        // platform view's one surface would
+                                                        // leave the screen behind it black.
+                                                        fallback:
+                                                            pictureViewType ==
+                                                                VideoViewType
+                                                                    .textureView
+                                                            ? VideoPlayer(
+                                                                controller,
+                                                              )
+                                                            : const SizedBox.shrink(),
                                                         position: _dragPosition,
                                                       ),
                                                     ),
