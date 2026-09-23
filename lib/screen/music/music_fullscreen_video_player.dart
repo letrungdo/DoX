@@ -10,6 +10,7 @@ import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/player_controls_focus.dart';
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -210,25 +211,31 @@ class _MusicFullscreenVideoPlayerState
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Focus(
-                focusNode: _pictureNode,
-                onKeyEvent: _onPictureKey,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _onPictureTap,
-                  child: Center(
-                    child: video != null
-                        ? MusicVideoView(
-                            controller: video,
-                            isOfficialAudio: vm.isAudioFromVideo,
-                            borderRadius: BorderRadius.zero,
-                          )
-                        : _buildWaiting(
-                            track?.artworkUrl ?? '',
-                            // Off, or none to be had: the artwork stands in
-                            // for it, with nothing to wait for.
-                            loading: vm.isVideoEnabled && vm.isVideoPending,
-                          ),
+              // The picture holds the focus while the controls are away, and
+              // is the whole screen: the shell's focus ring around it read as
+              // the video's corners being rounded.
+              TvFocusSurface(
+                node: _pictureNode,
+                child: Focus(
+                  focusNode: _pictureNode,
+                  onKeyEvent: _onPictureKey,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _onPictureTap,
+                    child: Center(
+                      child: video != null
+                          ? MusicVideoView(
+                              controller: video,
+                              isOfficialAudio: vm.isAudioFromVideo,
+                              borderRadius: BorderRadius.zero,
+                            )
+                          : _buildWaiting(
+                              track?.artworkUrl ?? '',
+                              // Off, or none to be had: the artwork stands in
+                              // for it, with nothing to wait for.
+                              loading: vm.isVideoEnabled && vm.isVideoPending,
+                            ),
+                    ),
                   ),
                 ),
               ),

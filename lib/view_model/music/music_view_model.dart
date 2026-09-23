@@ -81,9 +81,24 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   static const _maxVideoDrift = Duration(milliseconds: 1500);
   static const _videoResyncPause = Duration(seconds: 3);
 
+  /// How far a picture laid over the track's own sound may wander before it
+  /// is jumped back. That picture is another upload, often another cut, and
+  /// was never in step to the frame: only a stall that has left it well
+  /// behind is worth the visible jump.
+  static const _maxLooseVideoDrift = Duration(seconds: 5);
+
+  /// How far ahead of the sound a new picture is sought: the sound plays on
+  /// while the picture buffers its way there.
+  static const _videoSeekLead = Duration(milliseconds: 500);
+
   /// A drift past which the muted picture runs a little fast or slow until
   /// it is back within [_videoInStepDrift] — unseen, where a seek is a
   /// visible jump.
+  ///
+  /// Only for the official video, whose sound is the one playing, where lips
+  /// out of step show. A picture at 1.08× on a 60Hz screen shows its frames
+  /// unevenly, and over a track's own sound — another upload, often another
+  /// cut — the steadier picture is worth more than the tighter fit.
   static const _videoCatchUpDrift = Duration(milliseconds: 200);
   static const _videoInStepDrift = Duration(milliseconds: 60);
   static const _videoCatchUpSpeed = 0.08;
@@ -720,6 +735,18 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       }
       await follower.setVolume(0);
       if (video.loops) await follower.setLooping(true);
+      final sound = _audioController;
+      if (!video.loops && sound != null) {
+        // Put in place while still paused and off screen. Sought once it was
+        // playing, a 1080p picture on a television stalled while it decoded
+        // its way there from the keyframe before, came up behind the sound,
+        // and was pulled about for seconds after.
+        await follower.seekTo(sound.value.position + _videoSeekLead);
+        if (!_canShowPicture(generation) || request != _pictureRequest) {
+          await follower.dispose();
+          return;
+        }
+      }
       final old = _videoController;
       _videoController = follower;
       _pictureUrl = url;
@@ -728,7 +755,9 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       if (old != null && !identical(old, _audioController)) {
         unawaited(old.dispose());
       }
-      _syncVideo(force: true);
+      // Left alone while the seek above lands.
+      _lastVideoResync = DateTime.now();
+      _syncVideo();
       notifyListenersSafe();
       return;
     }
@@ -743,7 +772,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Paused while the app is off screen, whatever the sound is doing, and
   /// left on its last frame once the sound has run past its end. A looped
   /// stand-in only follows play and pause: it has no place in the song.
-  void _syncVideo({bool force = false}) {
+  void _syncVideo() {
     final video = _videoController;
     final audio = _audioController;
     if (video == null || audio == null || identical(video, audio)) return;
@@ -763,9 +792,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final now = DateTime.now();
     final ahead = video.value.position - position;
     final drift = ahead.abs();
-    if (force ||
-        (drift > _maxVideoDrift &&
-            now.difference(_lastVideoResync) > _videoResyncPause)) {
+    final maxDrift = _isAudioFromVideo ? _maxVideoDrift : _maxLooseVideoDrift;
+    if (drift > maxDrift &&
+        now.difference(_lastVideoResync) > _videoResyncPause) {
+      logger.d('[MusicVideo] picture ${ahead.inMilliseconds}ms off, seeking');
       _lastVideoResync = now;
       _setVideoSpeed(video, 1);
       unawaited(video.seekTo(position));
@@ -773,6 +803,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     }
     // Still landing from the last seek: its position means nothing yet.
     if (now.difference(_lastVideoResync) < _videoResyncPause) return;
+    if (!_isAudioFromVideo) return;
     if (drift > _videoCatchUpDrift) {
       _setVideoSpeed(
         video,
