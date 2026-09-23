@@ -193,4 +193,67 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
     vm.dispose();
   });
+
+  testWidgets('the inline video steps aside while the keyboard is up', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
+      playing: {'https://cdn/a', 'https://yt/muxed'},
+    );
+    final vm = MusicViewModel(
+      resolveStream: (_) async => 'https://cdn/a',
+      playback: _SilentPlayback(),
+      findVideo: (_) async => const MusicVideo(
+        videoId: 'v',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/muxed',
+      ),
+      findHdVideo: (_) async => null,
+      videoEnabled: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider.value(
+          value: vm,
+          child: const MusicScreen(),
+        ),
+      ),
+    );
+    await tester.runAsync(() async {
+      await vm.playTrack(
+        const MusicTrack(
+          id: 'a',
+          title: 'Track a',
+          artist: 'Artist',
+          artworkUrl: '',
+          streamUrl: 't',
+          duration: Duration(minutes: 3),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    expect(find.byType(MusicVideoView), findsOneWidget);
+
+    // A keyboard a third of the screen high.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+    await tester.pump();
+    expect(find.byType(MusicVideoView), findsNothing);
+    expect(vm.videoController, isNotNull, reason: 'still playing, unseen');
+
+    tester.view.resetViewInsets();
+    await tester.pump();
+    expect(find.byType(MusicVideoView), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 6));
+    vm.dispose();
+  });
 }

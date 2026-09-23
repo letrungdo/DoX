@@ -867,7 +867,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
-    final video = viewModel.videoController;
+    // Put away while the keyboard is up: the page shrinks to the space above
+    // it, and a video at its full height pushed the search results off the
+    // screen. It keeps playing, and comes back when the keyboard goes.
+    final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final video = keyboardUp ? null : viewModel.videoController;
     return NeuCard(
       margin: const EdgeInsets.all(12),
       child: Column(
