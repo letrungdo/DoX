@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
@@ -240,6 +241,29 @@ class _MusicFullscreenVideoPlayerState
     );
   }
 
+  /// Clear of the notch, the home indicator and the edges the system takes
+  /// its swipes from, wherever the phone has turned them.
+  ///
+  /// Not the plain safe-area padding: with the bars hidden it falls to
+  /// nothing, which left the buttons on the very strip where a touch goes to
+  /// the home indicator first — so a tap on them sometimes did nothing.
+  static EdgeInsets _phoneControlsPadding(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final gestures = MediaQuery.systemGestureInsetsOf(context);
+    double edge(double a, double b, double c) => max(a, max(b, c));
+    return EdgeInsets.only(
+          left: edge(padding.left, viewPadding.left, gestures.left),
+          right: edge(padding.right, viewPadding.right, gestures.right),
+          bottom: edge(
+            padding.bottom,
+            viewPadding.bottom,
+            max(gestures.bottom, Dimens.musicPhoneGestureClearance),
+          ),
+        ) +
+        Dimens.musicPhoneControlsPadding;
+  }
+
   /// The next track's artwork while its video is still being fetched, so a
   /// skip does not flash the track list up between two videos.
   Widget _buildWaiting(String artworkUrl) {
@@ -281,10 +305,7 @@ class _MusicFullscreenVideoPlayerState
       child: Padding(
         padding: isTv
             ? Dimens.tvOverscan.copyWith(top: Dimens.musicFullscreenControlsTop)
-            // Clear of the notch and the home indicator, wherever the phone
-            // has turned them.
-            : MediaQuery.paddingOf(context).copyWith(top: 0) +
-                  Dimens.musicPhoneControlsPadding,
+            : _phoneControlsPadding(context),
         child: FocusScope(
           node: _controlsScope,
           child: Column(

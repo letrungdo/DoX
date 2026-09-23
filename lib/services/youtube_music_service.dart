@@ -117,8 +117,13 @@ class YoutubeMusicService {
   /// The TV client with the challenge solver, for HD. Only made where a web
   /// view can run the solver, and only once HD is first asked for.
   YoutubeExplode? _hdExplode;
-  YoutubeExplode? get _hd => WebViewJsSolver.isSupported
-      ? _hdExplode ??= YoutubeExplode(jsSolver: WebViewJsSolver())
+  YoutubeExplode? get _hd =>
+      _solver == null ? null : _hdExplode ??= YoutubeExplode(jsSolver: _solver);
+
+  /// The challenge solver, shared by every client that needs one.
+  WebViewJsSolver? _solverInstance;
+  WebViewJsSolver? get _solver => WebViewJsSolver.isSupported
+      ? _solverInstance ??= WebViewJsSolver()
       : null;
 
   /// The pick made for each track, including "none", so a track played again
@@ -417,13 +422,17 @@ class YoutubeMusicService {
   /// What [stream] answers to a range from its middle: `206` for one that
   /// plays through, `403` for one that would stall after its first few
   /// hundred kilobytes.
-  Future<int> _middleStatus(
-    StreamInfo stream,
+  Future<int> _middleStatus(StreamInfo stream, Map<String, String> headers) =>
+      _statusFromMiddle(stream.url, stream.size.totalBytes, headers);
+
+  Future<int> _statusFromMiddle(
+    Uri url,
+    int totalBytes,
     Map<String, String> headers,
   ) async {
-    final middle = stream.size.totalBytes ~/ 2;
+    final middle = totalBytes ~/ 2;
     final response = await _probe.getUri<List<int>>(
-      stream.url,
+      url,
       options: Options(
         headers: {...headers, 'Range': 'bytes=$middle-${middle + 1023}'},
       ),

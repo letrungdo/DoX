@@ -239,6 +239,10 @@ class Dimens {
   /// so a landscape phone still has room for the list above it.
   static const musicVideoMaxHeight = 220.0;
 
+  /// The most of the screen's height the phone's inline video takes, so the
+  /// list and the player controls keep theirs on a sideways phone.
+  static const musicVideoMaxHeightShare = 0.25;
+
   /// How far the "original sound" badge sits from the video's corner.
   static const musicVideoBadgeInset = 8.0;
 
@@ -259,6 +263,10 @@ class Dimens {
   /// Around the phone's full-screen controls, inside the safe area; the top
   /// is where the fade starts.
   static const musicPhoneControlsPadding = EdgeInsets.fromLTRB(16, 48, 16, 12);
+
+  /// The least room kept under the phone's full-screen controls for the
+  /// home indicator's strip, which takes the first touch there.
+  static const musicPhoneGestureClearance = 24.0;
 
   /// Between the like, video and full-screen buttons under the television
   /// dashboard's transport row.

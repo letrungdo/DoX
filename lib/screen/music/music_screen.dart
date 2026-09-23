@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
@@ -895,9 +897,17 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
               child: Center(
+                // A share of the screen as well as a ceiling: on a phone
+                // turned sideways the ceiling alone pushed the player past
+                // the bottom edge, and the part of the video out there took
+                // no taps.
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxHeight: Dimens.musicVideoMaxHeight,
+                  constraints: BoxConstraints(
+                    maxHeight: min(
+                      Dimens.musicVideoMaxHeight,
+                      MediaQuery.sizeOf(context).height *
+                          Dimens.musicVideoMaxHeightShare,
+                    ),
                   ),
                   child: MusicVideoView(
                     controller: video,

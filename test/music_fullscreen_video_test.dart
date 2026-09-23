@@ -76,6 +76,22 @@ void main() {
     expect(immersiveMode.value, isFalse);
   });
 
+  testWidgets('the bottom row keeps off the system gesture strip', (
+    tester,
+  ) async {
+    tester.view.systemGestureInsets = const FakeViewPadding(bottom: 90);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(host(open: true, onExit: () {}));
+
+    // 90 physical pixels at the test's ratio of 3 is 30 logical.
+    final screen = tester.getSize(find.byType(MaterialApp));
+    final row = tester.getBottomLeft(find.byIcon(Icons.skip_next_rounded));
+    expect(screen.height - row.dy, greaterThanOrEqualTo(30));
+
+    await tester.pumpWidget(host(open: false, onExit: () {}));
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('a tap on the picture hides the controls and another brings '
       'them back', (tester) async {
     await tester.pumpWidget(host(open: true, onExit: () {}));

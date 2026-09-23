@@ -4,6 +4,7 @@ import 'package:do_x/constants/env.dart';
 import 'package:do_x/services/music_auth_service.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 /// Sends a write to the music API from inside a web view, as the site itself
@@ -119,6 +120,10 @@ class MusicWebSession {
     final loaded = Completer<InAppWebViewController?>();
     final page = HeadlessInAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_pageUrl)),
+      // One point square rather than the default: on iOS a headless web view
+      // is a real one, the size of the screen unless told otherwise, laid in
+      // the app's window where it could take the touches meant for the page.
+      initialSize: const Size(1, 1),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         thirdPartyCookiesEnabled: true,

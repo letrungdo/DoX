@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:youtube_explode_dart/src/reverse_engineering/challenges/ejs/base_ejs_solver.dart';
 import 'package:youtube_explode_dart/src/reverse_engineering/challenges/ejs/ejs.dart';
@@ -52,6 +53,10 @@ class WebViewJsSolver extends BaseEJSSolver {
       initialData: InAppWebViewInitialData(
         data: '<!doctype html><html></html>',
       ),
+      // One point square rather than the default: on iOS a headless web view
+      // is a real one, the size of the screen unless told otherwise, sitting
+      // in the app's window.
+      initialSize: const Size(1, 1),
       initialSettings: InAppWebViewSettings(javaScriptEnabled: true),
       onConsoleMessage: (_, message) =>
           logger.d('WebViewJsSolver page: ${message.message}'),
