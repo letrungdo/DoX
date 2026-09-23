@@ -430,8 +430,10 @@ class _MusicFullscreenVideoPlayerState
                       color: isLiked ? context.theme.colorScheme.error : null,
                       onTap: widget.onToggleLike,
                     ),
+                    // The video's state, as in the page's player: it is on
+                    // here, and the tap turns it off.
                     _ControlButton(
-                      icon: Icons.videocam_off_rounded,
+                      icon: Icons.videocam_rounded,
                       tooltip: l10n.musicVideoHide,
                       onTap: vm.toggleVideo,
                     ),
