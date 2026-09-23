@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/model/music_video.dart';
+import 'package:do_x/services/local_hls_server.dart';
 import 'package:do_x/services/music_video_matcher.dart';
 import 'package:do_x/services/youtube_js_solver.dart';
 import 'package:do_x/utils/device_type.dart';
@@ -72,31 +74,18 @@ class YoutubeMusicService {
   /// label's audio over a still cover, which is no picture at all.
   static const _videosFilter = 'EgWKAQIQAWoKEAkQBRAKEAMQBA==';
 
-  /// The `ANDROID_VR` client at the version yt-dlp asks as. The package's own
-  /// is older, and an old app version is one more reason for YouTube to turn
-  /// a request away.
-  static const _vrUserAgent =
-      'com.google.android.apps.youtube.vr.oculus/1.65.10 '
-      '(Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip';
-  static const _androidVr = YoutubeApiClient({
-    'context': {
-      'client': {
-        'clientName': 'ANDROID_VR',
-        'clientVersion': '1.65.10',
-        'deviceMake': 'Oculus',
-        'deviceModel': 'Quest 3',
-        'androidSdkVersion': 32,
-        'userAgent': _vrUserAgent,
-        'osName': 'Android',
-        'osVersion': '12L',
-        'hl': 'en',
-        'timeZone': 'UTC',
-        'utcOffsetMinutes': 0,
-      },
-    },
-    'contentCheckOk': true,
-    'racyCheckOk': true,
-  }, 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false');
+  /// The Apple Vision Pro client, as SmartTube asks as. Its adaptive links
+  /// come plain — no signature, no `n` challenge, no proof-of-origin token —
+  /// and play through to the end. `ANDROID_VR`, which also needs no token,
+  /// hands over links that YouTube now refuses past their first few hundred
+  /// kilobytes.
+  static const _visionOsUserAgent =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 '
+      '(KHTML, like Gecko) Version/26.0 Safari/605.1.15';
+
+  /// The visitor id `VISIONOS` is introduced as, fetched once and kept
+  /// until YouTube stops taking it.
+  Future<String>? _visitorData;
 
   /// How long a client YouTube has put its bot check in front of is left
   /// alone. Asking again straight away only costs every track the wait for
@@ -278,22 +267,21 @@ class YoutubeMusicService {
   /// than lines so a letterboxed video (1920×804) lands in the right tier.
   static int get _maxPixels => deviceType.isTv ? 1920 * 1080 : 1280 * 720;
 
-  /// [videoId]'s HD picture and sound, each only if it plays from the middle.
+  /// [videoId]'s HD picture and sound, each only if it plays through.
   ///
   /// Asked of the clients that hand adaptive streams over without a
   /// proof-of-origin token, one after the other until one of them plays:
   ///
-  /// - `ANDROID_VR`, which needs nothing else — no watch page, no challenge.
+  /// - `VISIONOS`, which needs only a visitor id — no watch page, no
+  ///   challenge. See [_visionOsHd].
   /// - `TV`, whose links carry signature and `n` challenges for
   ///   [WebViewJsSolver] to solve, and which needs the watch page for the
   ///   player script those challenges are written in.
-  ///
-  /// H.264 only: every phone and television decodes it in hardware, which
-  /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
   Future<_HdStreams> _hdStreams(String videoId) async {
-    final attempts = <(String, YoutubeExplode?, YoutubeApiClient, bool)>[
-      ('ANDROID_VR', _explode, _androidVr, false),
-      ('TV', _hd, YoutubeApiClient.tv, true),
+    final hd = _hd;
+    final attempts = <(String, Future<_FoundHd> Function()?)>[
+      ('VISIONOS', () => _visionOsHd(videoId)),
+      ('TV', hd == null ? null : () => _tvHd(hd, videoId)),
     ];
     final report = <String>[];
     void note(String line) {
@@ -301,8 +289,8 @@ class YoutubeMusicService {
       logger.d('[MusicVideo] $videoId $line');
     }
 
-    for (final (name, explode, client, watchPage) in attempts) {
-      if (explode == null) {
+    for (final (name, attempt) in attempts) {
+      if (attempt == null) {
         note('$name: skipped, no web view for its solver');
         continue;
       }
@@ -313,20 +301,13 @@ class YoutubeMusicService {
         continue;
       }
       try {
-        final manifest = await explode.videos.streams.getManifest(
-          videoId,
-          ytClients: [client],
-          requireWatchPage: watchPage,
-        );
-        final userAgent = client.payload['context']?['client']?['userAgent'];
-        final headers = {if (userAgent is String) 'User-Agent': userAgent};
-        final found = await _playableHd(manifest, headers);
+        final found = await attempt();
         note('$name: ${found.note}');
         if (found.video != null) {
           return _HdStreams(
             video: found.video,
             audio: found.audio,
-            headers: headers,
+            headers: found.headers,
             report: report.join('\n'),
           );
         }
@@ -338,10 +319,241 @@ class YoutubeMusicService {
             until: DateTime.now().add(_botCheckRest),
             reason: reason,
           );
+          // A visitor id YouTube has stopped taking is not asked with again.
+          _visitorData = null;
         }
       }
     }
     return _HdStreams(report: report.join('\n'));
+  }
+
+  /// Where AVPlayer plays: it opens YouTube's adaptive mp4 only after reading
+  /// through much of the file — half a minute and more for a 720p picture —
+  /// but an HLS playlist in a couple of seconds.
+  static bool get _prefersHls =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
+  /// HD from the `VISIONOS` client, asked directly rather than through the
+  /// package, which reads the answer's HLS playlist but does not hand its
+  /// link over.
+  ///
+  /// Where AVPlayer plays ([_prefersHls]) the picture is that playlist, cut
+  /// down by [trimHlsMaster] and served by [LocalHlsServer]; elsewhere it is
+  /// the adaptive mp4. The sound is the adaptive mp4 either way.
+  Future<_FoundHd> _visionOsHd(String videoId) async {
+    final visitorData = await _visitorId();
+    final headers = {'User-Agent': _visionOsUserAgent};
+    final response = await _probe.post<Map<String, dynamic>>(
+      _playerUrl,
+      data: _visionOsRequest(videoId, visitorData),
+      options: Options(
+        responseType: ResponseType.json,
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+          'Origin': 'https://www.youtube.com',
+          'X-Goog-Visitor-Id': visitorData,
+          'X-Youtube-Client-Name': '101',
+          'X-Youtube-Client-Version': _visionOsVersion,
+        },
+      ),
+    );
+    final json = response.data;
+    if (response.statusCode != 200 || json == null) {
+      throw Exception('player answered HTTP ${response.statusCode}');
+    }
+    final playability = json['playabilityStatus'];
+    final status = playability?['status'];
+    if (status != 'OK') {
+      throw Exception('$status Reason: ${playability?['reason'] ?? ''}');
+    }
+
+    final pictures = <_AdaptiveStream>[];
+    final sounds = <_AdaptiveStream>[];
+    final formats = json['streamingData']?['adaptiveFormats'];
+    for (final format in formats is List ? formats : const []) {
+      final stream = _AdaptiveStream.parse(format);
+      if (stream == null) continue;
+      if (stream.isH264) pictures.add(stream);
+      if (stream.isAac) sounds.add(stream);
+    }
+
+    final hlsUrl = json['streamingData']?['hlsManifestUrl'];
+    if (_prefersHls && hlsUrl is String) {
+      final master = await _probe.get<String>(
+        hlsUrl,
+        options: Options(responseType: ResponseType.plain, headers: headers),
+      );
+      final trimmed = master.statusCode == 200 && master.data != null
+          ? trimHlsMaster(master.data!, maxPixels: _maxPixels)
+          : null;
+      if (trimmed != null) {
+        final audio = await _playableSound(sounds, headers);
+        return (
+          video: await _hlsServer.serve(trimmed.playlist),
+          audio: audio,
+          headers: headers,
+          note: 'plays ${trimmed.size} over HLS',
+        );
+      }
+    }
+    return _playableHd(pictures, sounds, headers);
+  }
+
+  static const _playerUrl =
+      'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
+
+  static const _visionOsVersion = '1.02';
+
+  static Map<String, dynamic> _visionOsRequest(
+    String videoId,
+    String visitorData,
+  ) => {
+    'context': {
+      'client': {
+        'clientName': 'VISIONOS',
+        'clientVersion': _visionOsVersion,
+        'deviceMake': 'Apple',
+        'deviceModel': 'RealityDevice17,1',
+        'osName': 'visionOS',
+        'osVersion': '26.5.23O471',
+        'userAgent': _visionOsUserAgent,
+        'visitorData': visitorData,
+        'hl': 'en',
+      },
+    },
+    'videoId': videoId,
+    'contentCheckOk': true,
+    'racyCheckOk': true,
+  };
+
+  /// Serves the HLS playlists [trimHlsMaster] rewrites.
+  final _hlsServer = LocalHlsServer();
+
+  /// HD from the `TV` client, through the package and [WebViewJsSolver].
+  Future<_FoundHd> _tvHd(YoutubeExplode explode, String videoId) async {
+    final client = YoutubeApiClient.tv;
+    final manifest = await explode.videos.streams.getManifest(
+      videoId,
+      ytClients: [client],
+      requireWatchPage: true,
+    );
+    final userAgent = client.payload['context']?['client']?['userAgent'];
+    final headers = {if (userAgent is String) 'User-Agent': userAgent};
+    return _playableHd(
+      [
+        for (final s in manifest.videoOnly)
+          if (s.container == StreamContainer.mp4 &&
+              s.videoCodec.startsWith('avc1'))
+            _AdaptiveStream(
+              url: s.url,
+              bytes: s.size.totalBytes,
+              bitrate: s.bitrate.bitsPerSecond,
+              width: s.videoResolution.width,
+              height: s.videoResolution.height,
+            ),
+      ],
+      [
+        for (final s in manifest.audioOnly)
+          if (s.container == StreamContainer.mp4)
+            _AdaptiveStream(
+              url: s.url,
+              bytes: s.size.totalBytes,
+              bitrate: s.bitrate.bitsPerSecond,
+            ),
+      ],
+      headers,
+    );
+  }
+
+  /// [master] with only the H.264 variants no larger than [maxPixels], the
+  /// largest first, and the size of that one — or null when it has none.
+  ///
+  /// AVPlayer starts on the first variant listed and climbs from there only
+  /// slowly; YouTube lists its smallest first. VP9 goes too: AVPlayer would
+  /// pick it, and not every iPhone decodes it in hardware. Everything else —
+  /// the audio and subtitle groups the variants name — is kept as it is.
+  @visibleForTesting
+  static ({String playlist, String size})? trimHlsMaster(
+    String master, {
+    required int maxPixels,
+  }) {
+    final lines = const LineSplitter().convert(master);
+    final head = <String>[];
+    final variants = <({int pixels, int bandwidth, String info, String uri})>[];
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (!line.startsWith('#EXT-X-STREAM-INF:')) {
+        // A variant's link is taken with its tag below.
+        if (line.isNotEmpty && !line.startsWith('#')) continue;
+        if (line.isNotEmpty) head.add(line);
+        continue;
+      }
+      final uri = i + 1 < lines.length ? lines[i + 1] : '';
+      final codecs = _hlsAttribute(line, 'CODECS') ?? '';
+      final resolution = _hlsAttribute(line, 'RESOLUTION')?.split('x');
+      final width = int.tryParse(resolution?.first ?? '');
+      final height = int.tryParse(resolution?.last ?? '');
+      if (!codecs.startsWith('avc1') ||
+          width == null ||
+          height == null ||
+          width * height > maxPixels ||
+          uri.isEmpty ||
+          uri.startsWith('#')) {
+        continue;
+      }
+      variants.add((
+        pixels: width * height,
+        bandwidth: int.tryParse(_hlsAttribute(line, 'BANDWIDTH') ?? '') ?? 0,
+        info: line,
+        uri: uri,
+      ));
+    }
+    if (variants.isEmpty) return null;
+    variants.sort(
+      (a, b) => a.pixels != b.pixels
+          ? b.pixels.compareTo(a.pixels)
+          : b.bandwidth.compareTo(a.bandwidth),
+    );
+    return (
+      playlist: [
+        ...head,
+        for (final v in variants) ...[v.info, v.uri],
+      ].join('\n'),
+      size: _hlsAttribute(variants.first.info, 'RESOLUTION') ?? '',
+    );
+  }
+
+  /// The value of [name] in an HLS tag's attribute list, unquoted.
+  static String? _hlsAttribute(String tag, String name) => RegExp(
+    '[:,]$name=("[^"]*"|[^,]*)',
+  ).firstMatch(tag)?.group(1)?.replaceAll('"', '');
+
+  /// A visitor id from `sw.js_data`, the service worker's bootstrap data,
+  /// where the package and SmartTube both find one.
+  Future<String> _visitorId() =>
+      _visitorData ??= _fetchVisitorId().catchError((Object e) {
+        // Fetched afresh next time rather than failing every video after.
+        _visitorData = null;
+        throw e;
+      });
+
+  Future<String> _fetchVisitorId() async {
+    final response = await _dio.get<String>(
+      'https://www.youtube.com/sw.js_data',
+      options: Options(
+        responseType: ResponseType.plain,
+        headers: {'User-Agent': _visionOsUserAgent},
+      ),
+    );
+    var body = response.data ?? '';
+    if (body.startsWith(")]}'")) body = body.substring(4);
+    final value = (jsonDecode(body) as List)[0][2][0][0][13];
+    if (value is! String || value.isEmpty) {
+      throw const FormatException('sw.js_data carried no visitor id');
+    }
+    return value;
   }
 
   /// [e] in a line: its first, and the reason YouTube gave if it gave one —
@@ -370,60 +582,62 @@ class YoutubeMusicService {
     return reason.isEmpty ? lines.first : '${lines.first} $reason';
   }
 
-  /// The best H.264 picture and mp4 sound in [manifest] that play through,
-  /// with a line saying what was found and what was not.
-  Future<({String? video, String? audio, String note})> _playableHd(
-    StreamManifest manifest,
+  /// The largest of [pictures] no larger than [_maxPixels] and the best of
+  /// [sounds], each only if it plays from the middle, with a line saying
+  /// what was found and what was not.
+  ///
+  /// H.264 only: every phone and television decodes it in hardware, which
+  /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
+  Future<_FoundHd> _playableHd(
+    List<_AdaptiveStream> pictures,
+    List<_AdaptiveStream> sounds,
     Map<String, String> headers,
   ) async {
-    final pictures =
-        manifest.videoOnly
-            .where(
-              (s) =>
-                  s.container == StreamContainer.mp4 &&
-                  s.videoCodec.startsWith('avc1') &&
-                  _pixels(s) <= _maxPixels,
-            )
-            .toList()
-          ..sort((a, b) => _pixels(b).compareTo(_pixels(a)));
-    final sounds =
-        manifest.audioOnly
-            .where((s) => s.container == StreamContainer.mp4)
-            .toList()
-          ..sort((a, b) => b.bitrate.compareTo(a.bitrate));
-
-    final video = pictures.isEmpty ? null : pictures.first;
-    final audio = sounds.isEmpty ? null : sounds.first;
-    if (video == null) {
+    final fitting = pictures.where((s) => s.pixels <= _maxPixels).toList()
+      ..sort((a, b) => b.pixels.compareTo(a.pixels));
+    if (fitting.isEmpty) {
       return (
         video: null,
         audio: null,
-        note: 'no H.264 picture among ${manifest.videoOnly.length} streams',
+        headers: headers,
+        note: 'no H.264 picture among ${pictures.length} streams',
       );
     }
-    final (videoStatus, audioStatus) = await (
+    final video = fitting.first;
+    final (videoStatus, audio) = await (
       _middleStatus(video, headers),
-      audio == null ? Future.value(0) : _middleStatus(audio, headers),
+      _playableSound(sounds, headers),
     ).wait;
-    final size =
-        '${video.videoResolution.width}x${video.videoResolution.height}';
+    final size = '${video.width}x${video.height}';
     return (
       video: videoStatus == 206 ? video.url.toString() : null,
-      audio: audioStatus == 206 ? audio!.url.toString() : null,
+      audio: audio,
+      headers: headers,
       note: videoStatus == 206
           ? 'plays $size'
           : '$size refused mid-file (HTTP $videoStatus)',
     );
   }
 
-  static int _pixels(VideoOnlyStreamInfo s) =>
-      s.videoResolution.width * s.videoResolution.height;
+  /// The best of [sounds], if it plays from the middle.
+  Future<String?> _playableSound(
+    List<_AdaptiveStream> sounds,
+    Map<String, String> headers,
+  ) async {
+    if (sounds.isEmpty) return null;
+    final best = sounds.reduce((a, b) => b.bitrate > a.bitrate ? b : a);
+    return await _middleStatus(best, headers) == 206
+        ? best.url.toString()
+        : null;
+  }
 
   /// What [stream] answers to a range from its middle: `206` for one that
   /// plays through, `403` for one that would stall after its first few
   /// hundred kilobytes.
-  Future<int> _middleStatus(StreamInfo stream, Map<String, String> headers) =>
-      _statusFromMiddle(stream.url, stream.size.totalBytes, headers);
+  Future<int> _middleStatus(
+    _AdaptiveStream stream,
+    Map<String, String> headers,
+  ) => _statusFromMiddle(stream.url, stream.bytes, headers);
 
   Future<int> _statusFromMiddle(
     Uri url,
@@ -473,4 +687,54 @@ class _HdStreams {
   final String? audio;
   final Map<String, String> headers;
   final String report;
+}
+
+/// What one client's HD lookup came back with.
+typedef _FoundHd = ({
+  String? video,
+  String? audio,
+  Map<String, String> headers,
+  String note,
+});
+
+/// One adaptive stream — picture only or sound only — in an mp4.
+class _AdaptiveStream {
+  const _AdaptiveStream({
+    required this.url,
+    required this.bytes,
+    required this.bitrate,
+    this.width = 0,
+    this.height = 0,
+    this.mimeType = '',
+  });
+
+  /// An entry of the player answer's `adaptiveFormats`, or null for one
+  /// without a plain link.
+  static _AdaptiveStream? parse(dynamic format) {
+    if (format is! Map) return null;
+    final url = Uri.tryParse(format['url']?.toString() ?? '');
+    final bytes = int.tryParse(format['contentLength']?.toString() ?? '');
+    if (url == null || !url.hasScheme || bytes == null) return null;
+    return _AdaptiveStream(
+      url: url,
+      bytes: bytes,
+      bitrate: (format['bitrate'] as num?)?.toInt() ?? 0,
+      width: (format['width'] as num?)?.toInt() ?? 0,
+      height: (format['height'] as num?)?.toInt() ?? 0,
+      mimeType: format['mimeType']?.toString() ?? '',
+    );
+  }
+
+  final Uri url;
+  final int bytes;
+  final int bitrate;
+  final int width;
+  final int height;
+
+  /// `video/mp4; codecs="avc1.4d401f"` and the like.
+  final String mimeType;
+
+  int get pixels => width * height;
+  bool get isH264 => mimeType.startsWith('video/mp4; codecs="avc1');
+  bool get isAac => mimeType.startsWith('audio/mp4');
 }
