@@ -2670,4 +2670,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicVideoOfficialAudio => 'Âm thanh gốc từ MV';
+
+  @override
+  String get musicVideoFullscreen => 'Xem toàn màn hình';
+
+  @override
+  String get musicVideoBackToList => 'Danh sách bài hát';
 }

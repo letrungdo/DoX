@@ -69,6 +69,7 @@ void main() {
       resolveStream: (url) => (pending[url] = Completer<String>()).future,
       playback: _SilentPlayback(),
       findVideo: (_) async => null,
+      findHdVideo: (_) async => null,
       videoEnabled: true,
     );
   });
@@ -108,78 +109,123 @@ void main() {
   });
 
   group('with a YouTube video', () {
-    MusicViewModel withVideo(MusicVideo? video) => MusicViewModel(
+    MusicViewModel withVideo(
+      MusicVideo? video, {
+      bool enabled = true,
+      MusicVideo? hd,
+    }) => MusicViewModel(
       resolveStream: (url) async => 'https://cdn/a',
       playback: _SilentPlayback(),
       findVideo: (_) async => video,
-      videoEnabled: true,
+      findHdVideo: (_) async => hd,
+      videoEnabled: enabled,
     );
+
+    Future<void> play(WidgetTester tester, MusicViewModel model) async {
+      vm = model;
+      await pumpHost(tester);
+      await tester.runAsync(() async {
+        await vm.playTrack(_track('a'));
+        // The muted picture is attached after the sound has started.
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+    }
 
     setUp(() {
       platform = FakeVideoPlayerPlatform(
-        playing: {'https://cdn/a', 'https://yt/official', 'https://yt/fan'},
+        playing: {
+          'https://cdn/a',
+          'https://yt/muxed',
+          'https://yt/hd-audio',
+          'https://yt/hd-video',
+        },
       );
       VideoPlayerPlatform.instance = platform;
     });
 
-    testWidgets('an official video is played with its own sound', (
-      tester,
-    ) async {
-      vm = withVideo(
-        const MusicVideo(
-          videoId: 'omv',
-          streamUrl: 'https://yt/official',
-          duration: Duration(minutes: 3, seconds: 10),
-          carriesAudio: true,
+    testWidgets('an official video in HD plays its own sound under its '
+        'picture', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'omv',
+            duration: Duration(minutes: 3),
+            useAudio: true,
+            hdAudioUrl: 'https://yt/hd-audio',
+            hdVideoUrl: 'https://yt/hd-video',
+            muxedUrl: 'https://yt/muxed',
+          ),
         ),
       );
-      await pumpHost(tester);
-      await tester.runAsync(() => vm.playTrack(_track('a')));
 
-      expect(platform.opened, ['https://yt/official']);
+      expect(platform.opened, ['https://yt/hd-audio', 'https://yt/hd-video']);
+      expect(vm.isAudioFromVideo, isTrue);
+      expect(vm.videoController, isNot(same(vm.audioController)));
+      expect(vm.videoController!.value.volume, 0);
+      vm.dispose();
+    });
+
+    testWidgets('an official video with only the muxed stream is played '
+        'as one', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'omv',
+            duration: Duration(minutes: 3),
+            useAudio: true,
+            muxedUrl: 'https://yt/muxed',
+          ),
+        ),
+      );
+
+      expect(platform.opened, ['https://yt/muxed']);
       expect(vm.isAudioFromVideo, isTrue);
       expect(vm.videoController, same(vm.audioController));
-      expect(platform.sounding, hasLength(1));
       vm.dispose();
     });
 
     testWidgets('an official video that will not open falls back to the '
         'track', (tester) async {
-      vm = withVideo(
-        const MusicVideo(
-          videoId: 'omv',
-          streamUrl: 'https://yt/dead',
-          duration: Duration(minutes: 3),
-          carriesAudio: true,
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'omv',
+            duration: Duration(minutes: 3),
+            useAudio: true,
+            muxedUrl: 'https://yt/dead',
+          ),
         ),
       );
-      await pumpHost(tester);
-      await tester.runAsync(() => vm.playTrack(_track('a')));
 
-      expect(platform.opened, ['https://yt/dead', 'https://cdn/a']);
+      expect(platform.opened.take(2), ['https://yt/dead', 'https://cdn/a']);
       expect(vm.isAudioFromVideo, isFalse);
       expect(vm.isPlaying, isTrue);
       vm.dispose();
     });
 
-    testWidgets('any other video is laid, muted, over the track', (
-      tester,
-    ) async {
-      vm = withVideo(
-        const MusicVideo(
-          videoId: 'ugc',
-          streamUrl: 'https://yt/fan',
-          duration: Duration(minutes: 3, seconds: 2),
-          carriesAudio: false,
+    testWidgets('any other video is laid, muted, over the track — the '
+        '360p one when HD will not open', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'ugc',
+            duration: Duration(minutes: 5),
+            useAudio: false,
+            hdVideoUrl: 'https://yt/dead',
+            muxedUrl: 'https://yt/muxed',
+          ),
         ),
       );
-      await pumpHost(tester);
-      await tester.runAsync(() async {
-        await vm.playTrack(_track('a'));
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      });
 
-      expect(platform.opened, ['https://cdn/a', 'https://yt/fan']);
+      expect(platform.opened, [
+        'https://cdn/a',
+        'https://yt/dead',
+        'https://yt/muxed',
+      ]);
       expect(vm.isAudioFromVideo, isFalse);
       final video = vm.videoController;
       expect(video, isNotNull);
@@ -188,46 +234,76 @@ void main() {
       vm.dispose();
     });
 
-    testWidgets('a muted video much longer than the track is not shown', (
+    testWidgets('the 360p picture goes up first and HD replaces it', (
       tester,
     ) async {
-      vm = withVideo(
-        const MusicVideo(
-          videoId: 'ugc',
-          streamUrl: 'https://yt/fan',
-          duration: Duration(minutes: 4),
-          carriesAudio: false,
+      const basic = MusicVideo(
+        videoId: 'ugc',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/muxed',
+      );
+      await play(
+        tester,
+        withVideo(basic, hd: basic.withHd(videoUrl: 'https://yt/hd-video')),
+      );
+
+      expect(platform.opened, [
+        'https://cdn/a',
+        'https://yt/muxed',
+        'https://yt/hd-video',
+      ]);
+      expect(vm.videoController?.dataSource, 'https://yt/hd-video');
+      expect(vm.videoController!.value.volume, 0);
+      vm.dispose();
+    });
+
+    testWidgets('a video shorter than the track is not shown', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'ugc',
+            duration: Duration(minutes: 2, seconds: 30),
+            useAudio: false,
+            muxedUrl: 'https://yt/muxed',
+          ),
         ),
       );
-      await pumpHost(tester);
-      await tester.runAsync(() async {
-        await vm.playTrack(_track('a'));
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      });
 
       expect(platform.opened, ['https://cdn/a']);
       expect(vm.videoController, isNull);
       vm.dispose();
     });
 
-    testWidgets('with the video turned off nothing is looked up', (
+    testWidgets('with the video turned off it is still found, but not '
+        'played', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'omv',
+            duration: Duration(minutes: 3),
+            useAudio: true,
+            muxedUrl: 'https://yt/muxed',
+          ),
+          enabled: false,
+        ),
+      );
+
+      expect(platform.opened, ['https://cdn/a']);
+      expect(vm.hasVideo, isTrue);
+      expect(vm.videoController, isNull);
+      vm.dispose();
+    });
+
+    testWidgets('a track without a video offers no video switch', (
       tester,
     ) async {
-      var lookups = 0;
-      vm = MusicViewModel(
-        resolveStream: (url) async => 'https://cdn/a',
-        playback: _SilentPlayback(),
-        findVideo: (_) async {
-          lookups++;
-          return null;
-        },
-        videoEnabled: false,
-      );
-      await pumpHost(tester);
-      await tester.runAsync(() => vm.playTrack(_track('a')));
+      await play(tester, withVideo(null));
 
-      expect(lookups, 0);
-      expect(platform.opened, ['https://cdn/a']);
+      expect(vm.hasVideo, isFalse);
+      expect(vm.isFindingVideo, isFalse);
       vm.dispose();
     });
   });

@@ -4818,6 +4818,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Original sound from the video'**
   String get musicVideoOfficialAudio;
+
+  /// No description provided for @musicVideoFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get musicVideoFullscreen;
+
+  /// No description provided for @musicVideoBackToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Track list'**
+  String get musicVideoBackToList;
 }
 
 class _AppLocalizationsDelegate

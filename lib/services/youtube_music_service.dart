@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/model/music_video.dart';
 import 'package:do_x/services/music_video_matcher.dart';
+import 'package:do_x/services/youtube_js_solver.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
@@ -14,15 +16,33 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 /// results are the artist's official video, and that is what decides whether
 /// the video's sound can stand in for the track's.
 ///
-/// The stream is the muxed one. The adaptive streams go up to 1080p, but
-/// without a proof-of-origin token YouTube serves only their first few
-/// hundred kilobytes and answers `403` to every range after that — a player
-/// fetches a video in ranges, so it stalls within seconds. The muxed stream
-/// stops at 360p and plays to the end.
+/// Two sets of streams are asked for at once:
+///
+/// - **HD** — the adaptive streams, picture and sound apart, up to 1080p. The
+///   app's default client gets them too, but without a proof-of-origin token
+///   YouTube serves only their first few hundred kilobytes and answers `403`
+///   to every range after that, so a player stalls within seconds. The TV
+///   client needs no such token; what it wants instead is its signature and
+///   `n` challenges solved, which [WebViewJsSolver] does. Every HD stream is
+///   also tried from the middle before it is handed over, because a link
+///   that only opens is not yet one that plays.
+/// - **Muxed** — picture and sound together at 360p, which plays to the end
+///   with no challenge at all. It is what is left when HD is not.
 class YoutubeMusicService {
   YoutubeMusicService({Dio? dio, YoutubeExplode? explode})
     : _dio = dio ?? Dio(_options),
       _explode = explode ?? YoutubeExplode();
+
+  /// For trying a stream out: none of the search's headers, and any status
+  /// is an answer rather than an error.
+  final _probe = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 8),
+      responseType: ResponseType.bytes,
+      validateStatus: (_) => true,
+    ),
+  );
 
   static final _options = BaseOptions(
     connectTimeout: const Duration(seconds: 10),
@@ -51,17 +71,30 @@ class YoutubeMusicService {
   /// label's audio over a still cover, which is no picture at all.
   static const _videosFilter = 'EgWKAQIQAWoKEAkQBRAKEAMQBA==';
 
+  /// How long HD is waited for before the video carries on without it.
+  static const _hdWait = Duration(seconds: 15);
+
   final Dio _dio;
+
+  /// The default client, for the muxed stream.
   final YoutubeExplode _explode;
+
+  /// The TV client with the challenge solver, for HD. Only made where a web
+  /// view can run the solver, and only once HD is first asked for.
+  YoutubeExplode? _hdExplode;
+  YoutubeExplode? get _hd => WebViewJsSolver.isSupported
+      ? _hdExplode ??= YoutubeExplode(jsSolver: WebViewJsSolver())
+      : null;
 
   /// The pick made for each track, including "none", so a track played again
   /// is not searched for again. Only an answer is kept; a search that failed
   /// is tried afresh next time.
   final _picks = <String, MusicVideoPick?>{};
 
-  /// The video for [track], or null when there is none worth showing or it
-  /// could not be reached. Never throws: a missing video leaves the track
-  /// playing as it always has.
+  /// The video for [track] with its 360p stream, or null when there is no
+  /// video worth showing. Quick, so the picture can come up early; the HD
+  /// streams follow from [withHd]. Never throws: a missing video leaves the
+  /// track playing as it always has.
   Future<MusicVideo?> findVideo(MusicTrack track) async {
     try {
       final MusicVideoPick? pick;
@@ -74,16 +107,33 @@ class YoutubeMusicService {
       }
       if (pick == null) return null;
 
-      final streamUrl = await _muxedStream(pick.video.id);
-      if (streamUrl == null) return null;
+      final id = pick.video.id;
+      final muxed = await _muxedStream(id).catchError((Object e) {
+        logger.d('YoutubeMusicService no muxed stream for $id: $e');
+        return null;
+      });
       return MusicVideo(
-        videoId: pick.video.id,
-        streamUrl: streamUrl,
+        videoId: id,
         duration: pick.video.duration,
-        carriesAudio: pick.useAudio,
+        useAudio: pick.useAudio,
+        muxedUrl: muxed,
       );
     } on Object catch (e) {
       logger.d('YoutubeMusicService no video for ${track.id}: $e');
+      return null;
+    }
+  }
+
+  /// [video] with its HD streams, or null when there are none that play.
+  /// Bounded in time: the first one also fetches the solver and the player
+  /// script. Never throws.
+  Future<MusicVideo?> withHd(MusicVideo video) async {
+    try {
+      final hd = await _hdStreams(video.videoId).timeout(_hdWait);
+      if (hd == null || (hd.video == null && hd.audio == null)) return null;
+      return video.withHd(videoUrl: hd.video, audioUrl: hd.audio);
+    } on Object catch (e) {
+      logger.d('YoutubeMusicService no HD streams for ${video.videoId}: $e');
       return null;
     }
   }
@@ -169,6 +219,65 @@ class YoutubeMusicService {
       minutes: int.parse(match.group(2)!),
       seconds: int.parse(match.group(3)!),
     );
+  }
+
+  /// The largest picture a screen of this kind is given, in pixels: 1080p on
+  /// a television, 720p on anything held in a hand. Counted in pixels rather
+  /// than lines so a letterboxed video (1920×804) lands in the right tier.
+  static int get _maxPixels => deviceType.isTv ? 1920 * 1080 : 1280 * 720;
+
+  /// [videoId]'s HD picture and sound, each only if it plays from the middle.
+  ///
+  /// H.264 only: every phone and television decodes it in hardware, which
+  /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
+  Future<({String? video, String? audio})?> _hdStreams(String videoId) async {
+    final explode = _hd;
+    if (explode == null) return null;
+    final manifest = await explode.videos.streams.getManifest(
+      videoId,
+      ytClients: [YoutubeApiClient.tv],
+    );
+
+    final pictures =
+        manifest.videoOnly
+            .where(
+              (s) =>
+                  s.container == StreamContainer.mp4 &&
+                  s.videoCodec.startsWith('avc1') &&
+                  _pixels(s) <= _maxPixels,
+            )
+            .toList()
+          ..sort((a, b) => _pixels(b).compareTo(_pixels(a)));
+    final sounds =
+        manifest.audioOnly
+            .where((s) => s.container == StreamContainer.mp4)
+            .toList()
+          ..sort((a, b) => b.bitrate.compareTo(a.bitrate));
+
+    final video = pictures.isEmpty ? null : pictures.first;
+    final audio = sounds.isEmpty ? null : sounds.first;
+    final (videoPlays, audioPlays) = await (
+      video == null ? Future.value(false) : _playsThrough(video),
+      audio == null ? Future.value(false) : _playsThrough(audio),
+    ).wait;
+    return (
+      video: videoPlays ? video!.url.toString() : null,
+      audio: audioPlays ? audio!.url.toString() : null,
+    );
+  }
+
+  static int _pixels(VideoOnlyStreamInfo s) =>
+      s.videoResolution.width * s.videoResolution.height;
+
+  /// Whether [stream] answers a range from its middle — the request a stream
+  /// that would stall after its first few hundred kilobytes turns down.
+  Future<bool> _playsThrough(StreamInfo stream) async {
+    final middle = stream.size.totalBytes ~/ 2;
+    final response = await _probe.getUri<List<int>>(
+      stream.url,
+      options: Options(headers: {'Range': 'bytes=$middle-${middle + 1023}'}),
+    );
+    return response.statusCode == 206;
   }
 
   /// A link to [videoId]'s muxed mp4 — see the class notes for why that one.

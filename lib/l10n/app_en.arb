@@ -1503,5 +1503,7 @@
   "musicChallengeTvHint": "Move the pointer with the arrow keys. Press OK to grab the slider, drag it with the arrows, then press OK again to let go.",
   "musicVideoShow": "Show video",
   "musicVideoHide": "Hide video",
-  "musicVideoOfficialAudio": "Original sound from the video"
+  "musicVideoOfficialAudio": "Original sound from the video",
+  "musicVideoFullscreen": "Full screen",
+  "musicVideoBackToList": "Track list"
 }

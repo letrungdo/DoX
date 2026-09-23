@@ -12,35 +12,39 @@ class MusicVideoPick {
 
 /// Decides which YouTube video, if any, belongs to a Music track.
 ///
-/// A wrong picture is worse than none, so every rule here errs on the side of
-/// turning a video down:
+/// A picture is laid over the track, so almost any video of the song will do
+/// — a remix is as happy under the original's music video as under its own.
+/// Two things still turn a video down:
 ///
-/// - The version has to be the same one. A remix on Music gets the remix's
-///   video or nothing, never the original's — and the reverse, which matters
-///   more: YouTube is full of karaoke, cover and "sped up" uploads of every
-///   hit, and those are exactly what the track's own sound is there to avoid.
 /// - Most of the track title's words have to be in the video's title or
-///   channel.
-/// - The lengths have to agree. A muted video is laid over the track's sound
-///   from the same starting point, so it only lines up when the two last
-///   about as long; an official video brings its own sound, so it is let off
-///   with a looser bound — enough for a few seconds of logo, not for the
-///   ten-minute short film some music videos are. Not for a remix or a cover,
-///   though: there the name is shared by every remixer's take, and only the
-///   same length says it is the same one.
+///   channel, or it is a video of some other song.
+/// - It must not be shorter than the track, or the picture runs out before
+///   the music does.
+///
+/// Swapping the track's *sound* for the video's is another matter: that is
+/// only done for the artist's official video of the very same recording —
+/// the same version words (a remix stays the remix the user chose) and about
+/// the same length, allowing for a few seconds of logo but not for the
+/// ten-minute short film some music videos are. For a remix or a cover the
+/// name is shared by every remixer's take, so only the same length will do.
 abstract final class MusicVideoMatcher {
-  /// How far apart a muted video and the track may run in length.
-  static const syncTolerance = Duration(seconds: 4);
+  /// How much shorter than the track a video may be: the last seconds of a
+  /// song are often a fade nobody is watching.
+  static const lengthSlack = Duration(seconds: 2);
 
-  /// How far apart an official video, played with its own sound, and the
-  /// track may run in length.
+  /// How far apart an official video and the track may run in length for
+  /// the video's sound to be played instead.
   static const officialTolerance = Duration(seconds: 30);
+
+  /// The same, for a remix or a cover.
+  static const versionTolerance = Duration(seconds: 4);
 
   /// The share of the track title's words the video has to carry.
   static const _minCoverage = 0.6;
 
   /// Words that name a version of a song rather than the song. Either both
-  /// titles have the same ones or they are two different recordings.
+  /// titles have the same ones or they are two different recordings — which
+  /// only matters for the sound.
   static const _versionWords = {
     'remix',
     'cover',
@@ -104,7 +108,7 @@ abstract final class MusicVideoMatcher {
   }
 
   static MusicVideoPick? pick(MusicTrack track, List<YoutubeVideo> videos) {
-    // Without a length there is nothing to line a picture up against.
+    // Without a length there is nothing to hold a video's length up against.
     if (track.duration <= Duration.zero) return null;
 
     final wanted = tokens(track.title);
@@ -113,31 +117,35 @@ abstract final class MusicVideoMatcher {
     if (wantedWords.isEmpty) return null;
     final audioTolerance = wantedVersions.isEmpty
         ? officialTolerance
-        : syncTolerance;
+        : versionTolerance;
 
     MusicVideoPick? best;
     var bestScore = double.negativeInfinity;
     for (final video in videos) {
       if (video.id.isEmpty || video.duration <= Duration.zero) continue;
 
-      final versions = tokens(video.title).intersection(_versionWords);
-      if (!const SetEquality<String>().equals(versions, wantedVersions)) {
-        continue;
-      }
-
       final offered = tokens('${video.title} ${video.author}');
       final coverage =
           wantedWords.where(offered.contains).length / wantedWords.length;
       if (coverage < _minCoverage) continue;
 
-      final gap = (video.duration - track.duration).abs();
-      final useAudio = video.isOfficial && gap <= audioTolerance;
-      if (!useAudio && gap > syncTolerance) continue;
+      final sameVersion = const SetEquality<String>().equals(
+        tokens(video.title).intersection(_versionWords),
+        wantedVersions,
+      );
+      final gap = video.duration - track.duration;
+      final useAudio =
+          video.isOfficial && sameVersion && gap.abs() <= audioTolerance;
+      if (!useAudio && gap < -lengthSlack) continue;
 
-      // The words decide first; then an official video over a fan's, then
-      // the closer length.
+      // The official sound first; then the same version, an official
+      // picture, the words, and the closer length.
       final score =
-          coverage + (useAudio ? 0.5 : 0) - gap.inMilliseconds / 100000;
+          (useAudio ? 2 : 0) +
+          (sameVersion ? 0.5 : 0) +
+          (video.isOfficial ? 0.3 : 0) +
+          coverage -
+          gap.abs().inSeconds / 10000;
       if (score > bestScore) {
         bestScore = score;
         best = MusicVideoPick(video: video, useAudio: useAudio);

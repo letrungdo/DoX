@@ -1447,5 +1447,7 @@
   "musicChallengeTvHint": "Dùng phím mũi tên để di chuyển con trỏ. Nhấn OK để giữ thanh trượt, kéo bằng phím mũi tên rồi nhấn OK lần nữa để thả.",
   "musicVideoShow": "Hiện video",
   "musicVideoHide": "Ẩn video",
-  "musicVideoOfficialAudio": "Âm thanh gốc từ MV"
+  "musicVideoOfficialAudio": "Âm thanh gốc từ MV",
+  "musicVideoFullscreen": "Xem toàn màn hình",
+  "musicVideoBackToList": "Danh sách bài hát"
 }

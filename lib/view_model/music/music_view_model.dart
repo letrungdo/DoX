@@ -30,10 +30,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     Future<String> Function(String transcodingUrl)? resolveStream,
     MusicPlaybackSession? playback,
     Future<MusicVideo?> Function(MusicTrack track)? findVideo,
+    Future<MusicVideo?> Function(MusicVideo video)? findHdVideo,
     bool? videoEnabled,
   }) : _resolveStream = resolveStream ?? musicService.resolvePlayableStream,
        _playback = playback ?? musicPlayback,
        _findVideo = findVideo ?? youtubeMusicService.findVideo,
+       _findHdVideo = findHdVideo ?? youtubeMusicService.withHd,
        _isVideoEnabled = videoEnabled ?? storageService.getMusicVideoEnabled();
 
   /// Turns a track's transcoding link into one a player can open. Replaceable
@@ -47,9 +49,14 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// can hand one over without the network.
   final Future<MusicVideo?> Function(MusicTrack track) _findVideo;
 
+  /// Adds the HD streams to a video found by [_findVideo], which takes
+  /// longer. Replaceable for the same reason.
+  final Future<MusicVideo?> Function(MusicVideo video) _findHdVideo;
+
   /// How long a track's start waits to learn whether it has an official
-  /// video, whose sound would be played instead. A video that turns up later
-  /// is still shown, muted over the track's own sound.
+  /// video, whose sound would be played instead — in HD if that is in by
+  /// then. A video that turns up later is still shown, muted over the
+  /// track's own sound.
   static const _officialVideoWait = Duration(seconds: 4);
 
   /// How far a muted video may wander from the sound before it is pulled
@@ -109,7 +116,27 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// The track is being played from its official video, sound and all.
   bool get isAudioFromVideo => _isAudioFromVideo;
 
+  /// The video found for the current track, whether or not it is shown.
+  MusicVideo? _foundVideo;
+
+  /// The current track has a video to show. Looked up whether the video is
+  /// on or off, so the switch is offered only for a track that has one.
+  bool get hasVideo => _foundVideo != null;
+
+  bool _isFindingVideo = false;
+
+  /// The current track's video is still being looked for.
+  bool get isFindingVideo => _isFindingVideo;
+
   DateTime _lastVideoResync = DateTime(0);
+
+  /// The stream [_videoController] shows, so the HD picture replaces the
+  /// 360p one and never the other way round.
+  String? _pictureUrl;
+
+  /// Bumped by every change of picture: an older one still opening finds it
+  /// moved on and lets its player go.
+  int _pictureRequest = 0;
 
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
@@ -327,33 +354,52 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       loading: true,
     );
 
-    // Both asked for at once: the video is a search and a manifest away, and
-    // the track's own stream should not queue up behind it.
+    // All asked for at once: the video is a search and a manifest away, and
+    // the track's own stream should not queue up behind it. The 360p picture
+    // is quick; HD takes longer and replaces it when it comes.
     final streamFuture = _resolveStream(
       track.streamUrl,
     ).catchError((Object _) => '');
-    final videoFuture = _isVideoEnabled
-        ? _findVideoSafely(track)
-        : Future<MusicVideo?>.value();
+    final videoFuture = _findVideoSafely(track);
+    final hdFuture = videoFuture.then(
+      (video) => video == null ? null : _findHdSafely(video),
+    );
+    _foundVideo = null;
+    _isFindingVideo = true;
+    void found(MusicVideo? video, {required bool last}) {
+      if (!_isCurrentPlay(generation)) return;
+      if (video != null && video.isPlayable) _foundVideo = video;
+      if (last) _isFindingVideo = false;
+      notifyListenersSafe();
+    }
+
+    unawaited(videoFuture.then((video) => found(video, last: false)));
+    unawaited(hdFuture.then((video) => found(video, last: true)));
 
     VideoPlayerController? controller;
     try {
       // An official video brings the sound with it, so where the sound comes
       // from has to be settled before anything plays.
-      final early = await videoFuture.timeout(
-        _officialVideoWait,
-        onTimeout: () => null,
-      );
+      final early = _isVideoEnabled
+          ? await _videoWithin(videoFuture, hdFuture, _officialVideoWait)
+          : null;
       if (!_isCurrentPlay(generation)) return;
       MusicVideo? official;
+      // Set when the sound is the muxed stream, which is its own picture.
+      String? soundPicture;
       if (early != null && early.carriesAudio) {
-        try {
-          controller = await _openPlayer(early.streamUrl, background: true);
-          official = early;
-        } on Object catch (e) {
-          // Still the track's own sound to fall back on.
-          logger.d('MusicViewModel official video would not open: $e');
+        // The HD sound first, with the HD picture laid over it; then the
+        // muxed stream, which is sound and picture in one.
+        final hdAudio = early.hdAudioUrl;
+        if (hdAudio != null) {
+          controller = await _tryOpen(hdAudio, background: true);
         }
+        final muxed = early.muxedUrl;
+        if (controller == null && muxed != null) {
+          controller = await _tryOpen(muxed, background: true);
+          if (controller != null) soundPicture = muxed;
+        }
+        if (controller != null) official = early;
         if (!_isCurrentPlay(generation)) {
           await controller?.dispose();
           return;
@@ -374,9 +420,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       }
 
       _audioController = controller;
-      if (official != null) {
+      _isAudioFromVideo = official != null;
+      if (soundPicture != null) {
         _videoController = controller;
-        _isAudioFromVideo = true;
+        _pictureUrl = soundPicture;
       }
       _duration = controller.value.duration;
       await controller.play();
@@ -387,7 +434,13 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
       controller.addListener(_videoPlayerListener);
       _startPositionTimer();
-      if (official == null) unawaited(_attachVideo(videoFuture, generation));
+      unawaited(
+        _attachPictures(
+          official != null ? Future.value(official) : videoFuture,
+          hdFuture,
+          generation,
+        ),
+      );
     } catch (e, st) {
       if (!_isCurrentPlay(generation)) {
         // Superseded while it failed: the player it half opened is nobody's.
@@ -406,6 +459,23 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     notifyListenersSafe();
   }
 
+  /// The best video known by the time [wait] is up: the HD one if it is in,
+  /// otherwise the 360p one if that is.
+  Future<MusicVideo?> _videoWithin(
+    Future<MusicVideo?> basic,
+    Future<MusicVideo?> hd,
+    Duration wait,
+  ) async {
+    MusicVideo? basicSoFar;
+    unawaited(basic.then((video) => basicSoFar = video));
+    final deadline = Future<MusicVideo?>.delayed(wait);
+    final best = await Future.any([hd, deadline]);
+    if (best != null) return best;
+    // HD came back empty before the deadline, or not at all: the 360p one
+    // may still arrive in the time left.
+    return basicSoFar ?? await Future.any([basic, deadline]);
+  }
+
   /// Stops and lets go of the current players. Taken off the fields before
   /// they are waited on: a tap that lands during the wait must not find them
   /// still here and stop them a second time.
@@ -414,6 +484,8 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final video = _videoController;
     _audioController = null;
     _videoController = null;
+    _pictureUrl = null;
+    _pictureRequest++;
     _isAudioFromVideo = false;
     if (audio != null) {
       audio.removeListener(_videoPlayerListener);
@@ -453,43 +525,84 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   Future<MusicVideo?> _findVideoSafely(MusicTrack track) =>
       _findVideo(track).catchError((Object _) => null);
 
-  /// Lays the video [lookup] finds, muted, over the sound already playing.
+  Future<MusicVideo?> _findHdSafely(MusicVideo video) =>
+      _findHdVideo(video).catchError((Object _) => null);
+
+  /// [_openPlayer], with a stream that will not open answered by null.
+  Future<VideoPlayerController?> _tryOpen(
+    String url, {
+    required bool background,
+  }) async {
+    try {
+      return await _openPlayer(url, background: background);
+    } on Object catch (e) {
+      logger.d('MusicViewModel stream would not open: $e');
+      return null;
+    }
+  }
+
+  /// Puts the picture up as soon as there is one, and swaps in the HD one
+  /// when that arrives.
+  Future<void> _attachPictures(
+    Future<MusicVideo?> basic,
+    Future<MusicVideo?> hd,
+    int generation,
+  ) async {
+    final first = await basic;
+    if (first != null) await _showPicture(first, generation);
+    final better = await hd;
+    if (better != null) await _showPicture(better, generation);
+  }
+
+  /// Lays [video]'s best picture, muted, over the sound already playing —
+  /// the HD one if it opens, the 360p one if not — unless what is on screen
+  /// is already as good.
   ///
-  /// Only one that lasts as long as the sound does: the two start together,
-  /// so a video with a longer intro would be out of step for the whole song.
-  Future<void> _attachVideo(Future<MusicVideo?> lookup, int generation) async {
-    final video = await lookup;
-    if (video == null || !_canAttachVideo(generation)) return;
+  /// Not one shorter than the sound, or the picture would run out before the
+  /// music does. The official video the sound itself comes from passes by
+  /// construction.
+  Future<void> _showPicture(MusicVideo video, int generation) async {
+    if (!_canShowPicture(generation)) return;
     // The stream's own length where it gave one; the listing's otherwise.
     final length = _duration > Duration.zero
         ? _duration
         : _currentTrack?.duration ?? Duration.zero;
-    if ((video.duration - length).abs() > MusicVideoMatcher.syncTolerance) {
+    if (!_isAudioFromVideo &&
+        video.duration + MusicVideoMatcher.lengthSlack < length) {
       return;
     }
 
-    final VideoPlayerController follower;
-    try {
-      follower = await _openPlayer(video.streamUrl, background: false);
-    } on Object catch (e) {
-      logger.d('MusicViewModel video would not open: $e');
+    final shown = _pictureUrl;
+    final urls = video.pictureUrls;
+    // Only better than what is up: everything before it in the list.
+    final candidates = shown == null || !urls.contains(shown)
+        ? urls
+        : urls.sublist(0, urls.indexOf(shown));
+    if (candidates.isEmpty) return;
+
+    final request = ++_pictureRequest;
+    for (final url in candidates) {
+      final follower = await _tryOpen(url, background: false);
+      if (follower == null) continue;
+      if (!_canShowPicture(generation) || request != _pictureRequest) {
+        await follower.dispose();
+        return;
+      }
+      await follower.setVolume(0);
+      final old = _videoController;
+      _videoController = follower;
+      _pictureUrl = url;
+      if (old != null && !identical(old, _audioController)) {
+        unawaited(old.dispose());
+      }
+      _syncVideo(force: true);
+      notifyListenersSafe();
       return;
     }
-    if (!_canAttachVideo(generation)) {
-      await follower.dispose();
-      return;
-    }
-    await follower.setVolume(0);
-    _videoController = follower;
-    _syncVideo(force: true);
-    notifyListenersSafe();
   }
 
-  bool _canAttachVideo(int generation) =>
-      _isCurrentPlay(generation) &&
-      _isVideoEnabled &&
-      _audioController != null &&
-      _videoController == null;
+  bool _canShowPicture(int generation) =>
+      _isCurrentPlay(generation) && _isVideoEnabled && _audioController != null;
 
   /// Keeps a muted video with the sound: playing when it plays, paused when
   /// it pauses, and pulled back to it when the two have drifted apart.
@@ -526,20 +639,22 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Shows or hides the video. A hidden muted video is let go of — it would
   /// go on costing data for a picture nobody sees — while one that carries
   /// the sound keeps playing, just out of sight. Turned back on mid-track,
-  /// the video is looked up again and laid over the sound already playing.
+  /// the video already found is laid over the sound playing.
   void toggleVideo() {
     _isVideoEnabled = !_isVideoEnabled;
     unawaited(storageService.setMusicVideoEnabled(_isVideoEnabled));
     final video = _videoController;
     if (!_isVideoEnabled) {
+      _pictureRequest++;
       if (video != null && !identical(video, _audioController)) {
         _videoController = null;
+        _pictureUrl = null;
         unawaited(video.dispose());
       }
     } else {
-      final track = _currentTrack;
-      if (track != null && _audioController != null && video == null) {
-        unawaited(_attachVideo(_findVideoSafely(track), _playGeneration));
+      final found = _foundVideo;
+      if (found != null && _audioController != null) {
+        unawaited(_showPicture(found, _playGeneration));
       }
     }
     notifyListenersSafe();

@@ -20,21 +20,51 @@ class YoutubeVideo {
   final bool isOfficial;
 }
 
-/// The picture found for a track, ready for the player.
+/// The video found for a track, with the streams the player can open.
 class MusicVideo {
   const MusicVideo({
     required this.videoId,
-    required this.streamUrl,
     required this.duration,
-    required this.carriesAudio,
+    required this.useAudio,
+    this.hdVideoUrl,
+    this.hdAudioUrl,
+    this.muxedUrl,
   });
 
   final String videoId;
-  final String streamUrl;
   final Duration duration;
 
-  /// The song's official video: its own sound is played instead of the
-  /// track's, which also keeps the picture in step with it by construction.
-  /// Otherwise the video is shown muted over the track's sound.
-  final bool carriesAudio;
+  /// The song's own official video, the same recording as the track: its
+  /// sound is played instead of the track's, which also keeps the picture in
+  /// step with it. Otherwise the video is shown muted over the track.
+  final bool useAudio;
+
+  /// Picture only, up to 1080p. Absent when YouTube would not hand one over
+  /// that plays to the end.
+  final String? hdVideoUrl;
+
+  /// Sound only, at the video's best quality, to go under [hdVideoUrl].
+  final String? hdAudioUrl;
+
+  /// Picture and sound in one, at 360p: the stream that always plays.
+  final String? muxedUrl;
+
+  /// This video with its HD streams added.
+  MusicVideo withHd({String? videoUrl, String? audioUrl}) => MusicVideo(
+    videoId: videoId,
+    duration: duration,
+    useAudio: useAudio,
+    hdVideoUrl: videoUrl,
+    hdAudioUrl: audioUrl,
+    muxedUrl: muxedUrl,
+  );
+
+  /// There is a picture to show.
+  bool get isPlayable => pictureUrls.isNotEmpty;
+
+  /// The streams to try for the picture, best first.
+  List<String> get pictureUrls => [?hdVideoUrl, ?muxedUrl];
+
+  /// There is an official sound to play, and a stream to play it from.
+  bool get carriesAudio => useAudio && (hdAudioUrl != null || muxedUrl != null);
 }

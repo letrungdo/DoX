@@ -242,6 +242,18 @@ class Dimens {
   /// How far the "original sound" badge sits from the video's corner.
   static const musicVideoBadgeInset = 8.0;
 
+  /// The television's full-screen video: its round controls, the gap
+  /// between them, how far above them the fade starts, the artwork shown
+  /// while the next video is fetched, and how long the controls stay up
+  /// with nobody pressing anything.
+  static const musicTvControlSize = 56.0;
+  static const musicTvPlayButtonSize = 72.0;
+  static const musicTvControlSpacing = 20.0;
+  static const musicTvControlsTop = 64.0;
+  static const musicTvWaitingArtSize = 240.0;
+  static const musicTvControlsHideDelay = Duration(seconds: 5);
+  static const musicTvControlsFade = Duration(milliseconds: 200);
+
   /// The music service's bot check, framed in a sheet: tall enough for its
   /// puzzle without the sheet having to scroll.
   static const musicChallengeHeight = 460.0;

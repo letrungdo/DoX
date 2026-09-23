@@ -96,7 +96,8 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.4.2
   audio_service: ^0.18.19
-  youtube_explode_dart: ^3.1.0
+  # Pinned: the web-view challenge solver builds on its internal EJS classes.
+  youtube_explode_dart: 3.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -2680,4 +2680,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicVideoOfficialAudio => 'Original sound from the video';
+
+  @override
+  String get musicVideoFullscreen => 'Full screen';
+
+  @override
+  String get musicVideoBackToList => 'Track list';
 }

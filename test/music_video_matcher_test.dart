@@ -151,18 +151,14 @@ void main() {
     expect(pick?.useAudio, isTrue);
   });
 
-  test('a remix never gets the original, nor the original a karaoke', () {
-    final remix = MusicVideoMatcher.pick(
+  test('a remix is shown the original video, but keeps its own sound', () {
+    final pick = MusicVideoMatcher.pick(
       _track('Chúng Ta Của Tương Lai (Remix)', song),
       [_video('omv', 'Chúng Ta Của Tương Lai', song, official: true)],
     );
-    final original = MusicVideoMatcher.pick(
-      _track('Chúng Ta Của Tương Lai', song),
-      [_video('k', 'Chúng Ta Của Tương Lai - Karaoke', song)],
-    );
 
-    expect(remix, isNull);
-    expect(original, isNull);
+    expect(pick?.video.id, 'omv');
+    expect(pick?.useAudio, isFalse);
   });
 
   test('an official remix of another length is not taken for this one', () {
@@ -172,38 +168,39 @@ void main() {
         _video(
           'omv',
           'Hoàng Thuỳ Linh - See Tình | Remix Version',
-          const Duration(seconds: 171),
+          const Duration(seconds: 200),
           official: true,
         ),
       ],
     );
 
-    expect(pick, isNull);
+    expect(pick?.video.id, 'omv');
+    expect(pick?.useAudio, isFalse);
   });
 
-  test('a fan video has to last as long as the track to be laid over it', () {
+  test('a video shorter than the track is turned down', () {
     final track = _track('Chúng Ta Của Tương Lai', song);
-    final close = MusicVideoMatcher.pick(track, [
+    final shorter = MusicVideoMatcher.pick(track, [
       _video(
-        'near',
+        'short',
         'Chúng Ta Của Tương Lai',
-        song + const Duration(seconds: 3),
+        song - const Duration(seconds: 10),
       ),
     ]);
-    final far = MusicVideoMatcher.pick(track, [
+    final longer = MusicVideoMatcher.pick(track, [
       _video(
-        'far',
+        'long',
         'Chúng Ta Của Tương Lai',
-        song + const Duration(seconds: 20),
+        song + const Duration(minutes: 3),
       ),
     ]);
 
-    expect(close?.video.id, 'near');
-    expect(close?.useAudio, isFalse);
-    expect(far, isNull);
+    expect(shorter, isNull);
+    expect(longer?.video.id, 'long');
+    expect(longer?.useAudio, isFalse);
   });
 
-  test('an official video far longer than the song is turned down', () {
+  test('an official video far longer than the song keeps the track sound', () {
     final pick = MusicVideoMatcher.pick(
       _track('Chúng Ta Của Hiện Tại', const Duration(minutes: 5, seconds: 1)),
       [
@@ -216,7 +213,17 @@ void main() {
       ],
     );
 
-    expect(pick, isNull);
+    expect(pick?.video.id, 'film');
+    expect(pick?.useAudio, isFalse);
+  });
+
+  test('the same version is preferred over another one', () {
+    final pick = MusicVideoMatcher.pick(_track('Nơi Này Có Anh', song), [
+      _video('karaoke', 'Nơi Này Có Anh - Karaoke', song),
+      _video('lyrics', 'Nơi Này Có Anh (Lyrics)', song),
+    ]);
+
+    expect(pick?.video.id, 'lyrics');
   });
 
   test('a video about some other song is turned down', () {

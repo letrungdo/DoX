@@ -7,6 +7,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/music/music_challenge_sheet.dart';
 import 'package:do_x/screen/music/music_track_card.dart';
+import 'package:do_x/screen/music/music_tv_video_player.dart';
 import 'package:do_x/screen/music/music_video_view.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
@@ -70,6 +71,19 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   final FocusNode _videoToggleFocusNode = FocusNode(
     debugLabel: 'tv-music-video-toggle',
   );
+  final FocusNode _fullscreenFocusNode = FocusNode(
+    debugLabel: 'tv-music-video-fullscreen',
+  );
+
+  /// The track whose full-screen video the viewer backed out of. Its video
+  /// stays in the dashboard until they ask for it again; the next track's
+  /// video takes the screen as usual.
+  String? _leftTvVideoFor;
+
+  /// Whether the last frame was the full-screen video. Carried across the
+  /// gap between two tracks, while the next one's video is still being
+  /// fetched, so a skip does not flash the track list up in between.
+  bool _showingTvVideo = false;
 
   FocusNode _getNodeForTrack(String id) {
     return _trackFocusNodes.putIfAbsent(
@@ -103,6 +117,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     _repeatFocusNode.dispose();
     _likeActionFocusNode.dispose();
     _videoToggleFocusNode.dispose();
+    _fullscreenFocusNode.dispose();
     super.dispose();
   }
 
@@ -128,6 +143,27 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
           (_) => _followTrack(currentId),
         );
       }
+    }
+
+    // On a television a track with a video is watched, not listened to: the
+    // picture takes the whole screen, with the controls over it.
+    final track = viewModel.currentTrack;
+    final showTvVideo =
+        isTv &&
+        viewModel.isVideoEnabled &&
+        track != null &&
+        track.id != _leftTvVideoFor &&
+        (viewModel.videoController != null ||
+            (_showingTvVideo &&
+                (viewModel.isFindingVideo ||
+                    viewModel.audioController == null)));
+    _showingTvVideo = showTvVideo;
+    if (showTvVideo) {
+      return MusicTvVideoPlayer(
+        onExit: () => _leaveTvVideo(track.id),
+        onToggleLike: () => _onToggleLike(track),
+        seekable: _seekable,
+      );
     }
 
     final mainContent = isTv
@@ -169,6 +205,17 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       ),
       body: mainContent,
     );
+  }
+
+  /// Back from the full-screen video to the list, with the remote on the
+  /// player's controls and the list brought round to the track playing.
+  void _leaveTvVideo(String trackId) {
+    setState(() => _leftTvVideoFor = trackId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _playPauseFocusNode.requestFocus();
+      _followTrack(trackId);
+    });
   }
 
   /// The account the personal endpoints are called for. An icon rather than a
@@ -875,19 +922,21 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                       : context.theme.hintColor,
                   onPressed: () => _onToggleLike(viewModel.currentTrack!),
                 ),
-                IconButton(
-                  tooltip: viewModel.isVideoEnabled
-                      ? context.l10n.musicVideoHide
-                      : context.l10n.musicVideoShow,
-                  icon: Icon(
-                    viewModel.isVideoEnabled
-                        ? Icons.videocam_rounded
-                        : Icons.videocam_off_rounded,
-                    size: 20,
+                // Only for a track that has a video to show or hide.
+                if (viewModel.hasVideo)
+                  IconButton(
+                    tooltip: viewModel.isVideoEnabled
+                        ? context.l10n.musicVideoHide
+                        : context.l10n.musicVideoShow,
+                    icon: Icon(
+                      viewModel.isVideoEnabled
+                          ? Icons.videocam_rounded
+                          : Icons.videocam_off_rounded,
+                      size: 20,
+                    ),
+                    color: context.theme.hintColor,
+                    onPressed: viewModel.toggleVideo,
                   ),
-                  color: context.theme.hintColor,
-                  onPressed: viewModel.toggleVideo,
-                ),
                 IconButton(
                   icon: Icon(
                     viewModel.isPlaying
@@ -1020,17 +1069,27 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
               color: isTrackLiked ? context.theme.colorScheme.error : null,
               onPressed: () => _onToggleLike(viewModel.currentTrack!),
             ),
-            NeuIconButton(
-              icon: viewModel.isVideoEnabled
-                  ? Icons.videocam_rounded
-                  : Icons.videocam_off_rounded,
-              focusNode: _videoToggleFocusNode,
-              size: 36,
-              tooltip: viewModel.isVideoEnabled
-                  ? context.l10n.musicVideoHide
-                  : context.l10n.musicVideoShow,
-              onPressed: viewModel.toggleVideo,
-            ),
+            if (viewModel.hasVideo)
+              NeuIconButton(
+                icon: viewModel.isVideoEnabled
+                    ? Icons.videocam_rounded
+                    : Icons.videocam_off_rounded,
+                focusNode: _videoToggleFocusNode,
+                size: 36,
+                tooltip: viewModel.isVideoEnabled
+                    ? context.l10n.musicVideoHide
+                    : context.l10n.musicVideoShow,
+                onPressed: viewModel.toggleVideo,
+              ),
+            // The way back to the full-screen video after leaving it.
+            if (viewModel.videoController != null)
+              NeuIconButton(
+                icon: Icons.fullscreen_rounded,
+                focusNode: _fullscreenFocusNode,
+                size: 36,
+                tooltip: context.l10n.musicVideoFullscreen,
+                onPressed: () => setState(() => _leftTvVideoFor = null),
+              ),
           ],
         ),
       ],
