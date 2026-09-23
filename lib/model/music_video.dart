@@ -26,6 +26,7 @@ class MusicVideo {
     required this.videoId,
     required this.duration,
     required this.useAudio,
+    this.loops = false,
     this.hdVideoUrl,
     this.hdAudioUrl,
     this.muxedUrl,
@@ -38,6 +39,10 @@ class MusicVideo {
   /// sound is played instead of the track's, which also keeps the picture in
   /// step with it. Otherwise the video is shown muted over the track.
   final bool useAudio;
+
+  /// A stand-in for a song that has no video of its own: looped, muted, as a
+  /// backdrop, and not kept in step with the music.
+  final bool loops;
 
   /// Picture only, up to 1080p. Absent when YouTube would not hand one over
   /// that plays to the end.
@@ -54,6 +59,7 @@ class MusicVideo {
     videoId: videoId,
     duration: duration,
     useAudio: useAudio,
+    loops: loops,
     hdVideoUrl: videoUrl,
     hdAudioUrl: audioUrl,
     muxedUrl: muxedUrl,

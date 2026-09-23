@@ -2686,4 +2686,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicVideoBackToList => 'Track list';
+
+  @override
+  String get musicVideoExitFullscreen => 'Exit full screen';
 }

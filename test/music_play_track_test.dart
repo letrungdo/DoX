@@ -276,6 +276,29 @@ void main() {
       vm.dispose();
     });
 
+    testWidgets('a stand-in video is looped rather than kept in step', (
+      tester,
+    ) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'other',
+            duration: Duration(minutes: 1),
+            useAudio: false,
+            loops: true,
+            muxedUrl: 'https://yt/muxed',
+          ),
+        ),
+      );
+
+      final video = vm.videoController;
+      expect(video?.dataSource, 'https://yt/muxed');
+      expect(video!.value.isLooping, isTrue);
+      expect(video.value.volume, 0);
+      vm.dispose();
+    });
+
     testWidgets('with the video turned off it is still found, but not '
         'played', (tester) async {
       await play(

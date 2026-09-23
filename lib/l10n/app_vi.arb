@@ -1449,5 +1449,6 @@
   "musicVideoHide": "Ẩn video",
   "musicVideoOfficialAudio": "Âm thanh gốc từ MV",
   "musicVideoFullscreen": "Xem toàn màn hình",
-  "musicVideoBackToList": "Danh sách bài hát"
+  "musicVideoBackToList": "Danh sách bài hát",
+  "musicVideoExitFullscreen": "Thoát toàn màn hình"
 }

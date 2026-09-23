@@ -2676,4 +2676,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicVideoBackToList => 'Danh sách bài hát';
+
+  @override
+  String get musicVideoExitFullscreen => 'Thoát toàn màn hình';
 }

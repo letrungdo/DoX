@@ -1505,5 +1505,6 @@
   "musicVideoHide": "Hide video",
   "musicVideoOfficialAudio": "Original sound from the video",
   "musicVideoFullscreen": "Full screen",
-  "musicVideoBackToList": "Track list"
+  "musicVideoBackToList": "Track list",
+  "musicVideoExitFullscreen": "Exit full screen"
 }

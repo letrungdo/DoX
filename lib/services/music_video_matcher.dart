@@ -4,10 +4,19 @@ import 'package:do_x/model/music_video.dart';
 
 /// The video picked for a track, and whether its sound replaces the track's.
 class MusicVideoPick {
-  const MusicVideoPick({required this.video, required this.useAudio});
+  const MusicVideoPick({
+    required this.video,
+    required this.useAudio,
+    this.loops = false,
+  });
 
   final YoutubeVideo video;
   final bool useAudio;
+
+  /// A stand-in rather than the song's own video — shorter than the song, or
+  /// of something else altogether — so it is looped as a backdrop instead of
+  /// being kept in step with the music.
+  final bool loops;
 }
 
 /// Decides which YouTube video, if any, belongs to a Music track.
@@ -20,6 +29,11 @@ class MusicVideoPick {
 ///   channel, or it is a video of some other song.
 /// - It must not be shorter than the track, or the picture runs out before
 ///   the music does.
+///
+/// When nothing passes, a video is still found, because a picture of any
+/// kind beats a still cover: the best match that is too short, or failing
+/// that whatever YouTube ranked first. Either is looped as a backdrop — see
+/// [MusicVideoPick.loops].
 ///
 /// Swapping the track's *sound* for the video's is another matter: that is
 /// only done for the artist's official video of the very same recording —
@@ -114,15 +128,26 @@ abstract final class MusicVideoMatcher {
     final wanted = tokens(track.title);
     final wantedVersions = wanted.intersection(_versionWords);
     final wantedWords = wanted.difference(_versionWords);
-    if (wantedWords.isEmpty) return null;
+    if (wantedWords.isEmpty) {
+      final first = videos.firstWhereOrNull(
+        (v) => v.id.isNotEmpty && v.duration > Duration.zero,
+      );
+      return first == null
+          ? null
+          : MusicVideoPick(video: first, useAudio: false, loops: true);
+    }
     final audioTolerance = wantedVersions.isEmpty
         ? officialTolerance
         : versionTolerance;
 
     MusicVideoPick? best;
     var bestScore = double.negativeInfinity;
+    YoutubeVideo? shortMatch;
+    var shortScore = double.negativeInfinity;
+    YoutubeVideo? firstPlayable;
     for (final video in videos) {
       if (video.id.isEmpty || video.duration <= Duration.zero) continue;
+      firstPlayable ??= video;
 
       final offered = tokens('${video.title} ${video.author}');
       final coverage =
@@ -136,8 +161,6 @@ abstract final class MusicVideoMatcher {
       final gap = video.duration - track.duration;
       final useAudio =
           video.isOfficial && sameVersion && gap.abs() <= audioTolerance;
-      if (!useAudio && gap < -lengthSlack) continue;
-
       // The official sound first; then the same version, an official
       // picture, the words, and the closer length.
       final score =
@@ -146,12 +169,23 @@ abstract final class MusicVideoMatcher {
           (video.isOfficial ? 0.3 : 0) +
           coverage -
           gap.abs().inSeconds / 10000;
+      if (!useAudio && gap < -lengthSlack) {
+        if (score > shortScore) {
+          shortScore = score;
+          shortMatch = video;
+        }
+        continue;
+      }
       if (score > bestScore) {
         bestScore = score;
         best = MusicVideoPick(video: video, useAudio: useAudio);
       }
     }
-    return best;
+    if (best != null) return best;
+    final standIn = shortMatch ?? firstPlayable;
+    return standIn == null
+        ? null
+        : MusicVideoPick(video: standIn, useAudio: false, loops: true);
   }
 
   /// The words of [text], lower-cased, without Vietnamese marks or

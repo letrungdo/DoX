@@ -134,6 +134,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// 360p one and never the other way round.
   String? _pictureUrl;
 
+  /// The picture is a looped stand-in, which follows the sound's play and
+  /// pause but not its position — see [MusicVideo.loops].
+  bool _pictureLoops = false;
+
   /// Bumped by every change of picture: an older one still opening finds it
   /// moved on and lets its player go.
   int _pictureRequest = 0;
@@ -485,6 +489,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _audioController = null;
     _videoController = null;
     _pictureUrl = null;
+    _pictureLoops = false;
     _pictureRequest++;
     _isAudioFromVideo = false;
     if (audio != null) {
@@ -568,6 +573,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         ? _duration
         : _currentTrack?.duration ?? Duration.zero;
     if (!_isAudioFromVideo &&
+        !video.loops &&
         video.duration + MusicVideoMatcher.lengthSlack < length) {
       return;
     }
@@ -589,9 +595,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         return;
       }
       await follower.setVolume(0);
+      if (video.loops) await follower.setLooping(true);
       final old = _videoController;
       _videoController = follower;
       _pictureUrl = url;
+      _pictureLoops = video.loops;
       if (old != null && !identical(old, _audioController)) {
         unawaited(old.dispose());
       }
@@ -608,7 +616,8 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// it pauses, and pulled back to it when the two have drifted apart.
   ///
   /// Paused while the app is off screen, whatever the sound is doing, and
-  /// left on its last frame once the sound has run past its end.
+  /// left on its last frame once the sound has run past its end. A looped
+  /// stand-in only follows play and pause: it has no place in the song.
   void _syncVideo({bool force = false}) {
     final video = _videoController;
     final audio = _audioController;
@@ -619,12 +628,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final onScreen =
         lifecycle == null || lifecycle == AppLifecycleState.resumed;
     final position = audio.value.position;
-    final withinVideo = position < video.value.duration;
+    final withinVideo = _pictureLoops || position < video.value.duration;
     final shouldPlay = onScreen && audio.value.isPlaying && withinVideo;
     if (shouldPlay != video.value.isPlaying) {
       unawaited(shouldPlay ? video.play() : video.pause());
     }
-    if (!onScreen || !withinVideo) return;
+    if (!onScreen || !withinVideo || _pictureLoops) return;
 
     final now = DateTime.now();
     final drift = (video.value.position - position).abs();
@@ -649,6 +658,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       if (video != null && !identical(video, _audioController)) {
         _videoController = null;
         _pictureUrl = null;
+        _pictureLoops = false;
         unawaited(video.dispose());
       }
     } else {
@@ -819,7 +829,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     controller.seekTo(position);
     _position = position;
     final video = _videoController;
-    if (video != null && !identical(video, controller)) {
+    if (video != null && !identical(video, controller) && !_pictureLoops) {
       _lastVideoResync = DateTime.now();
       unawaited(video.seekTo(position));
     }

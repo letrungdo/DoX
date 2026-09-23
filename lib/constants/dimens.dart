@@ -242,17 +242,30 @@ class Dimens {
   /// How far the "original sound" badge sits from the video's corner.
   static const musicVideoBadgeInset = 8.0;
 
-  /// The television's full-screen video: its round controls, the gap
-  /// between them, how far above them the fade starts, the artwork shown
-  /// while the next video is fetched, and how long the controls stay up
-  /// with nobody pressing anything.
-  static const musicTvControlSize = 56.0;
-  static const musicTvPlayButtonSize = 72.0;
-  static const musicTvControlSpacing = 20.0;
-  static const musicTvControlsTop = 64.0;
-  static const musicTvWaitingArtSize = 240.0;
-  static const musicTvControlsHideDelay = Duration(seconds: 5);
-  static const musicTvControlsFade = Duration(milliseconds: 200);
+  /// The full-screen video: its round controls — a television's sized for
+  /// across the room, a phone's for a thumb — the gap between them, how far
+  /// above them the fade starts, the artwork shown while the next video is
+  /// fetched, and how long the controls stay up with nobody touching them.
+  static double get musicFullscreenControlSize => deviceType.isTv ? 56.0 : 44.0;
+  static double get musicFullscreenPlayButtonSize =>
+      deviceType.isTv ? 72.0 : 56.0;
+  static double get musicFullscreenControlSpacing =>
+      deviceType.isTv ? 20.0 : 12.0;
+  static const musicFullscreenControlsTop = 64.0;
+  static const musicFullscreenWaitingArtSize = 240.0;
+  static const musicFullscreenControlsHideDelay = Duration(seconds: 5);
+  static const musicFullscreenControlsFade = Duration(milliseconds: 200);
+
+  /// Around the phone's full-screen controls, inside the safe area; the top
+  /// is where the fade starts.
+  static const musicPhoneControlsPadding = EdgeInsets.fromLTRB(16, 48, 16, 12);
+
+  /// Between the like, video and full-screen buttons under the television
+  /// dashboard's transport row.
+  static const musicDashboardActionSpacing = 16.0;
+
+  /// The full-screen button in the corner of the phone's inline video.
+  static const musicVideoFullscreenIconSize = 20.0;
 
   /// The music service's bot check, framed in a sheet: tall enough for its
   /// puzzle without the sheet having to scroll.

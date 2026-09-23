@@ -178,7 +178,7 @@ void main() {
     expect(pick?.useAudio, isFalse);
   });
 
-  test('a video shorter than the track is turned down', () {
+  test('a video shorter than the track is only a looped stand-in', () {
     final track = _track('Chúng Ta Của Tương Lai', song);
     final shorter = MusicVideoMatcher.pick(track, [
       _video(
@@ -195,8 +195,11 @@ void main() {
       ),
     ]);
 
-    expect(shorter, isNull);
+    expect(shorter?.video.id, 'short');
+    expect(shorter?.loops, isTrue);
+    expect(shorter?.useAudio, isFalse);
     expect(longer?.video.id, 'long');
+    expect(longer?.loops, isFalse);
     expect(longer?.useAudio, isFalse);
   });
 
@@ -226,12 +229,24 @@ void main() {
     expect(pick?.video.id, 'lyrics');
   });
 
-  test('a video about some other song is turned down', () {
+  test('a video about some other song is only a looped stand-in', () {
     final pick = MusicVideoMatcher.pick(_track('Chúng Ta Của Hiện Tại', song), [
       _video('other', 'Hãy Trao Cho Anh', song, official: true),
     ]);
 
-    expect(pick, isNull);
+    expect(pick?.video.id, 'other');
+    expect(pick?.loops, isTrue);
+    expect(pick?.useAudio, isFalse);
+  });
+
+  test('a real match wins over a stand-in listed above it', () {
+    final pick = MusicVideoMatcher.pick(_track('Nơi Này Có Anh', song), [
+      _video('other', 'Hãy Trao Cho Anh', song),
+      _video('match', 'Nơi Này Có Anh', song),
+    ]);
+
+    expect(pick?.video.id, 'match');
+    expect(pick?.loops, isFalse);
   });
 
   test('the official video wins over a fan upload of the same song', () {

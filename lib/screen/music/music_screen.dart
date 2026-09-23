@@ -7,7 +7,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/music/music_challenge_sheet.dart';
 import 'package:do_x/screen/music/music_track_card.dart';
-import 'package:do_x/screen/music/music_tv_video_player.dart';
+import 'package:do_x/screen/music/music_fullscreen_video_player.dart';
 import 'package:do_x/screen/music/music_video_view.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
@@ -76,14 +76,22 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   );
 
   /// The track whose full-screen video the viewer backed out of. Its video
-  /// stays in the dashboard until they ask for it again; the next track's
-  /// video takes the screen as usual.
-  String? _leftTvVideoFor;
+  /// stays in the dashboard, or on a sideways phone in the player, until they
+  /// ask for it again; the next track's video takes the screen as usual.
+  String? _leftVideoFor;
+
+  /// A phone's full screen asked for by a tap on the video, which holds
+  /// whichever way the phone is turned.
+  bool _phoneFullscreen = false;
+
+  /// The way the phone was turned at the last frame, to tell a turn from a
+  /// rebuild.
+  Orientation? _lastOrientation;
 
   /// Whether the last frame was the full-screen video. Carried across the
   /// gap between two tracks, while the next one's video is still being
   /// fetched, so a skip does not flash the track list up in between.
-  bool _showingTvVideo = false;
+  bool _showingFullscreenVideo = false;
 
   FocusNode _getNodeForTrack(String id) {
     return _trackFocusNodes.putIfAbsent(
@@ -146,24 +154,39 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     }
 
     // On a television a track with a video is watched, not listened to: the
-    // picture takes the whole screen, with the controls over it.
+    // picture takes the whole screen, with the controls over it. So it does
+    // on a phone turned on its side, the way the film player does, and on an
+    // upright one whose video was tapped.
     final track = viewModel.currentTrack;
-    final showTvVideo =
-        isTv &&
+    final isLandscape =
+        deviceType.canDriveOrientation && _onPhoneTurned(context);
+    final wantsFullscreen = isTv || isLandscape
+        ? track?.id != _leftVideoFor
+        : _phoneFullscreen;
+    final showFullscreen =
+        wantsFullscreen &&
         viewModel.isVideoEnabled &&
         track != null &&
-        track.id != _leftTvVideoFor &&
         (viewModel.videoController != null ||
-            (_showingTvVideo &&
+            (_showingFullscreenVideo &&
                 (viewModel.isFindingVideo ||
                     viewModel.audioController == null)));
-    _showingTvVideo = showTvVideo;
-    if (showTvVideo) {
-      return MusicTvVideoPlayer(
-        onExit: () => _leaveTvVideo(track.id),
+    _showingFullscreenVideo = showFullscreen;
+    if (showFullscreen) {
+      return MusicFullscreenVideoPlayer(
+        onExit: () => _leaveFullscreen(track.id),
         onToggleLike: () => _onToggleLike(track),
         seekable: _seekable,
       );
+    }
+    // The next track had no video: the phone is back on the list, and will
+    // not jump into full screen again for a later one it did not tap.
+    if (_phoneFullscreen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_showingFullscreenVideo) {
+          setState(() => _phoneFullscreen = false);
+        }
+      });
     }
 
     final mainContent = isTv
@@ -207,13 +230,31 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     );
   }
 
-  /// Back from the full-screen video to the list, with the remote on the
-  /// player's controls and the list brought round to the track playing.
-  void _leaveTvVideo(String trackId) {
-    setState(() => _leftTvVideoFor = trackId);
+  /// Whether the phone is on its side, noting a turn as it happens: turned
+  /// either way, the phone starts afresh — a video backed out of sideways is
+  /// offered again on the next turn, and turning upright leaves a full
+  /// screen that the turn opened.
+  bool _onPhoneTurned(BuildContext context) {
+    final orientation = MediaQuery.orientationOf(context);
+    if (_lastOrientation != null && orientation != _lastOrientation) {
+      _leftVideoFor = null;
+      _phoneFullscreen = false;
+    }
+    _lastOrientation = orientation;
+    return orientation == Orientation.landscape;
+  }
+
+  /// Back from the full-screen video to the list, with the list brought
+  /// round to the track playing — and, on a television, the remote on the
+  /// player's controls.
+  void _leaveFullscreen(String trackId) {
+    setState(() {
+      _leftVideoFor = trackId;
+      _phoneFullscreen = false;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _playPauseFocusNode.requestFocus();
+      if (deviceType.isTv) _playPauseFocusNode.requestFocus();
       _followTrack(trackId);
     });
   }
@@ -862,6 +903,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                     borderRadius: BorderRadius.circular(
                       Dimens.radiusControlSmall,
                     ),
+                    onFullscreen: () => setState(() => _phoneFullscreen = true),
                   ),
                 ),
               ),
@@ -1060,6 +1102,16 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
               size: 36,
               onPressed: viewModel.nextTrack,
             ),
+          ],
+        ),
+        // The track's own actions on a row of their own: with the video's
+        // two buttons they no longer fit beside the transport in the
+        // dashboard's column.
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: Dimens.musicDashboardActionSpacing,
+          children: [
             NeuIconButton(
               icon: isTrackLiked
                   ? Icons.favorite_rounded
@@ -1088,7 +1140,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                 focusNode: _fullscreenFocusNode,
                 size: 36,
                 tooltip: context.l10n.musicVideoFullscreen,
-                onPressed: () => setState(() => _leftTvVideoFor = null),
+                onPressed: () => setState(() => _leftVideoFor = null),
               ),
           ],
         ),

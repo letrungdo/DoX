@@ -4830,6 +4830,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Track list'**
   String get musicVideoBackToList;
+
+  /// No description provided for @musicVideoExitFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get musicVideoExitFullscreen;
 }
 
 class _AppLocalizationsDelegate

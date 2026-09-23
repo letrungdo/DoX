@@ -21,11 +21,10 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 /// - **HD** — the adaptive streams, picture and sound apart, up to 1080p. The
 ///   app's default client gets them too, but without a proof-of-origin token
 ///   YouTube serves only their first few hundred kilobytes and answers `403`
-///   to every range after that, so a player stalls within seconds. The TV
-///   client needs no such token; what it wants instead is its signature and
-///   `n` challenges solved, which [WebViewJsSolver] does. Every HD stream is
-///   also tried from the middle before it is handed over, because a link
-///   that only opens is not yet one that plays.
+///   to every range after that, so a player stalls within seconds. The
+///   clients that need no such token are asked instead — see [_hdStreams].
+///   Every HD stream is also tried from the middle before it is handed over,
+///   because a link that only opens is not yet one that plays.
 /// - **Muxed** — picture and sound together at 360p, which plays to the end
 ///   with no challenge at all. It is what is left when HD is not.
 class YoutubeMusicService {
@@ -72,7 +71,7 @@ class YoutubeMusicService {
   static const _videosFilter = 'EgWKAQIQAWoKEAkQBRAKEAMQBA==';
 
   /// How long HD is waited for before the video carries on without it.
-  static const _hdWait = Duration(seconds: 15);
+  static const _hdWait = Duration(seconds: 20);
 
   final Dio _dio;
 
@@ -101,7 +100,12 @@ class YoutubeMusicService {
       if (_picks.containsKey(track.id)) {
         pick = _picks[track.id];
       } else {
-        final videos = await searchVideos(MusicVideoMatcher.searchQuery(track));
+        var videos = await searchVideos(MusicVideoMatcher.searchQuery(track));
+        // A title YouTube finds nothing for still has an artist who has
+        // videos, and any of them is a picture to put up.
+        if (videos.isEmpty && track.artist.trim().isNotEmpty) {
+          videos = await searchVideos(track.artist.trim());
+        }
         pick = MusicVideoMatcher.pick(track, videos);
         _picks[track.id] = pick;
       }
@@ -109,17 +113,18 @@ class YoutubeMusicService {
 
       final id = pick.video.id;
       final muxed = await _muxedStream(id).catchError((Object e) {
-        logger.d('YoutubeMusicService no muxed stream for $id: $e');
+        logger.d('[MusicVideo] no muxed stream for $id: $e');
         return null;
       });
       return MusicVideo(
         videoId: id,
         duration: pick.video.duration,
         useAudio: pick.useAudio,
+        loops: pick.loops,
         muxedUrl: muxed,
       );
     } on Object catch (e) {
-      logger.d('YoutubeMusicService no video for ${track.id}: $e');
+      logger.d('[MusicVideo] no video for ${track.id}: $e');
       return null;
     }
   }
@@ -133,7 +138,7 @@ class YoutubeMusicService {
       if (hd == null || (hd.video == null && hd.audio == null)) return null;
       return video.withHd(videoUrl: hd.video, audioUrl: hd.audio);
     } on Object catch (e) {
-      logger.d('YoutubeMusicService no HD streams for ${video.videoId}: $e');
+      logger.d('[MusicVideo] no HD streams for ${video.videoId}: $e');
       return null;
     }
   }
@@ -228,16 +233,49 @@ class YoutubeMusicService {
 
   /// [videoId]'s HD picture and sound, each only if it plays from the middle.
   ///
+  /// Asked of the clients that hand adaptive streams over without a
+  /// proof-of-origin token, one after the other until one of them plays:
+  ///
+  /// - `ANDROID_VR`, which needs nothing else — no watch page, no challenge.
+  /// - `TV`, whose links carry signature and `n` challenges for
+  ///   [WebViewJsSolver] to solve, and which needs the watch page for the
+  ///   player script those challenges are written in.
+  ///
   /// H.264 only: every phone and television decodes it in hardware, which
   /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
   Future<({String? video, String? audio})?> _hdStreams(String videoId) async {
-    final explode = _hd;
-    if (explode == null) return null;
-    final manifest = await explode.videos.streams.getManifest(
-      videoId,
-      ytClients: [YoutubeApiClient.tv],
-    );
+    final attempts = <(String, YoutubeExplode?, YoutubeApiClient, bool)>[
+      ('ANDROID_VR', _explode, YoutubeApiClient.androidVr, false),
+      ('TV', _hd, YoutubeApiClient.tv, true),
+    ];
+    for (final (name, explode, client, watchPage) in attempts) {
+      if (explode == null) {
+        logger.d('[MusicVideo] HD $name skipped: no web view for its solver');
+        continue;
+      }
+      try {
+        final manifest = await explode.videos.streams.getManifest(
+          videoId,
+          ytClients: [client],
+          requireWatchPage: watchPage,
+        );
+        final found = await _playableHd(manifest);
+        if (found.video != null) {
+          logger.d('[MusicVideo] HD $name plays for $videoId');
+          return found;
+        }
+        logger.d('[MusicVideo] HD $name streams refused mid-file ($videoId)');
+      } on Object catch (e) {
+        logger.d('[MusicVideo] HD $name failed for $videoId: $e');
+      }
+    }
+    return null;
+  }
 
+  /// The best H.264 picture and mp4 sound in [manifest] that play through.
+  Future<({String? video, String? audio})> _playableHd(
+    StreamManifest manifest,
+  ) async {
     final pictures =
         manifest.videoOnly
             .where(
