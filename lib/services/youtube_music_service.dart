@@ -125,6 +125,8 @@ class YoutubeMusicService {
   /// streams follow from [withHd]. Never throws: a missing video leaves the
   /// track playing as it always has.
   Future<MusicVideo?> findVideo(MusicTrack track) async {
+    // Wanted by the HD lookup that follows; fetched while the search runs.
+    _visitorId().ignore();
     try {
       final MusicVideoPick? pick;
       if (_picks.containsKey(track.id)) {
@@ -142,6 +144,9 @@ class YoutubeMusicService {
       if (pick == null) return null;
 
       final id = pick.video.id;
+      // HD needs only the id: started now rather than after the muxed
+      // stream, so it is in as soon as it can be — see [withHd].
+      _startHd(id);
       final muxed = await _muxedStream(id).catchError((Object e) {
         logger.d('[MusicVideo] no muxed stream for $id: $e');
         return null;
@@ -165,7 +170,12 @@ class YoutubeMusicService {
   /// player script. Never throws.
   Future<MusicVideo> withHd(MusicVideo video) async {
     try {
-      final hd = await _hdStreams(video.videoId).timeout(_hdWait);
+      final started = _hdStarted;
+      _hdStarted = null;
+      final lookup = started != null && started.videoId == video.videoId
+          ? started.lookup
+          : _hdStreams(video.videoId);
+      final hd = await lookup.timeout(_hdWait);
       return video.withHd(
         videoUrl: hd.video,
         audioUrl: hd.audio,
@@ -177,6 +187,16 @@ class YoutubeMusicService {
     } on Object catch (e) {
       return video.withHd(report: 'HD: $e');
     }
+  }
+
+  /// The HD lookup [findVideo] started for the video it found, waiting for
+  /// [withHd] to pick it up. Only the latest: a track skipped past leaves
+  /// its lookup to finish unread.
+  ({String videoId, Future<_HdStreams> lookup})? _hdStarted;
+
+  void _startHd(String videoId) {
+    final lookup = _hdStreams(videoId)..ignore();
+    _hdStarted = (videoId: videoId, lookup: lookup);
   }
 
   Future<List<YoutubeVideo>> searchVideos(String query) async {
@@ -381,15 +401,17 @@ class YoutubeMusicService {
 
     final hlsUrl = json['streamingData']?['hlsManifestUrl'];
     if (_prefersHls && hlsUrl is String) {
-      final master = await _probe.get<String>(
-        hlsUrl,
-        options: Options(responseType: ResponseType.plain, headers: headers),
-      );
+      final (master, audio) = await (
+        _probe.get<String>(
+          hlsUrl,
+          options: Options(responseType: ResponseType.plain, headers: headers),
+        ),
+        _playableSound(sounds, headers),
+      ).wait;
       final trimmed = master.statusCode == 200 && master.data != null
           ? trimHlsMaster(master.data!, maxPixels: _maxPixels)
           : null;
       if (trimmed != null) {
-        final audio = await _playableSound(sounds, headers);
         return (
           video: await _hlsServer.serve(trimmed.playlist),
           audio: audio,

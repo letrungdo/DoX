@@ -234,7 +234,7 @@ void main() {
       vm.dispose();
     });
 
-    testWidgets('the 360p picture goes up first and HD replaces it', (
+    testWidgets('an HD picture found in time goes up without the 360p one', (
       tester,
     ) async {
       const basic = MusicVideo(
@@ -248,13 +248,42 @@ void main() {
         withVideo(basic, hd: basic.withHd(videoUrl: 'https://yt/hd-video')),
       );
 
+      expect(platform.opened, ['https://cdn/a', 'https://yt/hd-video']);
+      expect(vm.videoController?.dataSource, 'https://yt/hd-video');
+      expect(vm.videoController!.value.volume, 0);
+      vm.dispose();
+    });
+
+    testWidgets('an HD picture that is slow to come replaces the 360p one', (
+      tester,
+    ) async {
+      const basic = MusicVideo(
+        videoId: 'ugc',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/muxed',
+      );
+      await play(
+        tester,
+        MusicViewModel(
+          resolveStream: (url) async => 'https://cdn/a',
+          playback: _SilentPlayback(),
+          findVideo: (_) async => basic,
+          findHdVideo: (_) async {
+            await Future<void>.delayed(const Duration(milliseconds: 30));
+            return basic.withHd(videoUrl: 'https://yt/hd-video');
+          },
+          videoEnabled: true,
+          hdPictureGrace: const Duration(milliseconds: 10),
+        ),
+      );
+
       expect(platform.opened, [
         'https://cdn/a',
         'https://yt/muxed',
         'https://yt/hd-video',
       ]);
       expect(vm.videoController?.dataSource, 'https://yt/hd-video');
-      expect(vm.videoController!.value.volume, 0);
       vm.dispose();
     });
 

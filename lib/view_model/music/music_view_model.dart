@@ -33,7 +33,9 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     Future<MusicVideo?> Function(MusicTrack track)? findVideo,
     Future<MusicVideo?> Function(MusicVideo video)? findHdVideo,
     bool? videoEnabled,
-  }) : _resolveStream = resolveStream ?? musicService.resolvePlayableStream,
+    Duration hdPictureGrace = const Duration(seconds: 3),
+  }) : _hdPictureGrace = hdPictureGrace,
+       _resolveStream = resolveStream ?? musicService.resolvePlayableStream,
        _playback = playback ?? musicPlayback,
        _findVideo = findVideo ?? youtubeMusicService.findVideo,
        _findHdVideo = findHdVideo ?? youtubeMusicService.withHd,
@@ -59,6 +61,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// then. A video that turns up later is still shown, muted over the
   /// track's own sound.
   static const _officialVideoWait = Duration(seconds: 4);
+
+  /// How long the 360p picture, once found, waits for the HD one before it
+  /// goes up. The HD lookup usually lands within a second of it, and a
+  /// picture that comes up in HD beats one that sharpens a few seconds in.
+  /// Replaceable so a test need not sit through it.
+  final Duration _hdPictureGrace;
 
   /// How far a muted video may wander from the sound before it is pulled
   /// back, and how long it is then left alone: a seek takes a moment to land,
@@ -362,6 +370,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final hdFuture = videoFuture.then(
       (video) => video == null ? null : _findHdSafely(video),
     );
+    // Counted from when the 360p picture is found, not from when pictures
+    // start going up, which is after the wait for an official sound.
+    final hdInTime = videoFuture.then(
+      (video) => video == null ? null : _within(hdFuture, _hdPictureGrace),
+    );
     _foundVideo = null;
     _playerNotes.clear();
     _isFindingVideo = true;
@@ -442,6 +455,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         _attachPictures(
           official != null ? Future.value(official) : videoFuture,
           hdFuture,
+          hdInTime,
           generation,
         ),
       );
@@ -569,17 +583,28 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     }
   }
 
-  /// Puts the picture up as soon as there is one, and swaps in the HD one
-  /// when that arrives.
+  /// Puts the picture up: the HD one where [hdInTime] has it, otherwise the
+  /// 360p one as soon as there is one, with the HD one swapped in when it
+  /// arrives.
   Future<void> _attachPictures(
     Future<MusicVideo?> basic,
     Future<MusicVideo?> hd,
+    Future<MusicVideo?> hdInTime,
     int generation,
   ) async {
     _isPreparingPicture = true;
+    MusicVideo? shownHd;
     try {
       final first = await basic;
-      if (first != null) await _showPicture(first, generation);
+      // The HD one straight away where it comes in time; it falls back to
+      // the 360p stream by itself if its own will not open.
+      final early = first == null ? null : await hdInTime;
+      if (early?.hdVideoUrl != null) {
+        shownHd = early;
+        await _showPicture(early!, generation);
+      } else if (first != null) {
+        await _showPicture(first, generation);
+      }
     } finally {
       // The first picture is up, or there is none: from here the HD one only
       // replaces it.
@@ -588,8 +613,28 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         notifyListenersSafe();
       }
     }
+    if (shownHd != null) return;
     final better = await hd;
     if (better != null) await _showPicture(better, generation);
+  }
+
+  /// What [future] comes back with inside [wait], or null after it.
+  static Future<T?> _within<T>(Future<T?> future, Duration wait) {
+    final result = Completer<T?>();
+    final timer = Timer(wait, () {
+      if (!result.isCompleted) result.complete(null);
+    });
+    future.then(
+      (value) {
+        timer.cancel();
+        if (!result.isCompleted) result.complete(value);
+      },
+      onError: (Object _) {
+        timer.cancel();
+        if (!result.isCompleted) result.complete(null);
+      },
+    );
+    return result.future;
   }
 
   /// Lays [video]'s best picture, muted, over the sound already playing —
