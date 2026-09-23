@@ -10,6 +10,7 @@ class DoButton extends StatelessWidget {
     this.text,
     this.isBusy = false,
     this.style,
+    this.autofocus = false,
   });
   final Widget? child;
   final void Function()? onPressed;
@@ -17,12 +18,17 @@ class DoButton extends StatelessWidget {
   final bool isBusy;
   final ButtonStyle? style;
 
+  /// Takes the remote's focus when it appears — for a television page whose
+  /// only control this is.
+  final bool autofocus;
+
   @override
   Widget build(BuildContext context) {
     final style0 = style ?? context.theme.elevatedButtonTheme.style;
     final button = ElevatedButton(
       onPressed: isBusy ? null : onPressed, //
       style: style,
+      autofocus: autofocus,
       child:
           child ??
           (text != null

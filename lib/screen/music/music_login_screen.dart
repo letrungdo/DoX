@@ -3,8 +3,11 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
+import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/music/music_tv_pairing_view.dart';
 import 'package:do_x/services/music_auth_service.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_login_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -30,6 +33,11 @@ import 'package:provider/provider.dart';
 /// a web view leaves blank as soon as the email step hands over to the
 /// password step. What comes back is an authorization code, redeemed here;
 /// the token cookie the site sets is read only if that exchange fails.
+///
+/// A television does not get the page at all: the service's bot check puts a
+/// challenge in front of it that cannot be passed from a remote. It shows a QR
+/// code instead, for a phone that is signed in to scan — see
+/// [MusicTvPairingView].
 @RoutePage()
 class MusicLoginScreen extends StatefulScreen implements AutoRouteWrapper {
   const MusicLoginScreen({super.key});
@@ -170,6 +178,14 @@ class _MusicLoginScreenState
             ),
             const SizedBox(height: 20),
             DoButton(onPressed: _signOut, text: l10n.logout),
+            if (_canPairTv) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => context.router.push(const MusicTvPairRoute()),
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: Text(l10n.musicPairTvTitle),
+              ),
+            ],
             TextButton(
               onPressed: _startOver,
               child: Text(l10n.musicSwitchAccount),
@@ -193,6 +209,14 @@ class _MusicLoginScreenState
             style: context.textTheme.secondary.size13,
           ),
         ),
+      );
+    }
+
+    if (deviceType.isTv) {
+      return MusicTvPairingView(
+        onToken: _claimPairedToken,
+        errorMessage: viewModel.errorMessage,
+        isSigningIn: viewModel.isBusy,
       );
     }
 
@@ -457,6 +481,32 @@ class _MusicLoginScreenState
       // next navigation is free to try again.
       _claimingToken = false;
     }
+  }
+
+  /// A phone with a camera, signed in here, can sign a television in.
+  bool get _canPairTv =>
+      !kIsWeb &&
+      !deviceType.isTv &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  /// The token a phone handed this television over the QR code. Answers with
+  /// the account's name for the phone to show, or `null` when it was no good.
+  Future<String?> _claimPairedToken(String token) async {
+    if (_claimingToken || !mounted) return null;
+    _claimingToken = true;
+    final signedIn = await vm.signInWithToken(token);
+    final name = musicAuth.account?.username ?? '';
+    if (!mounted) return signedIn ? name : null;
+    if (!signedIn) {
+      _claimingToken = false;
+      return null;
+    }
+    // After the phone has had its answer: leaving takes the listener down.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.router.maybePop(true);
+    });
+    return name;
   }
 
   Future<void> _signOut() async {

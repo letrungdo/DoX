@@ -242,6 +242,7 @@ class _AppRouter extends RootStackRouter {
     AutoRoute(path: '/tv/search', page: TvSearchRoute.page),
     AutoRoute(path: '/tv/music', page: MusicRoute.page),
     AutoRoute(path: '/tv/music/login', page: MusicLoginRoute.page),
+    AutoRoute(path: '/tv/music/pair-tv', page: MusicTvPairRoute.page),
     // The player is only ever pushed on the root stack, so it covers the
     // bottom bar the way a full-screen video should.
     AutoRoute(path: '/tv/player', page: TvPlayerRoute.page),

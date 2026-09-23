@@ -2589,4 +2589,72 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicSignedOut => 'Not signed in to Music.';
+
+  @override
+  String get musicPairTvTitle => 'Sign in on TV';
+
+  @override
+  String get musicPairTvScanHint =>
+      'Point the camera at the QR code on the TV\'s Music sign-in screen. The phone and the TV must be on the same Wi-Fi.';
+
+  @override
+  String get musicPairTvSending => 'Signing the TV in…';
+
+  @override
+  String musicPairTvDone(String name) {
+    return 'The TV is now signed in as $name.';
+  }
+
+  @override
+  String get musicPairTvUnreachable =>
+      'Could not reach the TV. Check that the phone is on the same Wi-Fi and the TV still shows the code. On iPhone, allow Local Network access for Do X in Settings.';
+
+  @override
+  String get musicPairTvRejected =>
+      'Music did not accept this account on the TV. Sign in again on the phone, then retry.';
+
+  @override
+  String get musicPairTvFailed => 'Could not sign the TV in. Please try again.';
+
+  @override
+  String get musicPairTvNotACode => 'This is not a Do X TV sign-in code.';
+
+  @override
+  String get musicPairTvCameraError =>
+      'The camera could not be opened. Check the camera permission for Do X.';
+
+  @override
+  String get musicPairTvScanAgain => 'Scan again';
+
+  @override
+  String get musicTvQrTitle => 'Scan with your phone to sign in';
+
+  @override
+  String get musicTvQrStep1 => 'On your phone, open Do X → Music and sign in.';
+
+  @override
+  String get musicTvQrStep2 => 'Tap the account icon, then “Sign in on TV”.';
+
+  @override
+  String get musicTvQrStep3 =>
+      'Scan this code. The phone must be on the same Wi-Fi as the TV.';
+
+  @override
+  String musicTvQrAddress(String address) {
+    return 'TV address: $address';
+  }
+
+  @override
+  String get musicTvQrNoNetwork =>
+      'The TV is not connected to a home network. Connect it to Wi-Fi or Ethernet, then try again.';
+
+  @override
+  String get musicTvQrNewCode => 'New code';
+
+  @override
+  String get musicTvQrSigningIn => 'Signing in…';
+
+  @override
+  String get musicTvQrBrowserMessage =>
+      'Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again.';
 }

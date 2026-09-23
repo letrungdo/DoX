@@ -4662,6 +4662,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not signed in to Music.'**
   String get musicSignedOut;
+
+  /// No description provided for @musicPairTvTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in on TV'**
+  String get musicPairTvTitle;
+
+  /// No description provided for @musicPairTvScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the QR code on the TV\'s Music sign-in screen. The phone and the TV must be on the same Wi-Fi.'**
+  String get musicPairTvScanHint;
+
+  /// No description provided for @musicPairTvSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing the TV in…'**
+  String get musicPairTvSending;
+
+  /// No description provided for @musicPairTvDone.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV is now signed in as {name}.'**
+  String musicPairTvDone(String name);
+
+  /// No description provided for @musicPairTvUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach the TV. Check that the phone is on the same Wi-Fi and the TV still shows the code. On iPhone, allow Local Network access for Do X in Settings.'**
+  String get musicPairTvUnreachable;
+
+  /// No description provided for @musicPairTvRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Music did not accept this account on the TV. Sign in again on the phone, then retry.'**
+  String get musicPairTvRejected;
+
+  /// No description provided for @musicPairTvFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not sign the TV in. Please try again.'**
+  String get musicPairTvFailed;
+
+  /// No description provided for @musicPairTvNotACode.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a Do X TV sign-in code.'**
+  String get musicPairTvNotACode;
+
+  /// No description provided for @musicPairTvCameraError.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera could not be opened. Check the camera permission for Do X.'**
+  String get musicPairTvCameraError;
+
+  /// No description provided for @musicPairTvScanAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get musicPairTvScanAgain;
+
+  /// No description provided for @musicTvQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with your phone to sign in'**
+  String get musicTvQrTitle;
+
+  /// No description provided for @musicTvQrStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'On your phone, open Do X → Music and sign in.'**
+  String get musicTvQrStep1;
+
+  /// No description provided for @musicTvQrStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the account icon, then “Sign in on TV”.'**
+  String get musicTvQrStep2;
+
+  /// No description provided for @musicTvQrStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan this code. The phone must be on the same Wi-Fi as the TV.'**
+  String get musicTvQrStep3;
+
+  /// No description provided for @musicTvQrAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'TV address: {address}'**
+  String musicTvQrAddress(String address);
+
+  /// No description provided for @musicTvQrNoNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV is not connected to a home network. Connect it to Wi-Fi or Ethernet, then try again.'**
+  String get musicTvQrNoNetwork;
+
+  /// No description provided for @musicTvQrNewCode.
+  ///
+  /// In en, this message translates to:
+  /// **'New code'**
+  String get musicTvQrNewCode;
+
+  /// No description provided for @musicTvQrSigningIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in…'**
+  String get musicTvQrSigningIn;
+
+  /// No description provided for @musicTvQrBrowserMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again.'**
+  String get musicTvQrBrowserMessage;
 }
 
 class _AppLocalizationsDelegate

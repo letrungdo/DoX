@@ -219,6 +219,17 @@ class Dimens {
   /// television's larger text as well as the phone's.
   static double get musicTrackTileHeight => deviceType.isTv ? 92.0 : 76.0;
 
+  /// The code the television shows for a phone to sign it in with. Big enough
+  /// to be read from across a room, which is where the phone usually is.
+  static const musicPairingQrSize = 260.0;
+
+  /// The quiet zone around it, in white whatever the theme: a scanner reads a
+  /// dark code on a light plate and nothing else.
+  static const musicPairingQrPadding = 14.0;
+
+  /// The phone's camera window onto that code.
+  static const musicPairingScannerMaxSize = 320.0;
+
   /// Where a tile the remote has just moved onto is parked in its viewport,
   /// and how long the ride takes. Half way up, so there is always a row of
   /// peek above and below telling the viewer the grid carries on.

@@ -2577,4 +2577,74 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicSignedOut => 'Chưa đăng nhập Music.';
+
+  @override
+  String get musicPairTvTitle => 'Đăng nhập trên TV';
+
+  @override
+  String get musicPairTvScanHint =>
+      'Hướng camera vào mã QR trên màn hình đăng nhập Music của TV. Điện thoại và TV phải dùng chung Wi-Fi.';
+
+  @override
+  String get musicPairTvSending => 'Đang đăng nhập cho TV…';
+
+  @override
+  String musicPairTvDone(String name) {
+    return 'TV đã đăng nhập với tài khoản $name.';
+  }
+
+  @override
+  String get musicPairTvUnreachable =>
+      'Không kết nối được tới TV. Kiểm tra điện thoại có dùng chung Wi-Fi và TV vẫn đang hiện mã. Trên iPhone, hãy cho phép Do X truy cập Mạng cục bộ trong Cài đặt.';
+
+  @override
+  String get musicPairTvRejected =>
+      'Music không chấp nhận tài khoản này trên TV. Hãy đăng nhập lại trên điện thoại rồi thử lại.';
+
+  @override
+  String get musicPairTvFailed =>
+      'Không đăng nhập được cho TV. Vui lòng thử lại.';
+
+  @override
+  String get musicPairTvNotACode => 'Đây không phải mã đăng nhập TV của Do X.';
+
+  @override
+  String get musicPairTvCameraError =>
+      'Không mở được camera. Hãy kiểm tra quyền camera của Do X.';
+
+  @override
+  String get musicPairTvScanAgain => 'Quét lại';
+
+  @override
+  String get musicTvQrTitle => 'Quét bằng điện thoại để đăng nhập';
+
+  @override
+  String get musicTvQrStep1 => 'Trên điện thoại, mở Do X → Music và đăng nhập.';
+
+  @override
+  String get musicTvQrStep2 =>
+      'Bấm biểu tượng tài khoản, rồi chọn “Đăng nhập trên TV”.';
+
+  @override
+  String get musicTvQrStep3 =>
+      'Quét mã này. Điện thoại phải dùng chung Wi-Fi với TV.';
+
+  @override
+  String musicTvQrAddress(String address) {
+    return 'Địa chỉ TV: $address';
+  }
+
+  @override
+  String get musicTvQrNoNetwork =>
+      'TV chưa kết nối mạng gia đình. Hãy kết nối Wi-Fi hoặc cáp mạng rồi thử lại.';
+
+  @override
+  String get musicTvQrNewCode => 'Mã mới';
+
+  @override
+  String get musicTvQrSigningIn => 'Đang đăng nhập…';
+
+  @override
+  String get musicTvQrBrowserMessage =>
+      'Mở Do X trên điện thoại này: Music → đăng nhập → biểu tượng tài khoản → Đăng nhập trên TV, rồi quét lại mã.';
 }

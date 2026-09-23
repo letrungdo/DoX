@@ -1463,5 +1463,38 @@
   },
   "musicSignInRequired": "Sign in to Music to like this track.",
   "musicLikeFailed": "Could not save the like.",
-  "musicSignedOut": "Not signed in to Music."
+  "musicSignedOut": "Not signed in to Music.",
+  "musicPairTvTitle": "Sign in on TV",
+  "musicPairTvScanHint": "Point the camera at the QR code on the TV's Music sign-in screen. The phone and the TV must be on the same Wi-Fi.",
+  "musicPairTvSending": "Signing the TV in…",
+  "musicPairTvDone": "The TV is now signed in as {name}.",
+  "@musicPairTvDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPairTvUnreachable": "Could not reach the TV. Check that the phone is on the same Wi-Fi and the TV still shows the code. On iPhone, allow Local Network access for Do X in Settings.",
+  "musicPairTvRejected": "Music did not accept this account on the TV. Sign in again on the phone, then retry.",
+  "musicPairTvFailed": "Could not sign the TV in. Please try again.",
+  "musicPairTvNotACode": "This is not a Do X TV sign-in code.",
+  "musicPairTvCameraError": "The camera could not be opened. Check the camera permission for Do X.",
+  "musicPairTvScanAgain": "Scan again",
+  "musicTvQrTitle": "Scan with your phone to sign in",
+  "musicTvQrStep1": "On your phone, open Do X → Music and sign in.",
+  "musicTvQrStep2": "Tap the account icon, then “Sign in on TV”.",
+  "musicTvQrStep3": "Scan this code. The phone must be on the same Wi-Fi as the TV.",
+  "musicTvQrAddress": "TV address: {address}",
+  "@musicTvQrAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "musicTvQrNoNetwork": "The TV is not connected to a home network. Connect it to Wi-Fi or Ethernet, then try again.",
+  "musicTvQrNewCode": "New code",
+  "musicTvQrSigningIn": "Signing in…",
+  "musicTvQrBrowserMessage": "Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again."
 }
