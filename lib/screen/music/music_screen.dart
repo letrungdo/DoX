@@ -38,7 +38,18 @@ class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
+  /// Shared by every tab's list; only one of them is on screen at a time.
   final _scrollController = ScrollController();
+
+  /// The track the list was last brought round to. A track that becomes the
+  /// current one without the list having chosen it — next, previous, the end
+  /// of the one before, the lock screen — has the list ride to it.
+  String? _followedTrackId;
+
+  static const _shelfHeadingPadding = EdgeInsets.fromLTRB(16, 16, 16, 8);
+  static const _searchListPadding = EdgeInsets.all(4);
+  static const _trackListPadding = EdgeInsets.all(8);
+
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'tv-music-search');
   final Map<String, FocusNode> _trackFocusNodes = {};
@@ -103,6 +114,16 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     final l10n = context.l10n;
 
     final pageTitle = l10n.tvCategoryMusic;
+
+    final currentId = viewModel.currentTrack?.id;
+    if (currentId != _followedTrackId) {
+      _followedTrackId = currentId;
+      if (currentId != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _followTrack(currentId),
+        );
+      }
+    }
 
     final mainContent = isTv
         ? Row(
@@ -196,6 +217,83 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       case MusicLikeOutcome.failed:
         context.showToast(l10n.musicLikeFailed, isError: true);
     }
+  }
+
+  /// Rides the list to [id]'s row and parks it half way up the viewport.
+  ///
+  /// Worked out rather than found: the rows are built lazily, so a row off
+  /// screen has no context to ask `Scrollable.ensureVisible` about. Every row
+  /// is the same height, which leaves only the shelf headings to measure.
+  void _followTrack(String id) {
+    if (!mounted || !_scrollController.hasClients) return;
+    if (_scrollController.positions.length != 1) return;
+    final offset = _trackOffset(vm, id);
+    // Not in the list on screen: the queue fell back to Discover while
+    // another tab is open.
+    if (offset == null) return;
+    final position = _scrollController.position;
+    final target =
+        offset -
+        (position.viewportDimension - Dimens.musicTrackTileHeight) *
+            Dimens.tvFocusScrollAlignment;
+    _scrollController.animateTo(
+      target.clamp(position.minScrollExtent, position.maxScrollExtent),
+      duration: Dimens.musicFollowScrollDuration,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// Where [id]'s row starts in the current tab's list, or null when it is
+  /// not there. Mirrors the padding each list is built with.
+  double? _trackOffset(MusicViewModel viewModel, String id) {
+    const spacing = Dimens.musicTrackSpacing;
+    final stride = Dimens.musicTrackTileHeight + spacing;
+    double? inGrid(List<MusicTrack> tracks, double leading) {
+      final index = tracks.indexWhere((t) => t.id == id);
+      return index < 0 ? null : leading + index * stride;
+    }
+
+    switch (viewModel.currentTab) {
+      case MusicTab.home:
+        final heading = _shelfHeadingHeight(deviceType.isTv);
+        var offset = 0.0;
+        for (final shelf in viewModel.shelves) {
+          offset += heading;
+          final found = inGrid(shelf.tracks, offset);
+          if (found != null) return found;
+          if (shelf.tracks.isNotEmpty) {
+            offset += shelf.tracks.length * stride - spacing;
+          }
+        }
+        return null;
+      case MusicTab.search:
+        return inGrid(viewModel.searchResults, _searchListPadding.top);
+      case MusicTab.likes:
+        return inGrid(viewModel.likedTracks, _trackListPadding.top);
+      case MusicTab.history:
+        return inGrid(viewModel.historyTracks, _trackListPadding.top);
+    }
+  }
+
+  TextStyle _shelfHeadingStyle(bool isTv) =>
+      TextStyle(fontSize: isTv ? 14 : 12, fontWeight: FontWeight.bold);
+
+  /// One shelf heading's height, laid out the way [Text] lays it out.
+  double _shelfHeadingHeight(bool isTv) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: 'Ag',
+        style: DefaultTextStyle.of(
+          context,
+        ).style.merge(_shelfHeadingStyle(isTv)),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final height = painter.height;
+    painter.dispose();
+    return _shelfHeadingPadding.vertical + height;
   }
 
   /// The tab rail, in the shape the home page's rail already has.
@@ -381,12 +479,14 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
         return _buildSearchTab(viewModel);
       case MusicTab.likes:
         return _buildTrackListSection(
+          MusicTab.likes,
           viewModel.likedTracks,
           'Bài hát yêu thích',
           Icons.favorite_border_rounded,
         );
       case MusicTab.history:
         return _buildTrackListSection(
+          MusicTab.history,
           viewModel.historyTracks,
           'Lịch sử đã nghe',
           Icons.history_rounded,
@@ -396,6 +496,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
 
   Widget _buildDiscoverHome(MusicViewModel viewModel, bool isTv) {
     return CustomScrollView(
+      key: const ValueKey(MusicTab.home),
       controller: _scrollController,
       slivers: [
         // The rows, and their headings, are whatever the service sent for this
@@ -404,13 +505,13 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
         for (final shelf in viewModel.shelves) ...[
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: _shelfHeadingPadding,
+              // One line, so [_trackOffset] knows how tall it is.
               child: Text(
                 shelf.title,
-                style: TextStyle(
-                  fontSize: isTv ? 14 : 12,
-                  fontWeight: FontWeight.bold,
-                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _shelfHeadingStyle(isTv),
               ),
             ),
           ),
@@ -469,9 +570,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                   ),
                 )
               : CustomScrollView(
+                  key: const ValueKey(MusicTab.search),
+                  controller: _scrollController,
                   slivers: [
                     SliverPadding(
-                      padding: const EdgeInsets.all(4),
+                      padding: _searchListPadding,
                       sliver: _buildSliverGrid(viewModel.searchResults),
                     ),
                   ],
@@ -482,6 +585,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   }
 
   Widget _buildTrackListSection(
+    MusicTab tab,
     List<MusicTrack> tracks,
     String emptyTitle,
     IconData emptyIcon,
@@ -499,9 +603,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       );
     }
     return CustomScrollView(
+      key: ValueKey(tab),
+      controller: _scrollController,
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.all(8),
+          padding: _trackListPadding,
           sliver: _buildSliverGrid(tracks),
         ),
       ],
@@ -523,8 +629,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 1,
           mainAxisExtent: Dimens.musicTrackTileHeight,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          crossAxisSpacing: Dimens.musicTrackSpacing,
+          mainAxisSpacing: Dimens.musicTrackSpacing,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final track = trackList[index];
@@ -536,7 +642,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
             isLiked: vModel.isLiked(track.id),
             focusNode: _getNodeForTrack(track.id),
             likeFocusNode: _getLikeNodeForTrack(track.id),
-            onTap: () => vModel.playTrack(track),
+            onTap: () {
+              // Chosen from the list, so the list stays where it is.
+              _followedTrackId = track.id;
+              vModel.playTrack(track);
+            },
             onToggleLike: () => _onToggleLike(track),
           );
         }, childCount: trackList.length),

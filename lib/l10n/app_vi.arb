@@ -1443,5 +1443,6 @@
   "musicTvQrBrowserMessage": "Mở Do X trên điện thoại này: Music → đăng nhập → biểu tượng tài khoản → Đăng nhập trên TV, rồi quét lại mã.",
   "musicPlaybackChannel": "Phát nhạc",
   "musicChallengeTitle": "Xác minh nhanh",
-  "musicChallengeHint": "Music cần xác minh bạn không phải bot. Hoàn tất bước kiểm tra để lưu lượt thích."
+  "musicChallengeHint": "Music cần xác minh bạn không phải bot. Hoàn tất bước kiểm tra để lưu lượt thích.",
+  "musicChallengeTvHint": "Dùng phím mũi tên để di chuyển con trỏ. Nhấn OK để giữ thanh trượt, kéo bằng phím mũi tên rồi nhấn OK lần nữa để thả."
 }

@@ -219,6 +219,14 @@ class Dimens {
   /// television's larger text as well as the phone's.
   static double get musicTrackTileHeight => deviceType.isTv ? 92.0 : 76.0;
 
+  /// The gap between two rows of the music list.
+  static const musicTrackSpacing = 12.0;
+
+  /// How long the music list takes to bring the track now playing into view
+  /// after next or previous — a longer ride than a focus move, because it can
+  /// cover a whole shelf.
+  static const musicFollowScrollDuration = Duration(milliseconds: 350);
+
   /// The code the television shows for a phone to sign it in with. Big enough
   /// to be read from across a room, which is where the phone usually is.
   static const musicPairingQrSize = 260.0;
@@ -230,6 +238,10 @@ class Dimens {
   /// The music service's bot check, framed in a sheet: tall enough for its
   /// puzzle without the sheet having to scroll.
   static const musicChallengeHeight = 460.0;
+
+  /// The remote's pointer over a web view — see `TvWebPointer`. Big enough to
+  /// find from the sofa, small enough not to hide what it is pointing at.
+  static const tvWebPointerSize = 28.0;
 
   /// The phone's camera window onto that code.
   static const musicPairingScannerMaxSize = 320.0;

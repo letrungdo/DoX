@@ -2657,4 +2657,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get musicChallengeHint =>
       'Music cần xác minh bạn không phải bot. Hoàn tất bước kiểm tra để lưu lượt thích.';
+
+  @override
+  String get musicChallengeTvHint =>
+      'Dùng phím mũi tên để di chuyển con trỏ. Nhấn OK để giữ thanh trượt, kéo bằng phím mũi tên rồi nhấn OK lần nữa để thả.';
 }

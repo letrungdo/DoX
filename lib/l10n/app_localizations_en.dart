@@ -2667,4 +2667,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get musicChallengeHint =>
       'Music wants to make sure you are not a bot. Complete the check and your like will be saved.';
+
+  @override
+  String get musicChallengeTvHint =>
+      'Move the pointer with the arrow keys. Press OK to grab the slider, drag it with the arrows, then press OK again to let go.';
 }

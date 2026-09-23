@@ -4794,6 +4794,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Music wants to make sure you are not a bot. Complete the check and your like will be saved.'**
   String get musicChallengeHint;
+
+  /// No description provided for @musicChallengeTvHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the pointer with the arrow keys. Press OK to grab the slider, drag it with the arrows, then press OK again to let go.'**
+  String get musicChallengeTvHint;
 }
 
 class _AppLocalizationsDelegate

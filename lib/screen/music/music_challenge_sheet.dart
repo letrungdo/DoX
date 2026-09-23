@@ -4,9 +4,13 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/env.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/loading.dart';
+import 'package:do_x/widgets/tv_web_pointer.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -39,6 +43,9 @@ class _MusicChallengeView extends StatefulWidget {
 class _MusicChallengeViewState extends State<_MusicChallengeView> {
   static const _siteUrl = 'https://${Envs.musicApiDomain}/';
 
+  /// The height the check's page is laid out for — see [_hostPage].
+  static final _designHeight = Dimens.musicChallengeHeight.round();
+
   bool _isLoading = true;
   bool _passed = false;
 
@@ -51,10 +58,25 @@ class _MusicChallengeViewState extends State<_MusicChallengeView> {
 <!doctype html>
 <html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>html, body, iframe { margin: 0; width: 100%; height: 100%; border: 0; }</style>
+<style>
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+iframe { display: block; border: 0; transform-origin: 0 0; }
+</style>
 </head><body>
 <iframe src="$src"></iframe>
 <script>
+// Laid out at the height the check is drawn for and scaled down to the room
+// there is. A shorter frame would leave the check scrolling inside a page of
+// another origin, where a television remote cannot scroll it.
+var frame = document.querySelector('iframe');
+function fit() {
+  var scale = Math.min(1, window.innerHeight / $_designHeight);
+  frame.style.width = (window.innerWidth / scale) + 'px';
+  frame.style.height = (window.innerHeight / scale) + 'px';
+  frame.style.transform = 'scale(' + scale + ')';
+}
+fit();
+window.addEventListener('resize', fit);
 window.addEventListener('message', function (event) {
   var host = '';
   try { host = new URL(event.origin).hostname; } catch (_) {}
@@ -106,40 +128,61 @@ window.addEventListener('message', function (event) {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          context.l10n.musicChallengeHint,
+          deviceType.isTv
+              ? context.l10n.musicChallengeTvHint
+              : context.l10n.musicChallengeHint,
           textAlign: TextAlign.center,
           style: context.textTheme.secondary.size13,
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: Dimens.musicChallengeHeight,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(Dimens.radiusCard),
-            child: Stack(
-              children: [
-                InAppWebView(
-                  initialData: InAppWebViewInitialData(
-                    data: _hostPage,
-                    baseUrl: WebUri(_siteUrl),
-                  ),
-                  initialSettings: InAppWebViewSettings(
-                    javaScriptEnabled: true,
-                    thirdPartyCookiesEnabled: true,
-                    transparentBackground: true,
-                  ),
-                  onWebViewCreated: (controller) =>
-                      controller.addJavaScriptHandler(
-                        handlerName: 'passed',
-                        callback: _onPassed,
+        // Flexible under a cap rather than a fixed height: a television's
+        // screen is shorter than the check, and a fixed block ran off the
+        // bottom of it — slider and all.
+        Flexible(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxHeight: Dimens.musicChallengeHeight,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(Dimens.radiusCard),
+              child: TvWebPointer(
+                child: Stack(
+                  children: [
+                    InAppWebView(
+                      // The web view takes every touch from its first
+                      // contact. Left to the gesture arena, a sideways drag
+                      // was held back until the finger lifted — the sheet's
+                      // own drag was still deciding — and a slider replayed
+                      // in one burst at the end is not a drag.
+                      gestureRecognizers: {
+                        Factory<OneSequenceGestureRecognizer>(
+                          EagerGestureRecognizer.new,
+                        ),
+                      },
+                      initialData: InAppWebViewInitialData(
+                        data: _hostPage,
+                        baseUrl: WebUri(_siteUrl),
                       ),
-                  onConsoleMessage: (_, message) =>
-                      logger.d('Music challenge page: ${message.message}'),
-                  onLoadStop: (_, _) {
-                    if (mounted) setState(() => _isLoading = false);
-                  },
+                      initialSettings: InAppWebViewSettings(
+                        javaScriptEnabled: true,
+                        thirdPartyCookiesEnabled: true,
+                        transparentBackground: true,
+                      ),
+                      onWebViewCreated: (controller) =>
+                          controller.addJavaScriptHandler(
+                            handlerName: 'passed',
+                            callback: _onPassed,
+                          ),
+                      onConsoleMessage: (_, message) =>
+                          logger.d('Music challenge page: ${message.message}'),
+                      onLoadStop: (_, _) {
+                        if (mounted) setState(() => _isLoading = false);
+                      },
+                    ),
+                    if (_isLoading) const Center(child: Loading()),
+                  ],
                 ),
-                if (_isLoading) const Center(child: Loading()),
-              ],
+              ),
             ),
           ),
         ),
