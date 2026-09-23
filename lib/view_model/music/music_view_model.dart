@@ -176,8 +176,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
-  Duration _position = Duration.zero;
-  Duration get position => _position;
+  /// Where the sound is, kept apart from the rest of the page's state: it
+  /// moves twice a second, and only the seek bar and the times beside it
+  /// need to hear of it — not the whole page, list and all.
+  final _position = ValueNotifier(Duration.zero);
+  Duration get position => _position.value;
+  ValueListenable<Duration> get positionListenable => _position;
 
   Duration _duration = Duration.zero;
   Duration get duration => _duration;
@@ -355,7 +359,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
     _currentTrack = track;
     _isPlaying = false;
-    _position = Duration.zero;
+    _position.value = Duration.zero;
     _duration = track.duration;
     notifyListenersSafe();
     // Here rather than in initState, which is too early to read the
@@ -546,6 +550,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         mixWithOthers:
             !background && defaultTargetPlatform == TargetPlatform.android,
       ),
+      // On a television the picture goes to a SurfaceView the display
+      // composites by itself, rather than through a texture Flutter redraws
+      // every frame on the weakest GPU the app runs on.
+      viewType: _pictureViewType,
     );
     try {
       await controller.initialize();
@@ -557,6 +565,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     }
     return controller;
   }
+
+  static VideoViewType get _pictureViewType =>
+      deviceType.isTv && defaultTargetPlatform == TargetPlatform.android
+      ? VideoViewType.platformView
+      : VideoViewType.textureView;
 
   Future<MusicVideo?> _findVideoSafely(MusicTrack track) =>
       _findVideo(track).catchError((Object _) => null);
@@ -800,9 +813,8 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       final controller = _audioController;
       if (controller != null && controller.value.isInitialized) {
-        _position = controller.value.position;
+        _position.value = controller.value.position;
         _syncVideo();
-        notifyListenersSafe();
       }
     });
   }
@@ -926,7 +938,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final controller = _audioController;
     if (controller == null || !controller.value.isInitialized) return;
     controller.seekTo(position);
-    _position = position;
+    _position.value = position;
     final video = _videoController;
     if (video != null && !identical(video, controller) && !_pictureLoops) {
       _lastVideoResync = DateTime.now();
@@ -974,6 +986,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     audio?.removeListener(_videoPlayerListener);
     audio?.dispose();
     if (video != null && !identical(video, audio)) video.dispose();
+    _position.dispose();
     super.dispose();
   }
 }

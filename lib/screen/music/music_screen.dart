@@ -1221,18 +1221,21 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: _seekable(
-                Slider(
-                  value: viewModel.position.inMilliseconds.toDouble().clamp(
-                    0.0,
-                    viewModel.duration.inMilliseconds.toDouble(),
+              child: ValueListenableBuilder(
+                valueListenable: viewModel.positionListenable,
+                builder: (context, position, _) => _seekable(
+                  Slider(
+                    value: position.inMilliseconds.toDouble().clamp(
+                      0.0,
+                      viewModel.duration.inMilliseconds.toDouble(),
+                    ),
+                    max: viewModel.duration.inMilliseconds.toDouble() == 0.0
+                        ? 1.0
+                        : viewModel.duration.inMilliseconds.toDouble(),
+                    onChanged: (val) {
+                      viewModel.seekTo(Duration(milliseconds: val.toInt()));
+                    },
                   ),
-                  max: viewModel.duration.inMilliseconds.toDouble() == 0.0
-                      ? 1.0
-                      : viewModel.duration.inMilliseconds.toDouble(),
-                  onChanged: (val) {
-                    viewModel.seekTo(Duration(milliseconds: val.toInt()));
-                  },
                 ),
               ),
             ),
@@ -1256,39 +1259,56 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
     return Column(
       children: [
-        _seekable(
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 4,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-            ),
-            child: Slider(
-              value: viewModel.position.inMilliseconds.toDouble().clamp(
-                0.0,
-                viewModel.duration.inMilliseconds.toDouble(),
-              ),
-              max: viewModel.duration.inMilliseconds.toDouble() == 0.0
-                  ? 1.0
-                  : viewModel.duration.inMilliseconds.toDouble(),
-              onChanged: (val) {
-                viewModel.seekTo(Duration(milliseconds: val.toInt()));
-              },
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ValueListenableBuilder(
+          valueListenable: viewModel.positionListenable,
+          builder: (context, position, _) => Column(
             children: [
-              Text(
-                _formatDuration(viewModel.position),
-                style: TextStyle(fontSize: 12, color: context.theme.hintColor),
+              _seekable(
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 4,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14,
+                    ),
+                  ),
+                  child: Slider(
+                    value: position.inMilliseconds.toDouble().clamp(
+                      0.0,
+                      viewModel.duration.inMilliseconds.toDouble(),
+                    ),
+                    max: viewModel.duration.inMilliseconds.toDouble() == 0.0
+                        ? 1.0
+                        : viewModel.duration.inMilliseconds.toDouble(),
+                    onChanged: (val) {
+                      viewModel.seekTo(Duration(milliseconds: val.toInt()));
+                    },
+                  ),
+                ),
               ),
-              Text(
-                _formatDuration(viewModel.duration),
-                style: TextStyle(fontSize: 12, color: context.theme.hintColor),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDuration(position),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.theme.hintColor,
+                      ),
+                    ),
+                    Text(
+                      _formatDuration(viewModel.duration),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.theme.hintColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

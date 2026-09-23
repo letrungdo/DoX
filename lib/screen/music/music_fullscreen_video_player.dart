@@ -357,37 +357,46 @@ class _MusicFullscreenVideoPlayerState
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: muted, fontSize: isTv ? 14 : 12),
               ),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 4,
-                  activeTrackColor: white,
-                  inactiveTrackColor: Colors.white24,
-                  thumbColor: white,
-                ),
-                child: widget.seekable(
-                  Slider(
-                    value: vm.position.inMilliseconds.toDouble().clamp(
-                      0.0,
-                      duration,
+              ValueListenableBuilder(
+                valueListenable: vm.positionListenable,
+                builder: (context, position, _) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 4,
+                        activeTrackColor: white,
+                        inactiveTrackColor: Colors.white24,
+                        thumbColor: white,
+                      ),
+                      child: widget.seekable(
+                        Slider(
+                          value: position.inMilliseconds.toDouble().clamp(
+                            0.0,
+                            duration,
+                          ),
+                          max: duration == 0 ? 1 : duration,
+                          onChanged: (value) =>
+                              vm.seekTo(Duration(milliseconds: value.toInt())),
+                        ),
+                      ),
                     ),
-                    max: duration == 0 ? 1 : duration,
-                    onChanged: (value) =>
-                        vm.seekTo(Duration(milliseconds: value.toInt())),
-                  ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _format(position),
+                          style: TextStyle(color: muted, fontSize: 12),
+                        ),
+                        Text(
+                          _format(vm.duration),
+                          style: TextStyle(color: muted, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _format(vm.position),
-                    style: TextStyle(color: muted, fontSize: 12),
-                  ),
-                  Text(
-                    _format(vm.duration),
-                    style: TextStyle(color: muted, fontSize: 12),
-                  ),
-                ],
               ),
               const SizedBox(height: 8),
               // Shrunk rather than cut off where a portrait phone is too

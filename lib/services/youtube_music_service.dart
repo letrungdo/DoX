@@ -6,7 +6,6 @@ import 'package:do_x/model/music_track.dart';
 import 'package:do_x/model/music_video.dart';
 import 'package:do_x/services/local_hls_server.dart';
 import 'package:do_x/services/music_video_matcher.dart';
-import 'package:do_x/services/youtube_js_solver.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:flutter/foundation.dart';
@@ -26,7 +25,8 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 ///   app's default client gets them too, but without a proof-of-origin token
 ///   YouTube serves only their first few hundred kilobytes and answers `403`
 ///   to every range after that, so a player stalls within seconds. The
-///   clients that need no such token are asked instead — see [_hdStreams].
+///   `VISIONOS` client, which needs no such token, is asked instead — see
+///   [_hdStreams].
 ///   Every HD stream is also tried from the middle before it is handed over,
 ///   because a link that only opens is not yet one that plays.
 /// - **Muxed** — picture and sound together at 360p, which plays to the end
@@ -89,13 +89,13 @@ class YoutubeMusicService {
   /// until YouTube stops taking it.
   Future<String>? _visitorData;
 
-  /// How long a client YouTube has put its bot check in front of is left
-  /// alone. Asking again straight away only costs every track the wait for
+  /// How long `VISIONOS` is left alone once YouTube has put its bot check
+  /// in front of it. Asking again straight away only costs every track the wait for
   /// the refusal, and a network that keeps asking is one it keeps flagging.
   static const _botCheckRest = Duration(minutes: 15);
 
-  /// The clients resting after a bot check, and what YouTube said.
-  final _blocked = <String, ({DateTime until, String reason})>{};
+  /// Until when `VISIONOS` rests after a bot check, and what YouTube said.
+  ({DateTime until, String reason})? _blocked;
 
   /// How long HD is waited for before the video carries on without it.
   static const _hdWait = Duration(seconds: 20);
@@ -104,18 +104,6 @@ class YoutubeMusicService {
 
   /// The default client, for the muxed stream.
   final YoutubeExplode _explode;
-
-  /// The TV client with the challenge solver, for HD. Only made where a web
-  /// view can run the solver, and only once HD is first asked for.
-  YoutubeExplode? _hdExplode;
-  YoutubeExplode? get _hd =>
-      _solver == null ? null : _hdExplode ??= YoutubeExplode(jsSolver: _solver);
-
-  /// The challenge solver, shared by every client that needs one.
-  WebViewJsSolver? _solverInstance;
-  WebViewJsSolver? get _solver => WebViewJsSolver.isSupported
-      ? _solverInstance ??= WebViewJsSolver()
-      : null;
 
   /// The pick made for each track, including "none", so a track played again
   /// is not searched for again. Only an answer is kept; a search that failed
@@ -162,8 +150,7 @@ class YoutubeMusicService {
   }
 
   /// [video] with its streams: HD where there is HD, the muxed 360p one
-  /// otherwise. Bounded in time: the first one also fetches
-  /// the solver and the player script. Never throws.
+  /// otherwise. Bounded in time. Never throws.
   Future<MusicVideo> withHd(MusicVideo video) async {
     final started = _hdStarted;
     _hdStarted = null;
@@ -191,9 +178,7 @@ class YoutubeMusicService {
   /// its lookup to finish unread.
   _StreamLookup? _hdStarted;
 
-  /// HD for [videoId], with the muxed stream asked for the moment the first
-  /// client comes back without HD — alongside the next, which can take a
-  /// while, rather than after it.
+  /// HD for [videoId], with the muxed stream asked for only if there is none.
   _StreamLookup _startLookup(String videoId) {
     Future<String?>? muxed;
     Future<String?> fallback() =>
@@ -201,8 +186,7 @@ class YoutubeMusicService {
           logger.d('[MusicVideo] no muxed stream for $videoId: $e');
           return null;
         });
-    final hd = _hdStreams(videoId, onMiss: () => unawaited(fallback()))
-      ..ignore();
+    final hd = _hdStreams(videoId)..ignore();
     return (videoId: videoId, hd: hd, muxed: fallback);
   }
 
@@ -294,73 +278,34 @@ class YoutubeMusicService {
   /// than lines so a letterboxed video (1920×804) lands in the right tier.
   static int get _maxPixels => deviceType.isTv ? 1920 * 1080 : 1280 * 720;
 
-  /// The most pixels a second a picture may ask to be decoded: 1080p at 30
-  /// frames on a television, 720p at 60 on anything held in a hand.
-  ///
-  /// A television's decoder and the texture Flutter draws the picture
-  /// through are the weakest of any screen the app runs on, and a 1080p60
-  /// picture, played beside the sound's own player, dropped frames there
-  /// all the way through. A 60-frame video comes up at 720p60 instead.
-  static int get _maxPixelRate =>
-      deviceType.isTv ? 1920 * 1080 * 30 : 1280 * 720 * 60;
+  /// [videoId]'s HD picture and sound, each only if it plays through, from
+  /// the `VISIONOS` client — see [_visionOsHd].
+  Future<_HdStreams> _hdStreams(String videoId) async {
+    void note(String line) => logger.d('[MusicVideo] $videoId VISIONOS: $line');
 
-  /// [videoId]'s HD picture and sound, each only if it plays through.
-  ///
-  /// Asked of the clients that hand adaptive streams over without a
-  /// proof-of-origin token, one after the other until one of them plays:
-  ///
-  /// - `VISIONOS`, which needs only a visitor id — no watch page, no
-  ///   challenge. See [_visionOsHd].
-  /// - `TV`, whose links carry signature and `n` challenges for
-  ///   [WebViewJsSolver] to solve, and which needs the watch page for the
-  ///   player script those challenges are written in.
-  ///
-  /// [onMiss] is called when a client has come back without HD and the next
-  /// is about to be asked.
-  Future<_HdStreams> _hdStreams(
-    String videoId, {
-    void Function()? onMiss,
-  }) async {
-    final hd = _hd;
-    final attempts = <(String, Future<_FoundHd> Function()?)>[
-      ('VISIONOS', () => _visionOsHd(videoId)),
-      ('TV', hd == null ? null : () => _tvHd(hd, videoId)),
-    ];
-    void note(String line) => logger.d('[MusicVideo] $videoId $line');
-
-    for (final (index, (name, attempt)) in attempts.indexed) {
-      if (index > 0) onMiss?.call();
-      if (attempt == null) {
-        note('$name: skipped, no web view for its solver');
-        continue;
+    final blocked = _blocked;
+    if (blocked != null && DateTime.now().isBefore(blocked.until)) {
+      final left = blocked.until.difference(DateTime.now()).inMinutes + 1;
+      note('resting ${left}m after — ${blocked.reason}');
+      return const _HdStreams();
+    }
+    try {
+      final found = await _visionOsHd(videoId);
+      note(found.note);
+      if (found.video != null) {
+        return _HdStreams(
+          video: found.video,
+          audio: found.audio,
+          headers: found.headers,
+        );
       }
-      final blocked = _blocked[name];
-      if (blocked != null && DateTime.now().isBefore(blocked.until)) {
-        final left = blocked.until.difference(DateTime.now()).inMinutes + 1;
-        note('$name: resting ${left}m after — ${blocked.reason}');
-        continue;
-      }
-      try {
-        final found = await attempt();
-        note('$name: ${found.note}');
-        if (found.video != null) {
-          return _HdStreams(
-            video: found.video,
-            audio: found.audio,
-            headers: found.headers,
-          );
-        }
-      } on Object catch (e) {
-        final reason = _firstLine(e);
-        note('$name: $reason');
-        if (_isBotCheck(e)) {
-          _blocked[name] = (
-            until: DateTime.now().add(_botCheckRest),
-            reason: reason,
-          );
-          // A visitor id YouTube has stopped taking is not asked with again.
-          _visitorData = null;
-        }
+    } on Object catch (e) {
+      final reason = _firstLine(e);
+      note(reason);
+      if (_isBotCheck(e)) {
+        _blocked = (until: DateTime.now().add(_botCheckRest), reason: reason);
+        // A visitor id YouTube has stopped taking is not asked with again.
+        _visitorData = null;
       }
     }
     return const _HdStreams();
@@ -471,43 +416,6 @@ class YoutubeMusicService {
 
   /// Serves the HLS playlists [trimHlsMaster] rewrites.
   final _hlsServer = LocalHlsServer();
-
-  /// HD from the `TV` client, through the package and [WebViewJsSolver].
-  Future<_FoundHd> _tvHd(YoutubeExplode explode, String videoId) async {
-    final client = YoutubeApiClient.tv;
-    final manifest = await explode.videos.streams.getManifest(
-      videoId,
-      ytClients: [client],
-      requireWatchPage: true,
-    );
-    final userAgent = client.payload['context']?['client']?['userAgent'];
-    final headers = {if (userAgent is String) 'User-Agent': userAgent};
-    return _playableHd(
-      [
-        for (final s in manifest.videoOnly)
-          if (s.container == StreamContainer.mp4 &&
-              s.videoCodec.startsWith('avc1'))
-            _AdaptiveStream(
-              url: s.url,
-              bytes: s.size.totalBytes,
-              bitrate: s.bitrate.bitsPerSecond,
-              width: s.videoResolution.width,
-              height: s.videoResolution.height,
-              fps: s.framerate.framesPerSecond.round(),
-            ),
-      ],
-      [
-        for (final s in manifest.audioOnly)
-          if (s.container == StreamContainer.mp4)
-            _AdaptiveStream(
-              url: s.url,
-              bytes: s.size.totalBytes,
-              bitrate: s.bitrate.bitsPerSecond,
-            ),
-      ],
-      headers,
-    );
-  }
 
   /// [master] with only the H.264 variants no larger than [maxPixels], the
   /// largest first, and the size of that one — or null when it has none.
@@ -624,9 +532,9 @@ class YoutubeMusicService {
     return reason.isEmpty ? lines.first : '${lines.first} $reason';
   }
 
-  /// The largest of [pictures] no larger than [_maxPixels] nor faster than
-  /// [_maxPixelRate] and the best of [sounds], each only if it plays from
-  /// the middle, with a line saying what was found and what was not.
+  /// The largest of [pictures] no larger than [_maxPixels] and the best of
+  /// [sounds], each only if it plays from the middle, with a line saying
+  /// what was found and what was not.
   ///
   /// H.264 only: every phone and television decodes it in hardware, which
   /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
@@ -635,18 +543,13 @@ class YoutubeMusicService {
     List<_AdaptiveStream> sounds,
     Map<String, String> headers,
   ) async {
-    final fitting =
-        pictures
-            .where(
-              (s) => s.pixels <= _maxPixels && s.pixelRate <= _maxPixelRate,
-            )
-            .toList()
-          // The larger picture first; of two the same size, the smoother.
-          ..sort(
-            (a, b) => b.pixels != a.pixels
-                ? b.pixels.compareTo(a.pixels)
-                : b.fps.compareTo(a.fps),
-          );
+    final fitting = pictures.where((s) => s.pixels <= _maxPixels).toList()
+      // The larger picture first; of two the same size, the smoother.
+      ..sort(
+        (a, b) => b.pixels != a.pixels
+            ? b.pixels.compareTo(a.pixels)
+            : b.fps.compareTo(a.fps),
+      );
     if (fitting.isEmpty) {
       return (
         video: null,
@@ -795,9 +698,6 @@ class _AdaptiveStream {
 
   int get pixels => width * height;
 
-  /// Pixels to decode a second. A picture that did not say its frame rate
-  /// is counted at 30, the rate most videos are.
-  int get pixelRate => pixels * (fps > 0 ? fps : 30);
   bool get isH264 => mimeType.startsWith('video/mp4; codecs="avc1');
   bool get isAac => mimeType.startsWith('audio/mp4');
 }

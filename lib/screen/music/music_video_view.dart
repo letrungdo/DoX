@@ -25,30 +25,31 @@ class MusicVideoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final aspectRatio = controller.value.aspectRatio;
-    final view = AspectRatio(
-      aspectRatio: aspectRatio > 0 ? aspectRatio : 16 / 9,
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: ColoredBox(
-          color: Colors.black,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              VideoPlayer(controller),
-              if (isOfficialAudio)
-                Positioned(
-                  left: Dimens.musicVideoBadgeInset,
-                  bottom: Dimens.musicVideoBadgeInset,
-                  child: _OfficialAudioBadge(
-                    label: context.l10n.musicVideoOfficialAudio,
-                  ),
-                ),
-            ],
-          ),
-        ),
+    final picture = ColoredBox(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          VideoPlayer(controller),
+          if (isOfficialAudio)
+            Positioned(
+              left: Dimens.musicVideoBadgeInset,
+              bottom: Dimens.musicVideoBadgeInset,
+              child: _OfficialAudioBadge(
+                label: context.l10n.musicVideoOfficialAudio,
+              ),
+            ),
+        ],
       ),
     );
-    return view;
+    return AspectRatio(
+      aspectRatio: aspectRatio > 0 ? aspectRatio : 16 / 9,
+      // Square corners need no clip, and a clip over the picture is paid for
+      // on every frame — full screen, the one place that has them.
+      child: borderRadius == BorderRadius.zero
+          ? picture
+          : ClipRRect(borderRadius: borderRadius, child: picture),
+    );
   }
 }
 
