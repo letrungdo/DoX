@@ -138,6 +138,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get menuTabAlwaysPinned => 'Tab Menu luôn được hiển thị.';
 
   @override
+  String get pageLayoutTvHint =>
+      'Bấm OK vào một trang để chọn, dùng lên/xuống để di chuyển, rồi bấm OK lần nữa để thả.';
+
+  @override
   String get bottomTabs => 'Tab dưới màn hình';
 
   @override

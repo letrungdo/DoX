@@ -3,6 +3,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/settings/page_layout_editor.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -135,6 +136,11 @@ class SettingsScreen extends StatelessWidget {
                         l10n.menuTabAlwaysPinned,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
+                      if (deviceType.isTv)
+                        Text(
+                          l10n.pageLayoutTvHint,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                     ],
                   ),
                 ),

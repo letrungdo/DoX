@@ -45,6 +45,16 @@ class MainScreen extends StatefulScreen implements AutoRouteWrapper {
 class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   bool _checkedInitialAuth = false;
 
+  /// The tabs the shell was last built with.
+  ///
+  /// Held while a page covers this one — the settings page editing the layout,
+  /// mostly. A new tab list rebuilds the whole shell, and every nested
+  /// navigator in it asks for the focus as its first route goes in: on a TV
+  /// that pulled the remote off the settings page, onto this one hidden
+  /// underneath, at the first press. The new list is picked up as soon as
+  /// this page is back on top.
+  List<AppPage>? _shownTabs;
+
   static const _inactiveIconFilter = ColorFilter.matrix([
     0.138,
     0.465,
@@ -320,7 +330,11 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     return Selector<AppViewModel, List<AppPage>>(
       selector: (_, vm) => vm.visibleTabs,
       shouldRebuild: (previous, next) => !listEquals(previous, next),
-      builder: (context, tabs, _) {
+      builder: (context, latestTabs, _) {
+        final isCovered = !(ModalRoute.of(context)?.isCurrent ?? true);
+        final tabs = _shownTabs = isCovered
+            ? _shownTabs ?? latestTabs
+            : latestTabs;
         final routes = tabs.map((page) => page.route).toList();
 
         return AutoTabsRouter(

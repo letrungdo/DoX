@@ -2,8 +2,10 @@ import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/settings/page_layout_editor.dart';
 import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -142,5 +144,78 @@ void main() {
     // Dragging replaced them; a stray arrow would mean the old UI came back.
     expect(find.byIcon(Icons.arrow_upward_rounded), findsNothing);
     expect(find.byIcon(Icons.arrow_downward_rounded), findsNothing);
+  });
+
+  group('on a TV remote', () {
+    setUp(() => deviceType.isTv = true);
+    tearDown(() => deviceType.isTv = false);
+
+    FocusNode focusOf(WidgetTester tester, AppPage page) => Focus.of(
+      tester.element(
+        find
+            .descendant(
+              of: find.byKey(ValueKey(page)),
+              matching: find.byType(Icon),
+            )
+            .first,
+      ),
+    );
+
+    testWidgets('OK picks a page up and up carries it past the header', (
+      tester,
+    ) async {
+      const tabs = [AppPage.news, AppPage.chicken];
+      final appVm = await _pump(
+        tester,
+        tabs: tabs,
+        menu: _menuHolding(tabs, [AppPage.movie, AppPage.wifi]),
+      );
+
+      focusOf(tester, AppPage.movie).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(appVm.tabPages.last, AppPage.movie);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(appVm.tabPages, [AppPage.news, AppPage.movie, AppPage.chicken]);
+      // The rebuilt row still holds the focus, so the next press moves it on.
+      expect(focusOf(tester, AppPage.movie).hasFocus, isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(appVm.menuPages.first, AppPage.movie);
+    });
+
+    testWidgets('once dropped, the arrows move focus instead of the page', (
+      tester,
+    ) async {
+      const tabs = [AppPage.news, AppPage.chicken];
+      final appVm = await _pump(
+        tester,
+        tabs: tabs,
+        menu: _menuHolding(tabs, [AppPage.movie, AppPage.wifi]),
+      );
+
+      focusOf(tester, AppPage.chicken).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(appVm.tabPages, [AppPage.chicken, AppPage.news]);
+      expect(focusOf(tester, AppPage.news).hasFocus, isTrue);
+    });
   });
 }

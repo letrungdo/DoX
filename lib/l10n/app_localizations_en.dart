@@ -138,6 +138,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuTabAlwaysPinned => 'The Menu tab is always shown.';
 
   @override
+  String get pageLayoutTvHint =>
+      'Press OK on a page to pick it up, move it with up and down, then press OK again to drop it.';
+
+  @override
   String get bottomTabs => 'Bottom tabs';
 
   @override

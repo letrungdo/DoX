@@ -49,6 +49,7 @@
   "electricityTitle": "Electricity management",
   "pageLayout": "Tabs & menu",
   "menuTabAlwaysPinned": "The Menu tab is always shown.",
+  "pageLayoutTvHint": "Press OK on a page to pick it up, move it with up and down, then press OK again to drop it.",
   "bottomTabs": "Bottom tabs",
   "moveToMenu": "Move to menu",
   "moveToBottomTabs": "Move to bottom tabs",

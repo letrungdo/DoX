@@ -42,6 +42,7 @@
   "electricityTitle": "Quản lý điện",
   "pageLayout": "Tab & menu",
   "menuTabAlwaysPinned": "Tab Menu luôn được hiển thị.",
+  "pageLayoutTvHint": "Bấm OK vào một trang để chọn, dùng lên/xuống để di chuyển, rồi bấm OK lần nữa để thả.",
   "bottomTabs": "Tab dưới màn hình",
   "moveToMenu": "Chuyển vào menu",
   "moveToBottomTabs": "Chuyển ra tab dưới",

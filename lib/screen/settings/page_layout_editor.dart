@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/constants/enum/app_page.dart';
 import 'package:do_x/extensions/app_page_extensions.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 /// Lets the user arrange which pages sit in the bottom bar and which stay in
@@ -14,8 +19,37 @@ import 'package:provider/provider.dart';
 /// itself, which is why moving a page across used to need its own up/down
 /// button. Here the header is just another row to drag past, so the same drag
 /// that reorders a page also moves it between the groups.
-class PageLayoutEditor extends StatelessWidget {
+///
+/// A TV remote cannot drag, so there each row is a focus stop instead: OK picks
+/// the page up, up and down walk it one row at a time through the same
+/// flattened list — past a header into the other group — and OK or back puts
+/// it down.
+class PageLayoutEditor extends StatefulWidget {
   const PageLayoutEditor({super.key});
+
+  @override
+  State<PageLayoutEditor> createState() => _PageLayoutEditorState();
+}
+
+class _PageLayoutEditorState extends State<PageLayoutEditor> {
+  /// The page the remote has picked up, moved by up and down until dropped.
+  AppPage? _held;
+
+  /// One node per page, owned here rather than by the tile: the list keys each
+  /// row by its index as well, so a moved row is rebuilt from scratch and its
+  /// focus has to be handed back to it.
+  final _focusNodes = <AppPage, FocusNode>{};
+
+  FocusNode _focusNodeOf(AppPage page) =>
+      _focusNodes.putIfAbsent(page, () => FocusNode(debugLabel: page.name));
+
+  @override
+  void dispose() {
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,25 +124,105 @@ class PageLayoutEditor extends StatelessWidget {
 
       case _RowKind.page:
         final page = row.page!;
+        final isTv = deviceType.isTv;
+        final isHeld = _held == page;
         // Long press anywhere on the row picks it up; the handle picks it up
         // straight away, for a user who has spotted it.
         return ReorderableDelayedDragStartListener(
           key: ValueKey(page),
           index: index,
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-            leading: Icon(page.icon, size: 20),
-            title: Text(page.label(l10n)),
-            trailing: ReorderableDragStartListener(
-              index: index,
-              child: Icon(
-                Icons.drag_handle_rounded,
-                color: theme.colorScheme.onSurfaceVariant,
+          child: Focus(
+            // Not a stop of its own: the tile is that. This one listens, so a
+            // held page answers the arrows instead of letting focus walk off.
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: isTv
+                ? (node, event) => _onKey(context, appVm, l10n, page, event)
+                : null,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+              leading: Icon(page.icon, size: 20),
+              title: Text(page.label(l10n)),
+              focusNode: isTv ? _focusNodeOf(page) : null,
+              selected: isHeld,
+              selectedTileColor: theme.colorScheme.primaryContainer,
+              // Only the remote needs the row to be a button; on a touchscreen
+              // a tap would just flash a ripple over a row that does nothing.
+              onTap: isTv
+                  ? () => setState(() => _held = isHeld ? null : page)
+                  : null,
+              trailing: ReorderableDragStartListener(
+                index: index,
+                child: Icon(
+                  isHeld
+                      ? Icons.unfold_more_rounded
+                      : Icons.drag_handle_rounded,
+                  color: isHeld
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
         );
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Remote
+  // -------------------------------------------------------------------------
+
+  KeyEventResult _onKey(
+    BuildContext context,
+    AppViewModel appVm,
+    AppLocalizations l10n,
+    AppPage page,
+    KeyEvent event,
+  ) {
+    if (_held != page) return KeyEventResult.ignored;
+    if (event is KeyUpEvent) return KeyEventResult.handled;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.goBack || key == LogicalKeyboardKey.escape) {
+      setState(() => _held = null);
+      return KeyEventResult.handled;
+    }
+    final step = switch (key) {
+      LogicalKeyboardKey.arrowUp => -1,
+      LogicalKeyboardKey.arrowDown => 1,
+      _ => 0,
+    };
+    // Left and right are swallowed too: letting focus leave would drop the
+    // page somewhere the user did not choose.
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.handled;
+    }
+    if (step == 0) return KeyEventResult.ignored;
+
+    // One row either way in the flattened list, in `onReorderItem` terms (an
+    // index into the list with the page lifted out), so stepping past a header
+    // is what carries the page into the other group.
+    final rows = _buildRows(appVm);
+    final index = rows.indexWhere((row) => row.page == page);
+    _onReorder(context, appVm, l10n, rows, index, index + step);
+
+    // The moved row is a new element, so once it is built the focus is put
+    // back on it and the list scrolled to keep it in view.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final node = _focusNodes[page];
+      final rowContext = node?.context;
+      if (!mounted || node == null || rowContext == null) return;
+      node.requestFocus();
+      unawaited(
+        Scrollable.ensureVisible(
+          rowContext,
+          alignment: Dimens.tvFocusScrollAlignment,
+          duration: Dimens.tvFocusScrollDuration,
+        ),
+      );
+    });
+    return KeyEventResult.handled;
   }
 
   // -------------------------------------------------------------------------

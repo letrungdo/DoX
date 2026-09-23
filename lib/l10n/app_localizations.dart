@@ -350,6 +350,12 @@ abstract class AppLocalizations {
   /// **'The Menu tab is always shown.'**
   String get menuTabAlwaysPinned;
 
+  /// No description provided for @pageLayoutTvHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Press OK on a page to pick it up, move it with up and down, then press OK again to drop it.'**
+  String get pageLayoutTvHint;
+
   /// No description provided for @bottomTabs.
   ///
   /// In en, this message translates to:
