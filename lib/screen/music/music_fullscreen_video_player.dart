@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/screen/music/music_video_view.dart';
@@ -224,7 +223,12 @@ class _MusicFullscreenVideoPlayerState
                             isOfficialAudio: vm.isAudioFromVideo,
                             borderRadius: BorderRadius.zero,
                           )
-                        : _buildWaiting(track?.artworkUrl ?? ''),
+                        : _buildWaiting(
+                            track?.artworkUrl ?? '',
+                            // Off, or none to be had: the artwork stands in
+                            // for it, with nothing to wait for.
+                            loading: vm.isVideoEnabled && vm.isVideoPending,
+                          ),
                   ),
                 ),
               ),
@@ -281,21 +285,20 @@ class _MusicFullscreenVideoPlayerState
 
   /// The next track's artwork while its video is still being fetched, so a
   /// skip does not flash the track list up between two videos.
-  Widget _buildWaiting(String artworkUrl) {
+  /// The artwork where the picture goes: dimmed under a spinner while the
+  /// video is on its way, as it is when there is no video to show.
+  Widget _buildWaiting(String artworkUrl, {required bool loading}) {
     return Stack(
       alignment: Alignment.center,
       children: [
-        if (artworkUrl.isNotEmpty)
-          Opacity(
-            opacity: 0.4,
-            child: CachedNetworkImage(
-              imageUrl: artworkUrl,
-              width: Dimens.musicFullscreenWaitingArtSize,
-              height: Dimens.musicFullscreenWaitingArtSize,
-              fit: BoxFit.cover,
-            ),
+        Opacity(
+          opacity: loading ? 0.4 : 1,
+          child: MusicArtwork(
+            url: artworkUrl,
+            size: Dimens.musicFullscreenWaitingArtSize,
           ),
-        const Loading(),
+        ),
+        if (loading) const Loading(),
       ],
     );
   }
@@ -430,13 +433,18 @@ class _MusicFullscreenVideoPlayerState
                       color: isLiked ? context.theme.colorScheme.error : null,
                       onTap: widget.onToggleLike,
                     ),
-                    // The video's state, as in the page's player: it is on
-                    // here, and the tap turns it off.
-                    _ControlButton(
-                      icon: Icons.videocam_rounded,
-                      tooltip: l10n.musicVideoHide,
-                      onTap: vm.toggleVideo,
-                    ),
+                    // The video's state, as in the page's player; only for a
+                    // track that has one to show or hide.
+                    if (vm.hasVideo)
+                      _ControlButton(
+                        icon: vm.isVideoEnabled
+                            ? Icons.videocam_rounded
+                            : Icons.videocam_off_rounded,
+                        tooltip: vm.isVideoEnabled
+                            ? l10n.musicVideoHide
+                            : l10n.musicVideoShow,
+                        onTap: vm.toggleVideo,
+                      ),
                     _ControlButton(
                       icon: isTv
                           ? Icons.queue_music_rounded

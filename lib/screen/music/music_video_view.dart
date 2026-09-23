@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
@@ -164,4 +165,34 @@ String musicVideoQualityLabel(Size size) {
     orElse: () => tiers.last,
   );
   return tier >= 720 ? '${tier}p HD' : '${tier}p';
+}
+
+/// The track's artwork in a square of [size], or a note where it has none:
+/// what the phone's player and the full screen show in place of a video.
+class MusicArtwork extends StatelessWidget {
+  const MusicArtwork({super.key, required this.url, this.size});
+
+  final String url;
+
+  /// Null to fill the box it is given.
+  final double? size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: url.isNotEmpty
+          ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover)
+          : ColoredBox(
+              color: Colors.black,
+              child: FittedBox(
+                child: Icon(
+                  Icons.music_note_rounded,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+    );
+  }
 }

@@ -184,18 +184,23 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         deviceType.canDriveOrientation && _onPhoneTurned(context);
     // A tap on the video counts whichever way the phone is turned — the
     // video backed out of on a sideways phone is still one tap away.
-    final wantsFullscreen =
-        _phoneFullscreen ||
-        ((isTv || isLandscape) && track?.id != _leftVideoFor);
-    final showFullscreen =
-        wantsFullscreen &&
+    final opensByItself = (isTv || isLandscape) && track?.id != _leftVideoFor;
+    final hasPicture =
         viewModel.isVideoEnabled &&
-        track != null &&
         (viewModel.videoController != null ||
             (_showingFullscreenVideo &&
                 (viewModel.isVideoPending ||
                     viewModel.audioController == null)));
+    // Asked for on a phone, full screen holds with the video off or none to
+    // be had: the artwork takes the picture's place. Opened by itself, it is
+    // there for the video and goes with it.
+    final showFullscreen =
+        track != null && (_phoneFullscreen || (opensByItself && hasPicture));
     _showingFullscreenVideo = showFullscreen;
+    // Up on a phone, it stays up as though tapped: turning the video off
+    // there shows the artwork instead of closing it. A turn of the phone
+    // still starts afresh — see [_onPhoneTurned].
+    if (showFullscreen && !isTv) _phoneFullscreen = true;
     if (showFullscreen && isTv) {
       return MusicFullscreenVideoPlayer(
         onExit: () => _leaveFullscreen(track.id),
@@ -213,9 +218,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         _videoExpansion.value != settled) {
       _videoExpansion.value = settled;
     }
-    // The next track had no video: the phone is back on the list, and will
-    // not jump into full screen again for a later one it did not tap.
-    if (_phoneFullscreen) {
+    // Nothing is playing any more: the phone is back on the list.
+    if (_phoneFullscreen && track == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_showingFullscreenVideo) {
           setState(() => _phoneFullscreen = false);
@@ -304,11 +308,17 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               seekable: _seekable,
             );
           }
-          final video = viewModel.videoController;
-          if (t == 0 || video == null) return const SizedBox.shrink();
+          if (t == 0 || track == null) return const SizedBox.shrink();
+          final video = viewModel.isVideoEnabled
+              ? viewModel.videoController
+              : null;
           return LayoutBuilder(
-            builder: (context, constraints) =>
-                _buildVideoInFlight(video, t, constraints.biggest),
+            builder: (context, constraints) => _buildPictureInFlight(
+              video,
+              track.artworkUrl,
+              t,
+              constraints.biggest,
+            ),
           );
         },
       ),
@@ -316,24 +326,37 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   }
 
   /// The picture [t] of the way from the player to the whole screen, over
-  /// a page that darkens as it grows.
-  Widget _buildVideoInFlight(
-    VideoPlayerController video,
+  /// a page that darkens as it grows: the video, or with none the artwork,
+  /// which lands where the full-screen player draws it.
+  Widget _buildPictureInFlight(
+    VideoPlayerController? video,
+    String artworkUrl,
     double t,
     Size screen,
   ) {
-    final aspectRatio = video.value.aspectRatio > 0
-        ? video.value.aspectRatio
-        : Dimens.musicMiniVideoAspect;
-    final full = Rect.fromCenter(
-      center: screen.center(Offset.zero),
-      width: min(screen.width, screen.height * aspectRatio),
-      height: min(screen.height, screen.width / aspectRatio),
-    );
-    const miniSize = Size(
-      Dimens.musicMiniVideoHeight * Dimens.musicMiniVideoAspect,
-      Dimens.musicMiniVideoHeight,
-    );
+    final Rect full;
+    if (video != null) {
+      final aspectRatio = video.value.aspectRatio > 0
+          ? video.value.aspectRatio
+          : Dimens.musicMiniVideoAspect;
+      full = Rect.fromCenter(
+        center: screen.center(Offset.zero),
+        width: min(screen.width, screen.height * aspectRatio),
+        height: min(screen.height, screen.width / aspectRatio),
+      );
+    } else {
+      full = Rect.fromCenter(
+        center: screen.center(Offset.zero),
+        width: Dimens.musicFullscreenWaitingArtSize,
+        height: Dimens.musicFullscreenWaitingArtSize,
+      );
+    }
+    final miniSize = video != null
+        ? const Size(
+            Dimens.musicMiniVideoHeight * Dimens.musicMiniVideoAspect,
+            Dimens.musicMiniVideoHeight,
+          )
+        : const Size.square(Dimens.musicMiniVideoHeight);
     final mini =
         _thumbnailRect() ??
         Rect.fromCenter(
@@ -352,7 +375,9 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             borderRadius: BorderRadius.circular(
               Dimens.radiusControlSmall * (1 - t),
             ),
-            child: MusicVideoFill(controller: video),
+            child: video != null
+                ? MusicVideoFill(controller: video)
+                : MusicArtwork(url: artworkUrl),
           ),
         ),
       ],
@@ -371,7 +396,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   }
 
   void _onVideoDragStart(DragStartDetails _) {
-    if (context.read<MusicViewModel>().videoController == null) return;
+    if (context.read<MusicViewModel>().currentTrack == null) return;
     _videoExpansion.stop();
     setState(() => _draggingVideo = true);
   }
@@ -1056,7 +1081,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
-    final video = viewModel.videoController;
+    final video = viewModel.isVideoEnabled ? viewModel.videoController : null;
     final player = NeuCard(
       margin: const EdgeInsets.all(12),
       child: Column(
@@ -1077,18 +1102,30 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                     ),
                   )
                 else
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      Dimens.radiusControlSmall,
-                    ),
-                    child: SizedBox.square(
-                      dimension: Dimens.musicMiniVideoHeight,
-                      child: viewModel.currentTrack!.artworkUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: viewModel.currentTrack!.artworkUrl,
-                              fit: BoxFit.cover,
-                            )
-                          : const Icon(Icons.music_note_rounded),
+                  // No video to show: the artwork opens the full screen the
+                  // same way, and it is the artwork that goes up.
+                  AnimatedBuilder(
+                    animation: _videoExpansion,
+                    builder: (context, _) => GestureDetector(
+                      key: _thumbnailKey,
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _expandVideo,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          Dimens.radiusControlSmall,
+                        ),
+                        child: SizedBox.square(
+                          dimension: Dimens.musicMiniVideoHeight,
+                          child: _videoExpansion.value > 0
+                              ? const ColoredBox(color: Colors.black)
+                              : viewModel.currentTrack!.artworkUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: viewModel.currentTrack!.artworkUrl,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Icon(Icons.music_note_rounded),
+                        ),
+                      ),
                     ),
                   ),
                 const SizedBox(width: 12),
@@ -1192,9 +1229,9 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         ],
       ),
     );
-    if (video == null) return player;
-    // Dragged up, the video comes out of the player after the finger and
-    // opens full screen; see [_buildVideoLayer] for the way back down.
+    // Dragged up, the picture — the video, or the artwork — comes out of the
+    // player after the finger and opens full screen; see [_buildVideoLayer]
+    // for the way back down.
     return GestureDetector(
       onVerticalDragStart: _onVideoDragStart,
       onVerticalDragUpdate: _onVideoDragUpdate,

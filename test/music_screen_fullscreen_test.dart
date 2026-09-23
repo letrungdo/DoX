@@ -286,6 +286,144 @@ void main() {
     vm.dispose();
   });
 
+  testWidgets('with the video off the artwork drags up to full screen', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
+      playing: {'https://cdn/a', 'https://yt/muxed'},
+    );
+    final vm = MusicViewModel(
+      resolveStream: (_) async => 'https://cdn/a',
+      playback: _SilentPlayback(),
+      findVideo: (_) async => const MusicVideo(
+        videoId: 'v',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/muxed',
+      ),
+      findHdVideo: (_) async => null,
+      videoEnabled: false,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider.value(
+          value: vm,
+          child: const MusicScreen(),
+        ),
+      ),
+    );
+    await tester.runAsync(() async {
+      await vm.playTrack(
+        const MusicTrack(
+          id: 'a',
+          title: 'Track a',
+          artist: 'Artist',
+          artworkUrl: '',
+          streamUrl: 't',
+          duration: Duration(minutes: 3),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    expect(find.byType(MusicVideoThumbnail), findsNothing);
+
+    await tester.fling(
+      find.byIcon(Icons.music_note_rounded),
+      const Offset(0, -120),
+      1500,
+    );
+    await tester.pump();
+    await tester.pump(_run);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(MusicFullscreenVideoPlayer),
+        matching: find.byType(MusicArtwork),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byIcon(Icons.fullscreen_exit_rounded));
+    await tester.pump();
+    await tester.pump(_run);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 6));
+    vm.dispose();
+  });
+
+  testWidgets('turning the video off in full screen keeps it, with the '
+      'artwork', (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
+      playing: {'https://cdn/a', 'https://yt/muxed'},
+    );
+    final vm = MusicViewModel(
+      resolveStream: (_) async => 'https://cdn/a',
+      playback: _SilentPlayback(),
+      findVideo: (_) async => const MusicVideo(
+        videoId: 'v',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/muxed',
+      ),
+      findHdVideo: (_) async => null,
+      videoEnabled: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider.value(
+          value: vm,
+          child: const MusicScreen(),
+        ),
+      ),
+    );
+    await tester.runAsync(() async {
+      await vm.playTrack(
+        const MusicTrack(
+          id: 'a',
+          title: 'Track a',
+          artist: 'Artist',
+          artworkUrl: '',
+          streamUrl: 't',
+          duration: Duration(minutes: 3),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.tap(find.byType(MusicVideoThumbnail));
+    await tester.pump();
+    await tester.pump(_run);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+
+    await tester.runAsync(() async {
+      vm.toggleVideo();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+    expect(find.byType(MusicArtwork), findsOneWidget);
+    expect(find.byIcon(Icons.videocam_off_rounded), findsWidgets);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 6));
+    vm.dispose();
+  });
+
   testWidgets('full screen holds through a skip while the next picture opens', (
     tester,
   ) async {
