@@ -120,4 +120,46 @@ void main() {
     // Upright video, named by its short side.
     expect(musicVideoQualityLabel(const Size(720, 1280)), '720p HD');
   });
+
+  testWidgets('opening and closing does not rebuild the tab bar mid-build', (
+    tester,
+  ) async {
+    // The main shell listens to the notifier for its tab bar, beside the
+    // page rather than above it — as `MainScreen` does.
+    Widget shell({required bool open}) => MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Column(
+        children: [
+          Expanded(
+            child: ChangeNotifierProvider.value(
+              value: vm,
+              child: open
+                  ? MusicFullscreenVideoPlayer(
+                      onExit: () {},
+                      onToggleLike: () {},
+                      seekable: (slider) => slider,
+                    )
+                  : const SizedBox(),
+            ),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: immersiveMode,
+            builder: (_, isImmersive, _) =>
+                SizedBox(height: isImmersive ? 0 : 56),
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(shell(open: false));
+    await tester.pumpWidget(shell(open: true));
+    expect(tester.takeException(), isNull);
+    expect(immersiveMode.value, isTrue);
+
+    await tester.pumpWidget(shell(open: false));
+    expect(tester.takeException(), isNull);
+    expect(immersiveMode.value, isFalse);
+    await tester.pump(const Duration(seconds: 1));
+  });
 }

@@ -608,6 +608,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
             controller: _searchController,
             focusNode: _searchFocusNode,
             textInputAction: TextInputAction.search,
+            // A tap anywhere else puts the keyboard away, as on the TV page.
+            onTapOutside: (_) => FocusScope.of(context).unfocus(),
             onChanged: (value) {
               viewModel.searchTracks(value);
               setState(() {});
@@ -649,6 +651,9 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
               : CustomScrollView(
                   key: const ValueKey(MusicTab.search),
                   controller: _scrollController,
+                  // Reading down the results is done with the keyboard away.
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   slivers: [
                     SliverPadding(
                       padding: _searchListPadding,

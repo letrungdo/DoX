@@ -72,13 +72,30 @@ class _MusicFullscreenVideoPlayerState
 
   /// The phone's whole screen: the bars and the tab bar out of the way.
   void _takeTheScreen() {
-    immersiveMode.value = true;
+    _open++;
+    _settleImmersiveMode();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   void _giveTheScreenBack() {
-    immersiveMode.value = false;
+    _open--;
+    _settleImmersiveMode();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
+  /// How many of these players are up. Two can overlap for a frame — the
+  /// page rebuilt with a new one before the old one is gone — so the tab bar
+  /// follows the count, not whichever of them spoke last.
+  static int _open = 0;
+
+  /// Tells the tab bar once the frame is done. Said from `initState` or
+  /// `dispose` directly, it rebuilt the shell in the middle of a build:
+  /// Flutter refused, the frame was dropped, and a tap on the video did
+  /// nothing on screen until some other touch drew the next one.
+  static void _settleImmersiveMode() {
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) => immersiveMode.value = _open > 0)
+      ..ensureVisualUpdate();
   }
 
   @override
