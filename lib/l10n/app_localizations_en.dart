@@ -2543,9 +2543,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get musicTabLikes => 'Favourites';
 
   @override
-  String get musicTabHistory => 'History';
-
-  @override
   String get tvWebFieldTitle => 'Enter text';
 
   @override
@@ -2556,7 +2553,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicLoginSubtitle =>
-      'Sign in with your Music account to like tracks and to see your likes and listening history.';
+      'Sign in with your Music account to like tracks and to see your likes.';
 
   @override
   String get musicLoginRejected =>

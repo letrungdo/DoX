@@ -367,8 +367,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
         return inGrid(viewModel.searchResults, _searchListPadding.top);
       case MusicTab.likes:
         return inGrid(viewModel.likedTracks, _trackListPadding.top);
-      case MusicTab.history:
-        return inGrid(viewModel.historyTracks, _trackListPadding.top);
     }
   }
 
@@ -436,12 +434,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                   MusicTab.likes,
                   Icons.favorite_rounded,
                   l10n.musicTabLikes,
-                ),
-                _buildRailItem(
-                  viewModel,
-                  MusicTab.history,
-                  Icons.history_rounded,
-                  l10n.musicTabHistory,
                 ),
               ],
             ),
@@ -553,11 +545,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
           ),
           tabItem(MusicTab.search, Icons.search_rounded, l10n.musicTabSearch),
           tabItem(MusicTab.likes, Icons.favorite_rounded, l10n.musicTabLikes),
-          tabItem(
-            MusicTab.history,
-            Icons.history_rounded,
-            l10n.musicTabHistory,
-          ),
         ],
       ),
     );
@@ -580,13 +567,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
           viewModel.likedTracks,
           'Bài hát yêu thích',
           Icons.favorite_border_rounded,
-        );
-      case MusicTab.history:
-        return _buildTrackListSection(
-          MusicTab.history,
-          viewModel.historyTracks,
-          'Lịch sử đã nghe',
-          Icons.history_rounded,
         );
     }
   }

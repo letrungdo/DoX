@@ -2531,9 +2531,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get musicTabLikes => 'Yêu thích';
 
   @override
-  String get musicTabHistory => 'Lịch sử';
-
-  @override
   String get tvWebFieldTitle => 'Nhập nội dung';
 
   @override
@@ -2544,7 +2541,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicLoginSubtitle =>
-      'Đăng nhập tài khoản Music để thích bài hát và xem danh sách yêu thích, lịch sử nghe.';
+      'Đăng nhập tài khoản Music để thích bài hát và xem danh sách yêu thích.';
 
   @override
   String get musicLoginRejected =>

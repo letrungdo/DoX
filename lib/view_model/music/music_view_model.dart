@@ -17,7 +17,7 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
-enum MusicTab { home, search, likes, history }
+enum MusicTab { home, search, likes }
 
 /// How a tap on a heart ended. A like is the one action on this page that
 /// needs an account, so "you are not signed in" is an outcome of its own and
@@ -83,9 +83,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   List<MusicTrack> _likedTracks = [];
   List<MusicTrack> get likedTracks => _likedTracks;
-
-  List<MusicTrack> _historyTracks = [];
-  List<MusicTrack> get historyTracks => _historyTracks;
 
   MusicTab _currentTab = MusicTab.home;
   MusicTab get currentTab => _currentTab;
@@ -195,8 +192,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   void _onAccountChanged() {
     if (_currentTab == MusicTab.likes) {
       loadLikedTracks();
-    } else if (_currentTab == MusicTab.history) {
-      loadHistoryTracks();
     } else {
       notifyListenersSafe();
     }
@@ -206,8 +201,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _currentTab = tab;
     if (tab == MusicTab.likes) {
       loadLikedTracks();
-    } else if (tab == MusicTab.history) {
-      loadHistoryTracks();
     }
     notifyListenersSafe();
   }
@@ -243,23 +236,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     } catch (e, st) {
       logger.e(
         'MusicViewModel loadLikedTracks failed',
-        error: e,
-        stackTrace: st,
-      );
-    } finally {
-      _isLoading = false;
-      notifyListenersSafe();
-    }
-  }
-
-  Future<void> loadHistoryTracks() async {
-    _isLoading = true;
-    notifyListenersSafe();
-    try {
-      _historyTracks = await musicService.getHistoryTracks();
-    } catch (e, st) {
-      logger.e(
-        'MusicViewModel loadHistoryTracks failed',
         error: e,
         stackTrace: st,
       );
@@ -798,9 +774,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       case MusicTab.likes:
         currentList = _likedTracks;
         break;
-      case MusicTab.history:
-        currentList = _historyTracks;
-        break;
     }
     if (currentList.isEmpty) currentList = discoverTracks;
 
@@ -830,9 +803,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         break;
       case MusicTab.likes:
         currentList = _likedTracks;
-        break;
-      case MusicTab.history:
-        currentList = _historyTracks;
         break;
     }
     if (currentList.isEmpty) currentList = discoverTracks;

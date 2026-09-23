@@ -211,40 +211,6 @@ class MusicService {
     }
   }
 
-  Future<List<MusicTrack>> getHistoryTracks() async {
-    if (!musicAuth.isSignedIn) return [];
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '$_baseUrl/me/play-history/tracks',
-        queryParameters: {
-          'client_id': _clientId,
-          'limit': 30,
-          'linked_partitioning': 1,
-        },
-      );
-
-      final List<MusicTrack> tracks = [];
-      final collection = response.data?['collection'];
-      if (collection is List) {
-        for (final item in collection) {
-          final trackMap = item['track'];
-          if (trackMap != null) {
-            final track = _parseTrack(trackMap);
-            if (track != null) tracks.add(track);
-          }
-        }
-      }
-      return tracks;
-    } catch (e, st) {
-      logger.e(
-        'MusicService getHistoryTracks API failure',
-        error: e,
-        stackTrace: st,
-      );
-      return [];
-    }
-  }
-
   MusicTrack? _parseTrack(Map<String, dynamic> trackMap) {
     try {
       final id = trackMap['id']?.toString() ?? '';

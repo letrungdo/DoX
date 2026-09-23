@@ -22,9 +22,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 
-/// Signs the Music page in to the music service. Liking a track, the likes
-/// tab and the history tab all speak for an account, and the service answers
-/// none of them without one.
+/// Signs the Music page in to the music service. Liking a track and the likes
+/// tab both speak for an account, and the service answers neither without
+/// one.
 ///
 /// The sign-in happens on the service's own page rather than on a form of
 /// ours: their sign-in API turns a plain HTTP client away with a captcha

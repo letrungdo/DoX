@@ -4579,12 +4579,6 @@ abstract class AppLocalizations {
   /// **'Favourites'**
   String get musicTabLikes;
 
-  /// No description provided for @musicTabHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'History'**
-  String get musicTabHistory;
-
   /// No description provided for @tvWebFieldTitle.
   ///
   /// In en, this message translates to:
@@ -4606,7 +4600,7 @@ abstract class AppLocalizations {
   /// No description provided for @musicLoginSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Sign in with your Music account to like tracks and to see your likes and listening history.'**
+  /// **'Sign in with your Music account to like tracks and to see your likes.'**
   String get musicLoginSubtitle;
 
   /// No description provided for @musicLoginRejected.
