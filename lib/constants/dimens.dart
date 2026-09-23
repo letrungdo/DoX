@@ -235,13 +235,18 @@ class Dimens {
   /// dark code on a light plate and nothing else.
   static const musicPairingQrPadding = 14.0;
 
-  /// The tallest the playing track's video is drawn in the phone's player,
-  /// so a landscape phone still has room for the list above it.
-  static const musicVideoMaxHeight = 220.0;
+  /// The video in the phone's player, where the artwork is otherwise: the
+  /// artwork's height, in the shape of a widescreen picture.
+  static const musicMiniVideoHeight = 44.0;
+  static const musicMiniVideoAspect = 16 / 9;
 
-  /// The most of the screen's height the phone's inline video takes, so the
-  /// list and the player controls keep theirs on a sideways phone.
-  static const musicVideoMaxHeightShare = 0.25;
+  /// The video's run between the phone's player and the whole screen: how
+  /// long it takes on its own, how far a drag goes for all of it as a share
+  /// of the screen's height, and how fast a flick has to be to decide it
+  /// whatever the distance, in logical pixels a second.
+  static const musicVideoExpandDuration = Duration(milliseconds: 280);
+  static const musicVideoDragTravelShare = 0.6;
+  static const musicVideoFlingVelocity = 700.0;
 
   /// How far the "original sound" badge sits from the video's corner.
   static const musicVideoBadgeInset = 8.0;
@@ -271,9 +276,6 @@ class Dimens {
   /// Between the like, video and full-screen buttons under the television
   /// dashboard's transport row.
   static const musicDashboardActionSpacing = 16.0;
-
-  /// The full-screen button in the corner of the phone's inline video.
-  static const musicVideoFullscreenIconSize = 20.0;
 
   /// The music service's bot check, framed in a sheet: tall enough for its
   /// puzzle without the sheet having to scroll.

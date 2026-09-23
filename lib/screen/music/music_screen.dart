@@ -23,6 +23,7 @@ import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 
 /// Top level so the sync badge can be `const`: a closure written inline is a
 /// new object every build, and the badge would rebuild with it.
@@ -41,7 +42,8 @@ class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
   }
 }
 
-class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
+class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
+    with SingleTickerProviderStateMixin {
   /// Shared by every tab's list; only one of them is on screen at a time.
   final _scrollController = ScrollController();
 
@@ -95,6 +97,23 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   /// fetched, so a skip does not flash the track list up in between.
   bool _showingFullscreenVideo = false;
 
+  /// On a phone, where the video is between the small picture in the player
+  /// (0) and the whole screen (1). A drag moves it; letting go, a tap or
+  /// back finishes the run.
+  late final _videoExpansion = AnimationController(
+    vsync: this,
+    duration: Dimens.musicVideoExpandDuration,
+  );
+
+  /// A drag on the video is under way: the picture follows the finger, and
+  /// the full-screen player waits for it to be let go.
+  bool _draggingVideo = false;
+
+  /// The small picture in the phone's player, which the video grows out of
+  /// and shrinks back into; and the layer it is drawn on on its way.
+  final _thumbnailKey = GlobalKey();
+  final _videoLayerKey = GlobalKey();
+
   FocusNode _getNodeForTrack(String id) {
     return _trackFocusNodes.putIfAbsent(
       id,
@@ -128,6 +147,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     _likeActionFocusNode.dispose();
     _videoToggleFocusNode.dispose();
     _fullscreenFocusNode.dispose();
+    _videoExpansion.dispose();
     super.dispose();
   }
 
@@ -176,12 +196,22 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                 (viewModel.isVideoPending ||
                     viewModel.audioController == null)));
     _showingFullscreenVideo = showFullscreen;
-    if (showFullscreen) {
+    if (showFullscreen && isTv) {
       return MusicFullscreenVideoPlayer(
         onExit: () => _leaveFullscreen(track.id),
         onToggleLike: () => _onToggleLike(track),
         seekable: _seekable,
       );
+    }
+    // Opened or closed by anything but a drag, a tap or back — the phone
+    // turned, the next track had no video: the picture is where it belongs
+    // at once.
+    final settled = showFullscreen ? 1.0 : 0.0;
+    if (!isTv &&
+        !_draggingVideo &&
+        !_videoExpansion.isAnimating &&
+        _videoExpansion.value != settled) {
+      _videoExpansion.value = settled;
     }
     // The next track had no video: the phone is back on the list, and will
     // not jump into full screen again for a later one it did not tap.
@@ -218,7 +248,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
             ],
           );
 
-    return AppScaffold(
+    final page = AppScaffold(
       // On a television the rail is the leftmost thing on the page, exactly as
       // it is on the home page — so it takes the screen's edge and the columns
       // apply their own insets. Inset here instead, the rail sat a safe area
@@ -232,6 +262,160 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
       ),
       body: mainContent,
     );
+    if (isTv) return page;
+    // On a phone the page stays under the full-screen video, so the picture
+    // can shrink back into its place in the player.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        page,
+        Positioned.fill(
+          child: _buildVideoLayer(viewModel, showFullscreen: showFullscreen),
+        ),
+      ],
+    );
+  }
+
+  /// The phone's video above the page: the full-screen player once it is
+  /// all the way up, the bare picture while it is on its way, and nothing
+  /// while it sits in the player.
+  ///
+  /// One drag detector for all three, so a drag begun on the full-screen
+  /// player carries on once the player has made way for the picture.
+  Widget _buildVideoLayer(
+    MusicViewModel viewModel, {
+    required bool showFullscreen,
+  }) {
+    final track = viewModel.currentTrack;
+    return GestureDetector(
+      key: _videoLayerKey,
+      onVerticalDragStart: _onVideoDragStart,
+      onVerticalDragUpdate: _onVideoDragUpdate,
+      onVerticalDragEnd: _onVideoDragEnd,
+      onVerticalDragCancel: () => _onVideoDragEnd(DragEndDetails()),
+      child: AnimatedBuilder(
+        animation: _videoExpansion,
+        builder: (context, _) {
+          final t = _videoExpansion.value;
+          if (track != null && showFullscreen && t == 1 && !_draggingVideo) {
+            return MusicFullscreenVideoPlayer(
+              onExit: () => _collapseVideo(track.id),
+              onToggleLike: () => _onToggleLike(track),
+              seekable: _seekable,
+            );
+          }
+          final video = viewModel.videoController;
+          if (t == 0 || video == null) return const SizedBox.shrink();
+          return LayoutBuilder(
+            builder: (context, constraints) =>
+                _buildVideoInFlight(video, t, constraints.biggest),
+          );
+        },
+      ),
+    );
+  }
+
+  /// The picture [t] of the way from the player to the whole screen, over
+  /// a page that darkens as it grows.
+  Widget _buildVideoInFlight(
+    VideoPlayerController video,
+    double t,
+    Size screen,
+  ) {
+    final aspectRatio = video.value.aspectRatio > 0
+        ? video.value.aspectRatio
+        : Dimens.musicMiniVideoAspect;
+    final full = Rect.fromCenter(
+      center: screen.center(Offset.zero),
+      width: min(screen.width, screen.height * aspectRatio),
+      height: min(screen.height, screen.width / aspectRatio),
+    );
+    const miniSize = Size(
+      Dimens.musicMiniVideoHeight * Dimens.musicMiniVideoAspect,
+      Dimens.musicMiniVideoHeight,
+    );
+    final mini =
+        _thumbnailRect() ??
+        Rect.fromCenter(
+          center: Offset(screen.width / 2, screen.height - miniSize.height),
+          width: miniSize.width,
+          height: miniSize.height,
+        );
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: ColoredBox(color: Colors.black.withValues(alpha: t)),
+        ),
+        Positioned.fromRect(
+          rect: Rect.lerp(mini, full, t)!,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(
+              Dimens.radiusControlSmall * (1 - t),
+            ),
+            child: MusicVideoFill(controller: video),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Where the small picture in the player sits on the video's layer, as of
+  /// the last frame.
+  Rect? _thumbnailRect() {
+    final thumbnail = _thumbnailKey.currentContext?.findRenderObject();
+    final layer = _videoLayerKey.currentContext?.findRenderObject();
+    if (thumbnail is! RenderBox || layer is! RenderBox) return null;
+    if (!thumbnail.hasSize || !layer.hasSize) return null;
+    return thumbnail.localToGlobal(Offset.zero, ancestor: layer) &
+        thumbnail.size;
+  }
+
+  void _onVideoDragStart(DragStartDetails _) {
+    if (context.read<MusicViewModel>().videoController == null) return;
+    _videoExpansion.stop();
+    setState(() => _draggingVideo = true);
+  }
+
+  void _onVideoDragUpdate(DragUpdateDetails details) {
+    if (!_draggingVideo) return;
+    final travel =
+        MediaQuery.sizeOf(context).height * Dimens.musicVideoDragTravelShare;
+    // Up is towards the whole screen. The controller keeps it within 0–1.
+    _videoExpansion.value -= (details.primaryDelta ?? 0) / travel;
+  }
+
+  /// Let go: a flick goes the way it was flicked, anything slower to
+  /// whichever end is nearer.
+  void _onVideoDragEnd(DragEndDetails details) {
+    if (!_draggingVideo) return;
+    final velocity = details.primaryVelocity ?? 0;
+    final open = velocity.abs() > Dimens.musicVideoFlingVelocity
+        ? velocity < 0
+        : _videoExpansion.value > 0.5;
+    final trackId = context.read<MusicViewModel>().currentTrack?.id;
+    _draggingVideo = false;
+    if (open || trackId == null) {
+      _expandVideo();
+    } else {
+      _collapseVideo(trackId);
+    }
+  }
+
+  /// Takes the video up to the whole screen. The run is started before the
+  /// page is rebuilt, so the rebuild finds it moving and leaves it be.
+  void _expandVideo() {
+    _videoExpansion.animateTo(1, curve: Curves.easeOutCubic);
+    setState(() => _phoneFullscreen = true);
+  }
+
+  /// Takes the video back down into the player.
+  void _collapseVideo(String trackId) {
+    _videoExpansion.animateTo(0, curve: Curves.easeOutCubic);
+    if (_showingFullscreenVideo) {
+      _leaveFullscreen(trackId);
+    } else {
+      setState(() {});
+    }
   }
 
   /// Whether the phone is on its side, noting a turn as it happens: turned
@@ -872,61 +1056,41 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
-    // Put away while the keyboard is up: the page shrinks to the space above
-    // it, and a video at its full height pushed the search results off the
-    // screen. It keeps playing, and comes back when the keyboard goes.
-    final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final video = keyboardUp ? null : viewModel.videoController;
-    return NeuCard(
+    final video = viewModel.videoController;
+    final player = NeuCard(
       margin: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (video != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-              child: Center(
-                // A share of the screen as well as a ceiling: on a phone
-                // turned sideways the ceiling alone pushed the player past
-                // the bottom edge, and the part of the video out there took
-                // no taps.
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: min(
-                      Dimens.musicVideoMaxHeight,
-                      MediaQuery.sizeOf(context).height *
-                          Dimens.musicVideoMaxHeightShare,
-                    ),
-                  ),
-                  child: MusicVideoView(
-                    controller: video,
-                    isOfficialAudio: viewModel.isAudioFromVideo,
-                    borderRadius: BorderRadius.circular(
-                      Dimens.radiusControlSmall,
-                    ),
-                    onFullscreen: () => setState(() => _phoneFullscreen = true),
-                  ),
-                ),
-              ),
-            ),
           Padding(
             padding: const EdgeInsets.all(10),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    Dimens.radiusControlSmall,
+                if (video != null)
+                  AnimatedBuilder(
+                    animation: _videoExpansion,
+                    builder: (context, _) => MusicVideoThumbnail(
+                      key: _thumbnailKey,
+                      controller: video,
+                      hidden: _videoExpansion.value > 0,
+                      onTap: _expandVideo,
+                    ),
+                  )
+                else
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      Dimens.radiusControlSmall,
+                    ),
+                    child: SizedBox.square(
+                      dimension: Dimens.musicMiniVideoHeight,
+                      child: viewModel.currentTrack!.artworkUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: viewModel.currentTrack!.artworkUrl,
+                              fit: BoxFit.cover,
+                            )
+                          : const Icon(Icons.music_note_rounded),
+                    ),
                   ),
-                  child: SizedBox.square(
-                    dimension: 44,
-                    child: viewModel.currentTrack!.artworkUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: viewModel.currentTrack!.artworkUrl,
-                            fit: BoxFit.cover,
-                          )
-                        : const Icon(Icons.music_note_rounded),
-                  ),
-                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1027,6 +1191,16 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
           ),
         ],
       ),
+    );
+    if (video == null) return player;
+    // Dragged up, the video comes out of the player after the finger and
+    // opens full screen; see [_buildVideoLayer] for the way back down.
+    return GestureDetector(
+      onVerticalDragStart: _onVideoDragStart,
+      onVerticalDragUpdate: _onVideoDragUpdate,
+      onVerticalDragEnd: _onVideoDragEnd,
+      onVerticalDragCancel: () => _onVideoDragEnd(DragEndDetails()),
+      child: player,
     );
   }
 

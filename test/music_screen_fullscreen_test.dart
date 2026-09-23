@@ -35,6 +35,9 @@ class _SilentPlayback extends MusicPlaybackSession {
   }) {}
 }
 
+/// Long enough for the video's run between the player and full screen.
+const _run = Duration(milliseconds: 400);
+
 void main() {
   testWidgets('the video opens full screen again after leaving it', (
     tester,
@@ -86,12 +89,13 @@ void main() {
 
     for (var round = 1; round <= 3; round++) {
       expect(
-        find.byType(MusicVideoView),
+        find.byType(MusicVideoThumbnail),
         findsOneWidget,
         reason: 'round $round',
       );
-      await tester.tap(find.byType(MusicVideoView));
+      await tester.tap(find.byType(MusicVideoThumbnail));
       await tester.pump();
+      await tester.pump(_run);
       expect(
         find.byType(MusicFullscreenVideoPlayer),
         findsOneWidget,
@@ -100,7 +104,7 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.fullscreen_exit_rounded));
       await tester.pump();
-      await tester.pump();
+      await tester.pump(_run);
       expect(
         find.byType(MusicFullscreenVideoPlayer),
         findsNothing,
@@ -165,16 +169,17 @@ void main() {
     expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
     await tester.tap(find.byIcon(Icons.fullscreen_exit_rounded));
     await tester.pump();
-    await tester.pump();
+    await tester.pump(_run);
 
     for (var round = 1; round <= 3; round++) {
       expect(
-        find.byType(MusicVideoView),
+        find.byType(MusicVideoThumbnail),
         findsOneWidget,
         reason: 'round $round',
       );
-      await tester.tap(find.byType(MusicVideoView));
+      await tester.tap(find.byType(MusicVideoThumbnail));
       await tester.pump();
+      await tester.pump(_run);
       expect(
         find.byType(MusicFullscreenVideoPlayer),
         findsOneWidget,
@@ -183,7 +188,7 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.fullscreen_exit_rounded));
       await tester.pump();
-      await tester.pump();
+      await tester.pump(_run);
       expect(
         find.byType(MusicFullscreenVideoPlayer),
         findsNothing,
@@ -196,7 +201,7 @@ void main() {
     vm.dispose();
   });
 
-  testWidgets('the inline video steps aside while the keyboard is up', (
+  testWidgets('a drag takes the video up to full screen and back down', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1170, 2532);
@@ -242,17 +247,39 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pump();
-    expect(find.byType(MusicVideoView), findsOneWidget);
+    final thumbnail = find.byType(MusicVideoThumbnail);
+    expect(thumbnail, findsOneWidget);
 
-    // A keyboard a third of the screen high.
-    tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+    // Part of the way up, the picture follows the finger.
+    final gesture = await tester.startGesture(tester.getCenter(thumbnail));
+    await gesture.moveBy(const Offset(0, -40));
+    await gesture.moveBy(const Offset(0, -100));
     await tester.pump();
-    expect(find.byType(MusicVideoView), findsNothing);
-    expect(vm.videoController, isNotNull, reason: 'still playing, unseen');
+    expect(find.byType(MusicVideoFill), findsNWidgets(1));
+    expect(find.byType(MusicFullscreenVideoPlayer), findsNothing);
+    // Let go slowly, well short of halfway: back into the player.
+    await tester.pump(const Duration(seconds: 1));
+    await gesture.up();
+    await tester.pump();
+    await tester.pump(_run);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsNothing);
 
-    tester.view.resetViewInsets();
+    // A flick up opens it however short.
+    await tester.fling(thumbnail, const Offset(0, -120), 1500);
     await tester.pump();
-    expect(find.byType(MusicVideoView), findsOneWidget);
+    await tester.pump(_run);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+
+    // And a flick down on the full screen takes it back.
+    await tester.fling(
+      find.byType(MusicFullscreenVideoPlayer),
+      const Offset(0, 300),
+      1500,
+    );
+    await tester.pump();
+    await tester.pump(_run);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsNothing);
+    expect(thumbnail, findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 6));
@@ -308,8 +335,9 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pump();
-    await tester.tap(find.byType(MusicVideoView));
+    await tester.tap(find.byType(MusicVideoThumbnail));
     await tester.pump();
+    await tester.pump(_run);
     expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
 
     await tester.runAsync(() async {

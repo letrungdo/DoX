@@ -15,16 +15,11 @@ class MusicVideoView extends StatelessWidget {
     required this.controller,
     required this.isOfficialAudio,
     required this.borderRadius,
-    this.onFullscreen,
   });
 
   final VideoPlayerController controller;
   final bool isOfficialAudio;
   final BorderRadius borderRadius;
-
-  /// Makes the whole picture a tap to full screen, with a corner icon to say
-  /// so.
-  final VoidCallback? onFullscreen;
 
   @override
   Widget build(BuildContext context) {
@@ -47,31 +42,77 @@ class MusicVideoView extends StatelessWidget {
                     label: context.l10n.musicVideoOfficialAudio,
                   ),
                 ),
-              if (onFullscreen != null)
-                const Positioned(
-                  right: Dimens.musicVideoBadgeInset,
-                  bottom: Dimens.musicVideoBadgeInset,
-                  child: Icon(
-                    Icons.fullscreen_rounded,
-                    size: Dimens.musicVideoFullscreenIconSize,
-                    color: Colors.white,
-                    shadows: [Shadow(blurRadius: 4)],
-                  ),
-                ),
             ],
           ),
         ),
       ),
     );
-    final tap = onFullscreen;
-    if (tap == null) return view;
+    return view;
+  }
+}
+
+/// The video filling whatever box it is given, cropped rather than
+/// letterboxed: the small picture in the phone's player, and the picture on
+/// its way between there and the whole screen.
+class MusicVideoFill extends StatelessWidget {
+  const MusicVideoFill({super.key, required this.controller});
+
+  final VideoPlayerController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = controller.value.size;
+    return ColoredBox(
+      color: Colors.black,
+      child: size.isEmpty
+          ? const SizedBox.expand()
+          : FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: VideoPlayer(controller),
+              ),
+            ),
+    );
+  }
+}
+
+/// The video where the phone's player shows the artwork, in the shape of
+/// the screen it opens onto. A tap opens it full screen.
+class MusicVideoThumbnail extends StatelessWidget {
+  const MusicVideoThumbnail({
+    super.key,
+    required this.controller,
+    required this.onTap,
+    this.hidden = false,
+  });
+
+  final VideoPlayerController controller;
+  final VoidCallback onTap;
+
+  /// Leaves the spot dark: the picture is on its way to or from the whole
+  /// screen, drawn above the page, and one of it is enough.
+  final bool hidden;
+
+  @override
+  Widget build(BuildContext context) {
     return Tooltip(
       message: context.l10n.musicVideoFullscreen,
-      // Opaque: the whole picture is the target, not only what it paints.
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: tap,
-        child: view,
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
+          child: SizedBox(
+            width: Dimens.musicMiniVideoHeight * Dimens.musicMiniVideoAspect,
+            height: Dimens.musicMiniVideoHeight,
+            child: hidden
+                ? const ColoredBox(color: Colors.black)
+                : MusicVideoFill(controller: controller),
+          ),
+        ),
       ),
     );
   }
