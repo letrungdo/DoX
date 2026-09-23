@@ -2679,4 +2679,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicVideoExitFullscreen => 'Thoát toàn màn hình';
+
+  @override
+  String musicVideoReportTitle(String quality) {
+    return 'Chất lượng video $quality';
+  }
+
+  @override
+  String get musicVideoReportPending => 'Đang tìm bản HD…';
 }

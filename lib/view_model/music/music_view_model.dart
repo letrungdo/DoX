@@ -128,6 +128,15 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// The current track's video is still being looked for.
   bool get isFindingVideo => _isFindingVideo;
 
+  /// What the player said about the HD streams it was handed, line by line.
+  final List<String> _playerNotes = [];
+
+  /// Why the picture is what it is: how the HD lookup went, client by
+  /// client, and whether the player took the stream. Empty before there is
+  /// anything to say.
+  String get videoReport =>
+      [_foundVideo?.hdReport, ..._playerNotes].nonNulls.join('\n');
+
   DateTime _lastVideoResync = DateTime(0);
 
   /// The stream [_videoController] shows, so the HD picture replaces the
@@ -369,6 +378,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       (video) => video == null ? null : _findHdSafely(video),
     );
     _foundVideo = null;
+    _playerNotes.clear();
     _isFindingVideo = true;
     void found(MusicVideo? video, {required bool last}) {
       if (!_isCurrentPlay(generation)) return;
@@ -396,7 +406,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         // muxed stream, which is sound and picture in one.
         final hdAudio = early.hdAudioUrl;
         if (hdAudio != null) {
-          controller = await _tryOpen(hdAudio, background: true);
+          controller = await _tryOpen(
+            hdAudio,
+            background: true,
+            headers: early.hdHeaders,
+          );
         }
         final muxed = early.muxedUrl;
         if (controller == null && muxed != null) {
@@ -509,9 +523,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   Future<VideoPlayerController> _openPlayer(
     String url, {
     required bool background,
+    Map<String, String> headers = const {},
   }) async {
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
+      httpHeaders: headers,
       videoPlayerOptions: VideoPlayerOptions(
         allowBackgroundPlayback: background,
       ),
@@ -537,12 +553,26 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   Future<VideoPlayerController?> _tryOpen(
     String url, {
     required bool background,
+    Map<String, String> headers = const {},
   }) async {
     try {
-      return await _openPlayer(url, background: background);
+      return await _openPlayer(url, background: background, headers: headers);
     } on Object catch (e) {
-      logger.d('MusicViewModel stream would not open: $e');
-      return null;
+      logger.d('[MusicVideo] stream would not open: $e');
+      if (headers.isEmpty) return null;
+      // Only the HD streams carry headers. Tried once more without them: a
+      // player may not take a User-Agent of someone else's.
+      _playerNotes.add('Player refused the HD stream: $e');
+      try {
+        final bare = await _openPlayer(url, background: background);
+        _playerNotes.add('Player took it without the client headers');
+        return bare;
+      } on Object catch (e) {
+        _playerNotes.add('Player refused it without headers too: $e');
+        return null;
+      } finally {
+        notifyListenersSafe();
+      }
     }
   }
 
@@ -588,7 +618,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
     final request = ++_pictureRequest;
     for (final url in candidates) {
-      final follower = await _tryOpen(url, background: false);
+      final follower = await _tryOpen(
+        url,
+        background: false,
+        headers: video.headersFor(url),
+      );
       if (follower == null) continue;
       if (!_canShowPicture(generation) || request != _pictureRequest) {
         await follower.dispose();

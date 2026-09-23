@@ -1450,5 +1450,12 @@
   "musicVideoOfficialAudio": "Âm thanh gốc từ MV",
   "musicVideoFullscreen": "Xem toàn màn hình",
   "musicVideoBackToList": "Danh sách bài hát",
-  "musicVideoExitFullscreen": "Thoát toàn màn hình"
+  "musicVideoExitFullscreen": "Thoát toàn màn hình",
+  "musicVideoReportTitle": "Chất lượng video {quality}",
+  "@musicVideoReportTitle": {
+    "placeholders": {
+      "quality": {"type": "String"}
+    }
+  },
+  "musicVideoReportPending": "Đang tìm bản HD…"
 }

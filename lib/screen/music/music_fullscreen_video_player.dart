@@ -9,6 +9,8 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
+import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/player_controls_focus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -307,6 +309,7 @@ class _MusicFullscreenVideoPlayerState
                   if (vm.videoController case final video?)
                     _QualityChip(
                       label: musicVideoQualityLabel(video.value.size),
+                      onTap: () => _showVideoReport(vm),
                     ),
                 ],
               ),
@@ -416,6 +419,40 @@ class _MusicFullscreenVideoPlayerState
     );
   }
 
+  /// Why the picture is the quality it is — the HD lookup's account, client
+  /// by client — for the viewer to read out when it is not HD.
+  ///
+  /// A dialog rather than a toast: the account runs to several lines, and a
+  /// toast shows two. Selectable, so it can be copied into a bug report.
+  void _showVideoReport(MusicViewModel vm) {
+    _hideTimer?.cancel();
+    final l10n = context.l10n;
+    final report = vm.videoReport;
+    final video = vm.videoController;
+    final quality = video == null
+        ? ''
+        : musicVideoQualityLabel(video.value.size);
+    unawaited(
+      showAppModal<void>(
+        context,
+        builder: (dialogContext) => AppDialog(
+          title: l10n.musicVideoReportTitle(quality),
+          content: SelectableText(
+            report.isEmpty ? l10n.musicVideoReportPending : report,
+          ),
+          actions: [
+            DialogActionButton(
+              text: l10n.close,
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+          ],
+        ),
+      ).then((_) {
+        if (mounted && _controlsVisible) _scheduleHide();
+      }),
+    );
+  }
+
   static String _format(Duration d) {
     final minutes = d.inMinutes.toString().padLeft(2, '0');
     final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
@@ -464,15 +501,21 @@ class _ControlButton extends StatelessWidget {
   }
 }
 
-/// What the picture is playing at, so a soft one is explained.
+/// What the picture is playing at. Tapped, it says why — see
+/// [MusicViewModel.videoReport].
 class _QualityChip extends StatelessWidget {
-  const _QualityChip({required this.label});
+  const _QualityChip({required this.label, required this.onTap});
 
   final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     if (label.isEmpty) return const SizedBox.shrink();
+    return FocusableTap(onTap: onTap, child: _buildChip());
+  }
+
+  Widget _buildChip() {
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.white70),

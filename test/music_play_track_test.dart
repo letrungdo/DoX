@@ -276,6 +276,37 @@ void main() {
       vm.dispose();
     });
 
+    testWidgets('an HD picture the player refuses with the client headers '
+        'is tried without them', (tester) async {
+      platform = FakeVideoPlayerPlatform(
+        playing: {'https://cdn/a', 'https://yt/muxed', 'https://yt/hd-video'},
+        refusedWithHeaders: {'https://yt/hd-video'},
+      );
+      VideoPlayerPlatform.instance = platform;
+      const basic = MusicVideo(
+        videoId: 'ugc',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/muxed',
+      );
+      await play(
+        tester,
+        withVideo(
+          basic,
+          hd: basic.withHd(
+            videoUrl: 'https://yt/hd-video',
+            headers: const {'User-Agent': 'vr'},
+            report: 'ANDROID_VR: plays 1280x720',
+          ),
+        ),
+      );
+
+      expect(vm.videoController?.dataSource, 'https://yt/hd-video');
+      expect(vm.videoReport, contains('ANDROID_VR: plays 1280x720'));
+      expect(vm.videoReport, contains('without the client headers'));
+      vm.dispose();
+    });
+
     testWidgets('a stand-in video is looped rather than kept in step', (
       tester,
     ) async {

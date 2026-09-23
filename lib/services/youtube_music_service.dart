@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/model/music_video.dart';
@@ -70,6 +72,40 @@ class YoutubeMusicService {
   /// label's audio over a still cover, which is no picture at all.
   static const _videosFilter = 'EgWKAQIQAWoKEAkQBRAKEAMQBA==';
 
+  /// The `ANDROID_VR` client at the version yt-dlp asks as. The package's own
+  /// is older, and an old app version is one more reason for YouTube to turn
+  /// a request away.
+  static const _vrUserAgent =
+      'com.google.android.apps.youtube.vr.oculus/1.65.10 '
+      '(Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip';
+  static const _androidVr = YoutubeApiClient({
+    'context': {
+      'client': {
+        'clientName': 'ANDROID_VR',
+        'clientVersion': '1.65.10',
+        'deviceMake': 'Oculus',
+        'deviceModel': 'Quest 3',
+        'androidSdkVersion': 32,
+        'userAgent': _vrUserAgent,
+        'osName': 'Android',
+        'osVersion': '12L',
+        'hl': 'en',
+        'timeZone': 'UTC',
+        'utcOffsetMinutes': 0,
+      },
+    },
+    'contentCheckOk': true,
+    'racyCheckOk': true,
+  }, 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false');
+
+  /// How long a client YouTube has put its bot check in front of is left
+  /// alone. Asking again straight away only costs every track the wait for
+  /// the refusal, and a network that keeps asking is one it keeps flagging.
+  static const _botCheckRest = Duration(minutes: 15);
+
+  /// The clients resting after a bot check, and what YouTube said.
+  final _blocked = <String, ({DateTime until, String reason})>{};
+
   /// How long HD is waited for before the video carries on without it.
   static const _hdWait = Duration(seconds: 20);
 
@@ -129,17 +165,23 @@ class YoutubeMusicService {
     }
   }
 
-  /// [video] with its HD streams, or null when there are none that play.
-  /// Bounded in time: the first one also fetches the solver and the player
-  /// script. Never throws.
-  Future<MusicVideo?> withHd(MusicVideo video) async {
+  /// [video] with its HD streams added — or without them, but with the
+  /// reason in [MusicVideo.hdReport], so the page can say why the picture
+  /// is 360p. Bounded in time: the first one also fetches the solver and the
+  /// player script. Never throws.
+  Future<MusicVideo> withHd(MusicVideo video) async {
     try {
       final hd = await _hdStreams(video.videoId).timeout(_hdWait);
-      if (hd == null || (hd.video == null && hd.audio == null)) return null;
-      return video.withHd(videoUrl: hd.video, audioUrl: hd.audio);
+      return video.withHd(
+        videoUrl: hd.video,
+        audioUrl: hd.audio,
+        headers: hd.headers,
+        report: hd.report,
+      );
+    } on TimeoutException {
+      return video.withHd(report: 'HD: timed out after ${_hdWait.inSeconds}s');
     } on Object catch (e) {
-      logger.d('[MusicVideo] no HD streams for ${video.videoId}: $e');
-      return null;
+      return video.withHd(report: 'HD: $e');
     }
   }
 
@@ -243,14 +285,26 @@ class YoutubeMusicService {
   ///
   /// H.264 only: every phone and television decodes it in hardware, which
   /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
-  Future<({String? video, String? audio})?> _hdStreams(String videoId) async {
+  Future<_HdStreams> _hdStreams(String videoId) async {
     final attempts = <(String, YoutubeExplode?, YoutubeApiClient, bool)>[
-      ('ANDROID_VR', _explode, YoutubeApiClient.androidVr, false),
+      ('ANDROID_VR', _explode, _androidVr, false),
       ('TV', _hd, YoutubeApiClient.tv, true),
     ];
+    final report = <String>[];
+    void note(String line) {
+      report.add(line);
+      logger.d('[MusicVideo] $videoId $line');
+    }
+
     for (final (name, explode, client, watchPage) in attempts) {
       if (explode == null) {
-        logger.d('[MusicVideo] HD $name skipped: no web view for its solver');
+        note('$name: skipped, no web view for its solver');
+        continue;
+      }
+      final blocked = _blocked[name];
+      if (blocked != null && DateTime.now().isBefore(blocked.until)) {
+        final left = blocked.until.difference(DateTime.now()).inMinutes + 1;
+        note('$name: resting ${left}m after — ${blocked.reason}');
         continue;
       }
       try {
@@ -259,22 +313,63 @@ class YoutubeMusicService {
           ytClients: [client],
           requireWatchPage: watchPage,
         );
-        final found = await _playableHd(manifest);
+        final userAgent = client.payload['context']?['client']?['userAgent'];
+        final headers = {if (userAgent is String) 'User-Agent': userAgent};
+        final found = await _playableHd(manifest, headers);
+        note('$name: ${found.note}');
         if (found.video != null) {
-          logger.d('[MusicVideo] HD $name plays for $videoId');
-          return found;
+          return _HdStreams(
+            video: found.video,
+            audio: found.audio,
+            headers: headers,
+            report: report.join('\n'),
+          );
         }
-        logger.d('[MusicVideo] HD $name streams refused mid-file ($videoId)');
       } on Object catch (e) {
-        logger.d('[MusicVideo] HD $name failed for $videoId: $e');
+        final reason = _firstLine(e);
+        note('$name: $reason');
+        if (_isBotCheck(e)) {
+          _blocked[name] = (
+            until: DateTime.now().add(_botCheckRest),
+            reason: reason,
+          );
+        }
       }
     }
-    return null;
+    return _HdStreams(report: report.join('\n'));
   }
 
-  /// The best H.264 picture and mp4 sound in [manifest] that play through.
-  Future<({String? video, String? audio})> _playableHd(
+  /// [e] in a line: its first, and the reason YouTube gave if it gave one —
+  /// which the package puts further down.
+  /// YouTube turning this network away rather than this video: its bot
+  /// check, or the watch page swapped for a captcha.
+  static bool _isBotCheck(Object e) {
+    final text = e.toString();
+    return e is RequestLimitExceededException ||
+        text.contains('not a bot') ||
+        text.contains('Sign in to confirm');
+  }
+
+  static String _firstLine(Object e) {
+    final lines = e
+        .toString()
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    if (lines.isEmpty) return '$e';
+    final reason = lines.firstWhere(
+      (line) => line.startsWith('Reason:'),
+      orElse: () => '',
+    );
+    return reason.isEmpty ? lines.first : '${lines.first} $reason';
+  }
+
+  /// The best H.264 picture and mp4 sound in [manifest] that play through,
+  /// with a line saying what was found and what was not.
+  Future<({String? video, String? audio, String note})> _playableHd(
     StreamManifest manifest,
+    Map<String, String> headers,
   ) async {
     final pictures =
         manifest.videoOnly
@@ -294,28 +389,46 @@ class YoutubeMusicService {
 
     final video = pictures.isEmpty ? null : pictures.first;
     final audio = sounds.isEmpty ? null : sounds.first;
-    final (videoPlays, audioPlays) = await (
-      video == null ? Future.value(false) : _playsThrough(video),
-      audio == null ? Future.value(false) : _playsThrough(audio),
+    if (video == null) {
+      return (
+        video: null,
+        audio: null,
+        note: 'no H.264 picture among ${manifest.videoOnly.length} streams',
+      );
+    }
+    final (videoStatus, audioStatus) = await (
+      _middleStatus(video, headers),
+      audio == null ? Future.value(0) : _middleStatus(audio, headers),
     ).wait;
+    final size =
+        '${video.videoResolution.width}x${video.videoResolution.height}';
     return (
-      video: videoPlays ? video!.url.toString() : null,
-      audio: audioPlays ? audio!.url.toString() : null,
+      video: videoStatus == 206 ? video.url.toString() : null,
+      audio: audioStatus == 206 ? audio!.url.toString() : null,
+      note: videoStatus == 206
+          ? 'plays $size'
+          : '$size refused mid-file (HTTP $videoStatus)',
     );
   }
 
   static int _pixels(VideoOnlyStreamInfo s) =>
       s.videoResolution.width * s.videoResolution.height;
 
-  /// Whether [stream] answers a range from its middle — the request a stream
-  /// that would stall after its first few hundred kilobytes turns down.
-  Future<bool> _playsThrough(StreamInfo stream) async {
+  /// What [stream] answers to a range from its middle: `206` for one that
+  /// plays through, `403` for one that would stall after its first few
+  /// hundred kilobytes.
+  Future<int> _middleStatus(
+    StreamInfo stream,
+    Map<String, String> headers,
+  ) async {
     final middle = stream.size.totalBytes ~/ 2;
     final response = await _probe.getUri<List<int>>(
       stream.url,
-      options: Options(headers: {'Range': 'bytes=$middle-${middle + 1023}'}),
+      options: Options(
+        headers: {...headers, 'Range': 'bytes=$middle-${middle + 1023}'},
+      ),
     );
-    return response.statusCode == 206;
+    return response.statusCode ?? 0;
   }
 
   /// A link to [videoId]'s muxed mp4 — see the class notes for why that one.
@@ -337,3 +450,18 @@ class YoutubeMusicService {
 }
 
 final youtubeMusicService = YoutubeMusicService();
+
+/// What the HD lookup came back with, and the account of how it went.
+class _HdStreams {
+  const _HdStreams({
+    this.video,
+    this.audio,
+    this.headers = const {},
+    required this.report,
+  });
+
+  final String? video;
+  final String? audio;
+  final Map<String, String> headers;
+  final String report;
+}

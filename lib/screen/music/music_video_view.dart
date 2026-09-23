@@ -67,7 +67,12 @@ class MusicVideoView extends StatelessWidget {
     if (tap == null) return view;
     return Tooltip(
       message: context.l10n.musicVideoFullscreen,
-      child: GestureDetector(onTap: tap, child: view),
+      // Opaque: the whole picture is the target, not only what it paints.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: tap,
+        child: view,
+      ),
     );
   }
 }

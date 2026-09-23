@@ -2689,4 +2689,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicVideoExitFullscreen => 'Exit full screen';
+
+  @override
+  String musicVideoReportTitle(String quality) {
+    return 'Video quality $quality';
+  }
+
+  @override
+  String get musicVideoReportPending => 'Still looking for an HD stream…';
 }

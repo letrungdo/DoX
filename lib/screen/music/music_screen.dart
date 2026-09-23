@@ -160,9 +160,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     final track = viewModel.currentTrack;
     final isLandscape =
         deviceType.canDriveOrientation && _onPhoneTurned(context);
-    final wantsFullscreen = isTv || isLandscape
-        ? track?.id != _leftVideoFor
-        : _phoneFullscreen;
+    // A tap on the video counts whichever way the phone is turned — the
+    // video backed out of on a sideways phone is still one tap away.
+    final wantsFullscreen =
+        _phoneFullscreen ||
+        ((isTv || isLandscape) && track?.id != _leftVideoFor);
     final showFullscreen =
         wantsFullscreen &&
         viewModel.isVideoEnabled &&

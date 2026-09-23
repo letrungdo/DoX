@@ -29,6 +29,8 @@ class MusicVideo {
     this.loops = false,
     this.hdVideoUrl,
     this.hdAudioUrl,
+    this.hdHeaders = const {},
+    this.hdReport,
     this.muxedUrl,
   });
 
@@ -51,19 +53,38 @@ class MusicVideo {
   /// Sound only, at the video's best quality, to go under [hdVideoUrl].
   final String? hdAudioUrl;
 
+  /// What the HD streams have to be fetched with: the client they were asked
+  /// for as, which YouTube may check the download against.
+  final Map<String, String> hdHeaders;
+
+  /// How the HD lookup went, client by client — what the page shows when
+  /// asked why the picture is only 360p.
+  final String? hdReport;
+
   /// Picture and sound in one, at 360p: the stream that always plays.
   final String? muxedUrl;
 
   /// This video with its HD streams added.
-  MusicVideo withHd({String? videoUrl, String? audioUrl}) => MusicVideo(
+  MusicVideo withHd({
+    String? videoUrl,
+    String? audioUrl,
+    Map<String, String> headers = const {},
+    String? report,
+  }) => MusicVideo(
     videoId: videoId,
     duration: duration,
     useAudio: useAudio,
     loops: loops,
     hdVideoUrl: videoUrl,
     hdAudioUrl: audioUrl,
+    hdHeaders: headers,
+    hdReport: report,
     muxedUrl: muxedUrl,
   );
+
+  /// The headers [url], one of this video's streams, is fetched with.
+  Map<String, String> headersFor(String url) =>
+      url == hdVideoUrl || url == hdAudioUrl ? hdHeaders : const {};
 
   /// There is a picture to show.
   bool get isPlayable => pictureUrls.isNotEmpty;

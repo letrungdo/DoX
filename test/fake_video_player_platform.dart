@@ -10,7 +10,11 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 /// which streams come up and which do not, and which stream the page reached
 /// for next when one of them did not.
 class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
-  FakeVideoPlayerPlatform({this.playing = const {}, this.stalls = false});
+  FakeVideoPlayerPlatform({
+    this.playing = const {},
+    this.stalls = false,
+    this.refusedWithHeaders = const {},
+  });
 
   /// The streams that come up. Anything else fails the way a dead link does.
   final Set<String> playing;
@@ -19,6 +23,10 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   /// channel that is still trying, which is where a page waiting on a live
   /// stream spends its first seconds.
   final bool stalls;
+
+  /// Streams that fail when asked for with any HTTP headers, and open
+  /// without them — a player that will not take someone else's User-Agent.
+  final Set<String> refusedWithHeaders;
 
   /// Every stream the page has asked for, in the order it asked.
   final opened = <String>[];
@@ -37,6 +45,10 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   Future<int?> createWithOptions(VideoCreationOptions options) async {
     final uri = options.dataSource.uri ?? '';
     opened.add(uri);
+    if (refusedWithHeaders.contains(uri) &&
+        options.dataSource.httpHeaders.isNotEmpty) {
+      throw PlatformException(code: 'VideoError', message: 'refused headers');
+    }
     if (!stalls && !playing.contains(uri)) {
       throw PlatformException(code: 'VideoError', message: 'dead stream');
     }
