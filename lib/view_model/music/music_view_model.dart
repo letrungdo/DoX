@@ -142,15 +142,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// picture it found has opened.
   bool get isVideoPending => _isFindingVideo || _isPreparingPicture;
 
-  /// What the player said about the HD streams it was handed, line by line.
-  final List<String> _playerNotes = [];
-
-  /// Why the picture is what it is: how the HD lookup went, client by
-  /// client, and whether the player took the stream. Empty before there is
-  /// anything to say.
-  String get videoReport =>
-      [_foundVideo?.hdReport, ..._playerNotes].nonNulls.join('\n');
-
   DateTime _lastVideoResync = DateTime(0);
 
   /// The stream [_videoController] shows, so the HD picture replaces the
@@ -376,7 +367,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       (video) => video == null ? null : _within(hdFuture, _hdPictureGrace),
     );
     _foundVideo = null;
-    _playerNotes.clear();
     _isFindingVideo = true;
     _isPreparingPicture = false;
     void found(MusicVideo? video, {required bool last}) {
@@ -569,16 +559,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       if (headers.isEmpty) return null;
       // Only the HD streams carry headers. Tried once more without them: a
       // player may not take a User-Agent of someone else's.
-      _playerNotes.add('Player refused the HD stream: $e');
       try {
-        final bare = await _openPlayer(url, background: background);
-        _playerNotes.add('Player took it without the client headers');
-        return bare;
+        return await _openPlayer(url, background: background);
       } on Object catch (e) {
-        _playerNotes.add('Player refused it without headers too: $e');
+        logger.d('[MusicVideo] stream would not open without headers: $e');
         return null;
-      } finally {
-        notifyListenersSafe();
       }
     }
   }

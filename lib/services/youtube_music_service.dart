@@ -20,7 +20,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 /// results are the artist's official video, and that is what decides whether
 /// the video's sound can stand in for the track's.
 ///
-/// Two sets of streams are asked for at once:
+/// Two kinds of stream, the second only when the first is not to be had:
 ///
 /// - **HD** — the adaptive streams, picture and sound apart, up to 1080p. The
 ///   app's default client gets them too, but without a proof-of-origin token
@@ -30,7 +30,9 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 ///   Every HD stream is also tried from the middle before it is handed over,
 ///   because a link that only opens is not yet one that plays.
 /// - **Muxed** — picture and sound together at 360p, which plays to the end
-///   with no challenge at all. It is what is left when HD is not.
+///   with no challenge at all. It is what is left when HD is not, and is
+///   asked for only then: a request for a stream nobody watches is one more
+///   for YouTube to count against the network.
 class YoutubeMusicService {
   YoutubeMusicService({Dio? dio, YoutubeExplode? explode})
     : _dio = dio ?? Dio(_options),
@@ -120,10 +122,10 @@ class YoutubeMusicService {
   /// is tried afresh next time.
   final _picks = <String, MusicVideoPick?>{};
 
-  /// The video for [track] with its 360p stream, or null when there is no
-  /// video worth showing. Quick, so the picture can come up early; the HD
-  /// streams follow from [withHd]. Never throws: a missing video leaves the
-  /// track playing as it always has.
+  /// The video for [track], or null when there is no video worth showing —
+  /// as yet with no stream: those follow from [withHd], whose lookup starts
+  /// here. Never throws: a missing video leaves the track playing as it
+  /// always has.
   Future<MusicVideo?> findVideo(MusicTrack track) async {
     // Wanted by the HD lookup that follows; fetched while the search runs.
     _visitorId().ignore();
@@ -144,19 +146,14 @@ class YoutubeMusicService {
       if (pick == null) return null;
 
       final id = pick.video.id;
-      // HD needs only the id: started now rather than after the muxed
-      // stream, so it is in as soon as it can be — see [withHd].
-      _startHd(id);
-      final muxed = await _muxedStream(id).catchError((Object e) {
-        logger.d('[MusicVideo] no muxed stream for $id: $e');
-        return null;
-      });
+      // Started now rather than when [withHd] is asked, so it is in as soon
+      // as it can be.
+      _hdStarted = _startLookup(id);
       return MusicVideo(
         videoId: id,
         duration: pick.video.duration,
         useAudio: pick.useAudio,
         loops: pick.loops,
-        muxedUrl: muxed,
       );
     } on Object catch (e) {
       logger.d('[MusicVideo] no video for ${track.id}: $e');
@@ -164,39 +161,49 @@ class YoutubeMusicService {
     }
   }
 
-  /// [video] with its HD streams added — or without them, but with the
-  /// reason in [MusicVideo.hdReport], so the page can say why the picture
-  /// is 360p. Bounded in time: the first one also fetches the solver and the
-  /// player script. Never throws.
+  /// [video] with its streams: HD where there is HD, the muxed 360p one
+  /// otherwise. Bounded in time: the first one also fetches
+  /// the solver and the player script. Never throws.
   Future<MusicVideo> withHd(MusicVideo video) async {
+    final started = _hdStarted;
+    _hdStarted = null;
+    final lookup = started != null && started.videoId == video.videoId
+        ? started
+        : _startLookup(video.videoId);
+    var hd = const _HdStreams();
     try {
-      final started = _hdStarted;
-      _hdStarted = null;
-      final lookup = started != null && started.videoId == video.videoId
-          ? started.lookup
-          : _hdStreams(video.videoId);
-      final hd = await lookup.timeout(_hdWait);
-      return video.withHd(
-        videoUrl: hd.video,
-        audioUrl: hd.audio,
-        headers: hd.headers,
-        report: hd.report,
-      );
+      hd = await lookup.hd.timeout(_hdWait);
     } on TimeoutException {
-      return video.withHd(report: 'HD: timed out after ${_hdWait.inSeconds}s');
+      logger.d('[MusicVideo] ${video.videoId} HD timed out');
     } on Object catch (e) {
-      return video.withHd(report: 'HD: $e');
+      logger.d('[MusicVideo] ${video.videoId} HD: $e');
     }
+    return video.withHd(
+      videoUrl: hd.video,
+      audioUrl: hd.audio,
+      headers: hd.headers,
+      muxedUrl: hd.video == null ? await lookup.muxed() : null,
+    );
   }
 
-  /// The HD lookup [findVideo] started for the video it found, waiting for
+  /// The lookup [findVideo] started for the video it found, waiting for
   /// [withHd] to pick it up. Only the latest: a track skipped past leaves
   /// its lookup to finish unread.
-  ({String videoId, Future<_HdStreams> lookup})? _hdStarted;
+  _StreamLookup? _hdStarted;
 
-  void _startHd(String videoId) {
-    final lookup = _hdStreams(videoId)..ignore();
-    _hdStarted = (videoId: videoId, lookup: lookup);
+  /// HD for [videoId], with the muxed stream asked for the moment the first
+  /// client comes back without HD — alongside the next, which can take a
+  /// while, rather than after it.
+  _StreamLookup _startLookup(String videoId) {
+    Future<String?>? muxed;
+    Future<String?> fallback() =>
+        muxed ??= _muxedStream(videoId).catchError((Object e) {
+          logger.d('[MusicVideo] no muxed stream for $videoId: $e');
+          return null;
+        });
+    final hd = _hdStreams(videoId, onMiss: () => unawaited(fallback()))
+      ..ignore();
+    return (videoId: videoId, hd: hd, muxed: fallback);
   }
 
   Future<List<YoutubeVideo>> searchVideos(String query) async {
@@ -297,19 +304,22 @@ class YoutubeMusicService {
   /// - `TV`, whose links carry signature and `n` challenges for
   ///   [WebViewJsSolver] to solve, and which needs the watch page for the
   ///   player script those challenges are written in.
-  Future<_HdStreams> _hdStreams(String videoId) async {
+  ///
+  /// [onMiss] is called when a client has come back without HD and the next
+  /// is about to be asked.
+  Future<_HdStreams> _hdStreams(
+    String videoId, {
+    void Function()? onMiss,
+  }) async {
     final hd = _hd;
     final attempts = <(String, Future<_FoundHd> Function()?)>[
       ('VISIONOS', () => _visionOsHd(videoId)),
       ('TV', hd == null ? null : () => _tvHd(hd, videoId)),
     ];
-    final report = <String>[];
-    void note(String line) {
-      report.add(line);
-      logger.d('[MusicVideo] $videoId $line');
-    }
+    void note(String line) => logger.d('[MusicVideo] $videoId $line');
 
-    for (final (name, attempt) in attempts) {
+    for (final (index, (name, attempt)) in attempts.indexed) {
+      if (index > 0) onMiss?.call();
       if (attempt == null) {
         note('$name: skipped, no web view for its solver');
         continue;
@@ -328,7 +338,6 @@ class YoutubeMusicService {
             video: found.video,
             audio: found.audio,
             headers: found.headers,
-            report: report.join('\n'),
           );
         }
       } on Object catch (e) {
@@ -344,7 +353,7 @@ class YoutubeMusicService {
         }
       }
     }
-    return _HdStreams(report: report.join('\n'));
+    return const _HdStreams();
   }
 
   /// Where AVPlayer plays: it opens YouTube's adaptive mp4 only after reading
@@ -696,20 +705,22 @@ class YoutubeMusicService {
 
 final youtubeMusicService = YoutubeMusicService();
 
-/// What the HD lookup came back with, and the account of how it went.
+/// What the HD lookup came back with.
 class _HdStreams {
-  const _HdStreams({
-    this.video,
-    this.audio,
-    this.headers = const {},
-    required this.report,
-  });
+  const _HdStreams({this.video, this.audio, this.headers = const {}});
 
   final String? video;
   final String? audio;
   final Map<String, String> headers;
-  final String report;
 }
+
+/// A video's streams on their way: HD, and the muxed stream asked for only
+/// if HD does not come.
+typedef _StreamLookup = ({
+  String videoId,
+  Future<_HdStreams> hd,
+  Future<String?> Function() muxed,
+});
 
 /// What one client's HD lookup came back with.
 typedef _FoundHd = ({

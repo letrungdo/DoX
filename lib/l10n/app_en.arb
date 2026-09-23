@@ -1505,12 +1505,5 @@
   "musicVideoOfficialAudio": "Original sound from the video",
   "musicVideoFullscreen": "Full screen",
   "musicVideoBackToList": "Track list",
-  "musicVideoExitFullscreen": "Exit full screen",
-  "musicVideoReportTitle": "Video quality {quality}",
-  "@musicVideoReportTitle": {
-    "placeholders": {
-      "quality": {"type": "String"}
-    }
-  },
-  "musicVideoReportPending": "Still looking for an HD stream…"
+  "musicVideoExitFullscreen": "Exit full screen"
 }

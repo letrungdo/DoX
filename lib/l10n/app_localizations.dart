@@ -4830,18 +4830,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exit full screen'**
   String get musicVideoExitFullscreen;
-
-  /// No description provided for @musicVideoReportTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Video quality {quality}'**
-  String musicVideoReportTitle(String quality);
-
-  /// No description provided for @musicVideoReportPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Still looking for an HD stream…'**
-  String get musicVideoReportPending;
 }
 
 class _AppLocalizationsDelegate

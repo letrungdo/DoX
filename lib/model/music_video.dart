@@ -30,7 +30,6 @@ class MusicVideo {
     this.hdVideoUrl,
     this.hdAudioUrl,
     this.hdHeaders = const {},
-    this.hdReport,
     this.muxedUrl,
   });
 
@@ -57,19 +56,16 @@ class MusicVideo {
   /// for as, which YouTube may check the download against.
   final Map<String, String> hdHeaders;
 
-  /// How the HD lookup went, client by client — what the page shows when
-  /// asked why the picture is only 360p.
-  final String? hdReport;
-
-  /// Picture and sound in one, at 360p: the stream that always plays.
+  /// Picture and sound in one, at 360p: the stream that always plays. Only
+  /// looked for when there is no HD to play.
   final String? muxedUrl;
 
-  /// This video with its HD streams added.
+  /// This video with its HD streams added, or the 360p one in their place.
   MusicVideo withHd({
     String? videoUrl,
     String? audioUrl,
     Map<String, String> headers = const {},
-    String? report,
+    String? muxedUrl,
   }) => MusicVideo(
     videoId: videoId,
     duration: duration,
@@ -78,8 +74,7 @@ class MusicVideo {
     hdVideoUrl: videoUrl,
     hdAudioUrl: audioUrl,
     hdHeaders: headers,
-    hdReport: report,
-    muxedUrl: muxedUrl,
+    muxedUrl: muxedUrl ?? this.muxedUrl,
   );
 
   /// The headers [url], one of this video's streams, is fetched with.

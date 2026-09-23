@@ -287,6 +287,23 @@ void main() {
       vm.dispose();
     });
 
+    testWidgets('a video found with no stream yet shows the 360p one the '
+        'lookup falls back to', (tester) async {
+      const found = MusicVideo(
+        videoId: 'ugc',
+        duration: Duration(minutes: 5),
+        useAudio: false,
+      );
+      await play(
+        tester,
+        withVideo(found, hd: found.withHd(muxedUrl: 'https://yt/muxed')),
+      );
+
+      expect(platform.opened, ['https://cdn/a', 'https://yt/muxed']);
+      expect(vm.videoController?.dataSource, 'https://yt/muxed');
+      vm.dispose();
+    });
+
     testWidgets('a video shorter than the track is not shown', (tester) async {
       await play(
         tester,
@@ -325,14 +342,11 @@ void main() {
           hd: basic.withHd(
             videoUrl: 'https://yt/hd-video',
             headers: const {'User-Agent': 'vr'},
-            report: 'ANDROID_VR: plays 1280x720',
           ),
         ),
       );
 
       expect(vm.videoController?.dataSource, 'https://yt/hd-video');
-      expect(vm.videoReport, contains('ANDROID_VR: plays 1280x720'));
-      expect(vm.videoReport, contains('without the client headers'));
       vm.dispose();
     });
 
