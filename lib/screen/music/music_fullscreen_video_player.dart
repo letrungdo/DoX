@@ -433,18 +433,18 @@ class _MusicFullscreenVideoPlayerState
                       color: isLiked ? context.theme.colorScheme.error : null,
                       onTap: widget.onToggleLike,
                     ),
-                    // The video's state, as in the page's player; only for a
-                    // track that has one to show or hide.
-                    if (vm.hasVideo)
-                      _ControlButton(
-                        icon: vm.isVideoEnabled
-                            ? Icons.videocam_rounded
-                            : Icons.videocam_off_rounded,
-                        tooltip: vm.isVideoEnabled
-                            ? l10n.musicVideoHide
-                            : l10n.musicVideoShow,
-                        onTap: vm.toggleVideo,
-                      ),
+                    // The video's state, as in the page's player; live only
+                    // for a track that has one to show or hide, but always
+                    // there, so a skip does not shove the row along.
+                    _ControlButton(
+                      icon: vm.isVideoEnabled
+                          ? Icons.videocam_rounded
+                          : Icons.videocam_off_rounded,
+                      tooltip: vm.isVideoEnabled
+                          ? l10n.musicVideoHide
+                          : l10n.musicVideoShow,
+                      onTap: vm.hasVideo ? vm.toggleVideo : null,
+                    ),
                     _ControlButton(
                       icon: isTv
                           ? Icons.queue_music_rounded
@@ -484,7 +484,9 @@ class _ControlButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final VoidCallback onTap;
+
+  /// Null greys the control out and takes it off the remote's path.
+  final VoidCallback? onTap;
   final FocusNode? focusNode;
   final Color? color;
   final String? tooltip;
@@ -505,7 +507,13 @@ class _ControlButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: Colors.white.withValues(alpha: large ? 0.25 : 0.12),
         ),
-        child: Icon(icon, size: size * 0.55, color: color ?? Colors.white),
+        child: Icon(
+          icon,
+          size: size * 0.55,
+          color: onTap == null
+              ? Colors.white.withValues(alpha: 0.35)
+              : color ?? Colors.white,
+        ),
       ),
     );
     return tooltip == null ? button : Tooltip(message: tooltip!, child: button);

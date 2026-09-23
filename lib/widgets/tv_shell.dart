@@ -168,8 +168,81 @@ class _DirectionalFocusOrScrollAction extends Action<DirectionalFocusIntent> {
     // Where the focus went is only known after the manager has applied it,
     // which it does on a microtask — before any of it is drawn, so putting
     // it back here costs nothing on screen.
-    scheduleMicrotask(() => _keepInsidePage(node, from, intent.direction));
+    scheduleMicrotask(() {
+      if (_keepInsidePage(node, from, intent.direction)) return;
+      _takeSkippedRow(node, intent.direction);
+    });
     return null;
+  }
+
+  /// Puts the remote on a control the arrow jumped over, if it jumped one.
+  ///
+  /// The framework only looks straight down (or up) the column the remote is
+  /// in, and goes further only when nothing at all is there. So from a
+  /// narrow control on the left — the news card's "details" toggle — down
+  /// passed over the small button at the right end of the heading below and
+  /// landed on the list under it: the button was on screen, one row down,
+  /// and down never reached it.
+  ///
+  /// A control lying wholly between where the remote was and where it went
+  /// is the row the viewer meant. Only one in the same list as both, so a
+  /// panel beside the list — the music player's buttons — is still left to
+  /// left and right.
+  void _takeSkippedRow(FocusNode node, TraversalDirection direction) {
+    final landed = FocusManager.instance.primaryFocus;
+    final context = node.context;
+    final landedContext = landed?.context;
+    if (landed == null ||
+        identical(landed, node) ||
+        context == null ||
+        !context.mounted ||
+        landedContext == null) {
+      return;
+    }
+    final scrollable = Scrollable.maybeOf(context, axis: Axis.vertical);
+    if (Scrollable.maybeOf(landedContext, axis: Axis.vertical) != scrollable) {
+      return;
+    }
+    final page = TvPageArea.of(context);
+    final down = direction == TraversalDirection.down;
+    final from = node.rect;
+    final to = landed.rect;
+    // Past the one edge, short of the other: a row of its own in between.
+    bool between(Rect rect) => down
+        ? rect.top >= from.bottom && rect.bottom <= to.top
+        : rect.bottom <= from.top && rect.top >= to.bottom;
+
+    final scope = node.nearestScope;
+    if (scope == null) return;
+    final skipped = scope.traversalDescendants.where((candidate) {
+      if (candidate is FocusScopeNode ||
+          identical(candidate, node) ||
+          identical(candidate, landed)) {
+        return false;
+      }
+      final candidateContext = candidate.context;
+      if (candidateContext == null || !candidateContext.mounted) return false;
+      if (!identical(TvPageArea.of(candidateContext), page)) return false;
+      if (Scrollable.maybeOf(candidateContext, axis: Axis.vertical) !=
+          scrollable) {
+        return false;
+      }
+      return between(candidate.rect);
+    }).toList();
+    if (skipped.isEmpty) return;
+
+    // The nearest row, and in it the control nearest the remote's column.
+    final centre = from.center;
+    skipped.sort((a, b) {
+      final vertical = (a.rect.center.dy - centre.dy).abs().compareTo(
+        (b.rect.center.dy - centre.dy).abs(),
+      );
+      if (vertical != 0) return vertical;
+      return (a.rect.center.dx - centre.dx).abs().compareTo(
+        (b.rect.center.dx - centre.dx).abs(),
+      );
+    });
+    skipped.first.requestFocus();
   }
 
   /// Puts the remote back and scrolls, if the arrow took it off the page.
@@ -179,17 +252,20 @@ class _DirectionalFocusOrScrollAction extends Action<DirectionalFocusIntent> {
   /// so pressing down there threw the remote sideways into the rail — and
   /// the page, having never run out of places to send the focus, never
   /// scrolled. Leaving the page is what left and right are for.
-  void _keepInsidePage(
+  ///
+  /// True when it put the remote back.
+  bool _keepInsidePage(
     FocusNode node,
     Element from,
     TraversalDirection direction,
   ) {
     final landed = FocusManager.instance.primaryFocus;
     if (landed == null || identical(TvPageArea.of(landed.context), from)) {
-      return;
+      return false;
     }
     node.requestFocus();
     _scroll(node.context, direction);
+    return true;
   }
 
   static bool _isVertical(TraversalDirection direction) =>
@@ -491,8 +567,8 @@ RenderBox? _focusedBox() {
   final context = FocusManager.instance.primaryFocus?.context;
   final node = FocusManager.instance.primaryFocus;
   if (node == null || node is FocusScopeNode || context == null) return null;
-  // If the node can no longer request focus (e.g. it's inside an ExcludeFocus 
-  // because an overlay is opening), stop drawing the ring. This prevents 
+  // If the node can no longer request focus (e.g. it's inside an ExcludeFocus
+  // because an overlay is opening), stop drawing the ring. This prevents
   // the border from lingering on covered cards during animations.
   if (!node.canRequestFocus) return null;
   if (!context.mounted) return null;
@@ -563,9 +639,9 @@ Rect? _ringOf(_FocusTarget target) {
   final box = target.box;
   if (!box.attached || !box.hasSize) return null;
 
-  // The node still holds the primary focus (to prevent it jumping to the 
-  // app bar), but it has been shut out of the focus tree by an overlay 
-  // zooming in. If it can no longer be reached, the ring should not be 
+  // The node still holds the primary focus (to prevent it jumping to the
+  // app bar), but it has been shut out of the focus tree by an overlay
+  // zooming in. If it can no longer be reached, the ring should not be
   // drawn over the screen either.
   final node = FocusManager.instance.primaryFocus;
   if (node == null || !node.canRequestFocus) return null;

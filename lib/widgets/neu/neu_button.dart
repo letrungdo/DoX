@@ -142,7 +142,10 @@ class NeuIconButton extends StatelessWidget {
           child: Icon(
             icon,
             size: iconSize,
-            color: color ?? context.colors.iconColor,
+            // Greyed out with the rest of the button when it is disabled.
+            color: onPressed == null
+                ? context.colors.disabled
+                : color ?? context.colors.iconColor,
           ),
         ),
       ),

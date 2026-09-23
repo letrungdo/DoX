@@ -1166,21 +1166,22 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                       : context.theme.hintColor,
                   onPressed: () => _onToggleLike(viewModel.currentTrack!),
                 ),
-                // Only for a track that has a video to show or hide.
-                if (viewModel.hasVideo)
-                  IconButton(
-                    tooltip: viewModel.isVideoEnabled
-                        ? context.l10n.musicVideoHide
-                        : context.l10n.musicVideoShow,
-                    icon: Icon(
-                      viewModel.isVideoEnabled
-                          ? Icons.videocam_rounded
-                          : Icons.videocam_off_rounded,
-                      size: 20,
-                    ),
-                    color: context.theme.hintColor,
-                    onPressed: viewModel.toggleVideo,
+                // Always there, and only live for a track that has a video
+                // to show or hide: coming and going with each skip, it shoved
+                // the buttons beside it along.
+                IconButton(
+                  tooltip: viewModel.isVideoEnabled
+                      ? context.l10n.musicVideoHide
+                      : context.l10n.musicVideoShow,
+                  icon: Icon(
+                    viewModel.isVideoEnabled
+                        ? Icons.videocam_rounded
+                        : Icons.videocam_off_rounded,
+                    size: 20,
                   ),
+                  color: context.theme.hintColor,
+                  onPressed: viewModel.hasVideo ? viewModel.toggleVideo : null,
+                ),
                 IconButton(
                   icon: Icon(
                     viewModel.isPlaying
@@ -1333,27 +1334,29 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               color: isTrackLiked ? context.theme.colorScheme.error : null,
               onPressed: () => _onToggleLike(viewModel.currentTrack!),
             ),
-            if (viewModel.hasVideo)
-              NeuIconButton(
-                icon: viewModel.isVideoEnabled
-                    ? Icons.videocam_rounded
-                    : Icons.videocam_off_rounded,
-                focusNode: _videoToggleFocusNode,
-                size: 36,
-                tooltip: viewModel.isVideoEnabled
-                    ? context.l10n.musicVideoHide
-                    : context.l10n.musicVideoShow,
-                onPressed: viewModel.toggleVideo,
-              ),
+            // Both always there, and live only while they have something to
+            // do: coming and going with each skip, they shoved the row along.
+            NeuIconButton(
+              icon: viewModel.isVideoEnabled
+                  ? Icons.videocam_rounded
+                  : Icons.videocam_off_rounded,
+              focusNode: _videoToggleFocusNode,
+              size: 36,
+              tooltip: viewModel.isVideoEnabled
+                  ? context.l10n.musicVideoHide
+                  : context.l10n.musicVideoShow,
+              onPressed: viewModel.hasVideo ? viewModel.toggleVideo : null,
+            ),
             // The way back to the full-screen video after leaving it.
-            if (viewModel.videoController != null)
-              NeuIconButton(
-                icon: Icons.fullscreen_rounded,
-                focusNode: _fullscreenFocusNode,
-                size: 36,
-                tooltip: context.l10n.musicVideoFullscreen,
-                onPressed: () => setState(() => _leftVideoFor = null),
-              ),
+            NeuIconButton(
+              icon: Icons.fullscreen_rounded,
+              focusNode: _fullscreenFocusNode,
+              size: 36,
+              tooltip: context.l10n.musicVideoFullscreen,
+              onPressed: viewModel.videoController != null
+                  ? () => setState(() => _leftVideoFor = null)
+                  : null,
+            ),
           ],
         ),
       ],

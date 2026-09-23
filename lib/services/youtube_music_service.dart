@@ -294,6 +294,16 @@ class YoutubeMusicService {
   /// than lines so a letterboxed video (1920×804) lands in the right tier.
   static int get _maxPixels => deviceType.isTv ? 1920 * 1080 : 1280 * 720;
 
+  /// The most pixels a second a picture may ask to be decoded: 1080p at 30
+  /// frames on a television, 720p at 60 on anything held in a hand.
+  ///
+  /// A television's decoder and the texture Flutter draws the picture
+  /// through are the weakest of any screen the app runs on, and a 1080p60
+  /// picture, played beside the sound's own player, dropped frames there
+  /// all the way through. A 60-frame video comes up at 720p60 instead.
+  static int get _maxPixelRate =>
+      deviceType.isTv ? 1920 * 1080 * 30 : 1280 * 720 * 60;
+
   /// [videoId]'s HD picture and sound, each only if it plays through.
   ///
   /// Asked of the clients that hand adaptive streams over without a
@@ -483,6 +493,7 @@ class YoutubeMusicService {
               bitrate: s.bitrate.bitsPerSecond,
               width: s.videoResolution.width,
               height: s.videoResolution.height,
+              fps: s.framerate.framesPerSecond.round(),
             ),
       ],
       [
@@ -613,9 +624,9 @@ class YoutubeMusicService {
     return reason.isEmpty ? lines.first : '${lines.first} $reason';
   }
 
-  /// The largest of [pictures] no larger than [_maxPixels] and the best of
-  /// [sounds], each only if it plays from the middle, with a line saying
-  /// what was found and what was not.
+  /// The largest of [pictures] no larger than [_maxPixels] nor faster than
+  /// [_maxPixelRate] and the best of [sounds], each only if it plays from
+  /// the middle, with a line saying what was found and what was not.
   ///
   /// H.264 only: every phone and television decodes it in hardware, which
   /// is not yet true of AV1, and VP9 comes in WebM, which iOS will not open.
@@ -624,8 +635,18 @@ class YoutubeMusicService {
     List<_AdaptiveStream> sounds,
     Map<String, String> headers,
   ) async {
-    final fitting = pictures.where((s) => s.pixels <= _maxPixels).toList()
-      ..sort((a, b) => b.pixels.compareTo(a.pixels));
+    final fitting =
+        pictures
+            .where(
+              (s) => s.pixels <= _maxPixels && s.pixelRate <= _maxPixelRate,
+            )
+            .toList()
+          // The larger picture first; of two the same size, the smoother.
+          ..sort(
+            (a, b) => b.pixels != a.pixels
+                ? b.pixels.compareTo(a.pixels)
+                : b.fps.compareTo(a.fps),
+          );
     if (fitting.isEmpty) {
       return (
         video: null,
@@ -639,7 +660,7 @@ class YoutubeMusicService {
       _middleStatus(video, headers),
       _playableSound(sounds, headers),
     ).wait;
-    final size = '${video.width}x${video.height}';
+    final size = '${video.width}x${video.height}@${video.fps}';
     return (
       video: videoStatus == 206 ? video.url.toString() : null,
       audio: audio,
@@ -738,6 +759,7 @@ class _AdaptiveStream {
     required this.bitrate,
     this.width = 0,
     this.height = 0,
+    this.fps = 0,
     this.mimeType = '',
   });
 
@@ -754,6 +776,7 @@ class _AdaptiveStream {
       bitrate: (format['bitrate'] as num?)?.toInt() ?? 0,
       width: (format['width'] as num?)?.toInt() ?? 0,
       height: (format['height'] as num?)?.toInt() ?? 0,
+      fps: (format['fps'] as num?)?.toInt() ?? 0,
       mimeType: format['mimeType']?.toString() ?? '',
     );
   }
@@ -764,10 +787,17 @@ class _AdaptiveStream {
   final int width;
   final int height;
 
+  /// Frames a second; 0 for sound, or a picture that did not say.
+  final int fps;
+
   /// `video/mp4; codecs="avc1.4d401f"` and the like.
   final String mimeType;
 
   int get pixels => width * height;
+
+  /// Pixels to decode a second. A picture that did not say its frame rate
+  /// is counted at 30, the rate most videos are.
+  int get pixelRate => pixels * (fps > 0 ? fps : 30);
   bool get isH264 => mimeType.startsWith('video/mp4; codecs="avc1');
   bool get isAac => mimeType.startsWith('audio/mp4');
 }

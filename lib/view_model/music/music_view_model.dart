@@ -68,11 +68,25 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Replaceable so a test need not sit through it.
   final Duration _hdPictureGrace;
 
-  /// How far a muted video may wander from the sound before it is pulled
-  /// back, and how long it is then left alone: a seek takes a moment to land,
-  /// and pulling it back again before it has would only make it stutter.
-  static const _maxVideoDrift = Duration(milliseconds: 350);
-  static const _videoResyncPause = Duration(seconds: 2);
+  /// How far a muted video may wander from the sound before it is jumped
+  /// back with a seek, and how long it is then left alone: a seek takes a
+  /// moment to land, and pulling it back again before it has would only
+  /// make it stutter.
+  ///
+  /// Large on purpose. A seek stops the picture while it decodes its way
+  /// from the keyframe before, and at 350ms a television — slower to decode,
+  /// its position read a poll late — sought every two seconds and the video
+  /// jerked all the way through. A smaller drift is played away instead:
+  /// see [_videoCatchUpDrift].
+  static const _maxVideoDrift = Duration(milliseconds: 1500);
+  static const _videoResyncPause = Duration(seconds: 3);
+
+  /// A drift past which the muted picture runs a little fast or slow until
+  /// it is back within [_videoInStepDrift] — unseen, where a seek is a
+  /// visible jump.
+  static const _videoCatchUpDrift = Duration(milliseconds: 200);
+  static const _videoInStepDrift = Duration(milliseconds: 60);
+  static const _videoCatchUpSpeed = 0.08;
 
   /// Heading for the one row built from a plain search, for an account the
   /// service has no selections for.
@@ -143,6 +157,9 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   bool get isVideoPending => _isFindingVideo || _isPreparingPicture;
 
   DateTime _lastVideoResync = DateTime(0);
+
+  /// The rate the muted picture was last set to play at while it catches up.
+  double _videoSpeed = 1;
 
   /// The stream [_videoController] shows, so the HD picture replaces the
   /// 360p one and never the other way round.
@@ -494,6 +511,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _videoController = null;
     _pictureUrl = null;
     _pictureLoops = false;
+    _videoSpeed = 1;
     _pictureRequest++;
     _isAudioFromVideo = false;
     if (audio != null) {
@@ -667,6 +685,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       _videoController = follower;
       _pictureUrl = url;
       _pictureLoops = video.loops;
+      _videoSpeed = 1;
       if (old != null && !identical(old, _audioController)) {
         unawaited(old.dispose());
       }
@@ -703,13 +722,32 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     if (!onScreen || !withinVideo || _pictureLoops) return;
 
     final now = DateTime.now();
-    final drift = (video.value.position - position).abs();
+    final ahead = video.value.position - position;
+    final drift = ahead.abs();
     if (force ||
         (drift > _maxVideoDrift &&
             now.difference(_lastVideoResync) > _videoResyncPause)) {
       _lastVideoResync = now;
+      _setVideoSpeed(video, 1);
       unawaited(video.seekTo(position));
+      return;
     }
+    // Still landing from the last seek: its position means nothing yet.
+    if (now.difference(_lastVideoResync) < _videoResyncPause) return;
+    if (drift > _videoCatchUpDrift) {
+      _setVideoSpeed(
+        video,
+        ahead.isNegative ? 1 + _videoCatchUpSpeed : 1 - _videoCatchUpSpeed,
+      );
+    } else if (drift < _videoInStepDrift) {
+      _setVideoSpeed(video, 1);
+    }
+  }
+
+  void _setVideoSpeed(VideoPlayerController video, double speed) {
+    if (_videoSpeed == speed) return;
+    _videoSpeed = speed;
+    unawaited(video.setPlaybackSpeed(speed));
   }
 
   /// Shows or hides the video. A hidden muted video is let go of — it would
@@ -892,6 +930,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final video = _videoController;
     if (video != null && !identical(video, controller) && !_pictureLoops) {
       _lastVideoResync = DateTime.now();
+      _setVideoSpeed(video, 1);
       unawaited(video.seekTo(position));
     }
     _playback.updateState(playing: _isPlaying, position: position);
