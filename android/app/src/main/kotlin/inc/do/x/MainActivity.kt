@@ -1,5 +1,8 @@
 package vn.dox.app
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+// AudioServiceActivity rather than FlutterActivity: the Music page keeps
+// playing in the background through audio_service, whose media service and
+// this activity have to share one Flutter engine.
+class MainActivity : AudioServiceActivity()

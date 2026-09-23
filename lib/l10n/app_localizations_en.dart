@@ -2657,4 +2657,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get musicTvQrBrowserMessage =>
       'Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again.';
+
+  @override
+  String get musicPlaybackChannel => 'Music playback';
 }

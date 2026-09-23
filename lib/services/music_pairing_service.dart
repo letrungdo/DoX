@@ -214,7 +214,7 @@ class MusicPairingHost {
     final server = _server;
     _server = null;
     _code = null;
-    await server?.close(force: true);
+    await server?.close();
   }
 
   Future<void> _handle(HttpRequest request, MusicPairingCode code) async {

@@ -43,6 +43,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Do X uses the camera to take photos and to scan the code that signs a TV in to Music.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

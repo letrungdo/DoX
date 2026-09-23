@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/services/music_auth_service.dart';
+import 'package:do_x/services/music_playback_session.dart';
 import 'package:do_x/services/music_service.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
@@ -17,7 +19,7 @@ enum MusicTab { home, search, likes, history }
 /// not just another failure.
 enum MusicLikeOutcome { done, signInRequired, failed }
 
-class MusicViewModel extends CoreViewModel {
+class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Heading for the one row built from a plain search, for an account the
   /// service has no selections for.
   static const _fallbackShelfTitle = 'Trending';
@@ -221,6 +223,8 @@ class MusicViewModel extends CoreViewModel {
       return;
     }
 
+    // Read before the first await, while the page is certainly still there.
+    final channelName = context.l10n.musicPlaybackChannel;
     _positionTimer?.cancel();
     final oldController = _audioController;
     if (oldController != null) {
@@ -233,6 +237,15 @@ class MusicViewModel extends CoreViewModel {
     _position = Duration.zero;
     _duration = track.duration;
     notifyListenersSafe();
+    // Here rather than in initState, which is too early to read the
+    // translation the notification channel is named with.
+    musicPlayback.attach(this, channelName: channelName);
+    musicPlayback.updateTrack(track, _duration);
+    musicPlayback.updateState(
+      playing: false,
+      position: Duration.zero,
+      loading: true,
+    );
 
     try {
       final mediaStreamUrl = await musicService.resolvePlayableStream(
@@ -242,8 +255,11 @@ class MusicViewModel extends CoreViewModel {
         throw Exception('Could not resolve playable dynamic media link');
       }
 
+      // The plugin pauses itself when the app is backgrounded unless told
+      // otherwise; the music carrying on is the point of a music player.
       final controller = VideoPlayerController.networkUrl(
         Uri.parse(mediaStreamUrl),
+        videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
       );
       _audioController = controller;
 
@@ -252,6 +268,8 @@ class MusicViewModel extends CoreViewModel {
       await controller.play();
       _isPlaying = true;
       unawaited(_setWakelock(true));
+      musicPlayback.updateTrack(track, _duration);
+      musicPlayback.updateState(playing: true, position: Duration.zero);
 
       controller.addListener(_videoPlayerListener);
       _startPositionTimer();
@@ -263,6 +281,7 @@ class MusicViewModel extends CoreViewModel {
       );
       _isPlaying = false;
       unawaited(_setWakelock(false));
+      musicPlayback.updateState(playing: false, position: Duration.zero);
     }
     notifyListenersSafe();
   }
@@ -309,10 +328,44 @@ class MusicViewModel extends CoreViewModel {
       controller.play();
       _isPlaying = true;
     }
+    _onPlayingChanged(controller);
+  }
+
+  void _onPlayingChanged(VideoPlayerController controller) {
     unawaited(_setWakelock(_isPlaying));
+    musicPlayback.updateState(
+      playing: _isPlaying,
+      position: controller.value.position,
+    );
     notifyListenersSafe();
   }
 
+  @override
+  void resume() {
+    final controller = _audioController;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (controller.value.isPlaying) return;
+    controller.play();
+    _isPlaying = true;
+    _onPlayingChanged(controller);
+  }
+
+  @override
+  void pause() {
+    final controller = _audioController;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (!controller.value.isPlaying) return;
+    controller.pause();
+    _isPlaying = false;
+    _onPlayingChanged(controller);
+  }
+
+  /// The notification's stop: the track is paused where it is, so opening the
+  /// app again finds it ready to carry on.
+  @override
+  void stopPlayback() => pause();
+
+  @override
   void nextTrack() {
     List<MusicTrack> currentList = [];
     switch (_currentTab) {
@@ -345,6 +398,7 @@ class MusicViewModel extends CoreViewModel {
     playTrack(currentList[nextIndex]);
   }
 
+  @override
   void previousTrack() {
     List<MusicTrack> currentList = [];
     switch (_currentTab) {
@@ -382,11 +436,13 @@ class MusicViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
+  @override
   void seekTo(Duration position) {
     final controller = _audioController;
     if (controller == null || !controller.value.isInitialized) return;
     controller.seekTo(position);
     _position = position;
+    musicPlayback.updateState(playing: _isPlaying, position: position);
     notifyListenersSafe();
   }
 
@@ -417,6 +473,7 @@ class MusicViewModel extends CoreViewModel {
     // is a television that never sleeps again.
     unawaited(_setWakelock(false));
     musicAuth.removeListener(_onAccountChanged);
+    musicPlayback.detach(this);
     _positionTimer?.cancel();
     _debounceTimer?.cancel();
     _audioController?.removeListener(_videoPlayerListener);

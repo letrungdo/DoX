@@ -4776,6 +4776,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again.'**
   String get musicTvQrBrowserMessage;
+
+  /// No description provided for @musicPlaybackChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Music playback'**
+  String get musicPlaybackChannel;
 }
 
 class _AppLocalizationsDelegate

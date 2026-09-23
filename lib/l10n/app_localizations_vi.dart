@@ -2647,4 +2647,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get musicTvQrBrowserMessage =>
       'Mở Do X trên điện thoại này: Music → đăng nhập → biểu tượng tài khoản → Đăng nhập trên TV, rồi quét lại mã.';
+
+  @override
+  String get musicPlaybackChannel => 'Phát nhạc';
 }

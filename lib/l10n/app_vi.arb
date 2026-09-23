@@ -1440,5 +1440,6 @@
   "musicTvQrNoNetwork": "TV chưa kết nối mạng gia đình. Hãy kết nối Wi-Fi hoặc cáp mạng rồi thử lại.",
   "musicTvQrNewCode": "Mã mới",
   "musicTvQrSigningIn": "Đang đăng nhập…",
-  "musicTvQrBrowserMessage": "Mở Do X trên điện thoại này: Music → đăng nhập → biểu tượng tài khoản → Đăng nhập trên TV, rồi quét lại mã."
+  "musicTvQrBrowserMessage": "Mở Do X trên điện thoại này: Music → đăng nhập → biểu tượng tài khoản → Đăng nhập trên TV, rồi quét lại mã.",
+  "musicPlaybackChannel": "Phát nhạc"
 }

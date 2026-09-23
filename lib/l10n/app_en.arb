@@ -1496,5 +1496,6 @@
   "musicTvQrNoNetwork": "The TV is not connected to a home network. Connect it to Wi-Fi or Ethernet, then try again.",
   "musicTvQrNewCode": "New code",
   "musicTvQrSigningIn": "Signing in…",
-  "musicTvQrBrowserMessage": "Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again."
+  "musicTvQrBrowserMessage": "Open Do X on this phone: Music → sign in → account icon → Sign in on TV, then scan the code again.",
+  "musicPlaybackChannel": "Music playback"
 }
