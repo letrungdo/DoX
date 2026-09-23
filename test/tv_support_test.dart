@@ -78,9 +78,8 @@ void main() {
   group('picking the APK to update with', () {
     final service = UpdateService();
     final release = <Map<String, dynamic>>[
-      {'name': 'app-release.apk', 'browser_download_url': 'legacy'},
       {'name': 'app-release-arm64-v8a.apk', 'browser_download_url': 'arm64'},
-      {'name': 'app-tv-armeabi-v7a.apk', 'browser_download_url': 'armv7'},
+      {'name': 'app-release-armeabi-v7a.apk', 'browser_download_url': 'armv7'},
       {'name': 'do_x.ipa', 'browser_download_url': 'ios'},
     ];
 
@@ -122,7 +121,7 @@ void main() {
       // GitHub API hands back, and that API orders assets by name — something
       // it promises nowhere. Handing one of those a 32-bit build would quietly
       // drop a phone onto it, so the names are picked to make that impossible:
-      // every APK sorting before the TV build is an arm64 one.
+      // `app-release-arm64-...` sorts before `app-release-armeabi-...`.
       final byName = release.map((a) => a['name'] as String).toList()..sort();
       final firstApk = byName.firstWhere((name) => name.endsWith('.apk'));
 

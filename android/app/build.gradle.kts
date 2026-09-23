@@ -40,31 +40,6 @@ android {
         versionName = flutter.versionName
 
         resConfigs("vi", "en")
-
-        // `flutter build apk --target-platform ...` narrows Flutter's own
-        // engine and AOT libraries, but the .so files that arrive inside plugin
-        // AARs are packaged for every ABI regardless. A single-ABI build then
-        // ships, say, an `arm64-v8a/` folder holding two plugin libraries and
-        // no libflutter.so — which is enough for a 64-bit device to choose that
-        // folder and then die looking for the engine. Mirroring the flag here
-        // keeps the APK to exactly the ABIs that were asked for.
-        val requestedAbis = (project.findProperty("target-platform") as String?)
-            ?.split(",")
-            ?.mapNotNull {
-                when (it.trim()) {
-                    "android-arm" -> "armeabi-v7a"
-                    "android-arm64" -> "arm64-v8a"
-                    "android-x64" -> "x86_64"
-                    else -> null
-                }
-            }
-            .orEmpty()
-        if (requestedAbis.isNotEmpty()) {
-            ndk {
-                abiFilters.clear()
-                abiFilters.addAll(requestedAbis)
-            }
-        }
     }
 
     signingConfigs {
