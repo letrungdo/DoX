@@ -14,6 +14,7 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
     this.playing = const {},
     this.stalls = false,
     this.refusedWithHeaders = const {},
+    this.held = const {},
   });
 
   /// The streams that come up. Anything else fails the way a dead link does.
@@ -27,6 +28,15 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   /// Streams that fail when asked for with any HTTP headers, and open
   /// without them — a player that will not take someone else's User-Agent.
   final Set<String> refusedWithHeaders;
+
+  /// Streams that take until their gate is opened to come up — a picture
+  /// still loading while the rest of the page moves on.
+  final Map<String, Completer<void>> held;
+
+  /// Whether each stream's player was made to mix with others, which on
+  /// Android is what keeps it off the audio focus.
+  final mixedWithOthers = <String, bool>{};
+  bool _mixWithOthers = false;
 
   /// Every stream the page has asked for, in the order it asked.
   final opened = <String>[];
@@ -45,6 +55,8 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   Future<int?> createWithOptions(VideoCreationOptions options) async {
     final uri = options.dataSource.uri ?? '';
     opened.add(uri);
+    mixedWithOthers[uri] = _mixWithOthers;
+    await held[uri]?.future;
     if (refusedWithHeaders.contains(uri) &&
         options.dataSource.httpHeaders.isNotEmpty) {
       throw PlatformException(code: 'VideoError', message: 'refused headers');
@@ -80,7 +92,8 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   }
 
   @override
-  Future<void> setMixWithOthers(bool mixWithOthers) async {}
+  Future<void> setMixWithOthers(bool mixWithOthers) async =>
+      _mixWithOthers = mixWithOthers;
 
   @override
   Future<void> setLooping(int playerId, bool looping) async {}

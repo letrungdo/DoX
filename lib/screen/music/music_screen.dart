@@ -173,7 +173,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
         track != null &&
         (viewModel.videoController != null ||
             (_showingFullscreenVideo &&
-                (viewModel.isFindingVideo ||
+                (viewModel.isVideoPending ||
                     viewModel.audioController == null)));
     _showingFullscreenVideo = showFullscreen;
     if (showFullscreen) {

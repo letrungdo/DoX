@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -124,6 +125,14 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   /// The current track's video is still being looked for.
   bool get isFindingVideo => _isFindingVideo;
+
+  bool _isPreparingPicture = false;
+
+  /// The current track's picture may still be on its way: looked for, or
+  /// found and opening. A full-screen video waits this out across a skip
+  /// rather than closing in the gap — the lookup can answer before the
+  /// picture it found has opened.
+  bool get isVideoPending => _isFindingVideo || _isPreparingPicture;
 
   /// What the player said about the HD streams it was handed, line by line.
   final List<String> _playerNotes = [];
@@ -356,6 +365,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _foundVideo = null;
     _playerNotes.clear();
     _isFindingVideo = true;
+    _isPreparingPicture = false;
     void found(MusicVideo? video, {required bool last}) {
       if (!_isCurrentPlay(generation)) return;
       if (video != null && video.isPlayable) _foundVideo = video;
@@ -506,6 +516,13 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       httpHeaders: headers,
       videoPlayerOptions: VideoPlayerOptions(
         allowBackgroundPlayback: background,
+        // A muted picture must not take Android's audio focus: every player
+        // asks for it on play unless told to mix, and the sound playing lost
+        // it and stopped the moment the video came up. Android only — on iOS
+        // the flag changes the whole app's audio session, and a mixing
+        // session loses the lock-screen controls.
+        mixWithOthers:
+            !background && defaultTargetPlatform == TargetPlatform.android,
       ),
     );
     try {
@@ -559,8 +576,18 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     Future<MusicVideo?> hd,
     int generation,
   ) async {
-    final first = await basic;
-    if (first != null) await _showPicture(first, generation);
+    _isPreparingPicture = true;
+    try {
+      final first = await basic;
+      if (first != null) await _showPicture(first, generation);
+    } finally {
+      // The first picture is up, or there is none: from here the HD one only
+      // replaces it.
+      if (_isCurrentPlay(generation)) {
+        _isPreparingPicture = false;
+        notifyListenersSafe();
+      }
+    }
     final better = await hd;
     if (better != null) await _showPicture(better, generation);
   }

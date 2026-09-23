@@ -307,6 +307,26 @@ void main() {
       vm.dispose();
     });
 
+    testWidgets('on Android the muted picture leaves the audio focus to the '
+        'sound', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          const MusicVideo(
+            videoId: 'ugc',
+            duration: Duration(minutes: 5),
+            useAudio: false,
+            muxedUrl: 'https://yt/muxed',
+          ),
+        ),
+      );
+
+      // Tests run as Android.
+      expect(platform.mixedWithOthers['https://cdn/a'], isFalse);
+      expect(platform.mixedWithOthers['https://yt/muxed'], isTrue);
+      vm.dispose();
+    });
+
     testWidgets('a stand-in video is looped rather than kept in step', (
       tester,
     ) async {

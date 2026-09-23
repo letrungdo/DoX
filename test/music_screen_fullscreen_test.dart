@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/model/music_track.dart';
@@ -251,6 +253,85 @@ void main() {
     tester.view.resetViewInsets();
     await tester.pump();
     expect(find.byType(MusicVideoView), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 6));
+    vm.dispose();
+  });
+
+  testWidgets('full screen holds through a skip while the next picture opens', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final gate = Completer<void>();
+    VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
+      playing: {'https://cdn/a', 'https://yt/a', 'https://yt/b'},
+      held: {'https://yt/b': gate},
+    );
+    final vm = MusicViewModel(
+      resolveStream: (_) async => 'https://cdn/a',
+      playback: _SilentPlayback(),
+      findVideo: (track) async => MusicVideo(
+        videoId: track.id,
+        duration: const Duration(minutes: 5),
+        useAudio: false,
+        muxedUrl: 'https://yt/${track.id}',
+      ),
+      // Answers at once, the way a resting client does — before the picture
+      // it follows has opened.
+      findHdVideo: (_) async => null,
+      videoEnabled: true,
+    );
+    MusicTrack track(String id) => MusicTrack(
+      id: id,
+      title: 'Track $id',
+      artist: 'Artist',
+      artworkUrl: '',
+      streamUrl: 't$id',
+      duration: const Duration(minutes: 3),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider.value(
+          value: vm,
+          child: const MusicScreen(),
+        ),
+      ),
+    );
+    await tester.runAsync(() async {
+      await vm.playTrack(track('a'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.tap(find.byType(MusicVideoView));
+    await tester.pump();
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await vm.playTrack(track('b'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.pump();
+    expect(vm.isFindingVideo, isFalse, reason: 'the lookup has answered');
+    expect(
+      find.byType(MusicFullscreenVideoPlayer),
+      findsOneWidget,
+      reason: 'the picture is still opening',
+    );
+
+    await tester.runAsync(() async {
+      gate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+    expect(vm.videoController?.dataSource, 'https://yt/b');
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 6));
