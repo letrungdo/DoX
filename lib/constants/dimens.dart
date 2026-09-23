@@ -235,6 +235,13 @@ class Dimens {
   /// dark code on a light plate and nothing else.
   static const musicPairingQrPadding = 14.0;
 
+  /// The tallest the playing track's video is drawn in the phone's player,
+  /// so a landscape phone still has room for the list above it.
+  static const musicVideoMaxHeight = 220.0;
+
+  /// How far the "original sound" badge sits from the video's corner.
+  static const musicVideoBadgeInset = 8.0;
+
   /// The music service's bot check, framed in a sheet: tall enough for its
   /// puzzle without the sheet having to scroll.
   static const musicChallengeHeight = 460.0;

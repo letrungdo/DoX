@@ -7,6 +7,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
 import 'package:do_x/screen/music/music_challenge_sheet.dart';
 import 'package:do_x/screen/music/music_track_card.dart';
+import 'package:do_x/screen/music/music_video_view.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
@@ -66,6 +67,9 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   final FocusNode _likeActionFocusNode = FocusNode(
     debugLabel: 'tv-music-like-action',
   );
+  final FocusNode _videoToggleFocusNode = FocusNode(
+    debugLabel: 'tv-music-video-toggle',
+  );
 
   FocusNode _getNodeForTrack(String id) {
     return _trackFocusNodes.putIfAbsent(
@@ -98,6 +102,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
     _shuffleFocusNode.dispose();
     _repeatFocusNode.dispose();
     _likeActionFocusNode.dispose();
+    _videoToggleFocusNode.dispose();
     super.dispose();
   }
 
@@ -706,43 +711,57 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
             ] else ...[
               Expanded(
                 child: Center(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.theme.shadowColor.withValues(
-                              alpha: 0.2,
-                            ),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                  child: viewModel.videoController != null
+                      ? MusicVideoView(
+                          controller: viewModel.videoController!,
+                          isOfficialAudio: viewModel.isAudioFromVideo,
+                          borderRadius: BorderRadius.circular(
+                            Dimens.radiusPanel,
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(Dimens.radiusPanel),
-                        child: viewModel.currentTrack!.artworkUrl.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: viewModel.currentTrack!.artworkUrl,
-                                fit: BoxFit.cover,
-                                placeholder: (_, _) =>
-                                    const Center(child: Loading()),
-                                errorWidget: (_, _, _) => Icon(
-                                  Icons.music_note_rounded,
-                                  size: 64,
-                                  color: context.theme.disabledColor,
-                                ),
-                              )
-                            : Icon(
-                                Icons.music_note_rounded,
-                                size: 64,
-                                color: context.theme.disabledColor,
+                        )
+                      : AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                Dimens.radiusPanel,
                               ),
-                      ),
-                    ),
-                  ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: context.theme.shadowColor.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                Dimens.radiusPanel,
+                              ),
+                              child:
+                                  viewModel.currentTrack!.artworkUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl:
+                                          viewModel.currentTrack!.artworkUrl,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, _) =>
+                                          const Center(child: Loading()),
+                                      errorWidget: (_, _, _) => Icon(
+                                        Icons.music_note_rounded,
+                                        size: 64,
+                                        color: context.theme.disabledColor,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.music_note_rounded,
+                                      size: 64,
+                                      color: context.theme.disabledColor,
+                                    ),
+                            ),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -776,11 +795,30 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
   Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
+    final video = viewModel.videoController;
     return NeuCard(
       margin: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (video != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: Dimens.musicVideoMaxHeight,
+                  ),
+                  child: MusicVideoView(
+                    controller: video,
+                    isOfficialAudio: viewModel.isAudioFromVideo,
+                    borderRadius: BorderRadius.circular(
+                      Dimens.radiusControlSmall,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(10),
             child: Row(
@@ -836,6 +874,19 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
                       ? context.theme.colorScheme.error
                       : context.theme.hintColor,
                   onPressed: () => _onToggleLike(viewModel.currentTrack!),
+                ),
+                IconButton(
+                  tooltip: viewModel.isVideoEnabled
+                      ? context.l10n.musicVideoHide
+                      : context.l10n.musicVideoShow,
+                  icon: Icon(
+                    viewModel.isVideoEnabled
+                        ? Icons.videocam_rounded
+                        : Icons.videocam_off_rounded,
+                    size: 20,
+                  ),
+                  color: context.theme.hintColor,
+                  onPressed: viewModel.toggleVideo,
                 ),
                 IconButton(
                   icon: Icon(
@@ -968,6 +1019,17 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel> {
               size: 36,
               color: isTrackLiked ? context.theme.colorScheme.error : null,
               onPressed: () => _onToggleLike(viewModel.currentTrack!),
+            ),
+            NeuIconButton(
+              icon: viewModel.isVideoEnabled
+                  ? Icons.videocam_rounded
+                  : Icons.videocam_off_rounded,
+              focusNode: _videoToggleFocusNode,
+              size: 36,
+              tooltip: viewModel.isVideoEnabled
+                  ? context.l10n.musicVideoHide
+                  : context.l10n.musicVideoShow,
+              onPressed: viewModel.toggleVideo,
             ),
           ],
         ),

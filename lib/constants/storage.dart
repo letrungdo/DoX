@@ -54,6 +54,9 @@ class StorageKey {
   /// The country the TV page was left on.
   static const tvCountry = "tvCountry";
 
+  /// Whether the Music page shows the song's video while it plays.
+  static const musicVideoEnabled = "musicVideoEnabled";
+
   /// The iptv-org country catalogue, cached with its date so the picker opens
   /// without waiting for the network.
   static const tvCountries = "tvCountries";

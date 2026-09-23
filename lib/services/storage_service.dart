@@ -219,6 +219,15 @@ class _StorageService {
     return prefs.setString(StorageKey.tvCountry, value);
   }
 
+  /// On unless turned off. Read through the null check because the Music page
+  /// can be built by a test that never opened the store.
+  bool getMusicVideoEnabled() =>
+      _prefs?.getBool(StorageKey.musicVideoEnabled) ?? true;
+
+  Future<bool> setMusicVideoEnabled(bool value) async {
+    return await _prefs?.setBool(StorageKey.musicVideoEnabled, value) ?? false;
+  }
+
   String? getTvCountries() => prefs.getString(StorageKey.tvCountries);
 
   Future<bool> setTvCountries(String value) async {

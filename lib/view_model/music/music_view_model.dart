@@ -1,13 +1,18 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
+import 'package:do_x/model/music_video.dart';
 import 'package:do_x/services/music_auth_service.dart';
 import 'package:do_x/services/music_playback_session.dart';
 import 'package:do_x/services/music_service.dart';
+import 'package:do_x/services/music_video_matcher.dart';
+import 'package:do_x/services/storage_service.dart';
+import 'package:do_x/services/youtube_music_service.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
@@ -24,8 +29,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   MusicViewModel({
     Future<String> Function(String transcodingUrl)? resolveStream,
     MusicPlaybackSession? playback,
+    Future<MusicVideo?> Function(MusicTrack track)? findVideo,
+    bool? videoEnabled,
   }) : _resolveStream = resolveStream ?? musicService.resolvePlayableStream,
-       _playback = playback ?? musicPlayback;
+       _playback = playback ?? musicPlayback,
+       _findVideo = findVideo ?? youtubeMusicService.findVideo,
+       _isVideoEnabled = videoEnabled ?? storageService.getMusicVideoEnabled();
 
   /// Turns a track's transcoding link into one a player can open. Replaceable
   /// so a test can decide when each answer arrives.
@@ -33,6 +42,21 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   /// Where the system's media controls are kept up to date.
   final MusicPlaybackSession _playback;
+
+  /// Looks up the YouTube video that goes with a track. Replaceable so a test
+  /// can hand one over without the network.
+  final Future<MusicVideo?> Function(MusicTrack track) _findVideo;
+
+  /// How long a track's start waits to learn whether it has an official
+  /// video, whose sound would be played instead. A video that turns up later
+  /// is still shown, muted over the track's own sound.
+  static const _officialVideoWait = Duration(seconds: 4);
+
+  /// How far a muted video may wander from the sound before it is pulled
+  /// back, and how long it is then left alone: a seek takes a moment to land,
+  /// and pulling it back again before it has would only make it stutter.
+  static const _maxVideoDrift = Duration(milliseconds: 350);
+  static const _videoResyncPause = Duration(seconds: 2);
 
   /// Heading for the one row built from a plain search, for an account the
   /// service has no selections for.
@@ -67,6 +91,25 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   VideoPlayerController? _audioController;
   VideoPlayerController? get audioController => _audioController;
+
+  bool _isVideoEnabled;
+  bool get isVideoEnabled => _isVideoEnabled;
+
+  /// The player whose picture is on screen: [audioController] itself when the
+  /// sound comes from the video ([isAudioFromVideo]), otherwise a muted one
+  /// kept in step with it.
+  VideoPlayerController? _videoController;
+
+  /// What to show for the current track, or null for its artwork.
+  VideoPlayerController? get videoController =>
+      _isVideoEnabled ? _videoController : null;
+
+  bool _isAudioFromVideo = false;
+
+  /// The track is being played from its official video, sound and all.
+  bool get isAudioFromVideo => _isAudioFromVideo;
+
+  DateTime _lastVideoResync = DateTime(0);
 
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
@@ -261,16 +304,13 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     // Read before the first await, while the page is certainly still there.
     final channelName = context.l10n.musicPlaybackChannel;
     _positionTimer?.cancel();
-    // Let go of it before waiting on it: a tap that lands during the wait
-    // must not find it still here and stop it a second time.
-    final oldController = _audioController;
-    _audioController = null;
-    if (oldController != null) {
-      oldController.removeListener(_videoPlayerListener);
-      await oldController.pause();
-      await oldController.dispose();
+    // Only waited on when there is something to let go of: with nothing
+    // playing, the stream is asked for before this call first yields, so a
+    // second tap cannot get in ahead of it.
+    if (_audioController != null || _videoController != null) {
+      await _releasePlayers();
+      if (!_isCurrentPlay(generation)) return;
     }
-    if (!_isCurrentPlay(generation)) return;
 
     _currentTrack = track;
     _isPlaying = false;
@@ -287,26 +327,57 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       loading: true,
     );
 
+    // Both asked for at once: the video is a search and a manifest away, and
+    // the track's own stream should not queue up behind it.
+    final streamFuture = _resolveStream(
+      track.streamUrl,
+    ).catchError((Object _) => '');
+    final videoFuture = _isVideoEnabled
+        ? _findVideoSafely(track)
+        : Future<MusicVideo?>.value();
+
     VideoPlayerController? controller;
     try {
-      final mediaStreamUrl = await _resolveStream(track.streamUrl);
+      // An official video brings the sound with it, so where the sound comes
+      // from has to be settled before anything plays.
+      final early = await videoFuture.timeout(
+        _officialVideoWait,
+        onTimeout: () => null,
+      );
       if (!_isCurrentPlay(generation)) return;
-      if (mediaStreamUrl.isEmpty) {
-        throw Exception('Could not resolve playable dynamic media link');
+      MusicVideo? official;
+      if (early != null && early.carriesAudio) {
+        try {
+          controller = await _openPlayer(early.streamUrl, background: true);
+          official = early;
+        } on Object catch (e) {
+          // Still the track's own sound to fall back on.
+          logger.d('MusicViewModel official video would not open: $e');
+        }
+        if (!_isCurrentPlay(generation)) {
+          await controller?.dispose();
+          return;
+        }
       }
 
-      // The plugin pauses itself when the app is backgrounded unless told
-      // otherwise; the music carrying on is the point of a music player.
-      controller = VideoPlayerController.networkUrl(
-        Uri.parse(mediaStreamUrl),
-        videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
-      );
-      await controller.initialize();
-      if (!_isCurrentPlay(generation)) {
-        await controller.dispose();
-        return;
+      if (controller == null) {
+        final mediaStreamUrl = await streamFuture;
+        if (!_isCurrentPlay(generation)) return;
+        if (mediaStreamUrl.isEmpty) {
+          throw Exception('Could not resolve playable dynamic media link');
+        }
+        controller = await _openPlayer(mediaStreamUrl, background: true);
+        if (!_isCurrentPlay(generation)) {
+          await controller.dispose();
+          return;
+        }
       }
+
       _audioController = controller;
+      if (official != null) {
+        _videoController = controller;
+        _isAudioFromVideo = true;
+      }
       _duration = controller.value.duration;
       await controller.play();
       _isPlaying = true;
@@ -316,6 +387,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
       controller.addListener(_videoPlayerListener);
       _startPositionTimer();
+      if (official == null) unawaited(_attachVideo(videoFuture, generation));
     } catch (e, st) {
       if (!_isCurrentPlay(generation)) {
         // Superseded while it failed: the player it half opened is nobody's.
@@ -330,6 +402,145 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       _isPlaying = false;
       unawaited(_setWakelock(false));
       _playback.updateState(playing: false, position: Duration.zero);
+    }
+    notifyListenersSafe();
+  }
+
+  /// Stops and lets go of the current players. Taken off the fields before
+  /// they are waited on: a tap that lands during the wait must not find them
+  /// still here and stop them a second time.
+  Future<void> _releasePlayers() async {
+    final audio = _audioController;
+    final video = _videoController;
+    _audioController = null;
+    _videoController = null;
+    _isAudioFromVideo = false;
+    if (audio != null) {
+      audio.removeListener(_videoPlayerListener);
+      await audio.pause();
+      await audio.dispose();
+    }
+    if (video != null && !identical(video, audio)) await video.dispose();
+  }
+
+  /// The player for [url], ready to play, or an error — never a half-opened
+  /// player left for nobody to dispose of.
+  ///
+  /// [background] keeps it going once the app has left the screen, which is
+  /// what the sound wants and what a muted picture must not do: nobody is
+  /// watching it, and it would spend data and battery on nothing.
+  Future<VideoPlayerController> _openPlayer(
+    String url, {
+    required bool background,
+  }) async {
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      videoPlayerOptions: VideoPlayerOptions(
+        allowBackgroundPlayback: background,
+      ),
+    );
+    try {
+      await controller.initialize();
+    } on Object {
+      // Not waited on: a player the platform refused to create never finishes
+      // disposing.
+      unawaited(controller.dispose());
+      rethrow;
+    }
+    return controller;
+  }
+
+  Future<MusicVideo?> _findVideoSafely(MusicTrack track) =>
+      _findVideo(track).catchError((Object _) => null);
+
+  /// Lays the video [lookup] finds, muted, over the sound already playing.
+  ///
+  /// Only one that lasts as long as the sound does: the two start together,
+  /// so a video with a longer intro would be out of step for the whole song.
+  Future<void> _attachVideo(Future<MusicVideo?> lookup, int generation) async {
+    final video = await lookup;
+    if (video == null || !_canAttachVideo(generation)) return;
+    // The stream's own length where it gave one; the listing's otherwise.
+    final length = _duration > Duration.zero
+        ? _duration
+        : _currentTrack?.duration ?? Duration.zero;
+    if ((video.duration - length).abs() > MusicVideoMatcher.syncTolerance) {
+      return;
+    }
+
+    final VideoPlayerController follower;
+    try {
+      follower = await _openPlayer(video.streamUrl, background: false);
+    } on Object catch (e) {
+      logger.d('MusicViewModel video would not open: $e');
+      return;
+    }
+    if (!_canAttachVideo(generation)) {
+      await follower.dispose();
+      return;
+    }
+    await follower.setVolume(0);
+    _videoController = follower;
+    _syncVideo(force: true);
+    notifyListenersSafe();
+  }
+
+  bool _canAttachVideo(int generation) =>
+      _isCurrentPlay(generation) &&
+      _isVideoEnabled &&
+      _audioController != null &&
+      _videoController == null;
+
+  /// Keeps a muted video with the sound: playing when it plays, paused when
+  /// it pauses, and pulled back to it when the two have drifted apart.
+  ///
+  /// Paused while the app is off screen, whatever the sound is doing, and
+  /// left on its last frame once the sound has run past its end.
+  void _syncVideo({bool force = false}) {
+    final video = _videoController;
+    final audio = _audioController;
+    if (video == null || audio == null || identical(video, audio)) return;
+    if (!video.value.isInitialized || !audio.value.isInitialized) return;
+
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    final onScreen =
+        lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    final position = audio.value.position;
+    final withinVideo = position < video.value.duration;
+    final shouldPlay = onScreen && audio.value.isPlaying && withinVideo;
+    if (shouldPlay != video.value.isPlaying) {
+      unawaited(shouldPlay ? video.play() : video.pause());
+    }
+    if (!onScreen || !withinVideo) return;
+
+    final now = DateTime.now();
+    final drift = (video.value.position - position).abs();
+    if (force ||
+        (drift > _maxVideoDrift &&
+            now.difference(_lastVideoResync) > _videoResyncPause)) {
+      _lastVideoResync = now;
+      unawaited(video.seekTo(position));
+    }
+  }
+
+  /// Shows or hides the video. A hidden muted video is let go of — it would
+  /// go on costing data for a picture nobody sees — while one that carries
+  /// the sound keeps playing, just out of sight. Turned back on mid-track,
+  /// the video is looked up again and laid over the sound already playing.
+  void toggleVideo() {
+    _isVideoEnabled = !_isVideoEnabled;
+    unawaited(storageService.setMusicVideoEnabled(_isVideoEnabled));
+    final video = _videoController;
+    if (!_isVideoEnabled) {
+      if (video != null && !identical(video, _audioController)) {
+        _videoController = null;
+        unawaited(video.dispose());
+      }
+    } else {
+      final track = _currentTrack;
+      if (track != null && _audioController != null && video == null) {
+        unawaited(_attachVideo(_findVideoSafely(track), _playGeneration));
+      }
     }
     notifyListenersSafe();
   }
@@ -360,6 +571,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       final controller = _audioController;
       if (controller != null && controller.value.isInitialized) {
         _position = controller.value.position;
+        _syncVideo();
         notifyListenersSafe();
       }
     });
@@ -381,6 +593,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   void _onPlayingChanged(VideoPlayerController controller) {
     unawaited(_setWakelock(_isPlaying));
+    _syncVideo();
     _playback.updateState(
       playing: _isPlaying,
       position: controller.value.position,
@@ -490,6 +703,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     if (controller == null || !controller.value.isInitialized) return;
     controller.seekTo(position);
     _position = position;
+    final video = _videoController;
+    if (video != null && !identical(video, controller)) {
+      _lastVideoResync = DateTime.now();
+      unawaited(video.seekTo(position));
+    }
     _playback.updateState(playing: _isPlaying, position: position);
     notifyListenersSafe();
   }
@@ -526,8 +744,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _playback.detach(this);
     _positionTimer?.cancel();
     _debounceTimer?.cancel();
-    _audioController?.removeListener(_videoPlayerListener);
-    _audioController?.dispose();
+    final audio = _audioController;
+    final video = _videoController;
+    audio?.removeListener(_videoPlayerListener);
+    audio?.dispose();
+    if (video != null && !identical(video, audio)) video.dispose();
     super.dispose();
   }
 }

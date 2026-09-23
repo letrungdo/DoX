@@ -4800,6 +4800,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move the pointer with the arrow keys. Press OK to grab the slider, drag it with the arrows, then press OK again to let go.'**
   String get musicChallengeTvHint;
+
+  /// No description provided for @musicVideoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show video'**
+  String get musicVideoShow;
+
+  /// No description provided for @musicVideoHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide video'**
+  String get musicVideoHide;
+
+  /// No description provided for @musicVideoOfficialAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Original sound from the video'**
+  String get musicVideoOfficialAudio;
 }
 
 class _AppLocalizationsDelegate

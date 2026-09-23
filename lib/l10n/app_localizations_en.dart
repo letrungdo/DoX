@@ -2671,4 +2671,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get musicChallengeTvHint =>
       'Move the pointer with the arrow keys. Press OK to grab the slider, drag it with the arrows, then press OK again to let go.';
+
+  @override
+  String get musicVideoShow => 'Show video';
+
+  @override
+  String get musicVideoHide => 'Hide video';
+
+  @override
+  String get musicVideoOfficialAudio => 'Original sound from the video';
 }

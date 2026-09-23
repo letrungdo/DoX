@@ -2661,4 +2661,13 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get musicChallengeTvHint =>
       'Dùng phím mũi tên để di chuyển con trỏ. Nhấn OK để giữ thanh trượt, kéo bằng phím mũi tên rồi nhấn OK lần nữa để thả.';
+
+  @override
+  String get musicVideoShow => 'Hiện video';
+
+  @override
+  String get musicVideoHide => 'Ẩn video';
+
+  @override
+  String get musicVideoOfficialAudio => 'Âm thanh gốc từ MV';
 }
