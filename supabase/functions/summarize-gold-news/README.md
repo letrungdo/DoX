@@ -23,8 +23,8 @@ Phần đọc RSS, gọi Gemini và gỡ link bọc `news.google.com` nằm ở
 deploy lại cả hai function.
 
 Đã triển khai trên project `fyyrgwohjgvsmwqgxiga`: bảng + policy, cron
-`summarize-gold-news-daily` (`0 23,5,11 * * *` UTC = 06:00 / 12:00 / 18:00 giờ
-VN), secret `GEMINI_API_KEY`, và function này.
+`summarize-gold-news-daily` (`0,30 23,5,11 * * *` UTC = 06:00 / 12:00 / 18:00 giờ
+VN, lượt :30 là chạy lại nếu Gemini lỗi — lượt đầu thành công thì nó bỏ qua), secret `GEMINI_API_KEY`, và function này.
 
 ## Triển khai lại
 

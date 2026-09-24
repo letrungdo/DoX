@@ -41,8 +41,9 @@ Phần đọc RSS, gọi Gemini và gỡ link bọc `news.google.com` nằm ở
 [`../_shared/news_feed.ts`](../_shared/news_feed.ts), dùng chung với bản tin
 vàng — sửa file đó thì deploy lại cả hai function.
 
-Cron `summarize-storm-news` chạy 3 giờ một lần (`10 */3 * * *` UTC); bản tin
-mới dưới 2 giờ thì function trả về luôn, không gọi Gemini.
+Cron `summarize-storm-news` chạy 3 giờ một lần (`10,40 */3 * * *` UTC — lượt :40
+là chạy lại nếu Gemini lỗi); bản tin mới dưới 2 giờ thì function trả về luôn,
+không gọi Gemini.
 
 ## Triển khai
 
