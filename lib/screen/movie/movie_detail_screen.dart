@@ -2179,6 +2179,13 @@ class _MovieDetailScreenState
     setState(() => _controlsFadedOut = fadedOut);
   }
 
+  /// The picture of [controller], keyed to it. On a television the picture is
+  /// a platform view, created once with the player it was first handed — a
+  /// new episode's controller dropped into the same element would leave it
+  /// showing the old player's last frame until the tree was rebuilt.
+  Widget _buildPicture(VideoPlayerController controller) =>
+      VideoPlayer(key: ObjectKey(controller), controller);
+
   Widget _buildVideoPlayerArea({
     required bool isFullScreen,
     bool fillParent = false,
@@ -2198,7 +2205,7 @@ class _MovieDetailScreenState
             ? Center(
                 child: AspectRatio(
                   aspectRatio: aspectRatio,
-                  child: VideoPlayer(controller),
+                  child: _buildPicture(controller),
                 ),
               )
             : const Center(
@@ -2267,14 +2274,14 @@ class _MovieDetailScreenState
                               child: SizedBox(
                                 width: controller.value.size.width,
                                 height: controller.value.size.height,
-                                child: VideoPlayer(controller),
+                                child: _buildPicture(controller),
                               ),
                             ),
                           )
                         : Center(
                             child: AspectRatio(
                               aspectRatio: controller.value.aspectRatio,
-                              child: VideoPlayer(controller),
+                              child: _buildPicture(controller),
                             ),
                           )
                   // `_isLoading` counts too: the detail request runs before the
