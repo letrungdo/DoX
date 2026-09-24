@@ -1,5 +1,6 @@
 // Gate for the functions that only pg_cron should run (`fetch-gold-price`,
-// `summarize-gold-news`, `summarize-storm-news`, `refresh-tv-channels`).
+// `summarize-gold-news`, `summarize-storm-news`, `refresh-tv-channels`,
+// `update-fx-rate`).
 //
 // The publishable key ships inside the app, so it proves nothing about who is
 // calling. The cron jobs instead read the `cron_secret` Vault value at run

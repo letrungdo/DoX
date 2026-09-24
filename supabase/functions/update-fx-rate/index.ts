@@ -1,5 +1,6 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { DOMParser } from "jsr:@b-fuze/deno-dom";
+import { rejectUnlessCron } from "../_shared/cron_auth.ts";
 
 // Only the Apps Script deployment key is kept as a secret; the URL is built
 // from it here. The other endpoints are public, so they are hardcoded.
@@ -118,7 +119,10 @@ const SOURCES: { code: string; fetch: () => Promise<number | null> }[] = [
   { code: "usdt_vnd", fetch: fetchUsdtVnd },
 ];
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const rejected = rejectUnlessCron(req);
+  if (rejected) return rejected;
+
   const now = new Date().toISOString();
 
   // Fetch every source in parallel; a failing source is skipped, not fatal.
