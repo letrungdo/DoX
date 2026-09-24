@@ -857,19 +857,14 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             onPressed: deviceType.isTv ? _openSearchPage : _toggleSearch,
           ),
           const SizedBox(width: 8),
-          if (vm.collection == MovieCollection.watched) ...[
-            NeuIconButton(
-              size: Dimens.appBarActionSize,
-              iconSize: 18,
-              depth: Dimens.appBarActionDepth,
-              tooltip: l10n.selectMovies,
-              icon: Icons.checklist_rounded,
-              onPressed: _startSelectionMode,
-            ),
-            const SizedBox(width: 8),
-          ],
+          // The select button comes and goes with the watch history, and the
+          // app bar lays its actions out by position: one slot more or less in
+          // front of the collection buttons would rebuild them from scratch,
+          // dispose the focus node the remote is on, and drop it back on the
+          // search button. So they all share one action, keyed within it.
           Builder(
             builder: (context) {
+              final isWatched = vm.collection == MovieCollection.watched;
               final appBarTheme = Theme.of(context).appBarTheme;
               final titleStyle =
                   appBarTheme.titleTextStyle ??
@@ -885,23 +880,34 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                   (3 * Dimens.appBarActionSize) +
                   (2 * 8) +
                   10 +
-                  (vm.collection == MovieCollection.watched
-                      ? Dimens.appBarActionSize + 8
-                      : 0);
+                  (isWatched ? Dimens.appBarActionSize + 8 : 0);
               // If the sum plus safe margins fits the bar width.
               final showAll =
                   constraints.maxWidth > (titleBlockWidth + actionsWidth + 32);
 
-              if (showAll) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isWatched) ...[
                     NeuIconButton(
+                      key: const ValueKey('movie-select'),
+                      size: Dimens.appBarActionSize,
+                      iconSize: 18,
+                      depth: Dimens.appBarActionDepth,
+                      tooltip: l10n.selectMovies,
+                      icon: Icons.checklist_rounded,
+                      onPressed: _startSelectionMode,
+                    ),
+                    const SizedBox(key: ValueKey('movie-select-gap'), width: 8),
+                  ],
+                  if (showAll) ...[
+                    NeuIconButton(
+                      key: const ValueKey('movie-watched'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
                       depth: Dimens.appBarActionDepth,
                       tooltip: l10n.watchedMovies,
-                      color: vm.collection == MovieCollection.watched
+                      color: isWatched
                           ? Theme.of(context).colorScheme.primary
                           : null,
                       icon: Icons.history_rounded,
@@ -910,6 +916,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                     ),
                     const SizedBox(width: 8),
                     NeuIconButton(
+                      key: const ValueKey('movie-favorites'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
                       depth: Dimens.appBarActionDepth,
@@ -921,19 +928,19 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       onPressed: () =>
                           _selectCollection(MovieCollection.favorites),
                     ),
-                  ],
-                );
-              }
-
-              return NeuIconButton(
-                size: Dimens.appBarActionSize,
-                iconSize: 18,
-                depth: Dimens.appBarActionDepth,
-                color: vm.collection != MovieCollection.browse
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
-                icon: Icons.more_vert_rounded,
-                onPressed: _showCollectionMenu,
+                  ] else
+                    NeuIconButton(
+                      key: const ValueKey('movie-collections'),
+                      size: Dimens.appBarActionSize,
+                      iconSize: 18,
+                      depth: Dimens.appBarActionDepth,
+                      color: vm.collection != MovieCollection.browse
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                      icon: Icons.more_vert_rounded,
+                      onPressed: _showCollectionMenu,
+                    ),
+                ],
               );
             },
           ),

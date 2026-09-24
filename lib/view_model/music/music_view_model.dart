@@ -34,6 +34,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     Future<MusicVideo?> Function(MusicTrack track)? findVideo,
     Future<MusicVideo?> Function(MusicVideo video)? findHdVideo,
     Future<List<MusicShelf>> Function()? discoverShelves,
+    Future<List<MusicTrack>> Function(String query)? search,
     bool? videoEnabled,
     Duration hdPictureGrace = const Duration(seconds: 3),
   }) : _hdPictureGrace = hdPictureGrace,
@@ -42,6 +43,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
        _findVideo = findVideo ?? youtubeMusicService.findVideo,
        _findHdVideo = findHdVideo ?? youtubeMusicService.withHd,
        _discoverShelves = discoverShelves ?? musicService.getDiscoverShelves,
+       _search = search ?? musicService.searchTracks,
        _isVideoEnabled = videoEnabled ?? storageService.getMusicVideoEnabled();
 
   /// Turns a track's transcoding link into one a player can open. Replaceable
@@ -62,6 +64,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Fetches the Discover rows. Replaceable so a test can hand some over
   /// without the network.
   final Future<List<MusicShelf>> Function() _discoverShelves;
+
+  /// Searches the catalogue. Replaceable so a test can answer without the
+  /// network.
+  final Future<List<MusicTrack>> Function(String query) _search;
 
   /// How long a track's start waits to learn whether it has an official
   /// video, whose sound would be played instead — in HD if that is in by
@@ -348,29 +354,42 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   Future<void> searchTracks(String query) async {
     _searchQuery = query;
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 400), () async {
-      _isLoading = true;
-      notifyListenersSafe();
-      try {
-        final results = await musicService.searchTracks(query);
-        // Typed over while it was on its way: the newer search's answer is
-        // the one to show, and this one could land after it.
-        if (query != _searchQuery) return;
-        _searchResults = results;
-      } catch (e, st) {
-        logger.e(
-          'MusicViewModel searchTracks failed',
-          error: e,
-          stackTrace: st,
-        );
-      } finally {
-        // A superseded search leaves the spinner to the one after it.
-        if (query == _searchQuery) {
-          _isLoading = false;
-          notifyListenersSafe();
-        }
+    _debounceTimer = Timer(
+      const Duration(milliseconds: 400),
+      () => _runSearch(query),
+    );
+  }
+
+  /// The search sent from the keyboard: asked for now rather than after the
+  /// typing pause, so the spinner is up — and the page knows to wait for the
+  /// answer — the moment the key is pressed. A query already asked for is
+  /// left to the answer on its way, or the one already shown.
+  Future<void> submitSearch(String query) async {
+    final pending = _debounceTimer?.isActive ?? false;
+    if (query == _searchQuery && !pending) return;
+    _searchQuery = query;
+    _debounceTimer?.cancel();
+    await _runSearch(query);
+  }
+
+  Future<void> _runSearch(String query) async {
+    _isLoading = true;
+    notifyListenersSafe();
+    try {
+      final results = await _search(query);
+      // Typed over while it was on its way: the newer search's answer is
+      // the one to show, and this one could land after it.
+      if (query != _searchQuery) return;
+      _searchResults = results;
+    } catch (e, st) {
+      logger.e('MusicViewModel searchTracks failed', error: e, stackTrace: st);
+    } finally {
+      // A superseded search leaves the spinner to the one after it.
+      if (query == _searchQuery) {
+        _isLoading = false;
+        notifyListenersSafe();
       }
-    });
+    }
   }
 
   /// The check the last like was stopped by, once [toggleLike] has answered

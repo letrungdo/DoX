@@ -9,6 +9,7 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/tv/tv_view_model.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -163,6 +164,56 @@ void main() {
       // once it is playing.
       expect(vm.channels.length, 1);
       expect(vm.allChannels.length, 4);
+    });
+
+    List<String> keyboardCalls(WidgetTester tester) => [
+      for (final call in tester.testTextInput.log)
+        if (call.method == 'TextInput.show' || call.method == 'TextInput.hide')
+          call.method,
+    ];
+
+    testWidgets('Search on the keyboard hands the remote to the results', (
+      tester,
+    ) async {
+      await pumpSearch(tester);
+      // Typed and submitted inside the debounce: the results are the ones
+      // for what was typed, not for the letter before.
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(text: 'htv'),
+      );
+      await tester.pump();
+      tester.testTextInput.log.clear();
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      // Not back in the box. Unfocusing it left the remote on the page's
+      // scope, the shell rescued it onto the first control — the box — and
+      // the keyboard came straight back up.
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'tv-search-channel-https://example.com/HTV7/index.m3u8',
+      );
+      expect(keyboardCalls(tester), isNot(contains('TextInput.show')));
+    });
+
+    testWidgets('Search with nothing found closes the keyboard in the box', (
+      tester,
+    ) async {
+      await pumpSearch(tester);
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pumpAndSettle();
+      tester.testTextInput.log.clear();
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-search');
+      expect(keyboardCalls(tester), ['TextInput.hide']);
+
+      // OK on the box is how the viewer asks for the keyboard back.
+      tester.testTextInput.log.clear();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(keyboardCalls(tester), ['TextInput.show']);
     });
 
     testWidgets('leaving the page puts the whole list back', (tester) async {

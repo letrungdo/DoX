@@ -9,6 +9,7 @@ import 'package:do_x/screen/movie/movie_poster_card.dart';
 import 'package:do_x/view_model/movie/movie_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/input/tv_search_keyboard.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +45,9 @@ class MovieSearchScreen extends StatefulWidget implements AutoRouteWrapper {
 class _MovieSearchScreenState extends State<MovieSearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode(debugLabel: 'movie-search');
+  final _resultsFocusNode = TvSearchKeyboard.resultsNode(
+    debugLabel: 'movie-search-results',
+  );
   final _scrollController = ScrollController();
   Timer? _debounce;
 
@@ -65,6 +69,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   void dispose() {
     _debounce?.cancel();
     _focusNode.dispose();
+    _resultsFocusNode.dispose();
     _controller.dispose();
     _scrollController
       ..removeListener(_onScroll)
@@ -85,10 +90,24 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   void _onQueryChanged(String query) {
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(_debounceDelay, () {
-      widget.movieVm.setSearchQuery(query);
-      if (_scrollController.hasClients) _scrollController.jumpTo(0);
-    });
+    _debounce = Timer(_debounceDelay, () => _search(query));
+  }
+
+  Future<void> _search(String query) {
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    return widget.movieVm.setSearchQuery(query);
+  }
+
+  /// The keyboard's Search key: the typing is over, so the query goes to the
+  /// server now rather than when the debounce runs out, and the remote goes
+  /// to its results once they are back.
+  void _onSubmitted() {
+    _debounce?.cancel();
+    TvSearchKeyboard.submit(
+      field: _focusNode,
+      results: _resultsFocusNode,
+      pending: _search(_controller.text),
+    );
   }
 
   @override
@@ -109,7 +128,12 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
             ),
             child: _buildField(l10n),
           ),
-          Expanded(child: _buildResults(viewModel, l10n)),
+          Expanded(
+            child: Focus(
+              focusNode: _resultsFocusNode,
+              child: _buildResults(viewModel, l10n),
+            ),
+          ),
         ],
       ),
     );
@@ -121,28 +145,32 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
       borderRadius: BorderRadius.circular(Dimens.radiusControl),
       borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
     );
-    return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
-      onChanged: _onQueryChanged,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: l10n.searchMoviesPlaceholder,
-        prefixIcon: const Icon(Icons.search_rounded),
-        suffixIcon: _controller.text.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.clear_rounded),
-                onPressed: () {
-                  _controller.clear();
-                  _onQueryChanged('');
-                },
-              ),
-        isDense: true,
-        filled: true,
-        fillColor: scheme.surface,
-        border: border,
-        enabledBorder: border,
+    return TvSearchKeyboard(
+      field: _focusNode,
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        onChanged: _onQueryChanged,
+        textInputAction: TextInputAction.search,
+        onEditingComplete: _onSubmitted,
+        decoration: InputDecoration(
+          hintText: l10n.searchMoviesPlaceholder,
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: _controller.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear_rounded),
+                  onPressed: () {
+                    _controller.clear();
+                    _onQueryChanged('');
+                  },
+                ),
+          isDense: true,
+          filled: true,
+          fillColor: scheme.surface,
+          border: border,
+          enabledBorder: border,
+        ),
       ),
     );
   }

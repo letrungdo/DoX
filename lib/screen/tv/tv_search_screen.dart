@@ -9,6 +9,7 @@ import 'package:do_x/screen/tv/tv_channel_card.dart';
 import 'package:do_x/view_model/tv/tv_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/input/tv_search_keyboard.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +42,9 @@ class TvSearchScreen extends StatefulWidget implements AutoRouteWrapper {
 class _TvSearchScreenState extends State<TvSearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode(debugLabel: 'tv-search');
+  final _resultsFocusNode = TvSearchKeyboard.resultsNode(
+    debugLabel: 'tv-search-results',
+  );
   final _scrollController = ScrollController();
   final Map<String, FocusNode> _channelFocusNodes = {};
 
@@ -74,6 +78,7 @@ class _TvSearchScreenState extends State<TvSearchScreen> {
       node.dispose();
     }
     _focusNode.dispose();
+    _resultsFocusNode.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -104,31 +109,47 @@ class _TvSearchScreenState extends State<TvSearchScreen> {
             ),
             child: _buildField(viewModel, l10n),
           ),
-          Expanded(child: _buildResults(viewModel, l10n)),
+          Expanded(
+            child: Focus(
+              focusNode: _resultsFocusNode,
+              child: _buildResults(viewModel, l10n),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildField(TvViewModel viewModel, AppLocalizations l10n) {
-    return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
-      onChanged: viewModel.search,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: l10n.tvSearchHint,
-        prefixIcon: const Icon(Icons.search_rounded),
-        suffixIcon: _controller.text.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.clear_rounded),
-                onPressed: () {
-                  _controller.clear();
-                  viewModel.search('');
-                  setState(() {});
-                },
-              ),
+    return TvSearchKeyboard(
+      field: _focusNode,
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        onChanged: viewModel.search,
+        textInputAction: TextInputAction.search,
+        onEditingComplete: () {
+          // The query as it stands, not as it was a debounce ago.
+          viewModel.search(_controller.text, immediately: true);
+          TvSearchKeyboard.submit(
+            field: _focusNode,
+            results: _resultsFocusNode,
+          );
+        },
+        decoration: InputDecoration(
+          hintText: l10n.tvSearchHint,
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: _controller.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear_rounded),
+                  onPressed: () {
+                    _controller.clear();
+                    viewModel.search('');
+                    setState(() {});
+                  },
+                ),
+        ),
       ),
     );
   }

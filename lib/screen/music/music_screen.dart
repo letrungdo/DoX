@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
@@ -61,6 +62,14 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
 
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'tv-music-search');
+
+  /// The Search tab on the rail, where the remote waits for the answer to a
+  /// search sent from the keyboard — see [_onSearchSubmitted].
+  final _searchTabFocusNode = FocusNode(debugLabel: 'tv-music-search-tab');
+
+  /// A search was sent from the keyboard and the remote is waiting on the
+  /// Search tab to be put on the first result once the answer is in.
+  bool _awaitingSearchResults = false;
   final Map<String, FocusNode> _trackFocusNodes = {};
 
   /// The heart on each row. Its own node, because on a television the remote
@@ -94,6 +103,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// The way the phone was turned at the last frame, to tell a turn from a
   /// rebuild.
   Orientation? _lastOrientation;
+
+  /// Whether the remote was on the dashboard's full-screen button when the
+  /// full-screen video went up, to be put back there when it comes down.
+  bool _fullscreenFromDashboard = false;
 
   /// Whether the last frame was the full-screen video. Carried across the
   /// gap between two tracks, while the next one's video is still being
@@ -232,6 +245,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       node.dispose();
     }
     _searchFocusNode.dispose();
+    _searchTabFocusNode.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     _playPauseFocusNode.dispose();
@@ -306,6 +320,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     // there for the video and goes with it.
     final showFullscreen =
         track != null && (_phoneFullscreen || (opensByItself && hasPicture));
+    // Read before the page is put away, which takes the remote off it.
+    if (showFullscreen && !_showingFullscreenVideo) {
+      _fullscreenFromDashboard =
+          FocusManager.instance.primaryFocus == _fullscreenFocusNode;
+    }
     _showingFullscreenVideo = showFullscreen;
     // Up on a phone, it stays up as though tapped: turning the video off
     // there shows the artwork instead of closing it. A turn of the phone
@@ -622,18 +641,107 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   }
 
   /// Back from the full-screen video to the list, with the list brought
-  /// round to the track playing — and, on a television, the remote on the
-  /// player's controls.
+  /// round to the track playing — and, on a television, the remote on that
+  /// track's row.
   void _leaveFullscreen(String trackId) {
+    // The page was put away with the remote on it, and putting it away took
+    // the remote off (see [_stow]): nothing is left focused on it to come
+    // back to, so the remote has to be put somewhere by hand.
+    final isTv = deviceType.isTv;
+    // Laid out, though out of sight, so the list can be moved to the row
+    // before it is shown: the row is then built by the frame that brings the
+    // page back, and there to take the remote.
+    if (isTv) _jumpToTrack(trackId);
     setState(() {
       _leftVideoFor = trackId;
       _phoneFullscreen = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (deviceType.isTv) _playPauseFocusNode.requestFocus();
-      _followTrack(trackId);
+      if (!isTv) {
+        _followTrack(trackId);
+        return;
+      }
+      if (_fullscreenFromDashboard) {
+        _fullscreenFromDashboard = false;
+        _fullscreenFocusNode.requestFocus();
+        return;
+      }
+      // The row the track was picked from; a track that is not in the list
+      // on screen — played from another tab — leaves the remote on the
+      // player instead.
+      final row = _trackFocusNodes[trackId];
+      if (row != null && row.context != null && row.canRequestFocus) {
+        row.requestFocus();
+      } else {
+        _playPauseFocusNode.requestFocus();
+      }
     });
+  }
+
+  /// Moves the list straight to [id]'s row, parked where [_followTrack]
+  /// parks it.
+  void _jumpToTrack(String id) {
+    final target = _followTarget(id);
+    if (target != null) _scrollController.jumpTo(target);
+  }
+
+  /// A search sent from the keyboard. On a television the field lets go of
+  /// the remote as the keyboard goes (see `EditableText`), and left on the
+  /// page's scope, `TvShell` hands it to the first control on the page — the
+  /// Discover tab. It goes to the first result instead, or waits for one on
+  /// the Search tab while the answer is on its way.
+  void _onSearchSubmitted(String query) {
+    final viewModel = vm;
+    unawaited(viewModel.submitSearch(query));
+    if (!deviceType.isTv) return;
+    if (_focusFirstResult()) return;
+    _searchTabFocusNode.requestFocus();
+    _awaitingSearchResults = true;
+    // Already answered, the list only needs bringing to its first row;
+    // otherwise the list's rebuild with the answer asks again.
+    if (!viewModel.isLoading) _onSearchAnswered();
+  }
+
+  /// Puts the remote on the first search result, if one is on screen.
+  bool _focusFirstResult() {
+    final viewModel = vm;
+    if (viewModel.isLoading || viewModel.currentTab != MusicTab.search) {
+      return false;
+    }
+    final first = viewModel.searchResults.firstOrNull;
+    final row = first == null ? null : _trackFocusNodes[first.id];
+    if (row == null || row.context == null || !row.canRequestFocus) {
+      return false;
+    }
+    row.requestFocus();
+    return true;
+  }
+
+  /// Once the answer to a search sent from the keyboard is on screen, moves
+  /// the remote from the Search tab to the first result — unless the viewer
+  /// has put it somewhere else in the meantime.
+  void _onSearchAnswered() {
+    WidgetsBinding.instance
+      ..ensureVisualUpdate()
+      ..addPostFrameCallback((_) {
+        if (!mounted || !_awaitingSearchResults || vm.isLoading) return;
+        _awaitingSearchResults = false;
+        if (FocusManager.instance.primaryFocus != _searchTabFocusNode) return;
+        if (_focusFirstResult()) return;
+        // The list came back scrolled down, where the page kept it for the
+        // last search: the first row is not built until it is at the top.
+        if (!_scrollController.hasClients ||
+            _scrollController.positions.length != 1) {
+          return;
+        }
+        _scrollController.jumpTo(_scrollController.position.minScrollExtent);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (FocusManager.instance.primaryFocus != _searchTabFocusNode) return;
+          _focusFirstResult();
+        });
+      });
   }
 
   /// The account the personal endpoints are called for. An icon rather than a
@@ -695,22 +803,30 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// screen has no context to ask `Scrollable.ensureVisible` about. Every row
   /// is the same height, which leaves only the shelf headings to measure.
   void _followTrack(String id) {
-    if (!mounted || !_scrollController.hasClients) return;
-    if (_scrollController.positions.length != 1) return;
+    final target = _followTarget(id);
+    if (target == null) return;
+    _scrollController.animateTo(
+      target,
+      duration: Dimens.musicFollowScrollDuration,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// Where the list is scrolled to to park [id]'s row half way up it, or
+  /// null when there is no one list on screen, or the row is not in it.
+  double? _followTarget(String id) {
+    if (!mounted || !_scrollController.hasClients) return null;
+    if (_scrollController.positions.length != 1) return null;
     final offset = _trackOffset(vm, id);
     // Not in the list on screen: the track came from another tab's list,
     // or from one refreshed since.
-    if (offset == null) return;
+    if (offset == null) return null;
     final position = _scrollController.position;
     final target =
         offset -
         (position.viewportDimension - Dimens.musicTrackTileHeight) *
             Dimens.tvFocusScrollAlignment;
-    _scrollController.animateTo(
-      target.clamp(position.minScrollExtent, position.maxScrollExtent),
-      duration: Dimens.musicFollowScrollDuration,
-      curve: Curves.easeOutCubic,
-    );
+    return target.clamp(position.minScrollExtent, position.maxScrollExtent);
   }
 
   /// Where [id]'s row starts in the current tab's list, or null when it is
@@ -801,6 +917,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   MusicTab.search,
                   Icons.search_rounded,
                   l10n.musicTabSearch,
+                  focusNode: _searchTabFocusNode,
                 ),
                 _buildRailItem(
                   viewModel,
@@ -820,13 +937,15 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     MusicViewModel viewModel,
     MusicTab tab,
     IconData icon,
-    String label,
-  ) {
+    String label, {
+    FocusNode? focusNode,
+  }) {
     final scheme = context.theme.colorScheme;
     final isSelected = viewModel.currentTab == tab;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: FocusableTap(
+        focusNode: focusNode,
         onTap: () => viewModel.switchTab(tab),
         child: DecoratedBox(
           decoration: BoxDecoration(
@@ -941,6 +1060,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       builder: (context, lists, _) {
         final (isLoading, tab, shelves, searchResults, likedTracks) = lists;
         _pruneFocusNodes((shelves, searchResults, likedTracks));
+        if (_awaitingSearchResults && !isLoading) _onSearchAnswered();
         final viewModel = context.read<MusicViewModel>();
         if (isLoading && tab == MusicTab.home && shelves.isEmpty) {
           return const Center(child: Loading());
@@ -1007,6 +1127,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               // A tap anywhere else puts the keyboard away, as on the TV page.
               onTapOutside: (_) => FocusScope.of(context).unfocus(),
               onChanged: viewModel.searchTracks,
+              onSubmitted: _onSearchSubmitted,
               decoration: InputDecoration(
                 hintText: context.l10n.musicSearchHint,
                 prefixIcon: const Icon(Icons.search_rounded),

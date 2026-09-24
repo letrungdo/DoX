@@ -164,11 +164,14 @@ class TvViewModel extends CoreViewModel {
     await onRefresh();
   }
 
-  void search(String query) {
+  /// Filters the list by [query] once the typing pauses, or straight away
+  /// when [immediately] — the keyboard's Search key, which means the typing
+  /// is over and the results are wanted now.
+  void search(String query, {bool immediately = false}) {
     _searchDebounce?.cancel();
     if (_query == query) return;
     // Emptying the box is not typing: the whole list comes back at once.
-    if (query.isEmpty) {
+    if (query.isEmpty || immediately) {
       _applySearch(query);
       return;
     }
