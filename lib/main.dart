@@ -8,6 +8,7 @@ import 'package:do_x/services/push_notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
+import 'package:do_x/services/temp_file_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/app_info.dart';
 import 'package:do_x/utils/device_type.dart';
@@ -115,6 +116,8 @@ Future<void> _initializeApp() async {
   authFlowService.start();
   if (!kIsWeb) {
     unawaited(pushNotificationService.start());
+    // Clears the picked and edited media earlier runs left in the cache.
+    unawaited(tempFileService.sweep());
     if (storageService.getElectricReminderEnabled()) {
       // Recreating an existing reminder does not need to delay the first UI.
       unawaited(notificationService.scheduleMonthlyElectricReminder());

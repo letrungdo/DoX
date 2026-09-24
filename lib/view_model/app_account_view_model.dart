@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
@@ -9,6 +10,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/services/push_notification_service.dart';
 import 'package:do_x/services/secure_storage_service.dart';
 import 'package:do_x/services/supabase_service.dart';
+import 'package:do_x/services/temp_file_service.dart';
 import 'package:do_x/utils/auth_error.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
@@ -32,7 +34,9 @@ class AppAccountViewModel extends CoreViewModel {
   Future<Uint8List?> pickAvatar(ImageSource source) async {
     final file = await _picker.pickImage(source: source);
     if (file == null) return null;
-    return file.readAsBytes();
+    final bytes = await file.readAsBytes();
+    unawaited(tempFileService.delete(file.path));
+    return bytes;
   }
 
   Future<void> uploadAvatar(Uint8List cropped) async {

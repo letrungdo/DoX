@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/services/temp_file_service.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -33,6 +35,11 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
 
   late VideoEditorController _controller = _createController(widget.file);
 
+  /// The re-encoded copy made when the picked video cannot be read as is,
+  /// deleted with the screen: the trim is exported from it into a file of its
+  /// own.
+  String? _normalizedPath;
+
   VideoEditorController _createController(File file) =>
       VideoEditorController.file(
         file,
@@ -62,6 +69,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
         final normalized = await _normalizeVideo(widget.file);
         if (!mounted) return;
         if (normalized != null) {
+          _normalizedPath = normalized;
           await _controller.dispose();
           _controller = _createController(File(normalized));
           return _initController(allowNormalize: false);
@@ -88,6 +96,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
   void dispose() async {
     _controller.dispose();
     _isExporting.dispose();
+    unawaited(tempFileService.delete(_normalizedPath));
 
     super.dispose();
   }
@@ -104,6 +113,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     ]);
     _isExporting.value = false;
     if (videoPath == null || thumbnailData == null) {
+      unawaited(tempFileService.delete(videoPath as String?));
       return;
     }
 
@@ -133,6 +143,9 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
       cancelText: l10n.shortenVideo,
       confirmText: l10n.reduceTo480p,
     );
+    // Either way the oversize export is not what goes up: the next attempt is
+    // exported afresh.
+    unawaited(tempFileService.delete(oversizePath));
     if (!downscale) return null; // user will adjust the trim slider
 
     _exportingProgress.value = 0;
@@ -142,6 +155,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
     if (reduced == null) return null;
 
     if (await File(reduced).length() > _maxVideoBytes) {
+      unawaited(tempFileService.delete(reduced));
       if (!mounted) return null;
       _showErrorSnackBar(context.l10n.videoStillTooLargeAt480p);
       return null;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
@@ -10,6 +11,7 @@ import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/modal/crop_image_modal.dart';
 import 'package:do_x/services/my_life/my_life_service.dart';
 import 'package:do_x/services/my_life/upload_service.dart';
+import 'package:do_x/services/temp_file_service.dart';
 import 'package:do_x/store/app_data.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
@@ -65,6 +67,7 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     if (xFile == null) return;
 
     final imageData = await xFile.readAsBytes();
+    unawaited(tempFileService.delete(xFile.path));
     if (!context.mounted) return;
     _videoCroped = null;
     _openCropImage(imageData);
@@ -75,11 +78,16 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
     final xFile = await _picker.pickVideo(source: ImageSource.gallery);
     _setPickingFile(false);
     if (xFile == null) return;
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      unawaited(tempFileService.delete(xFile.path));
+      return;
+    }
 
     final result = await context.router.push<List<dynamic>?>(
       TrimmerRoute(file: File(xFile.path)),
     );
+    // The trimmer has made its own copy by now; the picked one is done with.
+    unawaited(tempFileService.delete(xFile.path));
     if (result == null) return;
     final [videoPath, coverData] = result;
     if (videoPath == null) {
@@ -88,14 +96,15 @@ class MyLifeViewModel extends CoreViewModel with MyLifeOverlays {
       return;
     }
     if (coverData == null) {
+      unawaited(tempFileService.delete(videoPath));
       if (!context.mounted) return;
       showErrorMessage(context, message: "Can't get video thumbnail!");
       return;
     }
     _croppedImage = coverData;
     _videoCroped = await File(videoPath).readAsBytes();
+    unawaited(tempFileService.delete(videoPath));
     notifyListenersSafe();
-    // VideoTrimmerPlatform.instance.clearCache();
   }
 
   void _openCropImage(Uint8List image) {

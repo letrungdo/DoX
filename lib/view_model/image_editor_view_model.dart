@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/services/temp_file_service.dart';
 import 'package:do_x/utils/image_edit.dart';
 import 'package:do_x/utils/logger.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
@@ -59,6 +62,7 @@ class ImageEditorViewModel extends CoreViewModel {
       final picked = await _picker.pickImage(source: source);
       if (picked == null) return;
       final bytes = await picked.readAsBytes();
+      unawaited(tempFileService.delete(picked.path));
       _setProcessing(true);
       final prepared = await compute(
         prepareSource,
