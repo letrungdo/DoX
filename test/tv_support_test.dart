@@ -5,6 +5,7 @@ import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
+import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/tv_shell.dart';
@@ -222,7 +223,7 @@ void main() {
       await tester.pumpAndSettle();
       final onFirst = outline();
       expect(onFirst, isNotNull);
-      expect(onFirst!.inflate(-Dimens.focusOutlineGap), first.rect);
+      expect(onFirst!.inflate(-Dimens.focusRingWidth), first.rect);
 
       second.requestFocus();
       await tester.pumpAndSettle();
@@ -380,6 +381,80 @@ void main() {
       await tester.pumpAndSettle();
       expect(rings(), isEmpty);
       expect(outline(), isNotNull);
+    });
+
+    testWidgets('the ring follows the corners of the control it is on', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      final round = FocusNode(debugLabel: 'round');
+      final material = FocusNode(debugLabel: 'material');
+      final square = FocusNode(debugLabel: 'square');
+      addTearDown(round.dispose);
+      addTearDown(material.dispose);
+      addTearDown(square.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: Column(
+                children: [
+                  // The circle is drawn below the focus, as the players do.
+                  FocusableTap(
+                    focusNode: round,
+                    onTap: () {},
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(shape: BoxShape.circle),
+                    ),
+                  ),
+                  // The shape is above the focus, as an `IconButton`'s is.
+                  Material(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: InkWell(
+                      focusNode: material,
+                      onTap: () {},
+                      child: const SizedBox(width: 80, height: 40),
+                    ),
+                  ),
+                  Focus(
+                    focusNode: square,
+                    child: const SizedBox(width: 80, height: 40),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Future<BorderRadius?> cornersOn(FocusNode node) async {
+        node.requestFocus();
+        await tester.pumpAndSettle();
+        return tvFocusRing()?.borderRadius;
+      }
+
+      expect(await cornersOn(round), BorderRadius.circular(20));
+      expect(await cornersOn(material), BorderRadius.circular(10));
+      expect(await cornersOn(square), BorderRadius.zero);
+    });
+
+    test('the ring hugs its control, corners and all', () {
+      const control = Rect.fromLTWH(0, 0, 40, 40);
+      final ring = FocusRingDecoration.ringAround(
+        control,
+        BorderRadius.circular(Dimens.radiusPill),
+      );
+      const half = Dimens.focusRingWidth / 2;
+
+      expect(ring.outerRect, control.inflate(half));
+      // Round on a round control, not a rounded square around it.
+      expect(ring.tlRadiusX, ring.outerRect.width / 2);
     });
 
     testWidgets('a phone is left without one', (tester) async {

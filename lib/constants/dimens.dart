@@ -156,10 +156,6 @@ class Dimens {
   /// rail and the music page's so the two are the same object twice.
   static const tvRailPadding = 20.0;
 
-  /// How far the television's focus outline is drawn outside the control it
-  /// marks, so the control's own edge stays readable underneath it.
-  static const focusOutlineGap = 3.0;
-
   /// The smallest the text may be on a television.
   ///
   /// The app is written for a phone held at arm's length; a television is read

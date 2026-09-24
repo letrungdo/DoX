@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -587,11 +588,16 @@ class _FocusOutlineState extends State<_FocusOutline> {
 class _FocusTarget {
   const _FocusTarget({
     required this.box,
+    required this.borderRadius,
     required this.verticalViewport,
     required this.horizontalViewport,
   });
 
   final RenderBox box;
+
+  /// The control's own corners, at its laid-out size, so the ring follows
+  /// them — round for a round button. See [_shapeOf].
+  final BorderRadius borderRadius;
 
   /// The list the control scrolls up and down in, if it is in one.
   final RenderBox? verticalViewport;
@@ -648,10 +654,98 @@ _FocusTarget? _focusTarget() {
 
   return _FocusTarget(
     box: box,
+    borderRadius: _shapeOf(context, box.size),
     verticalViewport: vertical,
     horizontalViewport: horizontal,
   );
 }
+
+/// The corners of the focused control, read off the widgets that give it its
+/// shape, so the ring can follow them.
+///
+/// The shape is rarely on the focused widget itself: an `IconButton`'s focus
+/// sits inside the `InkWell` and `Material` that carry its shape, and a
+/// `FocusableTap`'s round button draws its circle in a `Container` below it.
+/// So both directions are searched — up through the ancestors and down the
+/// single-child chain — as long as the widget is still the control's size;
+/// a larger ancestor is the list or card around it, not the control.
+///
+/// Square corners when nothing says otherwise.
+BorderRadius _shapeOf(BuildContext context, Size size) {
+  BorderRadius? found;
+
+  bool sameSize(Element element) {
+    final box = element.renderObject;
+    if (box is! RenderBox || !box.hasSize) return false;
+    return (box.size.width - size.width).abs() < 0.5 &&
+        (box.size.height - size.height).abs() < 0.5;
+  }
+
+  context.visitAncestorElements((element) {
+    if (!sameSize(element)) return false;
+    found = _radiusOfWidget(element.widget, size);
+    return found == null;
+  });
+  if (found != null) return found!;
+
+  var element = context as Element;
+  for (var depth = 0; depth < _shapeSearchDepth; depth++) {
+    Element? only;
+    var children = 0;
+    element.visitChildren((child) {
+      only = child;
+      children++;
+    });
+    if (children != 1 || !sameSize(only!)) break;
+    element = only!;
+    final radius = _radiusOfWidget(element.widget, size);
+    if (radius != null) return radius;
+  }
+  return BorderRadius.zero;
+}
+
+/// How far down the focused control [_shapeOf] looks for its shape — deep
+/// enough for a `Container` inside a `FocusableTap`, shallow enough not to
+/// walk a whole card.
+const _shapeSearchDepth = 16;
+
+/// The corners [widget] gives a box of [size], or null when it gives none.
+BorderRadius? _radiusOfWidget(Widget widget, Size size) {
+  return switch (widget) {
+    InkResponse(:final customBorder?) => _radiusOfBorder(customBorder, size),
+    InkResponse(:final borderRadius?) => borderRadius.resolve(
+      TextDirection.ltr,
+    ),
+    Material(:final shape?) => _radiusOfBorder(shape, size),
+    Material(type: MaterialType.circle) => _round(size),
+    Material(:final borderRadius?) => borderRadius.resolve(TextDirection.ltr),
+    ClipOval() => _round(size),
+    ClipRRect(:final borderRadius) => borderRadius.resolve(TextDirection.ltr),
+    DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle)) => _round(
+      size,
+    ),
+    DecoratedBox(decoration: BoxDecoration(:final borderRadius?)) =>
+      borderRadius.resolve(TextDirection.ltr),
+    DecoratedBox(decoration: ShapeDecoration(:final shape)) => _radiusOfBorder(
+      shape,
+      size,
+    ),
+    _ => null,
+  };
+}
+
+BorderRadius? _radiusOfBorder(ShapeBorder shape, Size size) {
+  return switch (shape) {
+    CircleBorder() || StadiumBorder() => _round(size),
+    RoundedRectangleBorder(:final borderRadius) => borderRadius.resolve(
+      TextDirection.ltr,
+    ),
+    _ => null,
+  };
+}
+
+/// Fully round: a circle on a square box, a capsule on any other.
+BorderRadius _round(Size size) => BorderRadius.circular(size.shortestSide / 2);
 
 /// Whether the focused widget already says it has the focus on its own.
 ///
@@ -702,7 +796,8 @@ Rect? _ringOf(_FocusTarget target) {
     Offset.zero & box.size,
   );
   if (painted.isEmpty) return null;
-  final ring = painted.inflate(Dimens.focusOutlineGap);
+  // The ring hugs the control: its inner edge is the control's edge.
+  final ring = painted.inflate(Dimens.focusRingWidth);
 
   final clip = _clipOf(target);
   if (!clip.overlaps(ring)) return null;
@@ -750,15 +845,16 @@ Rect? _globalRectOf(RenderBox? box) {
 }
 
 /// The ring `TvShell` would draw for the focus as it stands, with the bounds
-/// it is clipped to — or null when it would draw none. The shell's own
+/// it is clipped to and the control corners it follows — or null when it
+/// would draw none. The shell's own
 /// answer, so a test can ask for it.
 @visibleForTesting
-({Rect ring, Rect clip})? tvFocusRing() {
+({Rect ring, Rect clip, BorderRadius borderRadius})? tvFocusRing() {
   final target = _focusTarget();
   if (target == null) return null;
   final ring = _ringOf(target);
   if (ring == null) return null;
-  return (ring: ring, clip: _clipOf(target));
+  return (ring: ring, clip: _clipOf(target), borderRadius: target.borderRadius);
 }
 
 /// Draws the ring where the focused control is *at paint time*.
@@ -788,12 +884,14 @@ class _FocusOutlinePainter extends CustomPainter {
     canvas
       ..save()
       ..clipRect(_clipOf(target))
-      // The stroke straddles the line it is drawn on, so the rectangle is
-      // pulled in by half of it to sit where a border of the same width would.
       ..drawRRect(
-        RRect.fromRectAndRadius(
-          ring.deflate(Dimens.focusRingWidth / 2),
-          const Radius.circular(Dimens.radiusControl),
+        FocusRingDecoration.ringAround(
+          ring.deflate(Dimens.focusRingWidth),
+          // The corners were read at the control's laid-out size; the lift
+          // draws it larger, and its corners with it.
+          target.borderRadius *
+              (ring.width - 2 * Dimens.focusRingWidth) /
+              target.box.size.width,
         ),
         Paint()
           ..style = PaintingStyle.stroke
