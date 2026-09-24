@@ -6,6 +6,7 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -329,6 +330,56 @@ void main() {
         isNotNull,
         reason: 'a control inside it is still marked',
       );
+    });
+
+    testWidgets('a card draws its own ring, and the shell draws none on it', (
+      tester,
+    ) async {
+      deviceType.isTv = true;
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      final card = FocusNode(debugLabel: 'card');
+      final inner = FocusNode(debugLabel: 'inner');
+      addTearDown(card.dispose);
+      addTearDown(inner.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: TvShell(
+            child: Scaffold(
+              body: AppCard(
+                focusNode: card,
+                onTap: () {},
+                // A plain control inside the card is a control of its own,
+                // which only the shell knows how to mark.
+                child: Focus(
+                  focusNode: inner,
+                  child: const SizedBox(height: 50, width: 200),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Iterable<Decoration?> rings() => tester
+          .widgetList<Container>(find.byType(Container))
+          .map((c) => c.foregroundDecoration)
+          .whereType<FocusRingDecoration>();
+
+      expect(rings(), isEmpty, reason: 'nothing focused yet');
+
+      card.requestFocus();
+      await tester.pumpAndSettle();
+      expect(rings(), hasLength(1));
+      expect(outline(), isNull, reason: 'a second ring over the card’s own');
+
+      inner.requestFocus();
+      await tester.pumpAndSettle();
+      expect(rings(), isEmpty);
+      expect(outline(), isNotNull);
     });
 
     testWidgets('a phone is left without one', (tester) async {

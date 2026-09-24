@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,44 +23,37 @@ class AppPressState {
 ///
 /// Deliberately not an [InkWell]: a ripple spreads from the finger and gets
 /// clipped by whatever the surface happens to hold. Here the whole surface
-/// takes the press at once — [stateBuilder] gets the pressed and focused flags
-/// and draws the flat state layer itself, usually through
+/// takes the press at once — [builder] gets the pressed and focused flags and
+/// draws the flat state layer itself, usually through
 /// `SurfaceTheme.stateFill` — and the surface shrinks a little while held.
 ///
 /// It is also the app's single focus target. Cards, buttons and chips all end
 /// up here, so giving this one widget a focus node is what makes the whole
-/// surface family reachable with a TV remote's D-pad. It draws no focus
-/// *ring* of its own — `TvShell` outlines whatever the remote is on, for every
-/// widget in the app, and a second marker here only read as a stray line
-/// inside the first. What the surface does draw is a brighter focused fill.
+/// surface family reachable with a TV remote's D-pad.
 ///
-/// What it does do on a television is grow. An outline alone is a thin line
-/// on a panel being read from across a room; the control lifting off the page
-/// is what can be seen from the sofa, and it is what every television
-/// interface does. `TvShell` measures the outline from where the control is
-/// actually painted, so the ring grows with it.
+/// Each surface draws its own focus ring: [builder] passes
+/// `FocusRingDecoration.of` as its `foregroundDecoration`, so the ring takes
+/// the surface's own radius. This widget tells `TvShell` so through
+/// [TvOwnFocusRing], and the shell's app-wide outline stays off it — a
+/// builder that draws no ring leaves the control with only the focused fill.
+///
+/// On a television the surface also grows. A ring alone is a thin line on a
+/// panel being read from across a room; the control lifting off the page is
+/// what can be seen from the sofa, and it is what every television interface
+/// does. The ring is painted by the surface itself, so it grows with it.
 class AppPressable extends StatefulWidget {
   const AppPressable({
     super.key,
-    this.builder,
-    this.stateBuilder,
+    required this.builder,
     this.onTap,
     this.onLongPress,
     this.pressedScale = Dimens.pressedScaleControl,
     this.autofocus = false,
     this.focusNode,
-  }) : assert(
-         (builder == null) != (stateBuilder == null),
-         'Pass exactly one of builder and stateBuilder.',
-       );
+  });
 
-  /// Draws the surface from the pressed flag alone. Prefer [stateBuilder],
-  /// which also says when the TV remote is on the surface.
-  final Widget Function(BuildContext context, bool pressed)? builder;
-
-  /// Draws the surface for its current [AppPressState].
-  final Widget Function(BuildContext context, AppPressState state)?
-  stateBuilder;
+  /// Draws the surface for its current [AppPressState], focus ring included.
+  final Widget Function(BuildContext context, AppPressState state) builder;
 
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -92,10 +86,49 @@ class _AppPressableState extends State<AppPressable> {
   bool _fingerDown = false;
   bool _sinkFinished = true;
 
-  /// Whether the remote is resting on this control. Only ever set on a
-  /// television — elsewhere nothing reads it, and a mouse or a finger leaves
+  /// Whether the focus highlight is showing on this control's node — true
+  /// while the node or anything inside it has the focus. Only ever set on a
+  /// television: elsewhere nothing reads it, and a mouse or a finger leaves
   /// focus behind on controls it has merely touched.
-  bool _focused = false;
+  bool _highlight = false;
+
+  /// Whether the remote is on this control itself, not on a control inside
+  /// it. A card that holds a button is not focused while the remote is on
+  /// the button — lifting and ringing both would mark two things at once.
+  bool _primary = false;
+
+  /// Whether the remote is resting on this control.
+  bool get _focused => _highlight && _primary;
+
+  /// Used when the caller passes no [AppPressable.focusNode], so there is
+  /// always a node to name to [TvOwnFocusRing].
+  FocusNode? _ownNode;
+
+  FocusNode get _node =>
+      widget.focusNode ?? (_ownNode ??= FocusNode(debugLabel: 'AppPressable'));
+
+  @override
+  void initState() {
+    super.initState();
+    _node.addListener(_onNodeChange);
+    _primary = _node.hasPrimaryFocus;
+  }
+
+  @override
+  void didUpdateWidget(AppPressable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode == widget.focusNode) return;
+    (oldWidget.focusNode ?? _ownNode)?.removeListener(_onNodeChange);
+    _node.addListener(_onNodeChange);
+    _primary = _node.hasPrimaryFocus;
+  }
+
+  @override
+  void dispose() {
+    _node.removeListener(_onNodeChange);
+    _ownNode?.dispose();
+    super.dispose();
+  }
 
   /// How wide the surface was when the remote arrived, so the lift can be
   /// the same number of pixels whatever the control is.
@@ -155,14 +188,26 @@ class _AppPressableState extends State<AppPressable> {
   }
 
   void _onFocusHighlight(bool value) {
-    if (_focused == value || !mounted) return;
+    if (_highlight == value || !mounted) return;
+    _setFocus(() => _highlight = value);
+  }
+
+  void _onNodeChange() {
+    final primary = _node.hasPrimaryFocus;
+    if (_primary == primary || !mounted) return;
+    _setFocus(() => _primary = primary);
+  }
+
+  void _setFocus(VoidCallback change) {
+    final was = _focused;
+    change();
+    if (was == _focused) return;
     setState(() {
-      _focused = value;
       // Read now rather than through a `LayoutBuilder`: one of these wraps
       // every tappable surface in the app, and a layout builder among them
       // would refuse the intrinsic measurements some of their parents ask
       // for. The box was laid out by the frame before this one.
-      if (value) {
+      if (_focused) {
         final box = context.findRenderObject();
         _width = box is RenderBox && box.hasSize ? box.size.width : null;
       }
@@ -171,44 +216,43 @@ class _AppPressableState extends State<AppPressable> {
 
   @override
   Widget build(BuildContext context) {
-    // The scale wraps the focus node rather than sitting inside it. `TvShell`
-    // measures its outline from the focused node's render object, and a
-    // transform *below* that node is one the measurement cannot see — the
-    // card grew and the ring stayed the size of the slot, drawn across the
-    // middle of it. From out here the transform is on the way up, so the
-    // rect the shell measures is the one that is actually on screen.
+    // The scale wraps the focus node rather than sitting inside it, so
+    // whatever measures the focused node's render object — the D-pad's
+    // traversal, the scroll that brings the control into view — sees the rect
+    // that is actually on screen rather than the slot it grew out of.
     return AnimatedScale(
       scale: _scale,
       duration: AppPressable.duration,
       curve: Curves.easeOut,
-      child: FocusableActionDetector(
-        enabled: _enabled,
-        autofocus: widget.autofocus,
-        focusNode: widget.focusNode,
-        onShowFocusHighlight: deviceType.isTv ? _onFocusHighlight : null,
-        mouseCursor: _enabled
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              _activate();
-              return null;
-            },
+      child: TvOwnFocusRing(
+        node: _node,
+        child: FocusableActionDetector(
+          enabled: _enabled,
+          autofocus: widget.autofocus,
+          focusNode: _node,
+          onShowFocusHighlight: deviceType.isTv ? _onFocusHighlight : null,
+          mouseCursor: _enabled
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                _activate();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(
+            onTapDown: _enabled ? (_) => _sink() : null,
+            onTapUp: _enabled ? (_) => _release() : null,
+            onTapCancel: _enabled ? _release : null,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            child: widget.builder(
+              context,
+              AppPressState(pressed: _pressed, focused: _focused),
+            ),
           ),
-        },
-        child: GestureDetector(
-          onTapDown: _enabled ? (_) => _sink() : null,
-          onTapUp: _enabled ? (_) => _release() : null,
-          onTapCancel: _enabled ? _release : null,
-          onTap: widget.onTap,
-          onLongPress: widget.onLongPress,
-          child:
-              widget.stateBuilder?.call(
-                context,
-                AppPressState(pressed: _pressed, focused: _focused),
-              ) ??
-              widget.builder!(context, _pressed),
         ),
       ),
     );

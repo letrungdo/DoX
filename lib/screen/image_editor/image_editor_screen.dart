@@ -22,6 +22,7 @@ import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:do_x/widgets/surface/app_chip.dart';
 import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
@@ -415,7 +416,6 @@ class _ImageEditorScreenState
             icon: Icons.undo_rounded,
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             tooltip: l10n.undo,
             onPressed: vm.canUndo && !busy ? vm.undo : null,
           ),
@@ -425,7 +425,6 @@ class _ImageEditorScreenState
             icon: Icons.ios_share_rounded,
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             tooltip: l10n.save,
             onPressed: vm.hasImage && !busy ? _save : null,
           ),
@@ -434,7 +433,6 @@ class _ImageEditorScreenState
             icon: Icons.more_vert_rounded,
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             tooltip: l10n.more,
             onPressed: busy ? null : _showMoreActions,
           ),
@@ -772,7 +770,7 @@ class _ImageEditorScreenState
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: AppPressable(
         onTap: () => _selectTool(tool),
-        stateBuilder: (context, state) => AnimatedContainer(
+        builder: (context, state) => AnimatedContainer(
           duration: AppPressable.duration,
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
@@ -788,6 +786,11 @@ class _ImageEditorScreenState
               focused: state.focused,
             ),
             borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
+          ),
+          foregroundDecoration: FocusRingDecoration.of(
+            context,
+            focused: state.focused,
+            radius: Dimens.radiusControlSmall,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

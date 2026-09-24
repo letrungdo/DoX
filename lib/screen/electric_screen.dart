@@ -139,7 +139,6 @@ class _ElectricScreenState
     final settingsButton = AppIconButton(
       size: Dimens.appBarActionSize,
       iconSize: 18,
-      depth: Dimens.appBarActionDepth,
       tooltip: l10n.settings,
       icon: Icons.settings_outlined,
       onPressed: () =>
@@ -334,7 +333,6 @@ class _ElectricScreenState
     // outline is drawn at rest.
     return AppCard(
       radius: 14,
-      depth: 0.5,
       color: selected ? scheme.tertiary : null,
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -479,7 +477,6 @@ class _ElectricScreenState
       child: Builder(
         builder: (context) => AppCard(
           radius: 12,
-          depth: 0.6,
           color: context.tintOnSurface(accent, amount: 0.08),
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
           child: Column(
@@ -1513,7 +1510,6 @@ class _SavedAccountPicker extends StatelessWidget {
   ) {
     return AppCard(
       radius: 14,
-      depth: 0.5,
       onTap: () => onSelect(account),
       padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
       child: Row(

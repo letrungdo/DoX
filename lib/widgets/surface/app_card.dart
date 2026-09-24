@@ -1,6 +1,7 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +20,6 @@ class AppCard extends StatelessWidget {
     this.margin,
     this.padding,
     this.radius = Dimens.radiusCard,
-    this.depth = 1,
     this.onTap,
     this.onLongPress,
     this.clipBehavior = Clip.antiAlias,
@@ -38,8 +38,6 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double radius;
 
-  /// Ignored; kept for source compatibility.
-  final double depth;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final Clip clipBehavior;
@@ -86,6 +84,11 @@ class AppCard extends StatelessWidget {
         ),
         borderRadius: borderRadius,
       ),
+      foregroundDecoration: FocusRingDecoration.of(
+        context,
+        focused: state.focused,
+        radius: radius,
+      ),
       child: content,
     );
 
@@ -98,7 +101,7 @@ class AppCard extends StatelessWidget {
       focusNode: focusNode,
       onTap: onTap,
       onLongPress: onLongPress,
-      stateBuilder: (context, state) => panel(state),
+      builder: (context, state) => panel(state),
     );
   }
 }

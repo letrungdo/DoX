@@ -205,7 +205,7 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.all(6),
       // Opaque so the badge keeps the same look on the tinted section cards.
-      decoration: context.panelDecoration(radius: 10, depth: 0.45),
+      decoration: context.panelDecoration(radius: 10),
       child: asset.svg(width: size, height: size),
     );
   }
@@ -221,7 +221,6 @@ class _ChickenBatchDetailScreenState
       accent: context.tintOnSurface(color),
       foreground: color,
       radius: 10,
-      depth: 0.4,
       padding: const EdgeInsets.all(7),
       child: Icon(Icons.edit_outlined, size: size, color: color),
     );
@@ -234,7 +233,7 @@ class _ChickenBatchDetailScreenState
   Widget _buildStatTile(String value, String label, {Color? valueColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: context.panelDecoration(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12),
       child: Column(
         children: [
           Text(
@@ -792,7 +791,7 @@ class _ChickenBatchDetailScreenState
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       // Opaque base fill, so the section's tint can't bleed through and dull
       // the numbers on it.
-      decoration: context.panelDecoration(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,
@@ -810,7 +809,6 @@ class _ChickenBatchDetailScreenState
       // outline plus hand-rolled drop shadow it used to carry.
       child: AppCard(
         radius: 12,
-        depth: 0.6,
         onTap: vm.isReadOnly ? null : () => _showSaleDialog(batch, sale: sale),
         padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
         child: Row(

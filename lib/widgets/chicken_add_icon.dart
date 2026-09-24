@@ -76,7 +76,6 @@ class ChickenAddButton extends StatelessWidget {
     // badge, not an [IconData].
     return AppButton(
       radius: 14,
-      depth: Dimens.appBarActionDepth,
       padding: EdgeInsets.zero,
       onPressed: onPressed,
       child: SizedBox.square(

@@ -1648,7 +1648,6 @@ class _MovieDetailScreenState
                       AppIconButton(
                         size: Dimens.appBarActionSize,
                         iconSize: 18,
-                        depth: Dimens.appBarActionDepth,
                         tooltip: vm.isFavorite
                             ? l10n.removeFromFavorites
                             : l10n.addToFavorites,
@@ -1893,7 +1892,6 @@ class _MovieDetailScreenState
               AppIconButton(
                 size: Dimens.appBarActionSize,
                 iconSize: 18,
-                depth: Dimens.appBarActionDepth,
                 tooltip: _vm.isFavorite
                     ? l10n.removeFromFavorites
                     : l10n.addToFavorites,

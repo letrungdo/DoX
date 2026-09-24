@@ -56,7 +56,6 @@ class FxRateRow extends StatelessWidget {
     return AppCard(
       color: softColor,
       radius: 10,
-      depth: 0.5,
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       child: Row(

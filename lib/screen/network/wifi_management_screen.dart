@@ -409,7 +409,6 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
 
     return AppCard(
       radius: 14,
-      depth: 0.8,
       color: isCurrent
           ? context.tintOnSurface(context.colors.success, amount: 0.12)
           : null,
@@ -566,7 +565,6 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     return AppCard(
       radius: 14,
       // A row under test lifts higher instead of taking a thicker outline.
-      depth: isTesting ? 1.2 : 0.8,
       color: context.tintOnSurface(color, amount: isTesting ? 0.16 : 0.1),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(

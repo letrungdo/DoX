@@ -24,6 +24,7 @@ import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -988,7 +989,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       child: FocusableTap(
         focusNode: focusNode,
         onTap: () => viewModel.switchTab(tab),
-        builder: (context, focused) => DecoratedBox(
+        builder: (context, focused) => Container(
           decoration: BoxDecoration(
             // As on the home page's rail: a tonal plate when selected, one
             // step brighter while the remote rests on an unselected row.
@@ -1002,6 +1003,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   )
                 : null,
             borderRadius: BorderRadius.circular(Dimens.radiusControl),
+          ),
+          foregroundDecoration: FocusRingDecoration.of(
+            context,
+            focused: focused,
+            radius: Dimens.radiusControl,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

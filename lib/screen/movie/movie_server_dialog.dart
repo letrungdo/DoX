@@ -150,7 +150,6 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
             AppIconButton(
               size: _actionButtonSize,
               iconSize: 20,
-              depth: 0.4,
               icon: Icons.add_rounded,
               onPressed: () => _enterInputMode(() {
                 _isAdding = true;
@@ -264,7 +263,6 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                                       AppIconButton(
                                         size: _actionButtonSize,
                                         iconSize: 20,
-                                        depth: 0.4,
                                         color: theme.colorScheme.error,
                                         icon: Icons.delete_outline_rounded,
                                         onPressed: () async {
@@ -278,7 +276,6 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                                     AppIconButton(
                                       size: _actionButtonSize,
                                       iconSize: 20,
-                                      depth: 0.4,
                                       icon: Icons.edit_outlined,
                                       onPressed: () => _enterInputMode(() {
                                         _editingUrl = url;

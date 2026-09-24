@@ -144,7 +144,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           AppIconButton(
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             icon: Icons.bar_chart_rounded,
             tooltip: l10n.profitStatistics,
             onPressed: () =>
@@ -162,7 +161,6 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             key: _menuButtonKey,
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             icon: Icons.more_vert_rounded,
             onPressed: _showOverflowMenu,
           ),

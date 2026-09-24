@@ -333,7 +333,6 @@ class _NewsScreenState<V extends NewsViewModel>
     return AppCard(
       color: softColor,
       radius: 10,
-      depth: 0.5,
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       child: Row(
         spacing: 6,

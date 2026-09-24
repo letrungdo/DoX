@@ -1,4 +1,5 @@
 import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 
 /// A tap target that a remote can reach.
@@ -8,11 +9,11 @@ import 'package:flutter/material.dart';
 /// straight past it and the control is unreachable. This adds the node and the
 /// select-key handling while leaving touch behaviour exactly as it was.
 ///
-/// It draws nothing. Showing which control the remote is on is `TvShell`'s job,
-/// and it does it for the whole app at once — a second marker here would only
-/// paint a line just inside that one. A control that wants a focused fill as
-/// well passes [builder] instead of [child] and draws it itself. It never
-/// grows the way `AppPressable` does: a rail whose rows grow jitters.
+/// With a [child] it draws nothing, and `TvShell`'s app-wide outline shows
+/// which control the remote is on. With a [builder] the control draws its own
+/// focus — its focused fill and a `FocusRingDecoration` fitted to its shape —
+/// and the shell's outline stays off it. It never grows the way
+/// `AppPressable` does: a rail whose rows grow jitters.
 class FocusableTap extends StatefulWidget {
   const FocusableTap({
     super.key,
@@ -30,8 +31,8 @@ class FocusableTap extends StatefulWidget {
 
   final Widget? child;
 
-  /// Draws the content knowing whether the remote rests on it. `focused` is
-  /// only ever true on a television.
+  /// Draws the content knowing whether the remote rests on it, focus ring
+  /// included. `focused` is only ever true on a television.
   final Widget Function(BuildContext context, bool focused)? builder;
 
   final VoidCallback? onTap;
@@ -47,6 +48,21 @@ class FocusableTap extends StatefulWidget {
 class _FocusableTapState extends State<FocusableTap> {
   bool _focused = false;
 
+  /// Used when the caller passes no [FocusableTap.focusNode] but a builder,
+  /// so there is a node to name to [TvOwnFocusRing].
+  FocusNode? _ownNode;
+
+  FocusNode? get _node => widget.builder == null
+      ? widget.focusNode
+      : widget.focusNode ??
+            (_ownNode ??= FocusNode(debugLabel: 'FocusableTap'));
+
+  @override
+  void dispose() {
+    _ownNode?.dispose();
+    super.dispose();
+  }
+
   bool get _enabled => widget.onTap != null || widget.onLongPress != null;
 
   void _onFocusHighlight(bool value) {
@@ -57,9 +73,10 @@ class _FocusableTapState extends State<FocusableTap> {
   @override
   Widget build(BuildContext context) {
     final builder = widget.builder;
-    return FocusableActionDetector(
+    final node = _node;
+    final detector = FocusableActionDetector(
       enabled: _enabled,
-      focusNode: widget.focusNode,
+      focusNode: node,
       autofocus: widget.autofocus,
       mouseCursor: _enabled ? SystemMouseCursors.click : MouseCursor.defer,
       // Only listened to when something draws it, and only on a television —
@@ -85,5 +102,7 @@ class _FocusableTapState extends State<FocusableTap> {
         child: builder?.call(context, _focused) ?? widget.child,
       ),
     );
+    if (builder == null || node == null) return detector;
+    return TvOwnFocusRing(node: node, child: detector);
   }
 }

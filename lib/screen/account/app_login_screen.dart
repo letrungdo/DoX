@@ -318,7 +318,6 @@ class _SavedAccountPicker extends StatelessWidget {
   ) {
     return AppCard(
       radius: 14,
-      depth: 0.5,
       onTap: enabled ? () => onSelect(account) : null,
       padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
       child: Row(

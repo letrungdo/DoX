@@ -1,6 +1,7 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
@@ -69,6 +70,11 @@ class AppChip extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(radius),
       ),
+      foregroundDecoration: FocusRingDecoration.of(
+        context,
+        focused: state.focused,
+        radius: radius,
+      ),
       child: trailing == null
           ? text
           : Row(
@@ -83,7 +89,7 @@ class AppChip extends StatelessWidget {
 
     return AppPressable(
       onTap: onTap,
-      stateBuilder: (context, state) =>
+      builder: (context, state) =>
           Center(widthFactor: 1, heightFactor: 1, child: chip(state)),
     );
   }

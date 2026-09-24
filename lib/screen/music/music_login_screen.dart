@@ -156,7 +156,6 @@ class _MusicLoginScreenState
             const SizedBox(height: 16),
             AppCard(
               radius: Dimens.radiusCard,
-              depth: 0.5,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [

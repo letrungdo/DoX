@@ -140,43 +140,19 @@ class SurfaceTheme extends ThemeExtension<SurfaceTheme> {
     return color;
   }
 
-  /// Always empty: panels carry no shadow. Kept so hand-rolled decorations
-  /// still compile until they move to [AppCard] or a plain [BoxDecoration].
-  List<BoxShadow> raisedShadows({
-    required Color fill,
-    double depth = 1,
-    bool inset = false,
-  }) => const [];
-
   /// Flat decoration for a panel drawn by hand. [color] is a semantic tint
   /// (state), and [background] the surface the panel sits on — pass it so an
   /// untinted panel nested in a card takes the nested fill.
-  ///
-  /// `depth: 0` means "pressed": every hand-rolled caller writes
-  /// `depth: pressed ? 0 : x`, so it gets the press layer. Any other depth,
-  /// and [inset], are ignored — selection is already carried by [color].
-  BoxDecoration raised({
+  BoxDecoration panel({
     double radius = Dimens.radiusCard,
-    double depth = 1,
     Color? color,
     Color? background,
-    bool inset = false,
   }) {
-    final fill = color ?? panelOn(background ?? base);
     return BoxDecoration(
-      color: depth == 0
-          ? stateFill(fill, content: _pressContent, pressed: true)
-          : fill,
+      color: color ?? panelOn(background ?? base),
       borderRadius: BorderRadius.circular(radius),
     );
   }
-
-  /// The content colour a hand-rolled press is drawn in: dark on the light
-  /// theme, light on the dark one.
-  Color get _pressContent =>
-      ThemeData.estimateBrightnessForColor(base) == Brightness.dark
-      ? Colors.white
-      : Colors.black;
 
   @override
   ThemeExtension<SurfaceTheme> copyWith({

@@ -85,7 +85,6 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
           AppIconButton(
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             icon: Icons.today_rounded,
             tooltip: l10n.lunarToday,
             onPressed: _goToToday,

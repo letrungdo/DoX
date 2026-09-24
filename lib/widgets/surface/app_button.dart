@@ -2,6 +2,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +21,6 @@ class AppButton extends StatefulWidget {
     this.foreground,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
     this.radius = Dimens.radiusControl,
-    this.depth = 0.85,
     this.expand = false,
     this.focusNode,
   });
@@ -38,9 +38,6 @@ class AppButton extends StatefulWidget {
 
   final EdgeInsetsGeometry padding;
   final double radius;
-
-  /// Ignored; kept for source compatibility.
-  final double depth;
 
   /// Stretch to the parent's width, for bottom-of-sheet actions.
   final bool expand;
@@ -89,7 +86,7 @@ class _AppButtonState extends State<AppButton> {
     final button = AppPressable(
       focusNode: widget.focusNode,
       onTap: widget.onPressed,
-      stateBuilder: (context, state) => AnimatedContainer(
+      builder: (context, state) => AnimatedContainer(
         duration: AppPressable.duration,
         curve: Curves.easeOut,
         decoration: BoxDecoration(
@@ -103,6 +100,11 @@ class _AppButtonState extends State<AppButton> {
                 )
               : surfaces.sunken,
           borderRadius: borderRadius,
+        ),
+        foregroundDecoration: FocusRingDecoration.of(
+          context,
+          focused: state.focused,
+          radius: widget.radius,
         ),
         child: content,
       ),
@@ -126,7 +128,6 @@ class AppIconButton extends StatelessWidget {
     this.iconSize = 20,
     this.color,
     this.tooltip,
-    this.depth = 0.6,
     this.focusNode,
     this.loading = false,
   });
@@ -142,9 +143,6 @@ class AppIconButton extends StatelessWidget {
   final Color? color;
   final String? tooltip;
   final FocusNode? focusNode;
-
-  /// Ignored; kept for source compatibility.
-  final double depth;
 
   @override
   Widget build(BuildContext context) {

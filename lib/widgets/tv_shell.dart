@@ -349,14 +349,14 @@ class _DirectionalFocusOrScrollAction extends Action<DirectionalFocusIntent> {
 }
 
 /// Draws one outline around whatever the remote is pointing at, over the whole
-/// app.
+/// app — the fallback for controls that do not draw their own.
 ///
 /// A television has no cursor and no finger, so seeing the control is the only
 /// way to know what OK will press — and a phone app has nothing that says so.
-/// Marking each widget in turn would mean touching every screen and would still
-/// miss the ones built out of plain text and images, so the outline is painted
-/// once at the root from [FocusManager] and works for controls nobody has
-/// thought about yet.
+/// The app's own surfaces (`AppCard`, `AppButton`, `AppChip`, the rails) draw
+/// a ring fitted to their shape and say so with [TvOwnFocusRing]; everything
+/// else — Material tiles, plain `Focus` rows, controls nobody has thought
+/// about yet — is outlined here, once, at the root from [FocusManager].
 /// Marks a focusable area that holds the remote without being a control: the
 /// picture a player parks it on while the transport bar is hidden.
 ///
@@ -370,6 +370,28 @@ class TvFocusSurface extends StatelessWidget {
 
   /// The focus node of the surface itself, so a control that happens to sit
   /// inside it is still told apart from it.
+  final FocusNode node;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+/// Marks a control that draws its own focus ring, so [TvShell] draws none
+/// around it.
+///
+/// Wrapped by `AppPressable` and by `FocusableTap` with a builder, which paint
+/// a `FocusRingDecoration` that fits the control's own shape. The shell's
+/// outline is the fallback for everything else — Material list tiles, icon
+/// buttons, anything nobody has given a ring of its own.
+///
+/// Matched by node, as [TvFocusSurface] is: a control inside a card that
+/// draws its own ring is still a control of its own, and still outlined.
+class TvOwnFocusRing extends StatelessWidget {
+  const TvOwnFocusRing({super.key, required this.node, required this.child});
+
+  /// The focus node of the control that draws the ring.
   final FocusNode node;
 
   final Widget child;
@@ -605,7 +627,7 @@ _FocusTarget? _focusTarget() {
   final node = FocusManager.instance.primaryFocus;
   final context = node?.context;
   if (box == null || node == null || context == null) return null;
-  if (_marksItself(context) || _isSurface(node, context)) return null;
+  if (_marksItself(node, context) || _isSurface(node, context)) return null;
 
   RenderBox? vertical;
   RenderBox? horizontal;
@@ -638,8 +660,14 @@ _FocusTarget? _focusTarget() {
 /// line just inside the first, which reads as a rendering mistake rather than
 /// as emphasis — and the field's own cue is the better of the two anyway,
 /// because it also fits the field's shape.
-bool _marksItself(BuildContext context) {
-  return context.findAncestorWidgetOfExactType<EditableText>() != null;
+///
+/// So does a control inside a [TvOwnFocusRing] naming its node.
+bool _marksItself(FocusNode node, BuildContext context) {
+  if (context.findAncestorWidgetOfExactType<EditableText>() != null) {
+    return true;
+  }
+  final own = context.findAncestorWidgetOfExactType<TvOwnFocusRing>();
+  return own != null && identical(own.node, node);
 }
 
 /// Whether the focus is on a [TvFocusSurface] rather than on a control.

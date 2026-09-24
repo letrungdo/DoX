@@ -344,7 +344,6 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     return AppIconButton(
       size: Dimens.appBarActionSize,
       iconSize: 18,
-      depth: Dimens.appBarActionDepth,
       tooltip: l10n.tvSearchHint,
       icon: Icons.search_rounded,
       onPressed: _openSearch,

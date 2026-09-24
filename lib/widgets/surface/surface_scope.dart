@@ -25,20 +25,16 @@ class SurfaceScope extends InheritedWidget {
 }
 
 extension SurfaceScopeContext on BuildContext {
-  /// [SurfaceTheme.raised] with the enclosing surface filled in — a flat
+  /// [SurfaceTheme.panel] with the enclosing surface filled in — a flat
   /// decoration for a panel drawn by hand instead of with [AppCard].
   BoxDecoration panelDecoration({
     double radius = Dimens.radiusCard,
-    double depth = 1,
     Color? color,
-    bool inset = false,
   }) {
-    return surfaces.raised(
+    return surfaces.panel(
       radius: radius,
-      depth: depth,
       color: color,
       background: SurfaceScope.of(this),
-      inset: inset,
     );
   }
 

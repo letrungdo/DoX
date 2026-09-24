@@ -51,7 +51,6 @@ class YearFilter extends StatelessWidget {
         const SizedBox(width: 8),
         AppCard(
           radius: 20,
-          depth: 0.5,
           onTap: () => _openSheet(context),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(

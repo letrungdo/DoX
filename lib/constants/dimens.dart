@@ -15,10 +15,6 @@ class Dimens {
   /// above and below it.
   static const appBarActionSize = 36.0;
 
-  /// No-op, remove: `depth` is ignored by the flat primitives, and the call
-  /// sites that still pass this go with it.
-  static const appBarActionDepth = 0.4;
-
   /// Default side of a `AppIconButton` outside an app bar.
   static const iconButtonSize = 40.0;
 

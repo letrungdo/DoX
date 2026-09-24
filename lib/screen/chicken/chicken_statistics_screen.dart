@@ -940,7 +940,7 @@ class _ChickenStatisticsScreenState
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: context.panelDecoration(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -987,7 +987,7 @@ class _ChickenStatisticsScreenState
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: context.panelDecoration(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

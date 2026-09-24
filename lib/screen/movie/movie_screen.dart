@@ -30,6 +30,7 @@ import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/surface/app_chip.dart';
 import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -851,7 +852,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             key: _searchButtonKey,
             size: Dimens.appBarActionSize,
             iconSize: 18,
-            depth: Dimens.appBarActionDepth,
             tooltip: l10n.searchMoviesPlaceholder,
             color: _isSearchOpen ? Theme.of(context).colorScheme.primary : null,
             icon: _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
@@ -894,7 +894,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       key: const ValueKey('movie-select'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
-                      depth: Dimens.appBarActionDepth,
                       tooltip: l10n.selectMovies,
                       icon: Icons.checklist_rounded,
                       onPressed: _startSelectionMode,
@@ -906,7 +905,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       key: const ValueKey('movie-watched'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
-                      depth: Dimens.appBarActionDepth,
                       tooltip: l10n.watchedMovies,
                       color: isWatched
                           ? Theme.of(context).colorScheme.primary
@@ -920,7 +918,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       key: const ValueKey('movie-favorites'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
-                      depth: Dimens.appBarActionDepth,
                       tooltip: l10n.favoriteMovies,
                       color: vm.collection == MovieCollection.favorites
                           ? Theme.of(context).colorScheme.primary
@@ -934,7 +931,6 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                       key: const ValueKey('movie-collections'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
-                      depth: Dimens.appBarActionDepth,
                       color: vm.collection != MovieCollection.browse
                           ? Theme.of(context).colorScheme.primary
                           : null,
@@ -1424,7 +1420,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
         options: options,
         isCountry: isCountry,
       ),
-      stateBuilder: (context, state) => AnimatedContainer(
+      builder: (context, state) => AnimatedContainer(
         duration: AppPressable.duration,
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
@@ -1440,6 +1436,11 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
             focused: state.focused,
           ),
           borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
+        ),
+        foregroundDecoration: FocusRingDecoration.of(
+          context,
+          focused: state.focused,
+          radius: Dimens.radiusControlSmall,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

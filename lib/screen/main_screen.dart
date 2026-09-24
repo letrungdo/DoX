@@ -15,6 +15,7 @@ import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
+import 'package:do_x/widgets/surface/focus_ring.dart';
 import 'package:do_x/widgets/update_download_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -295,10 +296,10 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: FocusableTap(
         onTap: onTap,
-        builder: (context, focused) => DecoratedBox(
+        builder: (context, focused) => Container(
           decoration: BoxDecoration(
             // The selected row is a tonal plate; an unselected row the remote
-            // rests on brightens a step, on top of the shell's ring.
+            // rests on brightens a step, inside the row's own ring.
             color: isSelected
                 ? surfaces.primarySoft
                 : focused
@@ -309,6 +310,11 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
                   )
                 : null,
             borderRadius: BorderRadius.circular(Dimens.radiusControl),
+          ),
+          foregroundDecoration: FocusRingDecoration.of(
+            context,
+            focused: focused,
+            radius: Dimens.radiusControl,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
