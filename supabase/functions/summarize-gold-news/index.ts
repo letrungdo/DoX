@@ -8,9 +8,11 @@
 // The RSS reading, the Gemini call and the Google News link resolver live in
 // `../_shared/news_feed.ts`, shared with `summarize-storm-news`.
 //
-// Secrets: GEMINI_API_KEY (required), GEMINI_MODEL (optional).
+// Secrets: GEMINI_API_KEY (required), GEMINI_MODEL (optional), CRON_SECRET
+// (required, see `../_shared/cron_auth.ts`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { rejectUnlessCron } from "../_shared/cron_auth.ts";
 import {
   collectItems,
   Feed,
@@ -178,7 +180,10 @@ Chỉ dựa trên các tiêu đề được cung cấp, không bịa thêm số 
 /// mistaken for a duplicate.
 const MIN_REBUILD_AGE_MS = 3 * 3600_000;
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const rejected = rejectUnlessCron(req);
+  if (rejected) return rejected;
+
   try {
     const date = vnToday();
     const supabase = createClient(

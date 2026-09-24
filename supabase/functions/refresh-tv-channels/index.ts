@@ -1,4 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { rejectUnlessCron } from "../_shared/cron_auth.ts";
 import { curate, parsePlaylist } from "./playlist.ts";
 import { BROWSER_AGENT, check } from "./check.ts";
 
@@ -39,7 +40,10 @@ const COUNTRY = "VN";
  */
 const CHECK_BUDGET_MS = 110_000;
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const rejected = rejectUnlessCron(req);
+  if (rejected) return rejected;
+
   const startedAt = Date.now();
   try {
     const [primary, extra] = await Promise.all([

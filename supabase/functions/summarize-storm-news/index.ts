@@ -10,9 +10,11 @@
 // for the rule that keeps a multi-day storm from notifying every three hours.
 //
 // Secrets: GEMINI_API_KEY (required), GEMINI_MODEL (optional),
-// FCM_SERVICE_ACCOUNT (required for the push).
+// FCM_SERVICE_ACCOUNT (required for the push), CRON_SECRET (required, see
+// `../_shared/cron_auth.ts`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { rejectUnlessCron } from "../_shared/cron_auth.ts";
 import { PushDevice, sendPush } from "../_shared/fcm.ts";
 import {
   collectItems,
@@ -271,7 +273,10 @@ async function notifyEveryDevice(
 /// mistaken for a duplicate.
 const MIN_REBUILD_AGE_MS = 2 * 3600_000;
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const rejected = rejectUnlessCron(req);
+  if (rejected) return rejected;
+
   try {
     const date = vnToday();
     const supabase = createClient(

@@ -30,21 +30,29 @@ VN), secret `GEMINI_API_KEY`, và function này.
 
 ```bash
 supabase secrets set GEMINI_API_KEY=xxx      # https://aistudio.google.com/apikey
-supabase db push                              # bảng + cron
-supabase functions deploy summarize-gold-news
+supabase db push                              # bảng + cron + Vault `cron_secret`
+supabase secrets set CRON_SECRET=<giá trị Vault `cron_secret`>
+supabase functions deploy summarize-gold-news --no-verify-jwt
+```
+
+`CRON_SECRET` là cùng một giá trị với Vault `cron_secret` (do migration tự sinh,
+dùng chung cho mọi function chạy bằng cron — xem `../_shared/cron_auth.ts`):
+
+```sql
+select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret';
 ```
 
 ## Chạy thử
 
 ```bash
 curl -X POST "https://fyyrgwohjgvsmwqgxiga.supabase.co/functions/v1/summarize-gold-news" \
-  -H "Authorization: Bearer <publishable_key>"
+  -H "x-cron-secret: <giá trị Vault cron_secret>"
 ```
 
-Cron gọi bằng publishable key (đã public trong app) nên endpoint coi như ai
-cũng gọi được. Hai chốt chặn khiến việc đó vô hại: chỉ ghi được ngày hôm nay
-hoặc hôm qua (`?date=YYYY-MM-DD`), và nếu bản tin của ngày đó mới dưới 3 giờ
-thì trả về luôn, không gọi Gemini. Muốn ép chạy lại sớm hơn thì xoá dòng đó:
+Thiếu hoặc sai `x-cron-secret` thì function trả 403, nên publishable key trong
+app không đủ để gọi. Ngoài ra chỉ ghi được ngày hôm nay hoặc hôm qua
+(`?date=YYYY-MM-DD`), và nếu bản tin của ngày đó mới dưới 3 giờ thì trả về
+luôn, không gọi Gemini. Muốn ép chạy lại sớm hơn thì xoá dòng đó:
 
 ```sql
 delete from public.gold_news where date = current_date;

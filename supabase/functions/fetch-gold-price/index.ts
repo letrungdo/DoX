@@ -1,4 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { rejectUnlessCron } from "../_shared/cron_auth.ts";
 
 const PNJ_API_URL = "https://edge-cf-api.pnj.io/ecom-frontend/v3/get-gold-price";
 
@@ -57,7 +58,10 @@ const TARGETS = [
   },
 ];
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const rejected = rejectUnlessCron(req);
+  if (rejected) return rejected;
+
   try {
     const response = await fetch(PNJ_API_URL, {
       headers: {

@@ -48,9 +48,10 @@ mới dưới 2 giờ thì function trả về luôn, không gọi Gemini.
 
 ```bash
 supabase secrets set GEMINI_API_KEY=xxx      # đã có sẵn nếu bản tin vàng đang chạy
-supabase db push                              # bảng + cron
-supabase functions deploy summarize-storm-news
-supabase functions deploy summarize-gold-news      # dùng chung _shared/news_feed.ts
+supabase db push                              # bảng + cron + Vault `cron_secret`
+supabase secrets set CRON_SECRET=<giá trị Vault `cron_secret`>  # xem README bản tin vàng
+supabase functions deploy summarize-storm-news --no-verify-jwt
+supabase functions deploy summarize-gold-news --no-verify-jwt  # dùng chung _shared/news_feed.ts
 supabase functions deploy notify-chicken-activity  # dùng chung _shared/fcm.ts
 ```
 
@@ -58,7 +59,7 @@ supabase functions deploy notify-chicken-activity  # dùng chung _shared/fcm.ts
 
 ```bash
 curl -X POST "https://fyyrgwohjgvsmwqgxiga.supabase.co/functions/v1/summarize-storm-news" \
-  -H "Authorization: Bearer <publishable_key>"
+  -H "x-cron-secret: <giá trị Vault cron_secret>"
 ```
 
 Muốn ép chạy lại sớm hơn 2 giờ:
