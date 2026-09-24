@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:do_x/constants/storage.dart';
+import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/tv_channel_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +28,7 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       await storageService.init();
+      storageService.debugSetTvPlaylistDirectory(null);
     });
 
     test('is what the page draws while the fetch is still out', () async {
@@ -32,14 +37,68 @@ void main() {
       // No lifetime of its own any more: the run fetches the list again
       // whatever the age of this copy, and this copy is only what goes up
       // in the meantime — and what stays up when the fetch fails.
-      final stored = tvChannelService.storedChannels('VN');
+      final stored = await tvChannelService.storedChannels('VN');
 
       expect(stored, isNotNull);
       expect(stored!.map((c) => c.name), contains('An Ninh TV HD'));
     });
 
-    test('is nothing at all before a list has ever arrived', () {
-      expect(tvChannelService.storedChannels('kr'), isNull);
+    test('is nothing at all before a list has ever arrived', () async {
+      expect(await tvChannelService.storedChannels('kr'), isNull);
+    });
+  });
+
+  group('The list kept in a file', () {
+    late Directory directory;
+
+    setUp(() async {
+      directory = await Directory.systemTemp.createTemp('tv_playlist_test');
+      storageService.debugSetTvPlaylistDirectory(directory);
+    });
+
+    tearDown(() async {
+      storageService.debugSetTvPlaylistDirectory(null);
+      await directory.delete(recursive: true);
+    });
+
+    test('keeps the body out of the preferences', () async {
+      SharedPreferences.setMockInitialValues({});
+      await storageService.init();
+
+      await storageService.setTvPlaylist('us', _playlist);
+
+      // The preferences are read whole at launch; a playlist of hundreds of
+      // kilobytes has no business in them.
+      expect(storageService.prefs.getString(StorageKey.tvPlaylist), isNull);
+      expect(await storageService.getTvPlaylist('us'), _playlist);
+      expect(await storageService.getTvPlaylist('kr'), isNull);
+    });
+
+    test(
+      'still reads a copy an older version kept in the preferences',
+      () async {
+        // Where an older version kept the whole body.
+        await storageService.prefs.setString(StorageKey.tvPlaylistSource, 'us');
+        await storageService.prefs.setString(StorageKey.tvPlaylist, _playlist);
+
+        expect(await storageService.getTvPlaylist('us'), _playlist);
+
+        // And lets go of it once the next copy has gone to the file.
+        await storageService.setTvPlaylist('us', '#EXTM3U\n');
+        expect(storageService.prefs.getString(StorageKey.tvPlaylist), isNull);
+        expect(await storageService.getTvPlaylist('us'), '#EXTM3U\n');
+      },
+    );
+  });
+
+  group('TvChannel.normalizeName', () {
+    test('folds case and every Vietnamese accent, and nothing else', () {
+      expect(TvChannel.normalizeName('  Đà Nẵng  '), 'da nang');
+      expect(TvChannel.normalizeName('VĨNH LONG'), 'vinh long');
+      expect(TvChannel.normalizeName('Ỷ Ừ Ệ Ọ'), 'y u e o');
+      expect(TvChannel.normalizeName('VTV3 HD'), 'vtv3 hd');
+      // Accents outside Vietnamese are not what this folds.
+      expect(TvChannel.normalizeName('Ñ Ü'), 'ñ ü');
     });
   });
 

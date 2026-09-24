@@ -60,6 +60,10 @@ class TvChannelCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         padding: EdgeInsets.zero,
         radius: Dimens.radiusCard,
+        // The card's own Material already clips the content to its corners;
+        // a second clip on the panel is a second offscreen pass per card,
+        // and a grid is a screenful of them.
+        clipBehavior: Clip.none,
         focusNode: focusNode,
         onTap: onTap,
         child: Column(
@@ -178,24 +182,79 @@ class TvChannelName extends StatelessWidget {
   /// it was being kept whole.
   static const minScale = 0.8;
 
+  /// Scales already measured, by everything the measurement depends on.
+  ///
+  /// A grid lays the same names out again on every rotation, every scroll
+  /// back up and every rebuild of the page, and each measurement is a text
+  /// layout of its own. Bounded, because a country can list thousands of
+  /// channels and the oldest measurement is the least likely to be asked for
+  /// again.
+  static final _scales =
+      <
+        ({
+          String name,
+          TextStyle style,
+          TextScaler scaler,
+          TextDirection direction,
+          double width,
+        }),
+        double
+      >{};
+
+  static const _maxCachedScales = 512;
+
+  static double _scaleFor({
+    required String name,
+    required TextStyle style,
+    required TextScaler scaler,
+    required TextDirection direction,
+    required double width,
+  }) {
+    if (width <= 0) return 1;
+    final key = (
+      name: name,
+      style: style,
+      scaler: scaler,
+      direction: direction,
+      width: width,
+    );
+    final cached = _scales[key];
+    if (cached != null) return cached;
+
+    final painter = TextPainter(
+      text: TextSpan(text: name, style: style),
+      maxLines: 1,
+      textDirection: direction,
+      textScaler: scaler,
+    )..layout();
+    // One measurement is enough: type laid out on one line is as wide as its
+    // size, so the size that fits is the size it has now times how much of
+    // the room it is over by.
+    final measured = painter.width;
+    painter.dispose();
+    final scale = measured <= width
+        ? 1.0
+        : (width / measured).clamp(minScale, 1.0);
+
+    if (_scales.length >= _maxCachedScales) {
+      _scales.remove(_scales.keys.first);
+    }
+    return _scales[key] = scale;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final painter = TextPainter(
-          text: TextSpan(text: name, style: style),
-          maxLines: 1,
-          textDirection: Directionality.of(context),
-          textScaler: scaler,
-        )..layout();
-        final width = constraints.maxWidth;
-        // One measurement is enough: type laid out on one line is as wide
-        // as its size, so the size that fits is the size it has now times
-        // how much of the room it is over by.
-        final scale = width <= 0 || painter.width <= width
-            ? 1.0
-            : (width / painter.width).clamp(minScale, 1.0);
+        final scale = _scaleFor(
+          name: name,
+          style: style,
+          scaler: scaler,
+          direction: direction,
+          width: constraints.maxWidth,
+        );
         final fontSize = (style.fontSize ?? 14) * scale;
 
         return Text(

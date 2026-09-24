@@ -260,10 +260,10 @@ class MovieDetailBody extends StatelessWidget {
                     NeuCard(
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       padding: const EdgeInsets.all(12),
+                      // Already plain text: the service strips the markup
+                      // once, when it parses the detail.
                       child: Text(
-                        detail!.description
-                            .replaceAll(RegExp(r'<[^>]*>'), '')
-                            .trim(),
+                        detail!.description,
                         style: const TextStyle(fontSize: 13, height: 1.4),
                       ),
                     ),

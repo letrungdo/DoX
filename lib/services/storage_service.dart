@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:do_x/constants/enum/market_code.dart';
 import 'package:do_x/constants/storage.dart';
+import 'package:do_x/utils/logger.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _StorageService {
@@ -190,20 +195,80 @@ class _StorageService {
 
   /// The stored playlist, but only when it is the one [source] asked for —
   /// the slot holds a single country, so another country's copy is no answer.
-  String? getTvPlaylist(String source) {
+  Future<String?> getTvPlaylist(String source) async {
     if (prefs.getString(StorageKey.tvPlaylistSource) != source) return null;
+    final file = await _tvPlaylistFile();
+    if (file != null) {
+      try {
+        if (await file.exists()) return await file.readAsString();
+      } on Object catch (e) {
+        logger.d('StorageService could not read the TV playlist', error: e);
+      }
+    }
+    // Where there is no file to read, and for a copy stored before the
+    // playlist moved out of the preferences.
     return prefs.getString(StorageKey.tvPlaylist);
   }
 
   /// Stores the playlist together with its source and the moment it arrived,
   /// so its age can be judged without parsing it.
+  ///
+  /// The body goes to a file of its own rather than into the preferences: a
+  /// country's playlist runs to hundreds of kilobytes, and the preferences
+  /// are one file read whole at launch and written whole on every change.
   Future<bool> setTvPlaylist(String source, String value) async {
     await prefs.setString(StorageKey.tvPlaylistSource, source);
     await prefs.setString(
       StorageKey.tvPlaylistSavedAt,
       DateTime.now().toIso8601String(),
     );
+    final file = await _tvPlaylistFile();
+    if (file != null) {
+      try {
+        // Written beside the file and moved over it, so a write cut short
+        // leaves the last whole copy rather than half of this one.
+        final partial = File('${file.path}.partial');
+        await partial.writeAsString(value, flush: true);
+        await partial.rename(file.path);
+        // The copy an older version kept in the preferences is now stale.
+        await prefs.remove(StorageKey.tvPlaylist);
+        return true;
+      } on Object catch (e) {
+        logger.d('StorageService could not write the TV playlist', error: e);
+      }
+    }
     return prefs.setString(StorageKey.tvPlaylist, value);
+  }
+
+  /// Where the stored playlist lives, or null where there is no file system
+  /// to keep it on — the web, or a platform without the plugin — in which
+  /// case the preferences hold it as they used to.
+  Future<File?> _tvPlaylistFile() => _tvPlaylistFileLookup ??= () async {
+    if (kIsWeb) return null;
+    try {
+      final directory = await getApplicationSupportDirectory();
+      return File('${directory.path}/$_tvPlaylistFileName');
+    } on Object catch (e) {
+      logger.d('StorageService has no support directory', error: e);
+      return null;
+    }
+  }();
+
+  /// Looked up once: the directory does not move while the app runs.
+  Future<File?>? _tvPlaylistFileLookup;
+
+  static const _tvPlaylistFileName = 'tv_playlist.txt';
+
+  /// Keeps the stored playlist in [directory], or in the preferences when it
+  /// is null.
+  ///
+  /// For tests: a test has no support directory of its own to write to, and
+  /// a widget test's clock never lets real file I/O finish.
+  @visibleForTesting
+  void debugSetTvPlaylistDirectory(Directory? directory) {
+    _tvPlaylistFileLookup = SynchronousFuture(
+      directory == null ? null : File('${directory.path}/$_tvPlaylistFileName'),
+    );
   }
 
   DateTime? getTvPlaylistSavedAt(String source) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/model/tv_country.dart';
 import 'package:do_x/services/storage_service.dart';
@@ -34,6 +36,18 @@ class TvViewModel extends CoreViewModel {
   String _query = '';
   String get query => _query;
 
+  /// The query as the filter compares it, folded once per search rather than
+  /// once per channel.
+  String _normalizedQuery = '';
+
+  /// Holds a query back until the typing pauses. Every keystroke would
+  /// otherwise run the whole playlist through the filter and rebuild the
+  /// grid, on a television whose on-screen keyboard is already slow.
+  Timer? _searchDebounce;
+
+  /// How long the typing has to pause before the grid follows it.
+  static const searchDebounce = Duration(milliseconds: 150);
+
   bool _isLoading = true;
   bool get isLoading => _isLoading;
 
@@ -63,6 +77,12 @@ class TvViewModel extends CoreViewModel {
     load();
   }
 
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> load({bool forceRefresh = false}) async {
     if (forceRefresh) {
       _isRefreshing = true;
@@ -76,7 +96,8 @@ class TvViewModel extends CoreViewModel {
     // trip away and the copy on disk is already here. It goes up first, so
     // that opening the app shows television rather than a spinner — and on a
     // line that is down, shows it at all.
-    if (_isLoading) _showStoredChannels();
+    if (_isLoading) await _showStoredChannels();
+    if (isDispose) return;
 
     try {
       await _loadCatalog();
@@ -106,8 +127,18 @@ class TvViewModel extends CoreViewModel {
 
   /// Puts the last list that reached the app on screen, with the fetch that
   /// will replace it still out — the app bar's spinner says as much.
-  void _showStoredChannels() {
-    final stored = tvChannelService.storedChannels(_country.playlistCode);
+  ///
+  /// Read for the country stored from last time, not for [_country]: the
+  /// catalogue that turns the stored code into a country has not been read
+  /// yet, and until it is [_country] is Vietnam whatever the viewer picked.
+  Future<void> _showStoredChannels() async {
+    final code = _countries.isEmpty
+        ? (storageService.getTvCountry() ?? _country.code)
+        : _country.code;
+    final stored = await tvChannelService.storedChannels(code);
+    if (isDispose) return;
+    // Something else put a list up in the meantime.
+    if (_channels.isNotEmpty) return;
     if (stored == null || stored.isEmpty) return;
     _channels = stored;
     _groups = _collectGroups(stored);
@@ -117,11 +148,37 @@ class TvViewModel extends CoreViewModel {
     notifyListenersSafe();
   }
 
+  /// Fetches the list again, whenever it was last fetched — what the viewer
+  /// asks for by pulling the grid down or tapping the tab they are on.
   Future<void> onRefresh() => load(forceRefresh: true);
 
+  /// Fetches the list again unless it is still fresh — what switching into
+  /// the tab asks for.
+  ///
+  /// Every switch refreshes the page it lands on, but a list read a minute
+  /// ago is the list as it stands, and fetching, reading and storing a whole
+  /// country's playlist again for it is work with nothing to show for it.
+  Future<void> refreshIfStale() async {
+    if (_isLoading || _isRefreshing) return;
+    if (tvChannelService.isFresh(_country.playlistCode)) return;
+    await onRefresh();
+  }
+
   void search(String query) {
+    _searchDebounce?.cancel();
     if (_query == query) return;
+    // Emptying the box is not typing: the whole list comes back at once.
+    if (query.isEmpty) {
+      _applySearch(query);
+      return;
+    }
+    _searchDebounce = Timer(searchDebounce, () => _applySearch(query));
+  }
+
+  void _applySearch(String query) {
+    if (isDispose || _query == query) return;
     _query = query;
+    _normalizedQuery = TvChannel.normalizeName(query);
     _applyFilters();
     notifyListenersSafe();
   }
@@ -173,7 +230,7 @@ class TvViewModel extends CoreViewModel {
         .where(
           (channel) =>
               (group == null || channel.groups.contains(group)) &&
-              channel.matches(_query),
+              channel.matchesNormalized(_normalizedQuery),
         )
         .toList();
   }

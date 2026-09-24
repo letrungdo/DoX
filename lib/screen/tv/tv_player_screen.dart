@@ -148,6 +148,32 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   /// taken as finished. The pause every television keypad has.
   static const _typedNumberTimeout = Duration(milliseconds: 1500);
 
+  /// How long the channel buttons have to rest before the channel they
+  /// landed on is opened.
+  ///
+  /// Pressing CH+ five times is a walk past four channels to the fifth, and
+  /// opening a stream for each of the four is four players started and torn
+  /// down on a television that has one decoder to spare. The banner follows
+  /// every press at once; only the picture waits.
+  static const _zapDebounce = Duration(milliseconds: 300);
+
+  /// How long a mirror has to come up before the next one is tried.
+  ///
+  /// A dead link rarely fails outright: the manifest never arrives, and the
+  /// player would wait on it for as long as its own network stack does.
+  static const _openTimeout = Duration(seconds: 8);
+
+  /// Bumped by every attempt to open a stream, so an attempt can tell once
+  /// it wakes up whether a newer one has taken its place — a channel changed
+  /// or a mirror given up on while it was still waiting.
+  int _openGeneration = 0;
+
+  /// The pending open of a channel the viewer is still zapping past.
+  Timer? _zapTimer;
+
+  /// Gives up on a mirror that has not come up within [_openTimeout].
+  Timer? _openTimeoutTimer;
+
   @override
   void initState() {
     super.initState();
@@ -161,6 +187,8 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _hideControlsTimer?.cancel();
     _channelNameTimer?.cancel();
     _typedNumberTimer?.cancel();
+    _zapTimer?.cancel();
+    _openTimeoutTimer?.cancel();
     unawaited(_setImmersive(false));
     // Never left behind: the page can be popped from anywhere — Back, the
     // control bar, the system gesture — and a lock still held is a television
@@ -215,6 +243,11 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   }
 
   Future<void> _open() async {
+    final generation = ++_openGeneration;
+    // Whether this attempt has been overtaken while it waited: the page is
+    // gone, or a newer attempt has started for another channel or mirror.
+    bool isStale() => !mounted || generation != _openGeneration;
+
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -233,9 +266,10 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     );
 
     try {
-      await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
+      await _initialize(controller);
+      if (isStale()) {
+        // Not awaited, for the same reason as on failure below.
+        unawaited(controller.dispose());
         return;
       }
 
@@ -274,9 +308,9 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
         ..setLooping(false);
       await controller.play();
 
-      if (!mounted) {
+      if (isStale()) {
         controller.removeListener(listener);
-        await controller.dispose();
+        unawaited(controller.dispose());
         return;
       }
 
@@ -297,9 +331,38 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       // disposing — it waits on the very creation that failed — and the
       // channel would sit on the spinner for good waiting with it.
       unawaited(controller.dispose());
-      if (!mounted) return;
+      // Only the attempt still on screen moves on to the next mirror. One
+      // that was overtaken failed for a channel the viewer has left, and
+      // acting on it would skip a mirror of the one they are on now.
+      if (isStale()) return;
       await _onSourceFailed();
     }
+  }
+
+  /// [controller]'s `initialize`, given up on after [_openTimeout].
+  ///
+  /// A timer of the page's own rather than `Future.timeout`, so that leaving
+  /// the page takes the countdown with it.
+  Future<void> _initialize(VideoPlayerController controller) {
+    final result = Completer<void>();
+    _openTimeoutTimer?.cancel();
+    final timer = _openTimeoutTimer = Timer(_openTimeout, () {
+      if (result.isCompleted) return;
+      result.completeError(
+        TimeoutException('The stream did not come up', _openTimeout),
+      );
+    });
+    controller.initialize().then(
+      (_) {
+        if (!result.isCompleted) result.complete();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!result.isCompleted) result.completeError(error, stackTrace);
+      },
+    );
+    // Its own timer only: by the time a stale attempt finishes, the field
+    // holds the countdown of the attempt that replaced it.
+    return result.future.whenComplete(timer.cancel);
   }
 
   /// Moves to the channel's next mirror, or gives up when there is none.
@@ -364,7 +427,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
       setState(() => _showChannelName = false);
     });
 
-    await _replaceController();
+    await _replaceController(debounce: true);
   }
 
   /// Opens the picture on a channel picked out of the list.
@@ -424,7 +487,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   }
 
   /// Drops the controller on screen so another channel can take its place.
-  Future<void> _replaceController() async {
+  ///
+  /// With [debounce] the new one is only opened once the viewer has stopped
+  /// changing channel for [_zapDebounce]; the old picture goes at once
+  /// either way, along with any attempt still waiting to open one.
+  Future<void> _replaceController({bool debounce = false}) async {
+    _zapTimer?.cancel();
+    _openTimeoutTimer?.cancel();
+    // Whatever is still on its way up belongs to what is being left.
+    _openGeneration++;
     final controller = _controller;
     final listener = _listener;
     if (controller != null && listener != null) {
@@ -434,8 +505,16 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     setState(() {
       _controller = null;
       _listener = null;
+      _isLoading = true;
+      _hasError = false;
     });
-    await _open();
+    if (!debounce) {
+      await _open();
+      return;
+    }
+    _zapTimer = Timer(_zapDebounce, () {
+      if (mounted) unawaited(_open());
+    });
   }
 
   /// Stops the picture on a frame, or picks it up again.
@@ -806,7 +885,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                       _buildTypedNumber()
                     else if (_showChannelName && !_showChannelList)
                       _buildChannelName(),
-                    if (_showChannelList) _buildChannelList(l10n),
+                    if (_showChannelList) _buildChannelList(),
                   ],
                 ),
               ),
@@ -906,99 +985,34 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     );
   }
 
-  /// The channel grid, over the picture that keeps playing behind it.
+  /// The open grid, kept between builds of the page.
   ///
-  /// The whole screen rather than a strip down the side: the viewer has
-  /// asked to choose, and the cards they choose from are the ones they know
-  /// from the page — logo, name and the number the keypad goes by. The
-  /// picture keeps playing underneath, which is what the surface is left
-  /// short of opaque for.
-  Widget _buildChannelList(AppLocalizations l10n) {
-    return Positioned.fill(
-      child: FocusScope(
-        node: _channelListScope,
-        child: Shortcuts(
-          shortcuts: const <ShortcutActivator, Intent>{
-            SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
-          },
-          child: Actions(
-            actions: {
-              DismissIntent: CallbackAction<DismissIntent>(
-                onInvoke: (_) {
-                  _toggleChannelList();
-                  return null;
-                },
-              ),
-            },
-            // Dimmed rather than hidden: the programme keeps running under
-            // the grid, but a white logo on a bright frame is a card that
-            // cannot be read at all — so the picture is taken down far
-            // enough for the cards to carry, and no further.
-            child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.7),
-              child: SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final width = constraints.maxWidth - Dimens.pagePadding * 2;
-                    // The same arithmetic `SliverGridDelegateWithMaxCross
-                    // AxisExtent` does on the page, spelled out because the
-                    // scroll to the channel playing needs the answer too.
-                    final columns =
-                        (width /
-                                (Dimens.tvChannelTileMaxWidth +
-                                    Dimens.tvChannelTileSpacing))
-                            .ceil()
-                            .clamp(1, widget.playlist.length);
-                    final tileWidth =
-                        (width - Dimens.tvChannelTileSpacing * (columns - 1)) /
-                        columns;
-                    _gridColumns = columns;
-                    _gridRowStride =
-                        tileWidth / Dimens.tvChannelOverlayTileAspect +
-                        Dimens.tvChannelTileSpacing;
+  /// The page rebuilds for a great deal the grid does not care about — the
+  /// controls fading, a digit typed, the banner timing out — and every one of
+  /// those would otherwise rebuild every card on screen, logo and all. Handed
+  /// back the same widget, the framework skips it; only a change of channel
+  /// builds a new one.
+  _ChannelListOverlay? _channelList;
 
-                    return GridView.builder(
-                      controller: _channelListController,
-                      padding: const EdgeInsets.all(Dimens.pagePadding),
-                      // One row beyond the screen rather than the several
-                      // the default reaches for: every row built here is a
-                      // row of logos to decode, and they are being decoded
-                      // over a running programme on hardware that has
-                      // little to spare.
-                      scrollCacheExtent: ScrollCacheExtent.pixels(
-                        _gridRowStride,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        childAspectRatio: Dimens.tvChannelOverlayTileAspect,
-                        crossAxisSpacing: Dimens.tvChannelTileSpacing,
-                        mainAxisSpacing: Dimens.tvChannelTileSpacing,
-                      ),
-                      itemCount: widget.playlist.length,
-                      itemBuilder: (context, index) {
-                        final channel = widget.playlist[index];
-                        return _ChannelTile(
-                          key: ValueKey(channel.url),
-                          channel: channel,
-                          // The place in the list, which is the closest
-                          // thing these playlists have to a channel number
-                          // — and the number the keypad already dials.
-                          number: index + 1,
-                          isPlaying: index == _index,
-                          focusNode: index == _index
-                              ? _currentChannelFocusNode
-                              : null,
-                          onTap: () => _playFromList(index),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+  Widget _buildChannelList() {
+    final cached = _channelList;
+    if (cached != null &&
+        cached.playingIndex == _index &&
+        identical(cached.playlist, widget.playlist)) {
+      return cached;
+    }
+    return _channelList = _ChannelListOverlay(
+      playlist: widget.playlist,
+      playingIndex: _index,
+      scope: _channelListScope,
+      controller: _channelListController,
+      playingFocusNode: _currentChannelFocusNode,
+      onDismiss: _toggleChannelList,
+      onPlay: _playFromList,
+      onLayout: (columns, rowStride) {
+        _gridColumns = columns;
+        _gridRowStride = rowStride;
+      },
     );
   }
 
@@ -1094,6 +1108,136 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The channel grid, over the picture that keeps playing behind it.
+///
+/// The whole screen rather than a strip down the side: the viewer has
+/// asked to choose, and the cards they choose from are the ones they know
+/// from the page — logo, name and the number the keypad goes by. The
+/// picture keeps playing underneath, which is what the surface is left
+/// short of opaque for.
+class _ChannelListOverlay extends StatelessWidget {
+  const _ChannelListOverlay({
+    required this.playlist,
+    required this.playingIndex,
+    required this.scope,
+    required this.controller,
+    required this.playingFocusNode,
+    required this.onDismiss,
+    required this.onPlay,
+    required this.onLayout,
+  });
+
+  final List<TvChannel> playlist;
+
+  /// Where the channel playing sits in [playlist].
+  final int playingIndex;
+
+  /// Its own scope, so the D-pad stays inside the grid while it is open
+  /// instead of walking off onto the picture behind.
+  final FocusScopeNode scope;
+
+  final ScrollController controller;
+
+  /// Put on the card of the channel playing, where the remote goes first.
+  final FocusNode playingFocusNode;
+
+  final VoidCallback onDismiss;
+  final ValueChanged<int> onPlay;
+
+  /// Told the shape the grid was laid out at — how many cards to a row, and
+  /// how far apart the rows are — for the page's scroll to the channel
+  /// playing, which runs a frame later with nothing to measure.
+  final void Function(int columns, double rowStride) onLayout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: FocusScope(
+        node: scope,
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+          },
+          child: Actions(
+            actions: {
+              DismissIntent: CallbackAction<DismissIntent>(
+                onInvoke: (_) {
+                  onDismiss();
+                  return null;
+                },
+              ),
+            },
+            // Dimmed rather than hidden: the programme keeps running under
+            // the grid, but a white logo on a bright frame is a card that
+            // cannot be read at all — so the picture is taken down far
+            // enough for the cards to carry, and no further.
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: 0.7),
+              child: SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth - Dimens.pagePadding * 2;
+                    // The same arithmetic `SliverGridDelegateWithMaxCross
+                    // AxisExtent` does on the page, spelled out because the
+                    // scroll to the channel playing needs the answer too.
+                    final columns =
+                        (width /
+                                (Dimens.tvChannelTileMaxWidth +
+                                    Dimens.tvChannelTileSpacing))
+                            .ceil()
+                            .clamp(1, playlist.length);
+                    final tileWidth =
+                        (width - Dimens.tvChannelTileSpacing * (columns - 1)) /
+                        columns;
+                    final rowStride =
+                        tileWidth / Dimens.tvChannelOverlayTileAspect +
+                        Dimens.tvChannelTileSpacing;
+                    onLayout(columns, rowStride);
+
+                    return GridView.builder(
+                      controller: controller,
+                      padding: const EdgeInsets.all(Dimens.pagePadding),
+                      // One row beyond the screen rather than the several
+                      // the default reaches for: every row built here is a
+                      // row of logos to decode, and they are being decoded
+                      // over a running programme on hardware that has
+                      // little to spare.
+                      scrollCacheExtent: ScrollCacheExtent.pixels(rowStride),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        childAspectRatio: Dimens.tvChannelOverlayTileAspect,
+                        crossAxisSpacing: Dimens.tvChannelTileSpacing,
+                        mainAxisSpacing: Dimens.tvChannelTileSpacing,
+                      ),
+                      itemCount: playlist.length,
+                      itemBuilder: (context, index) {
+                        final channel = playlist[index];
+                        return _ChannelTile(
+                          key: ValueKey(channel.url),
+                          channel: channel,
+                          // The place in the list, which is the closest
+                          // thing these playlists have to a channel number
+                          // — and the number the keypad already dials.
+                          number: index + 1,
+                          isPlaying: index == playingIndex,
+                          focusNode: index == playingIndex
+                              ? playingFocusNode
+                              : null,
+                          onTap: () => onPlay(index),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

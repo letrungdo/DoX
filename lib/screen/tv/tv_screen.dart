@@ -88,8 +88,50 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   @override
   ScrollController get tabScrollController => _scrollController;
 
+  /// The tab switcher this page is a tab of, watched so that a switch into
+  /// the tab can be told from a tap on the tab it is already on. Null for the
+  /// same page pushed from the menu.
+  RoutingController? _tabsRouter;
+
+  /// Whether this page was the tab on screen the last time the switcher
+  /// changed.
+  bool _isActiveTab = false;
+
+  /// Set by a switch into this tab, and spent by the refresh that follows it.
+  bool _hasJustSwitchedIn = false;
+
+  /// A switch into the tab only refreshes a list that is no longer fresh;
+  /// a tap on the tab the viewer is already on is them asking, and always
+  /// fetches.
   @override
-  Future<void> onTabRefresh() => vm.onRefresh();
+  Future<void> onTabRefresh() {
+    if (_hasJustSwitchedIn) {
+      _hasJustSwitchedIn = false;
+      return vm.refreshIfStale();
+    }
+    return vm.onRefresh();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _watchTabs();
+  }
+
+  void _watchTabs() {
+    if (!isBottomTab) return;
+    final router = RouteData.of(context).router;
+    if (identical(router, _tabsRouter)) return;
+    _tabsRouter?.removeListener(_onTabsChanged);
+    _tabsRouter = router..addListener(_onTabsChanged);
+    _isActiveTab = router.current.name == TvRoute.name;
+  }
+
+  void _onTabsChanged() {
+    final isActive = _tabsRouter?.current.name == TvRoute.name;
+    if (isActive && !_isActiveTab) _hasJustSwitchedIn = true;
+    _isActiveTab = isActive;
+  }
 
   @override
   void onResume() {
@@ -119,6 +161,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
 
   @override
   void dispose() {
+    _tabsRouter?.removeListener(_onTabsChanged);
     for (final node in _channelFocusNodes.values) {
       node.dispose();
     }

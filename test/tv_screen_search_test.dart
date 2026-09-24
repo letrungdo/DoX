@@ -36,6 +36,8 @@ void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
     await storageService.init();
+    // In the preferences: file I/O never finishes on a widget test's clock.
+    storageService.debugSetTvPlaylistDirectory(null);
   });
 
   setUp(() async {

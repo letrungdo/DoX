@@ -2680,4 +2680,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get musicVideoExitFullscreen => 'Thoát toàn màn hình';
+
+  @override
+  String get musicSearchEmpty => 'Nhập từ khóa để tìm kiếm nhạc...';
+
+  @override
+  String get musicLikesEmpty => 'Danh sách trống (Bài hát yêu thích)';
+
+  @override
+  String get musicDashboardIdle =>
+      'Chọn bài hát để thưởng thức âm nhạc chất lượng cao';
+
+  @override
+  String get musicShelfTrending => 'Trending';
 }

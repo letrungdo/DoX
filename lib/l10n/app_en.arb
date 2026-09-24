@@ -1506,5 +1506,9 @@
   "musicVideoOfficialAudio": "Original sound from the video",
   "musicVideoFullscreen": "Full screen",
   "musicVideoBackToList": "Track list",
-  "musicVideoExitFullscreen": "Exit full screen"
+  "musicVideoExitFullscreen": "Exit full screen",
+  "musicSearchEmpty": "Type a keyword to search for music...",
+  "musicLikesEmpty": "Your liked tracks list is empty",
+  "musicDashboardIdle": "Pick a track to enjoy high-quality music",
+  "musicShelfTrending": "Trending"
 }

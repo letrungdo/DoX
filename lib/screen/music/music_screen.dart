@@ -4,12 +4,15 @@ import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/router/app_router.gr.dart';
 import 'package:do_x/screen/core/screen_state.dart';
+import 'package:do_x/screen/core/tab_reselect.mixin.dart';
 import 'package:do_x/screen/music/music_challenge_sheet.dart';
 import 'package:do_x/screen/music/music_track_card.dart';
 import 'package:do_x/screen/music/music_fullscreen_video_player.dart';
+import 'package:do_x/screen/music/music_seek_bar.dart';
 import 'package:do_x/screen/music/music_video_view.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
@@ -43,7 +46,7 @@ class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
 }
 
 class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, TabReselect {
   /// Shared by every tab's list; only one of them is on screen at a time.
   final _scrollController = ScrollController();
 
@@ -115,6 +118,20 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   final _thumbnailKey = GlobalKey();
   final _videoLayerKey = GlobalKey();
 
+  /// A television's one picture, which moves between the dashboard and the
+  /// full screen instead of being made again: it is a platform view, and a
+  /// new one is a new native view for the player to find its surface in.
+  final _tvVideoKey = GlobalKey();
+
+  /// Where the page's route is looked up, to tell whether it is the one on
+  /// screen — see [_onNavigationChanged].
+  RouteData? _routeData;
+  Listenable? _navigationHistory;
+
+  /// The lists the focus nodes were last pruned against — see
+  /// [_pruneFocusNodes].
+  Object? _prunedFor;
+
   FocusNode _getNodeForTrack(String id) {
     return _trackFocusNodes.putIfAbsent(
       id,
@@ -129,6 +146,73 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     );
   }
 
+  /// Lets go of the nodes of rows no list has any more, once the frame that
+  /// dropped them is done — a node is only disposed of after its row has
+  /// left the tree. Every refresh of Discover brings new tracks, and the
+  /// nodes of the old ones were kept for as long as the page was.
+  void _pruneFocusNodes(Object lists) {
+    // Compared field by field, and the lists by identity: a list the view
+    // model changes is a new one.
+    if (lists == _prunedFor) return;
+    _prunedFor = lists;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final viewModel = vm;
+      final live = <String>{
+        for (final shelf in viewModel.shelves)
+          for (final track in shelf.tracks) track.id,
+        for (final track in viewModel.searchResults) track.id,
+        for (final track in viewModel.likedTracks) track.id,
+      };
+      for (final nodes in [_trackFocusNodes, _likeFocusNodes]) {
+        nodes.removeWhere((id, node) {
+          if (live.contains(id) || node.hasFocus) return false;
+          node.dispose();
+          return true;
+        });
+      }
+    });
+  }
+
+  @override
+  String get tabRouteName => MusicRoute.name;
+
+  @override
+  ScrollController get tabScrollController => _scrollController;
+
+  @override
+  Future<void> onTabRefresh() => vm.onRefresh();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Looked up rather than required: a widget test builds the page without
+    // a router, and the page is then simply always on screen.
+    final routeData = context
+        .findAncestorWidgetOfExactType<RouteDataScope>()
+        ?.routeData;
+    final history = routeData?.router.navigationHistory;
+    if (identical(routeData, _routeData) &&
+        identical(history, _navigationHistory)) {
+      return;
+    }
+    _navigationHistory?.removeListener(_onNavigationChanged);
+    _routeData = routeData;
+    _navigationHistory = history;
+    history?.addListener(_onNavigationChanged);
+    _onNavigationChanged();
+  }
+
+  /// Tells the view model whether the page is on screen. Its tab is kept
+  /// alive once visited, so another tab, or a page pushed over it, leaves it
+  /// playing out of sight — where its muted video had gone on streaming.
+  void _onNavigationChanged() {
+    final routeData = _routeData;
+    final history = _navigationHistory;
+    if (!mounted || routeData == null || history == null) return;
+    vm.setPageVisible(routeData.router.isRouteDataActive(routeData));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +224,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
 
   @override
   void dispose() {
+    _navigationHistory?.removeListener(_onNavigationChanged);
     for (final node in _trackFocusNodes.values) {
       node.dispose();
     }
@@ -169,13 +254,31 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<MusicViewModel>();
+    final viewModel = context.read<MusicViewModel>();
     final isTv = deviceType.isTv;
     final l10n = context.l10n;
 
     final pageTitle = l10n.tvCategoryMusic;
 
-    final currentId = viewModel.currentTrack?.id;
+    // Only what decides between the page and the full-screen video is
+    // listened for here. Every other part of the page listens for what it
+    // shows itself, so a track coming up — six or eight notifications — no
+    // longer rebuilds every row of the list with it.
+    final track = context.select((MusicViewModel vm) => vm.currentTrack);
+    final isVideoEnabled = context.select(
+      (MusicViewModel vm) => vm.isVideoEnabled,
+    );
+    final videoController = context.select(
+      (MusicViewModel vm) => vm.videoController,
+    );
+    final isVideoPending = context.select(
+      (MusicViewModel vm) => vm.isVideoPending,
+    );
+    final hasNoSound = context.select(
+      (MusicViewModel vm) => vm.audioController == null,
+    );
+
+    final currentId = track?.id;
     if (currentId != _followedTrackId) {
       _followedTrackId = currentId;
       if (currentId != null) {
@@ -189,18 +292,15 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     // picture takes the whole screen, with the controls over it. So it does
     // on a phone turned on its side, the way the film player does, and on an
     // upright one whose video was tapped.
-    final track = viewModel.currentTrack;
     final isLandscape =
         deviceType.canDriveOrientation && _onPhoneTurned(context);
     // A tap on the video counts whichever way the phone is turned — the
     // video backed out of on a sideways phone is still one tap away.
     final opensByItself = (isTv || isLandscape) && track?.id != _leftVideoFor;
     final hasPicture =
-        viewModel.isVideoEnabled &&
-        (viewModel.videoController != null ||
-            (_showingFullscreenVideo &&
-                (viewModel.isVideoPending ||
-                    viewModel.audioController == null)));
+        isVideoEnabled &&
+        (videoController != null ||
+            (_showingFullscreenVideo && (isVideoPending || hasNoSound)));
     // Asked for on a phone, full screen holds with the video off or none to
     // be had: the artwork takes the picture's place. Opened by itself, it is
     // there for the video and goes with it.
@@ -211,13 +311,6 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     // there shows the artwork instead of closing it. A turn of the phone
     // still starts afresh — see [_onPhoneTurned].
     if (showFullscreen && !isTv) _phoneFullscreen = true;
-    if (showFullscreen && isTv) {
-      return MusicFullscreenVideoPlayer(
-        onExit: () => _leaveFullscreen(track.id),
-        onToggleLike: () => _onToggleLike(track),
-        seekable: _seekable,
-      );
-    }
     // Opened or closed by anything but a drag, a tap or back — the phone
     // turned, the next track had no video: the picture is where it belongs
     // at once.
@@ -241,24 +334,38 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         ? Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildTvSidebarNavigation(viewModel),
+              Selector<MusicViewModel, MusicTab>(
+                selector: (_, vm) => vm.currentTab,
+                builder: (_, _, _) => _buildTvSidebarNavigation(viewModel),
+              ),
               Container(
                 width: 1,
                 color: context.theme.dividerColor.withValues(alpha: 0.1),
               ),
-              Expanded(flex: 3, child: _buildMainBodyArea(viewModel, isTv)),
+              Expanded(flex: 3, child: _buildMainBodyArea(isTv)),
               Container(
                 width: 1,
                 color: context.theme.dividerColor.withValues(alpha: 0.1),
               ),
-              Expanded(flex: 2, child: _buildRightPlayerDashboard(viewModel)),
+              Expanded(
+                flex: 2,
+                child: Consumer<MusicViewModel>(
+                  builder: (_, vm, _) =>
+                      _buildRightPlayerDashboard(vm, showFullscreen),
+                ),
+              ),
             ],
           )
         : Column(
             children: [
-              _buildMobileTabs(viewModel),
-              Expanded(child: _buildMainBodyArea(viewModel, isTv)),
-              _buildBottomMobilePlayer(viewModel),
+              Selector<MusicViewModel, MusicTab>(
+                selector: (_, vm) => vm.currentTab,
+                builder: (_, _, _) => _buildMobileTabs(viewModel),
+              ),
+              Expanded(child: _buildMainBodyArea(isTv)),
+              Consumer<MusicViewModel>(
+                builder: (_, vm, _) => _buildBottomMobilePlayer(vm),
+              ),
             ],
           );
 
@@ -271,22 +378,73 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       bodyHorizontal: !isTv,
       appBar: DoAppBar(
         title: pageTitle,
-        actions: [_buildAccountAction(viewModel)],
+        actions: [
+          Selector<MusicViewModel, (bool, String)>(
+            selector: (_, vm) => (vm.isSignedIn, vm.accountName),
+            builder: (_, _, _) => _buildAccountAction(viewModel),
+          ),
+        ],
         titleSuffix: const AppBarSyncIcon<MusicViewModel>(selector: _isLoading),
       ),
       body: mainContent,
     );
-    if (isTv) return page;
+    if (isTv) {
+      // The page stays under the full-screen video, out of sight, rather
+      // than being thrown away and built again each way: the list keeps its
+      // place, and the picture moves between the two — see [_tvVideoKey].
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          _stow(page, stowed: showFullscreen),
+          if (showFullscreen)
+            MusicFullscreenVideoPlayer(
+              onExit: () => _leaveFullscreen(track.id),
+              onToggleLike: () => _onToggleLike(track),
+              seekable: _seekable,
+              videoKey: _tvVideoKey,
+            ),
+        ],
+      );
+    }
     // On a phone the page stays under the full-screen video, so the picture
     // can shrink back into its place in the player.
     return Stack(
       fit: StackFit.expand,
       children: [
-        page,
+        AnimatedBuilder(
+          animation: _videoExpansion,
+          child: page,
+          // Put away only once the video covers it all. A drag starts from
+          // the page as it was, so it is back the moment one begins.
+          builder: (context, page) => _stow(
+            page!,
+            stowed:
+                showFullscreen && _videoExpansion.value == 1 && !_draggingVideo,
+          ),
+        ),
         Positioned.fill(
-          child: _buildVideoLayer(viewModel, showFullscreen: showFullscreen),
+          child: Consumer<MusicViewModel>(
+            builder: (_, vm, _) =>
+                _buildVideoLayer(vm, showFullscreen: showFullscreen),
+          ),
         ),
       ],
+    );
+  }
+
+  /// The page under an opaque full-screen video: still laid out — the small
+  /// picture's place in the player is read off it on the way back down —
+  /// but not painted, its animations stopped, and the remote kept off it.
+  ///
+  /// The same widgets whether or not it is [stowed], so putting it away
+  /// and bringing it back loses nothing.
+  Widget _stow(Widget page, {required bool stowed}) {
+    return Offstage(
+      offstage: stowed,
+      child: TickerMode(
+        enabled: !stowed,
+        child: ExcludeFocus(excluding: stowed, child: page),
+      ),
     );
   }
 
@@ -323,12 +481,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               ? viewModel.videoController
               : null;
           return LayoutBuilder(
-            builder: (context, constraints) => _buildPictureInFlight(
-              video,
-              track.artworkUrl,
-              t,
-              constraints.biggest,
-            ),
+            builder: (context, constraints) =>
+                _buildPictureInFlight(video, track, t, constraints.biggest),
           );
         },
       ),
@@ -340,7 +494,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// which lands where the full-screen player draws it.
   Widget _buildPictureInFlight(
     VideoPlayerController? video,
-    String artworkUrl,
+    MusicTrack track,
     double t,
     Size screen,
   ) {
@@ -387,7 +541,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             ),
             child: video != null
                 ? MusicVideoFill(controller: video)
-                : MusicArtwork(url: artworkUrl),
+                : MusicArtwork(track: track),
           ),
         ),
       ],
@@ -544,8 +698,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     if (!mounted || !_scrollController.hasClients) return;
     if (_scrollController.positions.length != 1) return;
     final offset = _trackOffset(vm, id);
-    // Not in the list on screen: the queue fell back to Discover while
-    // another tab is open.
+    // Not in the list on screen: the track came from another tab's list,
+    // or from one refreshed since.
     if (offset == null) return;
     final position = _scrollController.position;
     final target =
@@ -769,25 +923,44 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     );
   }
 
-  Widget _buildMainBodyArea(MusicViewModel viewModel, bool isTv) {
-    if (viewModel.isLoading &&
-        (viewModel.currentTab == MusicTab.home && viewModel.shelves.isEmpty)) {
-      return const Center(child: Loading());
-    }
+  /// The list, rebuilt only when what it lists changes: which row is
+  /// playing and which are liked are for each row to listen for — see
+  /// [_TrackRow].
+  Widget _buildMainBodyArea(bool isTv) {
+    return Selector<
+      MusicViewModel,
+      (bool, MusicTab, List<MusicShelf>, List<MusicTrack>, List<MusicTrack>)
+    >(
+      selector: (_, vm) => (
+        vm.isLoading,
+        vm.currentTab,
+        vm.shelves,
+        vm.searchResults,
+        vm.likedTracks,
+      ),
+      builder: (context, lists, _) {
+        final (isLoading, tab, shelves, searchResults, likedTracks) = lists;
+        _pruneFocusNodes((shelves, searchResults, likedTracks));
+        final viewModel = context.read<MusicViewModel>();
+        if (isLoading && tab == MusicTab.home && shelves.isEmpty) {
+          return const Center(child: Loading());
+        }
 
-    switch (viewModel.currentTab) {
-      case MusicTab.home:
-        return _buildDiscoverHome(viewModel, isTv);
-      case MusicTab.search:
-        return _buildSearchTab(viewModel);
-      case MusicTab.likes:
-        return _buildTrackListSection(
-          MusicTab.likes,
-          viewModel.likedTracks,
-          'Bài hát yêu thích',
-          Icons.favorite_border_rounded,
-        );
-    }
+        switch (tab) {
+          case MusicTab.home:
+            return _buildDiscoverHome(viewModel, isTv);
+          case MusicTab.search:
+            return _buildSearchTab(viewModel);
+          case MusicTab.likes:
+            return _buildTrackListSection(
+              MusicTab.likes,
+              viewModel.likedTracks,
+              context.l10n.musicLikesEmpty,
+              Icons.favorite_border_rounded,
+            );
+        }
+      },
+    );
   }
 
   Widget _buildDiscoverHome(MusicViewModel viewModel, bool isTv) {
@@ -823,29 +996,30 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       children: [
         Padding(
           padding: const EdgeInsets.all(12.0),
-          child: TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            textInputAction: TextInputAction.search,
-            // A tap anywhere else puts the keyboard away, as on the TV page.
-            onTapOutside: (_) => FocusScope.of(context).unfocus(),
-            onChanged: (value) {
-              viewModel.searchTracks(value);
-              setState(() {});
-            },
-            decoration: InputDecoration(
-              hintText: context.l10n.musicSearchHint,
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () {
-                        _searchController.clear();
-                        viewModel.searchTracks('');
-                        setState(() {});
-                      },
-                    ),
+          // Only the field listens to the text, for its clear button: the
+          // whole page was being rebuilt on every key to show or hide it.
+          child: ValueListenableBuilder(
+            valueListenable: _searchController,
+            builder: (context, value, _) => TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              textInputAction: TextInputAction.search,
+              // A tap anywhere else puts the keyboard away, as on the TV page.
+              onTapOutside: (_) => FocusScope.of(context).unfocus(),
+              onChanged: viewModel.searchTracks,
+              decoration: InputDecoration(
+                hintText: context.l10n.musicSearchHint,
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: value.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _searchController.clear();
+                          viewModel.searchTracks('');
+                        },
+                      ),
+              ),
             ),
           ),
         ),
@@ -863,7 +1037,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                         size: 48,
                         color: context.theme.disabledColor,
                       ),
-                      const Text('Nhập từ khóa để tìm kiếm nhạc...'),
+                      Text(context.l10n.musicSearchEmpty),
                     ],
                   ),
                 )
@@ -888,7 +1062,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   Widget _buildTrackListSection(
     MusicTab tab,
     List<MusicTrack> tracks,
-    String emptyTitle,
+    String emptyMessage,
     IconData emptyIcon,
   ) {
     if (tracks.isEmpty) {
@@ -898,7 +1072,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
           spacing: 8,
           children: [
             Icon(emptyIcon, size: 48, color: context.theme.disabledColor),
-            Text('Danh sách trống ($emptyTitle)'),
+            Text(emptyMessage),
           ],
         ),
       );
@@ -935,18 +1109,15 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final track = trackList[index];
-          final vModel = context.read<MusicViewModel>();
-          return MusicTrackCard(
+          return _TrackRow(
             key: ValueKey(track.id),
             track: track,
-            isCurrent: vModel.currentTrack?.id == track.id,
-            isLiked: vModel.isLiked(track.id),
             focusNode: _getNodeForTrack(track.id),
             likeFocusNode: _getLikeNodeForTrack(track.id),
             onTap: () {
               // Chosen from the list, so the list stays where it is.
               _followedTrackId = track.id;
-              vModel.playTrack(track);
+              context.read<MusicViewModel>().playFromList(track);
             },
             onToggleLike: () => _onToggleLike(track),
           );
@@ -964,17 +1135,28 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// leaves up and down to move the focus, which is exactly the split a remote
   /// wants. Declared here rather than app-wide: the mode also makes every
   /// `InkWell` focusable, which is why `TvShell` does not turn it on.
+  ///
+  /// Read in a builder of its own: read with the page's context, the whole
+  /// page depended on every change of the media query, the keyboard's
+  /// every frame on its way up included.
   Widget _seekable(Widget slider) {
     if (!deviceType.isTv) return slider;
-    return MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(navigationMode: NavigationMode.directional),
-      child: slider,
+    return Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(navigationMode: NavigationMode.directional),
+        child: slider,
+      ),
     );
   }
 
-  Widget _buildRightPlayerDashboard(MusicViewModel viewModel) {
+  /// The player beside the list. [showFullscreen] leaves the picture to the
+  /// full-screen video, which takes it over — see [_tvVideoKey].
+  Widget _buildRightPlayerDashboard(
+    MusicViewModel viewModel,
+    bool showFullscreen,
+  ) {
     return SafeArea(
       top: false,
       left: false,
@@ -996,10 +1178,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                         alpha: 0.4,
                       ),
                     ),
-                    const Text(
-                      'Chọn bài hát để thưởng thức âm nhạc chất lượng cao',
+                    Text(
+                      context.l10n.musicDashboardIdle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 14),
                     ),
                   ],
                 ),
@@ -1008,13 +1190,20 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               Expanded(
                 child: Center(
                   child: viewModel.videoController != null
-                      ? MusicVideoView(
-                          controller: viewModel.videoController!,
-                          isOfficialAudio: viewModel.isAudioFromVideo,
-                          borderRadius: BorderRadius.circular(
-                            Dimens.radiusPanel,
-                          ),
-                        )
+                      ? showFullscreen
+                            // Up on the full screen; one picture is all a
+                            // platform view has.
+                            ? const SizedBox.shrink()
+                            : MusicVideoView(
+                                key: _tvVideoKey,
+                                controller: viewModel.videoController!,
+                                isOfficialAudio: viewModel.isAudioFromVideo,
+                                // Square: a rounded clip over a platform
+                                // view is paid for on every frame of the
+                                // video, and it also lets the picture move
+                                // to the full screen unchanged.
+                                borderRadius: BorderRadius.zero,
+                              )
                       : AspectRatio(
                           aspectRatio: 1,
                           child: Container(
@@ -1038,17 +1227,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                               ),
                               child:
                                   viewModel.currentTrack!.artworkUrl.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl:
-                                          viewModel.currentTrack!.artworkUrl,
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, _) =>
-                                          const Center(child: Loading()),
-                                      errorWidget: (_, _, _) => Icon(
-                                        Icons.music_note_rounded,
-                                        size: 64,
-                                        color: context.theme.disabledColor,
-                                      ),
+                                  ? _buildDashboardArtwork(
+                                      viewModel.currentTrack!,
                                     )
                                   : Icon(
                                       Icons.music_note_rounded,
@@ -1088,10 +1268,35 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     );
   }
 
+  /// The artwork filling the dashboard's square, fetched and decoded at the
+  /// size the square comes out at rather than the service's largest.
+  Widget _buildDashboardArtwork(MusicTrack track) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final pixels =
+            min(constraints.maxWidth, constraints.maxHeight) *
+            MediaQuery.devicePixelRatioOf(context);
+        return CachedNetworkImage(
+          imageUrl: track.artworkUrlFor(pixels),
+          memCacheWidth: pixels.isFinite ? pixels.round() : null,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => const Center(child: Loading()),
+          errorWidget: (_, _, _) => Icon(
+            Icons.music_note_rounded,
+            size: 64,
+            color: context.theme.disabledColor,
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
     final video = viewModel.isVideoEnabled ? viewModel.videoController : null;
+    final miniArtPixels =
+        Dimens.musicMiniVideoHeight * MediaQuery.devicePixelRatioOf(context);
     final player = NeuCard(
       margin: const EdgeInsets.all(12),
       child: Column(
@@ -1130,7 +1335,9 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                               ? const ColoredBox(color: Colors.black)
                               : viewModel.currentTrack!.artworkUrl.isNotEmpty
                               ? CachedNetworkImage(
-                                  imageUrl: viewModel.currentTrack!.artworkUrl,
+                                  imageUrl: viewModel.currentTrack!
+                                      .artworkUrlFor(miniArtPixels),
+                                  memCacheWidth: miniArtPixels.round(),
                                   fit: BoxFit.cover,
                                 )
                               : const Icon(Icons.music_note_rounded),
@@ -1221,22 +1428,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: ValueListenableBuilder(
-                valueListenable: viewModel.positionListenable,
-                builder: (context, position, _) => _seekable(
-                  Slider(
-                    value: position.inMilliseconds.toDouble().clamp(
-                      0.0,
-                      viewModel.duration.inMilliseconds.toDouble(),
-                    ),
-                    max: viewModel.duration.inMilliseconds.toDouble() == 0.0
-                        ? 1.0
-                        : viewModel.duration.inMilliseconds.toDouble(),
-                    onChanged: (val) {
-                      viewModel.seekTo(Duration(milliseconds: val.toInt()));
-                    },
-                  ),
-                ),
+              child: MusicSeekBar(
+                builder: (context, _, slider) => _seekable(slider),
               ),
             ),
           ),
@@ -1259,9 +1452,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
     return Column(
       children: [
-        ValueListenableBuilder(
-          valueListenable: viewModel.positionListenable,
-          builder: (context, position, _) => Column(
+        MusicSeekBar(
+          builder: (context, position, slider) => Column(
             children: [
               _seekable(
                 SliderTheme(
@@ -1274,18 +1466,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                       overlayRadius: 14,
                     ),
                   ),
-                  child: Slider(
-                    value: position.inMilliseconds.toDouble().clamp(
-                      0.0,
-                      viewModel.duration.inMilliseconds.toDouble(),
-                    ),
-                    max: viewModel.duration.inMilliseconds.toDouble() == 0.0
-                        ? 1.0
-                        : viewModel.duration.inMilliseconds.toDouble(),
-                    onChanged: (val) {
-                      viewModel.seekTo(Duration(milliseconds: val.toInt()));
-                    },
-                  ),
+                  child: slider,
                 ),
               ),
               Padding(
@@ -1390,6 +1571,44 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
           ],
         ),
       ],
+    );
+  }
+}
+
+/// One row of the list, listening for the two things about it that change
+/// while the list itself stays the same: whether it is the track playing,
+/// and whether it is liked. A track starting notifies the page six or eight
+/// times, and only the rows whose answer changed are rebuilt for it.
+class _TrackRow extends StatelessWidget {
+  const _TrackRow({
+    super.key,
+    required this.track,
+    required this.focusNode,
+    required this.likeFocusNode,
+    required this.onTap,
+    required this.onToggleLike,
+  });
+
+  final MusicTrack track;
+  final FocusNode focusNode;
+  final FocusNode likeFocusNode;
+  final VoidCallback onTap;
+  final VoidCallback onToggleLike;
+
+  @override
+  Widget build(BuildContext context) {
+    final (isCurrent, isLiked) = context.select(
+      (MusicViewModel vm) =>
+          (vm.currentTrack?.id == track.id, vm.isLiked(track.id)),
+    );
+    return MusicTrackCard(
+      track: track,
+      isCurrent: isCurrent,
+      isLiked: isLiked,
+      focusNode: focusNode,
+      likeFocusNode: likeFocusNode,
+      onTap: onTap,
+      onToggleLike: onToggleLike,
     );
   }
 }

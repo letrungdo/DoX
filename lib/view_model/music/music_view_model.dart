@@ -33,6 +33,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     MusicPlaybackSession? playback,
     Future<MusicVideo?> Function(MusicTrack track)? findVideo,
     Future<MusicVideo?> Function(MusicVideo video)? findHdVideo,
+    Future<List<MusicShelf>> Function()? discoverShelves,
     bool? videoEnabled,
     Duration hdPictureGrace = const Duration(seconds: 3),
   }) : _hdPictureGrace = hdPictureGrace,
@@ -40,6 +41,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
        _playback = playback ?? musicPlayback,
        _findVideo = findVideo ?? youtubeMusicService.findVideo,
        _findHdVideo = findHdVideo ?? youtubeMusicService.withHd,
+       _discoverShelves = discoverShelves ?? musicService.getDiscoverShelves,
        _isVideoEnabled = videoEnabled ?? storageService.getMusicVideoEnabled();
 
   /// Turns a track's transcoding link into one a player can open. Replaceable
@@ -56,6 +58,10 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Adds the HD streams to a video found by [_findVideo], which takes
   /// longer. Replaceable for the same reason.
   final Future<MusicVideo?> Function(MusicVideo video) _findHdVideo;
+
+  /// Fetches the Discover rows. Replaceable so a test can hand some over
+  /// without the network.
+  final Future<List<MusicShelf>> Function() _discoverShelves;
 
   /// How long a track's start waits to learn whether it has an official
   /// video, whose sound would be played instead — in HD if that is in by
@@ -104,10 +110,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   static const _videoInStepDrift = Duration(milliseconds: 60);
   static const _videoCatchUpSpeed = 0.08;
 
-  /// Heading for the one row built from a plain search, for an account the
-  /// service has no selections for.
-  static const _fallbackShelfTitle = 'Trending';
-
   List<MusicShelf> _shelves = [];
   List<MusicShelf> get shelves => _shelves;
 
@@ -122,6 +124,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   List<MusicTrack> _likedTracks = [];
   List<MusicTrack> get likedTracks => _likedTracks;
+
+  /// The likes tab has not been fetched for the account signed in now, so
+  /// opening it fetches it. Once it has, a heart tapped here keeps it up to
+  /// date by itself, and only a refresh asks the service again.
+  bool _likedTracksStale = true;
 
   MusicTab _currentTab = MusicTab.home;
   MusicTab get currentTab => _currentTab;
@@ -174,6 +181,20 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   DateTime _lastVideoResync = DateTime(0);
 
+  /// Whether the page is the one on screen. Its tab is kept alive once
+  /// visited, so it can be behind another tab, or covered by a page pushed
+  /// over it, with the music still playing.
+  bool _isPageVisible = true;
+
+  /// Tells the page's players whether anyone can see them. Only the muted
+  /// picture cares: out of sight it is paused, as it is with the app in the
+  /// background, while the sound plays on.
+  void setPageVisible(bool visible) {
+    if (_isPageVisible == visible) return;
+    _isPageVisible = visible;
+    _syncVideo();
+  }
+
   /// The rate the muted picture was last set to play at while it catches up.
   double _videoSpeed = 1;
 
@@ -214,6 +235,17 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   Timer? _positionTimer;
   Timer? _debounceTimer;
 
+  /// Where the last seek was sent, and when. A seek takes a moment to land,
+  /// and until it has the player still reports where it was — which, written
+  /// to [_position], would pull the seek bar's thumb back for a tick.
+  Duration? _seekTarget;
+  DateTime _seekSentAt = DateTime(0);
+
+  /// How long a seek is waited for before the player's own position is
+  /// believed again, and how near the target counts as landed.
+  static const _seekLandWait = Duration(seconds: 2);
+  static const _seekLandedWithin = Duration(seconds: 1);
+
   @override
   void initState() {
     super.initState();
@@ -233,8 +265,9 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   String get accountName => musicAuth.account?.username ?? '';
 
   /// Signing in or out changes what the personal tabs can show, so refetch
-  /// whichever one is open.
+  /// whichever one is open, and the other the next time it is opened.
   void _onAccountChanged() {
+    _likedTracksStale = true;
     if (_currentTab == MusicTab.likes) {
       loadLikedTracks();
     } else {
@@ -244,25 +277,46 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   void switchTab(MusicTab tab) {
     _currentTab = tab;
-    if (tab == MusicTab.likes) {
+    if (tab == MusicTab.likes && _likedTracksStale) {
       loadLikedTracks();
     }
     notifyListenersSafe();
   }
 
+  /// Fetches the open tab again: the page's tab tapped once more at the top
+  /// of its list, or switched back to.
+  Future<void> onRefresh() async {
+    switch (_currentTab) {
+      case MusicTab.home:
+        await loadHomeData();
+      case MusicTab.search:
+        if (_searchQuery.isNotEmpty) await searchTracks(_searchQuery);
+      case MusicTab.likes:
+        await loadLikedTracks();
+    }
+  }
+
   Future<void> loadHomeData() async {
+    // Heading for the one row built from a plain search, for an account the
+    // service has no selections for. Read before the first await, while the
+    // page is certainly still there.
+    final fallbackTitle = context.l10n.musicShelfTrending;
     _isLoading = true;
     notifyListenersSafe();
     try {
       // The hearts come along with the rows: a liked track has to look liked
-      // wherever it turns up, not only in the likes tab.
-      await musicService.loadLikedTrackIds();
-      _shelves = await musicService.getDiscoverShelves();
+      // wherever it turns up, not only in the likes tab. Asked for together,
+      // as neither needs the other's answer.
+      final (_, shelves) = await (
+        musicService.loadLikedTrackIds(),
+        _discoverShelves(),
+      ).wait;
+      _shelves = shelves;
       // An account the service has nothing personal for still gets a page.
       if (_shelves.isEmpty) {
         final tracks = await musicService.searchTracks('');
         if (tracks.isNotEmpty) {
-          _shelves = [MusicShelf(title: _fallbackShelfTitle, tracks: tracks)];
+          _shelves = [MusicShelf(title: fallbackTitle, tracks: tracks)];
         }
       }
     } catch (e, st) {
@@ -278,6 +332,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     notifyListenersSafe();
     try {
       _likedTracks = await musicService.getLikedTracks();
+      _likedTracksStale = false;
     } catch (e, st) {
       logger.e(
         'MusicViewModel loadLikedTracks failed',
@@ -297,7 +352,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       _isLoading = true;
       notifyListenersSafe();
       try {
-        _searchResults = await musicService.searchTracks(query);
+        final results = await musicService.searchTracks(query);
+        // Typed over while it was on its way: the newer search's answer is
+        // the one to show, and this one could land after it.
+        if (query != _searchQuery) return;
+        _searchResults = results;
       } catch (e, st) {
         logger.e(
           'MusicViewModel searchTracks failed',
@@ -305,8 +364,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
           stackTrace: st,
         );
       } finally {
-        _isLoading = false;
-        notifyListenersSafe();
+        // A superseded search leaves the spinner to the one after it.
+        if (query == _searchQuery) {
+          _isLoading = false;
+          notifyListenersSafe();
+        }
       }
     });
   }
@@ -330,9 +392,17 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       notifyListenersSafe();
       return MusicLikeOutcome.failed;
     }
-    // Refresh liked tracks if we are on the likes tab
-    if (_currentTab == MusicTab.likes) {
-      await loadLikedTracks();
+    // The likes tab follows the heart without asking the service for the
+    // whole list again: the change is the one just accepted.
+    if (musicService.isTrackLiked(track.id)) {
+      if (!_likedTracks.any((t) => t.id == track.id)) {
+        _likedTracks = [track, ..._likedTracks];
+      }
+    } else {
+      _likedTracks = [
+        for (final t in _likedTracks)
+          if (t.id != track.id) t,
+      ];
     }
     notifyListenersSafe();
     return MusicLikeOutcome.done;
@@ -375,6 +445,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
     _currentTrack = track;
     _isPlaying = false;
+    _seekTarget = null;
     _position.value = Duration.zero;
     _duration = track.duration;
     notifyListenersSafe();
@@ -762,7 +833,8 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// Keeps a muted video with the sound: playing when it plays, paused when
   /// it pauses, and pulled back to it when the two have drifted apart.
   ///
-  /// Paused while the app is off screen, whatever the sound is doing, and
+  /// Paused while the app or the page is off screen, whatever the sound is
+  /// doing, and
   /// left on its last frame once the sound has run past its end. A looped
   /// stand-in only follows play and pause: it has no place in the song.
   void _syncVideo() {
@@ -773,7 +845,8 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     final onScreen =
-        lifecycle == null || lifecycle == AppLifecycleState.resumed;
+        _isPageVisible &&
+        (lifecycle == null || lifecycle == AppLifecycleState.resumed);
     final position = audio.value.position;
     final withinVideo = _pictureLoops || position < video.value.duration;
     final shouldPlay = onScreen && audio.value.isPlaying && withinVideo;
@@ -863,7 +936,17 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       final controller = _audioController;
       if (controller != null && controller.value.isInitialized) {
-        _position.value = controller.value.position;
+        final position = controller.value.position;
+        final target = _seekTarget;
+        // A seek still on its way leaves the bar where the seek put it.
+        final seeking =
+            target != null &&
+            (position - target).abs() > _seekLandedWithin &&
+            DateTime.now().difference(_seekSentAt) < _seekLandWait;
+        if (!seeking) {
+          _seekTarget = null;
+          _position.value = position;
+        }
         _syncVideo();
       }
     });
@@ -918,22 +1001,36 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   @override
   void stopPlayback() => pause();
 
+  /// The list next and previous walk: the one a track was last picked
+  /// from, as it stood then. A snapshot, so a refresh of the list on screen —
+  /// the tab switched back to, a new search — does not swap the queue out
+  /// under the track playing.
+  List<MusicTrack> _queue = const [];
+
+  /// The list the open tab shows, falling back to Discover when it is empty.
+  List<MusicTrack> get _tabTracks {
+    final tracks = switch (_currentTab) {
+      MusicTab.home => discoverTracks,
+      MusicTab.search => _searchResults,
+      MusicTab.likes => _likedTracks,
+    };
+    return tracks.isEmpty ? discoverTracks : tracks;
+  }
+
+  /// Plays [track] as picked from the open tab's list, which becomes the
+  /// queue from here on.
+  Future<void> playFromList(MusicTrack track) {
+    _queue = List.unmodifiable(_tabTracks);
+    return playTrack(track);
+  }
+
+  /// The queue, or the open tab's list for a track that was not picked from
+  /// one.
+  List<MusicTrack> get _playQueue => _queue.isEmpty ? _tabTracks : _queue;
+
   @override
   void nextTrack() {
-    List<MusicTrack> currentList = [];
-    switch (_currentTab) {
-      case MusicTab.home:
-        currentList = discoverTracks;
-        break;
-      case MusicTab.search:
-        currentList = _searchResults;
-        break;
-      case MusicTab.likes:
-        currentList = _likedTracks;
-        break;
-    }
-    if (currentList.isEmpty) currentList = discoverTracks;
-
+    final currentList = _playQueue;
     if (currentList.isEmpty) return;
     if (_isShuffleEnabled) {
       final randomIndex = Random().nextInt(currentList.length);
@@ -950,20 +1047,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
 
   @override
   void previousTrack() {
-    List<MusicTrack> currentList = [];
-    switch (_currentTab) {
-      case MusicTab.home:
-        currentList = discoverTracks;
-        break;
-      case MusicTab.search:
-        currentList = _searchResults;
-        break;
-      case MusicTab.likes:
-        currentList = _likedTracks;
-        break;
-    }
-    if (currentList.isEmpty) currentList = discoverTracks;
-
+    final currentList = _playQueue;
     if (currentList.isEmpty) return;
     final currentIndex = currentList.indexWhere(
       (t) => t.id == _currentTrack?.id,
@@ -988,6 +1072,11 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     final controller = _audioController;
     if (controller == null || !controller.value.isInitialized) return;
     controller.seekTo(position);
+    _seekTarget = position;
+    _seekSentAt = DateTime.now();
+    // Nothing else on the page moves with a seek: the bar and the times
+    // beside it hear of it through [positionListenable], and the rest of the
+    // page is not rebuilt for it.
     _position.value = position;
     final video = _videoController;
     if (video != null && !identical(video, controller) && !_pictureLoops) {
@@ -996,7 +1085,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       unawaited(video.seekTo(position));
     }
     _playback.updateState(playing: _isPlaying, position: position);
-    notifyListenersSafe();
   }
 
   /// Holds the television's screen on while a track plays, the way the channel

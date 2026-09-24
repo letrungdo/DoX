@@ -1,8 +1,8 @@
-
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/screen/tv/tv_player_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
@@ -81,5 +81,59 @@ void main() {
     // Not on from where the last attempt gave up: minutes have passed, and
     // the best link is the one most likely to have come back.
     expect(platform.opened, [_dead, _alsoDead, _dead, _alsoDead]);
+  });
+  testWidgets('a mirror that never comes up is given up on', (tester) async {
+    VideoPlayerPlatform.instance = platform = FakeVideoPlayerPlatform(
+      stalls: true,
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: TvPlayerScreen(channel: _channel),
+      ),
+    );
+    await tester.pump();
+    expect(platform.opened, [_dead]);
+
+    // A dead link rarely fails outright; it simply never answers, and the
+    // viewer would sit on the spinner for as long as the network stack does.
+    await tester.pump(const Duration(seconds: 9));
+    expect(platform.opened, [_dead, _alsoDead]);
+  });
+
+  testWidgets('zapping past channels opens only the one landed on', (
+    tester,
+  ) async {
+    const playlist = [
+      TvChannel(id: 'a', name: 'A', urls: ['https://example.com/a.m3u8']),
+      TvChannel(id: 'b', name: 'B', urls: ['https://example.com/b.m3u8']),
+      TvChannel(id: 'c', name: 'C', urls: ['https://example.com/c.m3u8']),
+      TvChannel(id: 'd', name: 'D', urls: ['https://example.com/d.m3u8']),
+    ];
+    VideoPlayerPlatform.instance = platform = FakeVideoPlayerPlatform(
+      playing: {for (final channel in playlist) channel.url},
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: TvPlayerScreen(channel: playlist.first, playlist: playlist),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.channelUp);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    // The banner follows every press at once; the picture waits for the
+    // remote to rest.
+    expect(find.text('D'), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    // B and C were walked past, not watched: no player was started for them.
+    expect(platform.opened, [playlist.first.url, playlist.last.url]);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
@@ -389,7 +391,14 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
+/// How long the bar takes to thicken when it is focused, hovered or held.
+const _seekBarActiveDuration = Duration(milliseconds: 150);
+
 /// Sleek seek bar with animated track expansion and glowing thumb handle.
+///
+/// Only the thickness animates. The played and buffered lengths are set
+/// outright: animating them turned every position report into 150ms of frames,
+/// which over a whole film meant the player never stopped drawing.
 class VideoSeekBar extends StatelessWidget {
   const VideoSeekBar({
     super.key,
@@ -399,6 +408,7 @@ class VideoSeekBar extends StatelessWidget {
     required this.isDragging,
     required this.isScrubbing,
     this.dragFraction,
+    this.live = true,
     this.playedColor = Colors.pinkAccent,
     this.bufferedColor = Colors.white30,
     this.backgroundColor = Colors.white12,
@@ -410,6 +420,11 @@ class VideoSeekBar extends StatelessWidget {
   final bool isDragging;
   final bool isScrubbing;
   final double? dragFraction;
+
+  /// Whether the bar follows the controller. Off while the controls are
+  /// hidden: nobody can see the bar then, and following it would still cost a
+  /// frame on every position report.
+  final bool live;
   final Color playedColor;
   final Color bufferedColor;
   final Color backgroundColor;
@@ -433,107 +448,114 @@ class VideoSeekBar extends StatelessWidget {
     }
 
     final isActive = isFocused || isHovered || isDragging || isScrubbing;
-    final trackHeight = isActive ? 6.0 : 4.0;
-    final thumbSize = isActive ? 14.0 : 10.0;
 
-    return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: activeController,
-      builder: (context, value, child) {
-        final duration = value.duration;
-        final totalMs = duration.inMilliseconds;
-        final positionMs = value.position.inMilliseconds;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: isActive ? 1 : 0),
+      duration: _seekBarActiveDuration,
+      builder: (context, active, _) {
+        if (!live) return _buildTrack(activeController.value, active);
+        return ValueListenableBuilder<VideoPlayerValue>(
+          valueListenable: activeController,
+          builder: (context, value, _) => _buildTrack(value, active),
+        );
+      },
+    );
+  }
 
-        double playedFraction = 0.0;
-        if (totalMs > 0) {
-          if ((isDragging || isScrubbing) && dragFraction != null) {
-            playedFraction = dragFraction!.clamp(0.0, 1.0);
-          } else {
-            playedFraction = (positionMs / totalMs).clamp(0.0, 1.0);
-          }
-        }
+  /// [active] runs from 0 (resting) to 1 (focused, hovered or held) while the
+  /// bar thickens, and everything that grows with it is interpolated from it.
+  Widget _buildTrack(VideoPlayerValue value, double active) {
+    final trackHeight = lerpDouble(4, 6, active)!;
+    final thumbSize = lerpDouble(10, 14, active)!;
+    final totalMs = value.duration.inMilliseconds;
+    final positionMs = value.position.inMilliseconds;
 
-        double bufferedFraction = 0.0;
-        if (totalMs > 0 && value.buffered.isNotEmpty) {
-          final bufferedEnd = value.buffered.last.end.inMilliseconds;
-          bufferedFraction = (bufferedEnd / totalMs).clamp(0.0, 1.0);
-        }
+    double playedFraction = 0.0;
+    if (totalMs > 0) {
+      if ((isDragging || isScrubbing) && dragFraction != null) {
+        playedFraction = dragFraction!.clamp(0.0, 1.0);
+      } else {
+        playedFraction = (positionMs / totalMs).clamp(0.0, 1.0);
+      }
+    }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final playedWidth = (width * playedFraction).clamp(0.0, width);
-            final bufferedWidth = (width * bufferedFraction).clamp(0.0, width);
+    double bufferedFraction = 0.0;
+    if (totalMs > 0 && value.buffered.isNotEmpty) {
+      final bufferedEnd = value.buffered.last.end.inMilliseconds;
+      bufferedFraction = (bufferedEnd / totalMs).clamp(0.0, 1.0);
+    }
 
-            return SizedBox(
-              height: 20,
-              width: width,
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                clipBehavior: Clip.none,
-                children: [
-                  // Track Background
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    height: trackHeight,
-                    width: width,
-                    decoration: BoxDecoration(
-                      color: backgroundColor,
-                      borderRadius: BorderRadius.circular(trackHeight / 2),
-                    ),
-                  ),
-                  // Buffered Bar
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    height: trackHeight,
-                    width: bufferedWidth,
-                    decoration: BoxDecoration(
-                      color: bufferedColor,
-                      borderRadius: BorderRadius.circular(trackHeight / 2),
-                    ),
-                  ),
-                  // Played Bar
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    height: trackHeight,
-                    width: playedWidth,
-                    decoration: BoxDecoration(
-                      color: playedColor,
-                      borderRadius: BorderRadius.circular(trackHeight / 2),
-                    ),
-                  ),
-                  // Thumb Handle / Highlight Dot
-                  Positioned(
-                    left: (playedWidth - thumbSize / 2).clamp(
-                      0.0,
-                      width - thumbSize,
-                    ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: thumbSize,
-                      height: thumbSize,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: playedColor,
-                          width: isActive ? 3 : 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: playedColor.withValues(
-                              alpha: isActive ? 0.8 : 0.4,
-                            ),
-                            blurRadius: isActive ? 8 : 4,
-                            spreadRadius: isActive ? 2 : 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final playedWidth = (width * playedFraction).clamp(0.0, width);
+        final bufferedWidth = (width * bufferedFraction).clamp(0.0, width);
+        final radius = BorderRadius.circular(trackHeight / 2);
+
+        return SizedBox(
+          height: 20,
+          width: width,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            clipBehavior: Clip.none,
+            children: [
+              // Track Background
+              Container(
+                height: trackHeight,
+                width: width,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: radius,
+                ),
               ),
-            );
-          },
+              // Buffered Bar
+              Container(
+                height: trackHeight,
+                width: bufferedWidth,
+                decoration: BoxDecoration(
+                  color: bufferedColor,
+                  borderRadius: radius,
+                ),
+              ),
+              // Played Bar
+              Container(
+                height: trackHeight,
+                width: playedWidth,
+                decoration: BoxDecoration(
+                  color: playedColor,
+                  borderRadius: radius,
+                ),
+              ),
+              // Thumb Handle / Highlight Dot
+              Positioned(
+                left: (playedWidth - thumbSize / 2).clamp(
+                  0.0,
+                  width - thumbSize,
+                ),
+                child: Container(
+                  width: thumbSize,
+                  height: thumbSize,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: playedColor,
+                      width: lerpDouble(2, 3, active)!,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: playedColor.withValues(
+                          alpha: lerpDouble(0.4, 0.8, active)!,
+                        ),
+                        blurRadius: lerpDouble(4, 8, active)!,
+                        spreadRadius: lerpDouble(1, 2, active)!,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

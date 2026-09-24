@@ -7,6 +7,17 @@ import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/widgets/neu/neu_card.dart';
 import 'package:flutter/material.dart';
 
+/// The pixel width to decode a poster drawn [width] logical pixels wide at.
+///
+/// A poster arrives at whatever size the server keeps, often several times
+/// what a grid cell shows, and decoded at full size a screenful of them holds
+/// tens of megabytes. `null` when the width is not known yet, which decodes at
+/// full size rather than guessing.
+int? posterDecodeWidth(BuildContext context, double width) {
+  if (!width.isFinite || width <= 0) return null;
+  return (width * MediaQuery.devicePixelRatioOf(context)).round();
+}
+
 /// Poster card shared by the browse grid and the "related movies" rail.
 ///
 /// [showOverlays] turns the badge, library state and view/like counters on; the
@@ -77,20 +88,26 @@ class MoviePosterCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CachedNetworkImage(
-                  imageUrl: movie.poster,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey.shade900,
-                    child: const Center(
-                      child: Icon(Icons.movie, color: Colors.white24),
+                LayoutBuilder(
+                  builder: (context, constraints) => CachedNetworkImage(
+                    imageUrl: movie.poster,
+                    fit: BoxFit.cover,
+                    memCacheWidth: posterDecodeWidth(
+                      context,
+                      constraints.maxWidth,
                     ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey.shade800,
-                    child: const Icon(
-                      Icons.broken_image_rounded,
-                      color: Colors.white38,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey.shade900,
+                      child: const Center(
+                        child: Icon(Icons.movie, color: Colors.white24),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade800,
+                      child: const Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.white38,
+                      ),
                     ),
                   ),
                 ),

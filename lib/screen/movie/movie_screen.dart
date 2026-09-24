@@ -52,6 +52,11 @@ const _overlayAnimationDuration = Duration(milliseconds: 300);
 /// How long the search field takes to slide in and out.
 const _searchAnimationDuration = Duration(milliseconds: 260);
 
+/// How old the list may get before coming back to the app refetches it. A
+/// quick look at another app keeps the page — and how far down it was
+/// scrolled — exactly as it was left.
+const _resumeReloadAge = Duration(minutes: 5);
+
 /// Centre of the search field's prefix icon in body coordinates: the field's
 /// 16px side padding and 8px top padding, plus the prefix slot inside it. Used
 /// as the landing point of the icon flying down from the app bar.
@@ -105,6 +110,21 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// the page rather than a sheet over it.
   static const _miniThreshold = 0.02;
   final _detailController = MovieDetailController();
+
+  /// The detail page in the overlay, and the film it was built for. Built once
+  /// per film, so neither a frame of the overlay's animation nor a rebuild of
+  /// this page for the grid behind it rebuilds the player.
+  Widget? _detailScreen;
+  Movie? _detailScreenMovie;
+
+  /// How far the overlay travels between the mini bar and full screen, kept
+  /// current for the drag handlers of the cached [_detailScreen].
+  double _overlayTravel = 0;
+
+  /// The app bar title's measured width and the label and style it was
+  /// measured for — laid out once per label instead of on every build.
+  double? _movieLabelWidth;
+  (String, TextStyle)? _movieLabelWidthKey;
 
   bool _isSelectionMode = false;
   final Set<String> _selectedMovieIds = {};
@@ -183,10 +203,15 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   @override
   void onResume() {
     super.onResume();
+    // A film on screen is what the viewer came back to; reloading the grid
+    // behind it would only throw away how far down it was scrolled.
+    if (_playingMovie != null) return;
     // The saved server may have redirected somewhere else since the app was
     // last used; the check runs behind the refresh and reloads if it moved.
     unawaited(vm.refreshServerAddress());
-    vm.loadMovies(refresh: true, silent: true);
+    if (vm.isOlderThan(_resumeReloadAge)) {
+      vm.loadMovies(refresh: true, silent: true);
+    }
   }
 
   void _onScroll() {
@@ -349,9 +374,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     );
     if (!mounted) return;
     final hadQuery = vm.searchQuery.isNotEmpty;
-    vm.setSearchQuery('');
     if (hadQuery) {
-      await vm.loadMovies(refresh: true);
+      // Clearing the query is itself the refetch of the full list.
+      await vm.setSearchQuery('');
       if (_scrollController.hasClients) _scrollController.jumpTo(0);
     }
     // The player is an overlay on this page, not on the search page, so a
@@ -375,13 +400,13 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       setState(() {
         _isSearchOpen = false;
       });
-      vm.setSearchQuery('');
       _searchAnimation.reverse();
       // The node, not the scope — see the browser's background tap handler.
       _searchFocusNode.unfocus();
       // Nothing was searched, so the list on screen is already the right one.
+      // Otherwise clearing the query is itself the refetch of the full list.
       if (hadQuery) {
-        vm.loadMovies(refresh: true);
+        unawaited(vm.setSearchQuery(''));
         if (_scrollController.hasClients) _scrollController.jumpTo(0);
       }
       return;
@@ -456,6 +481,29 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// The focus node of the grid tile at [index], created on first use.
   FocusNode _tileFocusNode(int index) =>
       _tileFocusNodes.putIfAbsent(index, FocusNode.new);
+
+  bool _isTileFocusPruneScheduled = false;
+
+  /// Disposes the focus nodes of tiles past the end of a list that got
+  /// shorter. After the frame, once the grid has let go of them: a node is
+  /// still attached to its old tile while the grid is rebuilding.
+  void _pruneTileFocusNodes(int tileCount) {
+    if (_isTileFocusPruneScheduled ||
+        _tileFocusNodes.keys.every((index) => index < tileCount)) {
+      return;
+    }
+    _isTileFocusPruneScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isTileFocusPruneScheduled = false;
+      if (!mounted) return;
+      final count = vm.movies.length;
+      _tileFocusNodes.removeWhere((index, node) {
+        if (index < count || node.context != null) return false;
+        node.dispose();
+        return true;
+      });
+    });
+  }
 
   /// Puts the remote back on the grid after something took focus away.
   ///
@@ -581,6 +629,8 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           _playingMovie = null;
           _entryRect = null;
           _isClosingOverlay = false;
+          _detailScreen = null;
+          _detailScreenMovie = null;
         });
 
         if (vm.collection == MovieCollection.browse) {
@@ -596,6 +646,8 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
         _playingMovie = null;
         _entryRect = null;
         _isDetailFullScreen = false;
+        _detailScreen = null;
+        _detailScreenMovie = null;
       });
       _overlayController.value = 0;
 
@@ -686,60 +738,56 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           unawaited(_closeOverlay());
         }
       },
-      child: Consumer<MovieViewModel>(
-        builder: (context, vm, _) {
-          final movieLabel = movieService.getLabel();
-          final baseUrl = movieService.baseUrl;
-          final emptyMessage = switch (vm.collection) {
-            MovieCollection.watched => l10n.noWatchedMovies,
-            MovieCollection.favorites => l10n.noFavoriteMovies,
-            MovieCollection.browse => l10n.noMoviesFound,
-          };
-
-          return LayoutBuilder(
-            builder: (context, constraints) => Stack(
-              fit: StackFit.expand,
-              children: [
-                // The detail is an overlay in this Stack, not a pushed route,
-                // so nothing takes the browser out of the focus tree the way a
-                // route would: covered by the player, every poster behind it
-                // still answers the D-pad, and the remote wanders off into a
-                // grid it cannot see. Only the ExcludeFocus rebuilds as the
-                // overlay travels — the browser is handed through untouched.
-                AnimatedBuilder(
-                  animation: _overlayController,
-                  child: GestureDetector(
-                    onTap: _searchFocusNode.unfocus,
-                    child: _buildBrowser(
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          fit: StackFit.expand,
+          children: [
+            // The detail is an overlay in this Stack, not a pushed route,
+            // so nothing takes the browser out of the focus tree the way a
+            // route would: covered by the player, every poster behind it
+            // still answers the D-pad, and the remote wanders off into a
+            // grid it cannot see. Only the ExcludeFocus rebuilds as the
+            // overlay travels — the browser is handed through untouched.
+            AnimatedBuilder(
+              animation: _overlayController,
+              child: GestureDetector(
+                onTap: _searchFocusNode.unfocus,
+                // Only the browser follows the view model. The player sits
+                // outside it, so a page of posters arriving never rebuilds
+                // the film that is playing over them.
+                child: Consumer<MovieViewModel>(
+                  builder: (context, vm, _) {
+                    _pruneTileFocusNodes(vm.movies.length);
+                    return _buildBrowser(
                       context,
                       vm: vm,
-                      emptyMessage: emptyMessage,
-                      movieLabel: movieLabel,
-                      baseUrl: baseUrl,
+                      emptyMessage: switch (vm.collection) {
+                        MovieCollection.watched => l10n.noWatchedMovies,
+                        MovieCollection.favorites => l10n.noFavoriteMovies,
+                        MovieCollection.browse => l10n.noMoviesFound,
+                      },
+                      movieLabel: movieService.getLabel(),
+                      baseUrl: movieService.baseUrl,
                       l10n: l10n,
                       constraints: constraints,
-                    ),
-                  ),
-                  builder: (context, child) => ExcludeFocus(
-                    // Minimised, the player is a bar at the bottom and the
-                    // browser is back in charge, so it takes the remote again.
-                    excluding:
-                        !_isClosingOverlay &&
-                        _playingMovie != null &&
-                        _overlayController.value > _miniThreshold,
-                    child: child!,
-                  ),
+                    );
+                  },
                 ),
-                if (_playingMovie != null)
-                  _buildPlayerOverlay(
-                    context,
-                    _playingMovie!,
-                    constraints.biggest,
-                  ),
-              ],
+              ),
+              builder: (context, child) => ExcludeFocus(
+                // Minimised, the player is a bar at the bottom and the
+                // browser is back in charge, so it takes the remote again.
+                excluding:
+                    !_isClosingOverlay &&
+                    _playingMovie != null &&
+                    _overlayController.value > _miniThreshold,
+                child: child!,
+              ),
             ),
-          );
-        },
+            if (_playingMovie != null)
+              _buildPlayerOverlay(context, _playingMovie!, constraints.biggest),
+          ],
+        ),
       ),
     );
   }
@@ -827,14 +875,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                   appBarTheme.titleTextStyle ??
                   Theme.of(context).textTheme.titleLarge ??
                   const TextStyle(fontSize: 20);
-              final textPainter = TextPainter(
-                text: TextSpan(text: movieLabel, style: titleStyle),
-                maxLines: 1,
-                textDirection: TextDirection.ltr,
-              )..layout();
-
               // Estimated title block: Label + Suffix (expand icon, sync icon) + gaps.
-              final titleBlockWidth = textPainter.width + 48 + 16;
+              final titleBlockWidth =
+                  _labelWidth(movieLabel, titleStyle) + 48 + 16;
               // Actions: Search (40) + History (40) + Favorite (40) + End
               // padding (10), plus the select button while the watch history
               // is the collection on screen.
@@ -1402,6 +1445,59 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     );
   }
 
+  /// The width [label] takes on one line in [style], measured once per label.
+  double _labelWidth(String label, TextStyle style) {
+    final key = (label, style);
+    final cached = _movieLabelWidth;
+    if (cached != null && _movieLabelWidthKey == key) return cached;
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    _movieLabelWidthKey = key;
+    return _movieLabelWidth = width;
+  }
+
+  /// The detail page for [movie], built the first time it is asked for and
+  /// handed back unchanged after that. Its callbacks read the overlay's
+  /// current state when they run, so the same instance stays correct.
+  Widget _detailScreenFor(Movie movie) {
+    final cached = _detailScreen;
+    if (cached != null && identical(_detailScreenMovie, movie)) return cached;
+    _detailScreenMovie = movie;
+    return _detailScreen = ChangeNotifierProvider(
+      create: (_) => MovieDetailViewModel(),
+      child: MovieDetailScreen(
+        movieUrl: movie.url,
+        movieId: movie.id,
+        initialMovie: movie,
+        embedded: true,
+        minimizeAnimation: _overlayController,
+        controller: _detailController,
+        onFullScreenChanged: (isFullScreen) {
+          if (!mounted) return;
+          // Full-screen video has to cover the bottom tab bar too when this
+          // page is one of the tabs.
+          immersiveMode.value = isFullScreen;
+          setState(() => _isDetailFullScreen = isFullScreen);
+        },
+        onRelatedMovieTap: (related) => setState(() => _playingMovie = related),
+        onClose: () => unawaited(_closeOverlay()),
+        // Null takes the minimise button out of the header and the drag off
+        // the player, so a television is not shown a way in to something it
+        // cannot come back from.
+        onMinimize: _canMinimize ? _minimizeOverlay : null,
+        onPlayerDragUpdate: _canMinimize
+            ? (details) => _onOverlayDragUpdate(details, _overlayTravel)
+            : null,
+        onPlayerDragEnd: _canMinimize ? _onOverlayDragEnd : null,
+      ),
+    );
+  }
+
   /// The YouTube-style player: a rect that lerps between the tapped card (or
   /// the mini bar) and the whole screen, hosting the detail page inside.
   Widget _buildPlayerOverlay(BuildContext context, Movie movie, Size size) {
@@ -1416,6 +1512,28 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
       miniPlayerHeight,
     );
     final travel = fullRect.height - miniRect.height;
+    _overlayTravel = travel;
+
+    // Built out here, so the frames of the animation only move and fade them.
+    final detail = _detailScreenFor(movie);
+    final entryRect = _entryRect;
+    final entryPoster = entryRect == null
+        ? null
+        : Positioned.fill(
+            child: IgnorePointer(
+              // The tapped poster, fading out over the page it grew from.
+              // Decoded at the card's size, which is the copy the grid has
+              // already cached.
+              child: FadeTransition(
+                opacity: ReverseAnimation(_overlayController),
+                child: CachedNetworkImage(
+                  imageUrl: movie.poster,
+                  fit: BoxFit.cover,
+                  memCacheWidth: posterDecodeWidth(context, entryRect.width),
+                ),
+              ),
+            ),
+          );
 
     return AnimatedBuilder(
       animation: _overlayController,
@@ -1478,50 +1596,8 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    ChangeNotifierProvider(
-                      create: (_) => MovieDetailViewModel(),
-                      child: MovieDetailScreen(
-                        movieUrl: movie.url,
-                        movieId: movie.id,
-                        initialMovie: movie,
-                        embedded: true,
-                        minimizeProgress: t,
-                        controller: _detailController,
-                        onFullScreenChanged: (isFullScreen) {
-                          if (!mounted) return;
-                          // Full-screen video has to cover the bottom tab bar too
-                          // when this page is one of the tabs.
-                          immersiveMode.value = isFullScreen;
-                          setState(() => _isDetailFullScreen = isFullScreen);
-                        },
-                        onRelatedMovieTap: (related) =>
-                            setState(() => _playingMovie = related),
-                        onClose: () => unawaited(_closeOverlay()),
-                        // Null takes the minimise button out of the header and
-                        // the drag off the player, so a television is not shown
-                        // a way in to something it cannot come back from.
-                        onMinimize: _canMinimize ? _minimizeOverlay : null,
-                        onPlayerDragUpdate: _canMinimize
-                            ? (details) => _onOverlayDragUpdate(details, travel)
-                            : null,
-                        onPlayerDragEnd: _canMinimize
-                            ? _onOverlayDragEnd
-                            : null,
-                      ),
-                    ),
-                    // The tapped poster, fading out over the page it grew from.
-                    if (_entryRect != null && t < 1)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: Opacity(
-                            opacity: 1 - t,
-                            child: CachedNetworkImage(
-                              imageUrl: movie.poster,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
+                    detail,
+                    if (entryPoster != null && t < 1) entryPoster,
                   ],
                 ),
               ),

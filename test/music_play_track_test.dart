@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/model/music_video.dart';
 import 'package:do_x/services/music_playback_session.dart';
@@ -106,6 +107,40 @@ void main() {
     });
 
     expect(platform.sounding, isEmpty);
+  });
+
+  testWidgets('a refresh of Discover while a track plays keeps next and '
+      'previous on the list it was picked from', (tester) async {
+    final a = [_track('a'), _track('a2'), _track('a3')];
+    final b = [_track('b'), _track('b2')];
+    var fetches = 0;
+    vm = MusicViewModel(
+      resolveStream: (url) async => 'https://cdn/a',
+      playback: _SilentPlayback(),
+      findVideo: (_) async => null,
+      findHdVideo: (_) async => null,
+      discoverShelves: () async => [
+        MusicShelf(title: 'Shelf', tracks: fetches++ == 0 ? a : b),
+      ],
+      videoEnabled: true,
+    );
+    await pumpHost(tester);
+    await tester.runAsync(() async {
+      await vm.loadHomeData();
+      await vm.playFromList(a[1]);
+      // The tab switched back to: the rows on screen are new ones.
+      await vm.loadHomeData();
+      expect(vm.discoverTracks.map((t) => t.id), ['b', 'b2']);
+
+      vm.nextTrack();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(vm.currentTrack?.id, 'a3');
+
+      vm.previousTrack();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(vm.currentTrack?.id, 'a2');
+    });
+    vm.dispose();
   });
 
   group('with a YouTube video', () {
@@ -231,6 +266,39 @@ void main() {
       expect(video, isNotNull);
       expect(video, isNot(same(vm.audioController)));
       expect(video!.value.volume, 0);
+      vm.dispose();
+    });
+
+    testWidgets('a muted picture pauses while the page is out of sight, '
+        'and the sound plays on', (tester) async {
+      await play(
+        tester,
+        withVideo(
+          // A looped stand-in: the fake player reports no length, and any
+          // other picture would count as run out and stay paused anyway.
+          const MusicVideo(
+            videoId: 'other',
+            duration: Duration(minutes: 1),
+            useAudio: false,
+            loops: true,
+            muxedUrl: 'https://yt/muxed',
+          ),
+        ),
+      );
+      final video = vm.videoController!;
+      final sound = vm.audioController!;
+      expect(video.value.isPlaying, isTrue);
+
+      vm.setPageVisible(false);
+      expect(video.value.isPlaying, isFalse);
+      expect(sound.value.isPlaying, isTrue);
+
+      await tester.runAsync(() async {
+        vm.setPageVisible(true);
+        // A play from the start seeks there first.
+        await Future<void>.delayed(Duration.zero);
+      });
+      expect(video.value.isPlaying, isTrue);
       vm.dispose();
     });
 

@@ -57,7 +57,7 @@ class MusicPlaybackSession {
             duration: duration > Duration.zero ? duration : null,
             artUri: track.artworkUrl.isEmpty
                 ? null
-                : Uri.tryParse(track.artworkUrl),
+                : Uri.tryParse(track.largeArtworkUrl),
           ),
         ),
       ),

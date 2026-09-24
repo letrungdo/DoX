@@ -2690,4 +2690,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicVideoExitFullscreen => 'Exit full screen';
+
+  @override
+  String get musicSearchEmpty => 'Type a keyword to search for music...';
+
+  @override
+  String get musicLikesEmpty => 'Your liked tracks list is empty';
+
+  @override
+  String get musicDashboardIdle => 'Pick a track to enjoy high-quality music';
+
+  @override
+  String get musicShelfTrending => 'Trending';
 }

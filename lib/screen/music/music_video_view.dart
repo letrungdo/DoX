@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/model/music_track.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -171,20 +172,31 @@ String musicVideoQualityLabel(Size size) {
 /// The track's artwork in a square of [size], or a note where it has none:
 /// what the phone's player and the full screen show in place of a video.
 class MusicArtwork extends StatelessWidget {
-  const MusicArtwork({super.key, required this.url, this.size});
+  const MusicArtwork({super.key, required this.track, this.size});
 
-  final String url;
+  final MusicTrack? track;
 
-  /// Null to fill the box it is given.
+  /// Null to fill the box it is given — the picture on its way up, which
+  /// is never bigger than the full screen's artwork.
   final double? size;
 
   @override
   Widget build(BuildContext context) {
+    final track = this.track;
+    // Fetched and decoded at the size it is drawn, not the service's
+    // largest; the full screen and the picture on its way there share it.
+    final pixels =
+        (size ?? Dimens.musicFullscreenWaitingArtSize) *
+        MediaQuery.devicePixelRatioOf(context);
     return SizedBox(
       width: size,
       height: size,
-      child: url.isNotEmpty
-          ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover)
+      child: track != null && track.artworkUrl.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: track.artworkUrlFor(pixels),
+              memCacheWidth: pixels.round(),
+              fit: BoxFit.cover,
+            )
           : ColoredBox(
               color: Colors.black,
               child: FittedBox(

@@ -219,11 +219,10 @@ class MusicService {
       final title = trackMap['title'] ?? 'Unknown Track';
       final username = trackMap['user']?['username'] ?? 'Independent Artist';
 
-      String artwork =
+      // Kept at the size it comes in: each place that draws it asks for the
+      // size it needs — see [MusicTrack.artworkUrlFor].
+      final String artwork =
           trackMap['artwork_url'] ?? trackMap['user']?['avatar_url'] ?? '';
-      if (artwork.contains('-large.')) {
-        artwork = artwork.replaceAll('-large.', '-t500x500.');
-      }
 
       String streamUrl = '';
       final media = trackMap['media']?['transcodings'];
@@ -344,33 +343,42 @@ class MusicService {
     }
   }
 
-  /// Turns track ids into tracks, in batches the endpoint accepts.
+  /// Turns track ids into tracks, in batches the endpoint accepts — all of
+  /// them asked for at once, and read back in the order they were sent.
   Future<Map<String, MusicTrack>> _fetchTracksByIds(List<String> ids) async {
     const batchSize = 50;
-    final result = <String, MusicTrack>{};
-    for (var start = 0; start < ids.length; start += batchSize) {
-      final batch = ids.sublist(
-        start,
-        start + batchSize > ids.length ? ids.length : start + batchSize,
+    final batches = await Future.wait([
+      for (var start = 0; start < ids.length; start += batchSize)
+        _fetchTrackBatch(
+          ids.sublist(
+            start,
+            start + batchSize > ids.length ? ids.length : start + batchSize,
+          ),
+        ),
+    ]);
+    return {
+      for (final batch in batches)
+        for (final track in batch) track.id: track,
+    };
+  }
+
+  /// One batch of [_fetchTracksByIds]; a batch that fails is left out
+  /// rather than failing the others.
+  Future<List<MusicTrack>> _fetchTrackBatch(List<String> ids) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '$_baseUrl/tracks',
+        queryParameters: {'ids': ids.join(','), 'client_id': _clientId},
       );
-      try {
-        final response = await _dio.get<List<dynamic>>(
-          '$_baseUrl/tracks',
-          queryParameters: {'ids': batch.join(','), 'client_id': _clientId},
-        );
-        for (final item in response.data ?? const []) {
-          final track = _parseTrack(item);
-          if (track != null) result[track.id] = track;
-        }
-      } catch (e, st) {
-        logger.e(
-          'MusicService _fetchTracksByIds failed',
-          error: e,
-          stackTrace: st,
-        );
-      }
+      return [for (final item in response.data ?? const []) ?_parseTrack(item)];
+    } catch (e, st) {
+      logger.e(
+        'MusicService _fetchTracksByIds failed',
+        error: e,
+        stackTrace: st,
+      );
+      return const [];
     }
-    return result;
   }
 
   /// Seeds the hearts from the account itself, so a track already liked shows
@@ -395,9 +403,15 @@ class MusicService {
     }
   }
 
+  /// What an empty search asks the service for: the tracks the page falls
+  /// back to for an account with nothing personal to show. A term sent to
+  /// the API rather than text on screen, so it is not translated — the
+  /// results it picks are the same whatever language the app is in.
+  static const _defaultSearchQuery = 'Remix Việt Nam';
+
   Future<List<MusicTrack>> searchTracks(String query) async {
     try {
-      final searchWord = query.isEmpty ? 'Remix Việt Nam' : query;
+      final searchWord = query.isEmpty ? _defaultSearchQuery : query;
       final response = await _dio.get<Map<String, dynamic>>(
         '$_baseUrl/search',
         queryParameters: {

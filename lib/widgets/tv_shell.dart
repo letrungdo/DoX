@@ -452,6 +452,20 @@ class _FocusOutlineState extends State<_FocusOutline> {
     if (!wasSettling) _followNextFrame();
   }
 
+  /// Keeps the ring on a row that a scroll is moving under it.
+  ///
+  /// A repaint per notification, because the row moves with each one — but
+  /// the settle is only started, never restarted: a scroll sends a
+  /// notification every frame it moves, and resetting the count on each of
+  /// them kept the ring asking for frames of its own long after the list had
+  /// come to rest.
+  void _followScroll() {
+    _tick.value++;
+    if (_settleFrames > 0) return;
+    _settleFrames = _settleFrameCount;
+    _followNextFrame();
+  }
+
   void _followNextFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -512,7 +526,7 @@ class _FocusOutlineState extends State<_FocusOutline> {
       // Focus does not change while a list scrolls, but the row it rests on
       // moves under it, so without this the ring is left behind.
       onNotification: (_) {
-        _follow();
+        _followScroll();
         return false;
       },
       child: Stack(
@@ -521,12 +535,17 @@ class _FocusOutlineState extends State<_FocusOutline> {
         children: [
           widget.child,
           Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: _FocusOutlinePainter(
-                  color: Theme.of(context).colorScheme.primary,
-                  target: _target,
-                  repaint: Listenable.merge([_target, _tick]),
+            // A layer of its own: the ring repaints on every frame the
+            // focus or a list moves, and without a boundary each of those
+            // repaints the whole page under it as well.
+            child: RepaintBoundary(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _FocusOutlinePainter(
+                    color: Theme.of(context).colorScheme.primary,
+                    target: _target,
+                    repaint: Listenable.merge([_target, _tick]),
+                  ),
                 ),
               ),
             ),

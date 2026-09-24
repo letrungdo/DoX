@@ -211,37 +211,35 @@ class MovieLibraryService {
     final from = (page - 1) * pageSize;
     final to = from + pageSize - 1;
 
-    final response = await query
-        .order(watchedOnly ? 'watched_at' : 'updated_at', ascending: false)
-        .range(from, to);
-
-    // In Supabase Dart 2.x, to get the total count without fetching everything,
-    // we can either perform a separate count query or use a custom converter/header.
-    // However, the easiest way for personal collections is often to fetch the
-    // count separately if the library is small, or use the response object if
-    // we can access the underlying PostgrestResponse.
-
-    // Let's get the count separately to be safe and clean.
     final countQuery = supabase
         .from('movie_library')
         .select('movie_id')
         .eq('user_id', user.id)
         .like('movie_id', '${_scope.prefix}%');
+    final filteredCountQuery = watchedOnly
+        ? countQuery.not('watched_at', 'is', null)
+        : favoritesOnly
+        ? countQuery.eq('is_favorite', true)
+        : countQuery;
 
-    final countResponse =
-        await (watchedOnly
-                ? countQuery.not('watched_at', 'is', null)
-                : favoritesOnly
-                ? countQuery.eq('is_favorite', true)
-                : countQuery)
-            .count(CountOption.exact);
+    // The page and its total go out together: neither needs the other, and
+    // asking for the count only once the page was back doubled the wait.
+    final results = await Future.wait<Object>([
+      query
+          .order(watchedOnly ? 'watched_at' : 'updated_at', ascending: false)
+          .range(from, to),
+      filteredCountQuery.count(CountOption.exact),
+    ]);
 
-    final List<dynamic> rows = response as List<dynamic>;
-    final totalCount = countResponse.count;
+    final rows = results[0] as List<dynamic>;
+    final totalCount = (results[1] as PostgrestResponse).count;
 
     final normalizedQuery = searchQuery.trim().toLowerCase();
     final items = <MovieLibraryItem>[];
-    const hydrationBatchSize = 3;
+    // Each row costs a detail request (served from the detail cache when the
+    // film was opened before). Batches still publish in order, so the grid
+    // fills top-down, but six at a time fill a page in half the rounds.
+    const hydrationBatchSize = 6;
 
     for (var offset = 0; offset < rows.length; offset += hydrationBatchSize) {
       final end = (offset + hydrationBatchSize).clamp(0, rows.length);

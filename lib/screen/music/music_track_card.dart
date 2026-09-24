@@ -52,6 +52,10 @@ class MusicTrackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTv = deviceType.isTv;
+    // Fetched and decoded at the size the square is drawn: a screenful of
+    // rows is a screenful of pictures to decode.
+    final artPixels =
+        Dimens.musicTrackArtSize * MediaQuery.devicePixelRatioOf(context);
     return Focus(
       // Not a stop of its own: the row's card is that. This one listens, so
       // the row can ride the list when the remote reaches it, and carries the
@@ -79,7 +83,13 @@ class MusicTrackCard extends StatelessWidget {
                     ),
                     image: track.artworkUrl.isNotEmpty
                         ? DecorationImage(
-                            image: CachedNetworkImageProvider(track.artworkUrl),
+                            image: ResizeImage.resizeIfNeeded(
+                              artPixels.round(),
+                              null,
+                              CachedNetworkImageProvider(
+                                track.artworkUrlFor(artPixels),
+                              ),
+                            ),
                             fit: BoxFit.cover,
                           )
                         : null,

@@ -4836,6 +4836,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exit full screen'**
   String get musicVideoExitFullscreen;
+
+  /// No description provided for @musicSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a keyword to search for music...'**
+  String get musicSearchEmpty;
+
+  /// No description provided for @musicLikesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your liked tracks list is empty'**
+  String get musicLikesEmpty;
+
+  /// No description provided for @musicDashboardIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a track to enjoy high-quality music'**
+  String get musicDashboardIdle;
+
+  /// No description provided for @musicShelfTrending.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get musicShelfTrending;
 }
 
 class _AppLocalizationsDelegate

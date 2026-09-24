@@ -98,23 +98,55 @@ class TvChannel {
 
   /// Whether the channel matches a search box's [query], accent-insensitively
   /// enough for the Vietnamese names in these playlists.
-  bool matches(String query) {
-    final needle = _normalize(query);
+  bool matches(String query) => matchesNormalized(normalizeName(query));
+
+  /// [matches] for a query already put through [normalizeName], so a filter
+  /// running down a whole playlist folds the query once rather than once per
+  /// channel.
+  bool matchesNormalized(String needle) {
     if (needle.isEmpty) return true;
-    return _normalize(name).contains(needle);
+    return searchKey.contains(needle);
   }
+
+  /// [name] as [normalizeName] folds it, worked out on the first search and
+  /// kept: the search box asks every channel on every keystroke.
+  ///
+  /// Kept beside the channel rather than in it, because a channel is a
+  /// constant and a constant cannot carry a field that fills in later.
+  String get searchKey => _searchKeys[this] ??= normalizeName(name);
+
+  static final _searchKeys = Expando<String>('TvChannel.searchKey');
 
   /// [value] lowercased and stripped of its Vietnamese accents, so two
   /// playlists spelling one station differently still read as one name.
   static String normalizeName(String value) => _normalize(value);
 
+  /// One pass over the text: every playlist entry goes through here while it
+  /// is being read and sorted, and a replace per vowel family walked each
+  /// name seven times over.
   static String _normalize(String value) {
-    var text = value.toLowerCase().trim();
-    for (final entry in _accents.entries) {
-      text = text.replaceAll(RegExp('[${entry.value}]'), entry.key);
+    final text = value.toLowerCase().trim();
+    StringBuffer? folded;
+    for (var i = 0; i < text.length; i++) {
+      final unit = text.codeUnitAt(i);
+      // Plain ASCII has no accent to fold, and it is most of every name.
+      final base = unit < 0x80 ? null : _foldedUnits[unit];
+      if (base == null) {
+        folded?.writeCharCode(unit);
+        continue;
+      }
+      folded ??= StringBuffer(text.substring(0, i));
+      folded.writeCharCode(base);
     }
-    return text;
+    return folded?.toString() ?? text;
   }
+
+  /// [_accents] turned round: each accented vowel's code unit to the code
+  /// unit of the letter it is built from.
+  static final Map<int, int> _foldedUnits = {
+    for (final entry in _accents.entries)
+      for (final unit in entry.value.codeUnits) unit: entry.key.codeUnitAt(0),
+  };
 
   /// Vietnamese vowels folded onto the letter they are built from, so typing
   /// `vinh long` finds `Vĩnh Long`.

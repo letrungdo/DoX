@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/utils/logger.dart';
+import 'package:flutter/foundation.dart';
+import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html_parser;
 
 enum MovieSiteType { html, ophim }
@@ -505,15 +507,7 @@ class MovieService {
   }
 
   /// Helper to fix relative URLs
-  String _fixUrl(String? url) {
-    if (url == null || url.isEmpty) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    // Relative links come from the page the live host served, so they are
-    // completed against that host, not the entry point that redirected to it.
-    final base = effectiveBaseUrl ?? '';
-    if (url.startsWith('/')) return '$base$url';
-    return '$base/$url';
-  }
+  String _fixUrl(String? url) => _fixUrlAgainst(url, effectiveBaseUrl ?? '');
 
   String resolveServerPath(String path) => _fixUrl(path);
 
@@ -528,162 +522,17 @@ class MovieService {
     return value.startsWith('/') ? value : '/$value';
   }
 
-  bool _isVietsub(String value) {
-    return RegExp(
-      r'viet\s*sub|việt\s*sub',
-      caseSensitive: false,
-    ).hasMatch(value);
-  }
-
-  /// Helper to extract movie ID from URL slug (e.g. "...-3982.html" => "3982")
-  String _extractId(String url) {
-    final match = RegExp(r'-(\d+)\.html').firstMatch(url);
-    if (match != null) {
-      return match.group(1) ?? '';
-    }
-    return '';
-  }
-
-  /// Parse movie list items and total count from HTML document or JSON response
-  MovieResponse _parseMovieResponse(dynamic data) {
-    String htmlContent;
-    if (data is Map && data.containsKey('movies')) {
-      htmlContent = data['movies'].toString();
-    } else {
-      htmlContent = data.toString();
-    }
-
-    final document = html_parser.parse(htmlContent);
-    final movies = <Movie>[];
-    final seenIds = <String>{};
-
-    // Extract total count if available (Search results)
-    int total = 0;
-    final recordEl = document.querySelector('.record');
-    if (recordEl != null) {
-      final match = RegExp(r'(\d+)').firstMatch(recordEl.text);
-      if (match != null) {
-        total = int.tryParse(match.group(1)!) ?? 0;
-      }
-    }
-
-    // Fallback: estimate from pagination
-    if (total == 0) {
-      final navLinks = document.querySelectorAll('.navigation .page-numbers');
-      if (navLinks.isNotEmpty) {
-        int maxPage = 1;
-        for (final link in navLinks) {
-          final pageText = link.text.trim();
-          final pageNum = int.tryParse(pageText);
-          if (pageNum != null && pageNum > maxPage) {
-            maxPage = pageNum;
-          }
-        }
-        // Estimate: usually 20 items per page
-        // If we are on page 1, we can see how many items are there
-      }
-    }
-
-    // Selectors covering different sections (carousel, category grid, trending, sidebar)
-    final mainContent = document.querySelector('#main-content');
-    final container = mainContent ?? document;
-
-    final items = container.querySelectorAll(
-      '.movie-item, .movie-carousel-top-item, .trending-movie-item, .last-film-box li a',
-    );
-
-    for (final item in items) {
-      final anchor = item.localName == 'a'
-          ? item
-          : item.querySelector('a') ?? item.parent;
-      if (anchor == null || anchor.localName != 'a') continue;
-
-      final href = anchor.attributes['href'] ?? '';
-      if (!href.contains('.html')) continue;
-
-      final id = _extractId(href);
-      if (id.isEmpty || seenIds.contains(id)) continue;
-
-      final title =
-          anchor.attributes['title'] ??
-          anchor
-              .querySelector(
-                '.movie-title-1, .movie-name-1, .trending-movie-name, .list-top-movie-item-vn',
-              )
-              ?.text
-              .trim() ??
-          '';
-
-      if (title.isEmpty) continue;
-
-      final imgEl = anchor.querySelector('img');
-      String poster = '';
-      if (imgEl != null) {
-        poster = imgEl.attributes['src'] ?? imgEl.attributes['data-src'] ?? '';
-      } else {
-        final style =
-            anchor
-                .querySelector('.list-top-movie-item-thumb')
-                ?.attributes['style'] ??
-            '';
-        final bgMatch = RegExp(r"url\('?([^'\)]+)'?\)").firstMatch(style);
-        if (bgMatch != null) poster = bgMatch.group(1) ?? '';
-      }
-
-      final subtitle = anchor
-          .querySelector('.meta-sub, .ribbon-sub')
-          ?.text
-          .trim();
-      final badge =
-          anchor.querySelector('.ribbon-sub, .ribbon')?.text.trim() ?? subtitle;
-      final views = anchor
-          .querySelector(
-            '.meta-viewed, .ribbon-viewed, .list-top-movie-item-view',
-          )
-          ?.text
-          .trim();
-      final likes = anchor.querySelector('.meta-like')?.text.trim();
-      final hasVietsub = _isVietsub(
-        [title, subtitle, badge].whereType<String>().join(' '),
-      );
-
-      movies.add(
-        Movie(
-          id: id,
-          title: title,
-          url: _fixUrl(href),
-          poster: _fixUrl(poster),
-          badge: badge,
-          views: views,
-          likes: likes,
-          hasVietsub: hasVietsub,
-        ),
-      );
-      seenIds.add(id);
-    }
-
-    // Final total calculation if not found in .record
-    if (total == 0) {
-      final navLinks = document.querySelectorAll('.navigation .page-numbers');
-      if (navLinks.isNotEmpty) {
-        int maxPage = 1;
-        for (final link in navLinks) {
-          final pageNum = int.tryParse(link.text.trim());
-          if (pageNum != null && pageNum > maxPage) maxPage = pageNum;
-        }
-        if (maxPage > 1) {
-          // Approximate total = (maxPage - 1) * itemsPerPage + itemsOnLastPage
-          // Here we assume itemsPerPage is movies.length if we are on page 1
-          total = maxPage * movies.length;
-        } else {
-          total = movies.length;
-        }
-      } else {
-        total = movies.length;
-      }
-    }
-
-    return MovieResponse(movies: movies, total: total);
+  /// Parses a page of movie cards off the UI isolate — a listing page is
+  /// hundreds of kilobytes of markup, which parsed inline dropped frames on
+  /// every page of the grid.
+  Future<MovieResponse> _parseMovieResponse(dynamic data) {
+    final htmlContent = data is Map && data.containsKey('movies')
+        ? data['movies'].toString()
+        : data.toString();
+    return compute(_parseMovieListHtml, (
+      html: htmlContent,
+      baseUrl: effectiveBaseUrl ?? '',
+    ));
   }
 
   /// Get movies by category (trending, recent) with pagination.
@@ -725,7 +574,7 @@ class MovieService {
       }
 
       final response = await _dio.get(path, cancelToken: cancelToken);
-      return _parseMovieResponse(response.data);
+      return await _parseMovieResponse(response.data);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         return const MovieResponse(movies: [], total: 0);
@@ -758,7 +607,7 @@ class MovieService {
       }
 
       final response = await _dio.get(path, cancelToken: cancelToken);
-      return _parseMovieResponse(response.data.toString());
+      return await _parseMovieResponse(response.data.toString());
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         return const MovieResponse(movies: [], total: 0);
@@ -790,56 +639,21 @@ class MovieService {
 
     try {
       final response = await _dio.get(movieUrl, cancelToken: cancelToken);
-      final htmlStr = response.data.toString();
-      final document = html_parser.parse(htmlStr);
-
-      final title =
-          document.querySelector('h1.header-title')?.text.trim() ??
-          document
-              .querySelector('meta[property="og:title"]')
-              ?.attributes['content'] ??
-          '';
-
-      final description =
-          document.querySelector('#film-content-wrapper p')?.text.trim() ??
-          document
-              .querySelector('meta[name="description"]')
-              ?.attributes['content'] ??
-          '';
-
-      final poster = _fixUrl(
-        document
-                .querySelector('meta[property="og:image"]')
-                ?.attributes['content'] ??
-            document.querySelector('img.thumb')?.attributes['src'],
-      );
-
-      final tagElements = document.querySelectorAll('.tag-list .tag-link');
-      final tags = tagElements
-          .map((e) => e.text.trim())
-          .where((t) => t.isNotEmpty)
-          .toList();
-      final views = document.querySelector('.icon-view')?.text.trim();
-      final likes = document.querySelector('.icon-like')?.text.trim();
-      final hasVietsub = _isVietsub([title, description, ...tags].join(' '));
-
-      final relatedMovies = _parseMovieResponse(
-        htmlStr,
-      ).movies.where((m) => m.id != movieId).toList();
+      // One parse, off the UI isolate, serves the page and its related rail.
+      final page = await compute(_parseMovieDetailHtml, (
+        html: response.data.toString(),
+        baseUrl: effectiveBaseUrl ?? '',
+        movieId: movieId,
+      ));
 
       String? streamUrl;
       if (includeStream) {
         // Attempt to extract direct stream URL from inline script first.
-        final atobMatch = RegExp(
-          r'window\.atob\("([^"]+)"\)',
-        ).firstMatch(htmlStr);
-        if (atobMatch != null) {
-          final b64 = atobMatch.group(1);
-          if (b64 != null) {
-            try {
-              streamUrl = utf8.decode(base64.decode(b64));
-            } catch (_) {}
-          }
+        final b64 = page.inlineStream;
+        if (b64 != null) {
+          try {
+            streamUrl = utf8.decode(base64.decode(b64));
+          } catch (_) {}
         }
 
         // If inline script didn't contain stream or failed, call AJAX server 1.
@@ -870,25 +684,21 @@ class MovieService {
         );
       }
 
-      final thumbnailTrackMatch = RegExp(
-        r'''["']([^"']+\.vtt)["']''',
-        caseSensitive: false,
-      ).firstMatch(htmlStr);
-      final thumbnailTrackUrl = _fixUrl(thumbnailTrackMatch?.group(1));
+      final thumbnailTrackUrl = _fixUrl(page.thumbnailTrack);
 
       final detail = MovieDetail(
         id: movieId,
-        title: title,
+        title: page.title,
         url: movieUrl,
-        poster: poster,
-        description: description,
-        views: views,
-        likes: likes,
-        hasVietsub: hasVietsub,
+        poster: page.poster,
+        description: page.description,
+        views: page.views,
+        likes: page.likes,
+        hasVietsub: page.hasVietsub,
         streamUrl: streamUrl,
         thumbnailTrackUrl: thumbnailTrackUrl.isEmpty ? null : thumbnailTrackUrl,
-        tags: tags,
-        relatedMovies: relatedMovies,
+        tags: page.tags,
+        relatedMovies: page.relatedMovies,
         servers: servers,
       );
 
@@ -1225,7 +1035,9 @@ class MovieService {
         time: movieData['time']?.toString(),
         url: slug,
         poster: poster,
-        description: movieData['content'] ?? '',
+        // The API sends the synopsis as markup; stripped once here rather
+        // than on every build of the page that shows it.
+        description: _stripHtmlTags(movieData['content']?.toString() ?? ''),
         views: movieData['view']?.toString(),
         hasVietsub: (movieData['lang'] ?? '').toString().toLowerCase().contains(
           'sub',
@@ -1258,3 +1070,224 @@ class MovieService {
 }
 
 final movieService = MovieService();
+
+final _htmlTagPattern = RegExp(r'<[^>]*>');
+
+String _stripHtmlTags(String value) =>
+    value.replaceAll(_htmlTagPattern, '').trim();
+
+final _vietsubPattern = RegExp(r'viet\s*sub|việt\s*sub', caseSensitive: false);
+
+bool _isVietsub(String value) => _vietsubPattern.hasMatch(value);
+
+final _movieIdPattern = RegExp(r'-(\d+)\.html');
+
+/// The movie ID in a URL slug (e.g. "...-3982.html" => "3982").
+String _extractId(String url) =>
+    _movieIdPattern.firstMatch(url)?.group(1) ?? '';
+
+/// Completes a relative link against [baseUrl], the host that served the page.
+String _fixUrlAgainst(String? url, String baseUrl) {
+  if (url == null || url.isEmpty) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return '$baseUrl$url';
+  return '$baseUrl/$url';
+}
+
+/// A listing page to parse, and the host its relative links belong to.
+typedef _MovieListInput = ({String html, String baseUrl});
+
+/// A detail page to parse; [movieId] is left out of its own related rail.
+typedef _MovieDetailInput = ({String html, String baseUrl, String movieId});
+
+/// What the HTML detail page yields, read from a single parse of it.
+typedef _MovieDetailPage = ({
+  String title,
+  String description,
+  String poster,
+  List<String> tags,
+  String? views,
+  String? likes,
+  bool hasVietsub,
+  List<Movie> relatedMovies,
+  String? inlineStream,
+  String? thumbnailTrack,
+});
+
+/// Top level so [compute] can run it on another isolate.
+MovieResponse _parseMovieListHtml(_MovieListInput input) =>
+    _parseMovieDocument(html_parser.parse(input.html), input.baseUrl);
+
+/// Top level so [compute] can run it on another isolate.
+_MovieDetailPage _parseMovieDetailHtml(_MovieDetailInput input) {
+  final htmlStr = input.html;
+  final document = html_parser.parse(htmlStr);
+
+  final title =
+      document.querySelector('h1.header-title')?.text.trim() ??
+      document
+          .querySelector('meta[property="og:title"]')
+          ?.attributes['content'] ??
+      '';
+
+  final description =
+      document.querySelector('#film-content-wrapper p')?.text.trim() ??
+      document
+          .querySelector('meta[name="description"]')
+          ?.attributes['content'] ??
+      '';
+
+  final poster = _fixUrlAgainst(
+    document
+            .querySelector('meta[property="og:image"]')
+            ?.attributes['content'] ??
+        document.querySelector('img.thumb')?.attributes['src'],
+    input.baseUrl,
+  );
+
+  final tags = document
+      .querySelectorAll('.tag-list .tag-link')
+      .map((e) => e.text.trim())
+      .where((t) => t.isNotEmpty)
+      .toList();
+
+  final relatedMovies = _parseMovieDocument(
+    document,
+    input.baseUrl,
+  ).movies.where((m) => m.id != input.movieId).toList();
+
+  return (
+    title: title,
+    description: description,
+    poster: poster,
+    tags: tags,
+    views: document.querySelector('.icon-view')?.text.trim(),
+    likes: document.querySelector('.icon-like')?.text.trim(),
+    hasVietsub: _isVietsub([title, description, ...tags].join(' ')),
+    relatedMovies: relatedMovies,
+    inlineStream: RegExp(
+      r'window\.atob\("([^"]+)"\)',
+    ).firstMatch(htmlStr)?.group(1),
+    thumbnailTrack: RegExp(
+      r'''["']([^"']+\.vtt)["']''',
+      caseSensitive: false,
+    ).firstMatch(htmlStr)?.group(1),
+  );
+}
+
+/// Movie list items and total count from a parsed page.
+MovieResponse _parseMovieDocument(html_dom.Document document, String baseUrl) {
+  final movies = <Movie>[];
+  final seenIds = <String>{};
+
+  // Extract total count if available (Search results)
+  int total = 0;
+  final recordEl = document.querySelector('.record');
+  if (recordEl != null) {
+    final match = RegExp(r'(\d+)').firstMatch(recordEl.text);
+    if (match != null) {
+      total = int.tryParse(match.group(1)!) ?? 0;
+    }
+  }
+
+  // Selectors covering different sections (carousel, category grid, trending, sidebar)
+  final mainContent = document.querySelector('#main-content');
+  final container = mainContent ?? document;
+
+  final items = container.querySelectorAll(
+    '.movie-item, .movie-carousel-top-item, .trending-movie-item, .last-film-box li a',
+  );
+
+  for (final item in items) {
+    final anchor = item.localName == 'a'
+        ? item
+        : item.querySelector('a') ?? item.parent;
+    if (anchor == null || anchor.localName != 'a') continue;
+
+    final href = anchor.attributes['href'] ?? '';
+    if (!href.contains('.html')) continue;
+
+    final id = _extractId(href);
+    if (id.isEmpty || seenIds.contains(id)) continue;
+
+    final title =
+        anchor.attributes['title'] ??
+        anchor
+            .querySelector(
+              '.movie-title-1, .movie-name-1, .trending-movie-name, .list-top-movie-item-vn',
+            )
+            ?.text
+            .trim() ??
+        '';
+
+    if (title.isEmpty) continue;
+
+    final imgEl = anchor.querySelector('img');
+    String poster = '';
+    if (imgEl != null) {
+      poster = imgEl.attributes['src'] ?? imgEl.attributes['data-src'] ?? '';
+    } else {
+      final style =
+          anchor
+              .querySelector('.list-top-movie-item-thumb')
+              ?.attributes['style'] ??
+          '';
+      final bgMatch = RegExp(r"url\('?([^'\)]+)'?\)").firstMatch(style);
+      if (bgMatch != null) poster = bgMatch.group(1) ?? '';
+    }
+
+    final subtitle = anchor
+        .querySelector('.meta-sub, .ribbon-sub')
+        ?.text
+        .trim();
+    final badge =
+        anchor.querySelector('.ribbon-sub, .ribbon')?.text.trim() ?? subtitle;
+    final views = anchor
+        .querySelector(
+          '.meta-viewed, .ribbon-viewed, .list-top-movie-item-view',
+        )
+        ?.text
+        .trim();
+    final likes = anchor.querySelector('.meta-like')?.text.trim();
+    final hasVietsub = _isVietsub(
+      [title, subtitle, badge].whereType<String>().join(' '),
+    );
+
+    movies.add(
+      Movie(
+        id: id,
+        title: title,
+        url: _fixUrlAgainst(href, baseUrl),
+        poster: _fixUrlAgainst(poster, baseUrl),
+        badge: badge,
+        views: views,
+        likes: likes,
+        hasVietsub: hasVietsub,
+      ),
+    );
+    seenIds.add(id);
+  }
+
+  // Not in `.record`: estimated from the pagination.
+  if (total == 0) {
+    final navLinks = document.querySelectorAll('.navigation .page-numbers');
+    if (navLinks.isNotEmpty) {
+      int maxPage = 1;
+      for (final link in navLinks) {
+        final pageNum = int.tryParse(link.text.trim());
+        if (pageNum != null && pageNum > maxPage) maxPage = pageNum;
+      }
+      if (maxPage > 1) {
+        // Approximate total = (maxPage - 1) * itemsPerPage + itemsOnLastPage
+        // Here we assume itemsPerPage is movies.length if we are on page 1
+        total = maxPage * movies.length;
+      } else {
+        total = movies.length;
+      }
+    } else {
+      total = movies.length;
+    }
+  }
+
+  return MovieResponse(movies: movies, total: total);
+}

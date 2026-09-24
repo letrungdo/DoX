@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/model/music_track.dart';
+import 'package:do_x/screen/music/music_seek_bar.dart';
 import 'package:do_x/screen/music/music_video_view.dart';
 import 'package:do_x/store/immersive_mode.dart';
 import 'package:do_x/utils/device_type.dart';
@@ -38,6 +40,7 @@ class MusicFullscreenVideoPlayer extends StatefulWidget {
     required this.onExit,
     required this.onToggleLike,
     required this.seekable,
+    this.videoKey,
   });
 
   /// Back to the track list.
@@ -46,6 +49,10 @@ class MusicFullscreenVideoPlayer extends StatefulWidget {
 
   /// Makes a slider one the remote can step off — see the music page.
   final Widget Function(Widget slider) seekable;
+
+  /// Carried by the picture, so the one the page was showing moves in here
+  /// rather than being made again — see the music page.
+  final Key? videoKey;
 
   @override
   State<MusicFullscreenVideoPlayer> createState() =>
@@ -59,6 +66,10 @@ class _MusicFullscreenVideoPlayerState
   final _playNode = FocusNode(debugLabel: 'tv-music-video-play');
 
   bool _controlsVisible = true;
+
+  /// The controls have faded all the way out, and are no longer built: the
+  /// seek bar in them was still being rebuilt twice a second out of sight.
+  bool _controlsGone = false;
   Timer? _hideTimer;
 
   @override
@@ -109,7 +120,12 @@ class _MusicFullscreenVideoPlayerState
   /// Brings the controls up with the remote on them, and starts the clock
   /// that takes them down again.
   void _showControls() {
-    if (!_controlsVisible) setState(() => _controlsVisible = true);
+    if (!_controlsVisible || _controlsGone) {
+      setState(() {
+        _controlsVisible = true;
+        _controlsGone = false;
+      });
+    }
     _scheduleHide();
     // Only a remote needs to be put anywhere.
     if (!deviceType.isTv) return;
@@ -225,12 +241,13 @@ class _MusicFullscreenVideoPlayerState
                     child: Center(
                       child: video != null
                           ? MusicVideoView(
+                              key: widget.videoKey,
                               controller: video,
                               isOfficialAudio: vm.isAudioFromVideo,
                               borderRadius: BorderRadius.zero,
                             )
                           : _buildWaiting(
-                              track?.artworkUrl ?? '',
+                              track,
                               // Off, or none to be had: the artwork stands in
                               // for it, with nothing to wait for.
                               loading: vm.isVideoEnabled && vm.isVideoPending,
@@ -250,12 +267,19 @@ class _MusicFullscreenVideoPlayerState
                     child: AnimatedOpacity(
                       opacity: _controlsVisible ? 1 : 0,
                       duration: Dimens.musicFullscreenControlsFade,
+                      onEnd: () {
+                        if (!_controlsVisible && mounted) {
+                          setState(() => _controlsGone = true);
+                        }
+                      },
                       // A finger on the controls keeps them up, the way a
                       // key press does on a television.
-                      child: Listener(
-                        onPointerDown: (_) => _scheduleHide(),
-                        child: _buildControls(vm),
-                      ),
+                      child: _controlsGone
+                          ? const SizedBox.shrink()
+                          : Listener(
+                              onPointerDown: (_) => _scheduleHide(),
+                              child: _buildControls(vm),
+                            ),
                     ),
                   ),
                 ),
@@ -294,14 +318,14 @@ class _MusicFullscreenVideoPlayerState
   /// skip does not flash the track list up between two videos.
   /// The artwork where the picture goes: dimmed under a spinner while the
   /// video is on its way, as it is when there is no video to show.
-  Widget _buildWaiting(String artworkUrl, {required bool loading}) {
+  Widget _buildWaiting(MusicTrack? track, {required bool loading}) {
     return Stack(
       alignment: Alignment.center,
       children: [
         Opacity(
           opacity: loading ? 0.4 : 1,
           child: MusicArtwork(
-            url: artworkUrl,
+            track: track,
             size: Dimens.musicFullscreenWaitingArtSize,
           ),
         ),
@@ -313,7 +337,6 @@ class _MusicFullscreenVideoPlayerState
   Widget _buildControls(MusicViewModel vm) {
     final l10n = context.l10n;
     final track = vm.currentTrack;
-    final duration = vm.duration.inMilliseconds.toDouble();
     final isLiked = track != null && vm.isLiked(track.id);
     final isTv = deviceType.isTv;
     const white = Colors.white;
@@ -364,9 +387,8 @@ class _MusicFullscreenVideoPlayerState
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: muted, fontSize: isTv ? 14 : 12),
               ),
-              ValueListenableBuilder(
-                valueListenable: vm.positionListenable,
-                builder: (context, position, _) => Column(
+              MusicSeekBar(
+                builder: (context, position, slider) => Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -377,17 +399,7 @@ class _MusicFullscreenVideoPlayerState
                         inactiveTrackColor: Colors.white24,
                         thumbColor: white,
                       ),
-                      child: widget.seekable(
-                        Slider(
-                          value: position.inMilliseconds.toDouble().clamp(
-                            0.0,
-                            duration,
-                          ),
-                          max: duration == 0 ? 1 : duration,
-                          onChanged: (value) =>
-                              vm.seekTo(Duration(milliseconds: value.toInt())),
-                        ),
-                      ),
+                      child: widget.seekable(slider),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

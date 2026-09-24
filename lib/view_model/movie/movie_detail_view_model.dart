@@ -11,6 +11,10 @@ import 'package:do_x/view_model/core/core_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+/// One client for every thumbnail track, rather than a fresh one — with its
+/// own connection pool and handshakes — for each film opened.
+final _thumbnailTrackDio = Dio();
+
 class MovieDetailViewModel extends CoreViewModel {
   MovieDetailViewModel();
 
@@ -218,7 +222,7 @@ class MovieDetailViewModel extends CoreViewModel {
   ) async {
     final generation = ++_thumbnailGeneration;
     try {
-      final response = await Dio().get<String>(
+      final response = await _thumbnailTrackDio.get<String>(
         trackUrl,
         options: Options(
           responseType: ResponseType.plain,

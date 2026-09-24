@@ -43,8 +43,38 @@ class _TvChannelService {
     ),
   );
 
+  /// How long a list fetched this run is taken as the list as it stands,
+  /// for a caller that only wants it fresh rather than refetched on the spot.
+  ///
+  /// Switching into the TV tab is such a caller: it is a way of looking at
+  /// the page, not of asking for it again, and a playlist rebuilt once a day
+  /// has nothing new to say a few minutes after it was last read.
+  static const freshFor = Duration(minutes: 5);
+
+  /// Bodies at least this long are read off the UI isolate.
+  ///
+  /// A country's playlist runs to hundreds of kilobytes, and reading and
+  /// sorting it on the UI isolate drops frames on a television that is
+  /// already drawing the grid. A short body costs less to read than an
+  /// isolate costs to start, so it is read in place.
+  static const _backgroundParseLength = 64 * 1024;
+
   /// Channels by country code, for the countries visited this run.
   final _channels = <String, List<TvChannel>>{};
+
+  /// When each country's list last came back from the network this run.
+  final _fetchedAt = <String, DateTime>{};
+
+  /// What the body behind each country's list in [_channels] looked like,
+  /// so a fetch that brings back the same body is not read and stored again.
+  final _signatures = <String, ({int length, int hash})>{};
+
+  /// Whether [countryCode]'s list came back from the network less than
+  /// [freshFor] ago.
+  bool isFresh(String countryCode) {
+    final fetchedAt = _fetchedAt[countryCode.toLowerCase()];
+    return fetchedAt != null && DateTime.now().difference(fetchedAt) < freshFor;
+  }
 
   /// The channel list of [countryCode], from memory if this run has already
   /// read it and from the network otherwise.
@@ -68,9 +98,20 @@ class _TvChannelService {
 
     try {
       final fetched = await _fetch(code);
-      final channels = parseChannels(fetched.body);
+      _fetchedAt[code] = DateTime.now();
+      // The same body as the list already up: nothing to read, and the copy
+      // on disk is this body already.
+      final signature = _signatureOf(fetched.body);
+      final current = _channels[code];
+      if (current != null &&
+          current.isNotEmpty &&
+          _signatures[code] == signature) {
+        return current;
+      }
+      final channels = fetched.channels ?? await _parseOffUi(fetched.body);
       if (channels.isEmpty) throw const FormatException('Empty TV playlist');
       _channels[code] = channels;
+      _signatures[code] = signature;
       if (fetched.isWorthKeeping) {
         await storageService.setTvPlaylist(code, fetched.body);
       }
@@ -85,7 +126,7 @@ class _TvChannelService {
       }
       // Whatever is on disk beats an error screen: a day-old channel list still
       // plays, and the user asked to watch television, not to see a refresh fail.
-      final fallback = _channels[code] ?? _parseStoredPlaylist(code);
+      final fallback = _channels[code] ?? await _parseStoredPlaylist(code);
       if (fallback != null && fallback.isNotEmpty) {
         return _channels[code] = fallback;
       }
@@ -95,9 +136,9 @@ class _TvChannelService {
 
   /// The last list of [countryCode] that reached the app, for the page to
   /// draw while this run's fetch is still out, or null when there is none.
-  List<TvChannel>? storedChannels(String countryCode) {
+  Future<List<TvChannel>?> storedChannels(String countryCode) async {
     final code = countryCode.toLowerCase();
-    return _channels[code] ?? _parseStoredPlaylist(code);
+    return _channels[code] ?? await _parseStoredPlaylist(code);
   }
 
   /// The last list of [countryCode] that reached the app, which is what it
@@ -106,10 +147,31 @@ class _TvChannelService {
   /// It is kept without a lifetime of its own: it is never served while the
   /// network can be reached, and when it cannot, how old it is changes
   /// nothing — it is still the only television there is.
-  List<TvChannel>? _parseStoredPlaylist(String countryCode) {
-    final raw = storageService.getTvPlaylist(countryCode);
+  Future<List<TvChannel>?> _parseStoredPlaylist(String countryCode) async {
+    final raw = await storageService.getTvPlaylist(countryCode);
     if (raw == null || raw.isEmpty) return null;
-    return parseChannels(raw);
+    final channels = await _parseOffUi(raw);
+    // Remembered as what is on screen, so a fetch bringing back this same
+    // body is known for one.
+    if (channels.isNotEmpty) _signatures[countryCode] = _signatureOf(raw);
+    return channels;
+  }
+
+  /// Enough of [body] to tell it from the body before it without keeping
+  /// both.
+  ({int length, int hash}) _signatureOf(String body) =>
+      (length: body.length, hash: body.hashCode);
+
+  /// [parseChannels], on a background isolate once [body] is long enough to
+  /// be worth one.
+  Future<List<TvChannel>> _parseOffUi(String body) {
+    if (body.length < _backgroundParseLength) {
+      return SynchronousFuture(parseChannels(body));
+    }
+    return compute(_parseChannelsIn, (
+      body: body,
+      platform: defaultTargetPlatform,
+    ));
   }
 
   /// The channel list [countryCode] should be shown, and whether it is the
@@ -121,13 +183,17 @@ class _TvChannelService {
   /// that way is not stored, though — it is the thin, unchecked list, and
   /// caching it would keep it on screen for half a day after the table came
   /// back.
-  Future<({String body, bool isWorthKeeping})> _fetch(
-    String countryCode,
-  ) async {
+  ///
+  /// The table's rows arrive already decoded, so they are turned into
+  /// [channels] as they are, and encoded only for the copy on disk.
+  Future<({String body, List<TvChannel>? channels, bool isWorthKeeping})>
+  _fetch(String countryCode) async {
     if (countryCode == curatedCountryCode) {
       try {
+        final rows = await _fetchCuratedRows(countryCode);
         return (
-          body: await _fetchCuratedChannels(countryCode),
+          body: jsonEncode(rows),
+          channels: [for (final row in rows) TvChannel.fromRow(row)],
           isWorthKeeping: true,
         );
       } catch (e, st) {
@@ -141,13 +207,15 @@ class _TvChannelService {
     final response = await _dio.get<String>(countryPlaylistUrl(countryCode));
     return (
       body: response.data ?? '',
+      channels: null,
       isWorthKeeping: countryCode != curatedCountryCode,
     );
   }
 
-  /// The rows `refresh-tv-channels` last wrote, as the JSON they are stored
-  /// and parsed as.
-  Future<String> _fetchCuratedChannels(String countryCode) async {
+  /// The rows `refresh-tv-channels` last wrote.
+  Future<List<Map<String, dynamic>>> _fetchCuratedRows(
+    String countryCode,
+  ) async {
     final rows = await supabase
         .from('tv_channels')
         .select()
@@ -156,7 +224,7 @@ class _TvChannelService {
         // the rows in the order they arrive.
         .order('sort_order', ascending: true);
     if (rows.isEmpty) throw const FormatException('Empty TV channel table');
-    return jsonEncode(rows);
+    return rows;
   }
 
   /// The channels a stored or freshly fetched body holds.
@@ -166,9 +234,15 @@ class _TvChannelService {
   /// starts with, which no playlist ever does.
   ///
   /// Public so a stored copy of either shape can be tested.
-  List<TvChannel> parseChannels(String body) {
+  List<TvChannel> parseChannels(String body) =>
+      _readChannels(body, defaultTargetPlatform);
+
+  /// [parseChannels] for [platform], which is handed in rather than read
+  /// because this also runs on a background isolate — where a platform
+  /// override set on the UI isolate does not reach.
+  static List<TvChannel> _readChannels(String body, TargetPlatform platform) {
     final trimmed = body.trimLeft();
-    if (!trimmed.startsWith('[')) return parsePlaylist(body);
+    if (!trimmed.startsWith('[')) return _readPlaylist(body, platform);
     try {
       final decoded = jsonDecode(trimmed);
       if (decoded is! List) return const [];
@@ -201,7 +275,13 @@ class _TvChannelService {
   /// the spares the player falls back on, rather than shown as a row each.
   ///
   /// Public so the parser can be tested without a network round trip.
-  List<TvChannel> parsePlaylist(String content) {
+  List<TvChannel> parsePlaylist(String content) =>
+      _readPlaylist(content, defaultTargetPlatform);
+
+  static List<TvChannel> _readPlaylist(
+    String content,
+    TargetPlatform platform,
+  ) {
     final drafts = <_ChannelDraft>[];
     final draftByKey = <String, _ChannelDraft>{};
     final seen = <String>{};
@@ -247,11 +327,12 @@ class _TvChannelService {
       if (!inEntry) continue;
 
       inEntry = false;
-      if (!_isPlayable(line)) continue;
+      if (!_isPlayable(line, platform)) continue;
       if (!seen.add(line)) continue;
 
       final tvgId = attributes['tvg-id'] ?? '';
-      final cleanName = _cleanName(name).isEmpty ? line : _cleanName(name);
+      final strippedName = _cleanName(name);
+      final cleanName = strippedName.isEmpty ? line : strippedName;
 
       // Two entries are the same station when the playlist gives them the
       // same `tvg-id`; without one, the name is all there is to go on.
@@ -286,12 +367,17 @@ class _TvChannelService {
       draftByKey[key] = draft;
     }
 
-    final channels = drafts.map((draft) => draft.build()).toList();
-    channels.sort((a, b) => compareChannelNames(a.name, b.name));
-    return channels;
+    // Each name reduced to what it is sorted by once, up front: worked out
+    // inside the comparison it would be worked out again on every one of the
+    // thousands of comparisons a playlist's sort makes.
+    final keyed = [
+      for (final draft in drafts)
+        (channel: draft.build(), keys: _ChannelSortKeys.of(draft.name)),
+    ]..sort((a, b) => a.keys.compareTo(b.keys));
+    return [for (final entry in keyed) entry.channel];
   }
 
-  String? _logoOf(Map<String, String> attributes) {
+  static String? _logoOf(Map<String, String> attributes) {
     final logo = attributes['tvg-logo'];
     return logo == null || logo.isEmpty ? null : logo;
   }
@@ -300,16 +386,16 @@ class _TvChannelService {
   ///
   /// Apple's player speaks HLS and nothing else, so a DASH manifest is a row
   /// that could only ever fail; ExoPlayer on Android plays both.
-  bool _isPlayable(String url) {
+  static bool _isPlayable(String url, TargetPlatform platform) {
     if (!url.startsWith('http')) return false;
     final isDash = url.split('?').first.toLowerCase().endsWith('.mpd');
     if (!isDash) return true;
     return !kIsWeb &&
-        defaultTargetPlatform != TargetPlatform.iOS &&
-        defaultTargetPlatform != TargetPlatform.macOS;
+        platform != TargetPlatform.iOS &&
+        platform != TargetPlatform.macOS;
   }
 
-  Map<String, String> _headersFrom(Map<String, String> attributes) {
+  static Map<String, String> _headersFrom(Map<String, String> attributes) {
     final headers = <String, String>{};
     for (final entry in attributes.entries) {
       final header = _headerName(entry.key);
@@ -322,23 +408,30 @@ class _TvChannelService {
 
   /// The HTTP header an M3U option name stands for, or null when it is one of
   /// the many options that says nothing about the request.
-  String? _headerName(String key) => switch (key.toLowerCase()) {
+  static String? _headerName(String key) => switch (key.toLowerCase()) {
     'http-referrer' || 'http-referer' => 'Referer',
     'http-user-agent' => 'User-Agent',
     'http-origin' => 'Origin',
     _ => null,
   };
 
-  String _cleanName(String rawName) {
+  static String _cleanName(String rawName) {
     return rawName
         .replaceAll(_flagExp, '')
         .replaceAll(_qualityExp, '')
-        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(_whitespaceExp, ' ')
         .trim();
   }
 }
 
 final tvChannelService = _TvChannelService();
+
+/// [_TvChannelService.parseChannels] as a background isolate runs it.
+List<TvChannel> _parseChannelsIn(
+  ({String body, TargetPlatform platform}) request,
+) => _TvChannelService._readChannels(request.body, request.platform);
+
+final _whitespaceExp = RegExp(r'\s+');
 
 /// Orders two channel names the way a viewer reads them, which means the
 /// digits in them count as numbers: plain text ordering puts `VTV10` between
@@ -353,23 +446,46 @@ final tvChannelService = _TvChannelService();
 /// whatever carries it after every number.
 ///
 /// Public so the ordering can be tested on names alone.
-int compareChannelNames(String first, String second) {
-  final byReading = _compareText(_sortKey(first), _sortKey(second));
-  if (byReading != 0) return byReading;
-  // Two names that read the same still have to have an order between them.
-  return _compareText(
-    TvChannel.normalizeName(first),
-    TvChannel.normalizeName(second),
-  );
+int compareChannelNames(String first, String second) =>
+    _ChannelSortKeys.of(first).compareTo(_ChannelSortKeys.of(second));
+
+/// What [compareChannelNames] compares a name by, worked out once so that a
+/// sort can hold on to it instead of working it out per comparison.
+class _ChannelSortKeys {
+  const _ChannelSortKeys({required this.reading, required this.normalized});
+
+  factory _ChannelSortKeys.of(String name) {
+    final normalized = TvChannel.normalizeName(name);
+    return _ChannelSortKeys(
+      reading: _sortKey(normalized),
+      normalized: normalized,
+    );
+  }
+
+  /// The name as a viewer would say it out loud.
+  final String reading;
+
+  /// The name as written, lowercased and without its accents.
+  final String normalized;
+
+  int compareTo(_ChannelSortKeys other) {
+    final byReading = _compareText(reading, other.reading);
+    if (byReading != 0) return byReading;
+    // Two names that read the same still have to have an order between them.
+    return _compareText(normalized, other.normalized);
+  }
 }
 
 /// The words a channel name carries without them saying which channel it is,
 /// so that `Vĩnh Long 5` and `Vinh Long TV 4` sort as one run of numbers.
 final _sortNoiseExp = RegExp(r'\b(tv|kenh|channel|hd|sd|fhd|uhd|4k)\b');
 
-String _sortKey(String name) => TvChannel.normalizeName(
-  name,
-).replaceAll(_sortNoiseExp, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+/// [normalized], a name already put through [TvChannel.normalizeName], with
+/// the noise words taken out.
+String _sortKey(String normalized) => normalized
+    .replaceAll(_sortNoiseExp, ' ')
+    .replaceAll(_whitespaceExp, ' ')
+    .trim();
 
 int _compareText(String left, String right) {
   var i = 0;
@@ -413,8 +529,10 @@ int _compareText(String left, String right) {
 
 bool _isDigit(int codeUnit) => codeUnit >= 0x30 && codeUnit <= 0x39;
 
+final _leadingZerosExp = RegExp(r'^0+');
+
 String _withoutLeadingZeros(String digits) {
-  final trimmed = digits.replaceFirst(RegExp(r'^0+'), '');
+  final trimmed = digits.replaceFirst(_leadingZerosExp, '');
   return trimmed.isEmpty ? '0' : trimmed;
 }
 

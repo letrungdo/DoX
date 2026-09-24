@@ -53,6 +53,16 @@ class MovieViewModel extends CoreViewModel {
 
   int _loadGeneration = 0;
 
+  /// When the list on screen was last fetched from the top, so a return to
+  /// the app can tell a list worth keeping from one worth refetching.
+  DateTime? _loadedAt;
+
+  /// Whether the list is older than [maxAge], or has never loaded at all.
+  bool isOlderThan(Duration maxAge) {
+    final loadedAt = _loadedAt;
+    return loadedAt == null || DateTime.now().difference(loadedAt) > maxAge;
+  }
+
   static const genrePrefix = 'genre_';
   static const countryPrefix = 'country_';
 
@@ -130,6 +140,9 @@ class MovieViewModel extends CoreViewModel {
 
     _isFetching = true;
     if (refresh) {
+      // Whatever was still on its way answers a question nobody is asking any
+      // more — the generation check would drop it, so it is not waited on.
+      renewCancelToken('superseded');
       _isLoading = !silent;
       _isLoadingMore = false;
       _currentPage = 1;
@@ -216,6 +229,7 @@ class MovieViewModel extends CoreViewModel {
       _hasMore = response.movies.isNotEmpty;
       _totalMovies = response.total;
       if (refresh) {
+        _loadedAt = DateTime.now();
         if (!receivedLibraryBatch) {
           _movies = response.movies;
           _movieIds.clear();
@@ -245,6 +259,7 @@ class MovieViewModel extends CoreViewModel {
     }
 
     if (refresh) {
+      _loadedAt = DateTime.now();
       _movies = fetched;
       _movieIds.clear();
       _movieIds.addAll(fetched.map((m) => m.id));
@@ -399,9 +414,13 @@ class MovieViewModel extends CoreViewModel {
     }
   }
 
-  void setSearchQuery(String query) {
-    _searchQuery = query.trim();
-    loadMovies(refresh: true);
+  /// Searches for [query], or goes back to the full list for an empty one.
+  /// A query that is already the one on screen fetches nothing.
+  Future<void> setSearchQuery(String query) {
+    final trimmed = query.trim();
+    if (trimmed == _searchQuery) return Future.value();
+    _searchQuery = trimmed;
+    return loadMovies(refresh: true);
   }
 
   void setCollection(MovieCollection collection) {

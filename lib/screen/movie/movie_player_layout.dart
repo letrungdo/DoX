@@ -131,15 +131,32 @@ TextFit fitText({
 /// A title split into the name and the alternate name shown under it.
 typedef MovieTitleParts = ({String title, String? subtitle});
 
+/// Anywhere in the title, not just at its end — some servers write
+/// `Tên phim (Tên khác) - Phần 2`.
+final _bracketPattern = RegExp(r'\(([^()]+)\)');
+final _repeatedSpaces = RegExp(r'\s{2,}');
+
+/// The last title split and what it came out as. The player asks for the same
+/// title on every build, so the regex runs once per title rather than once per
+/// frame.
+String? _lastSplitInput;
+MovieTitleParts? _lastSplitResult;
+
 /// A bracketed part of the title is another name for the movie, as in
 /// `Kẻ Trộm Mặt Trăng 4 (Despicable Me 4)`, and reads as the app bar's second
 /// line. It is not the original name, which has its own field and own strip.
 MovieTitleParts splitMovieTitle(String rawTitle) {
+  final cached = _lastSplitResult;
+  if (cached != null && _lastSplitInput == rawTitle) return cached;
+  final result = _splitMovieTitle(rawTitle);
+  _lastSplitInput = rawTitle;
+  _lastSplitResult = result;
+  return result;
+}
+
+MovieTitleParts _splitMovieTitle(String rawTitle) {
   final title = rawTitle.trim();
-  // Anywhere in the title, not just at its end — some servers write
-  // `Tên phim (Tên khác) - Phần 2`.
-  final bracketPattern = RegExp(r'\(([^()]+)\)');
-  final alternates = bracketPattern
+  final alternates = _bracketPattern
       .allMatches(title)
       .map((match) => match.group(1)!.trim())
       .where((value) => value.isNotEmpty)
@@ -147,13 +164,38 @@ MovieTitleParts splitMovieTitle(String rawTitle) {
   if (alternates.isEmpty) return (title: title, subtitle: null);
 
   final name = title
-      .replaceAll(bracketPattern, ' ')
-      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      .replaceAll(_bracketPattern, ' ')
+      .replaceAll(_repeatedSpaces, ' ')
       .trim();
   // A title that is nothing but brackets keeps what it had.
   if (name.isEmpty) return (title: title, subtitle: null);
 
   return (title: name, subtitle: alternates.join(' • '));
+}
+
+/// How many fitted title blocks and strips are remembered. A handful covers
+/// the detail page's own variants (bar, overlay header, strip) across a
+/// rotation or two.
+const _fitCacheLimit = 16;
+
+/// Fitted results keyed on everything that decides them — text, styles,
+/// width, text scale and direction. Fitting lays the text out at every half
+/// point it tries, which is far too much to redo on every build.
+final _fitCache = <Object, Object>{};
+
+T _memoizedFit<T extends Object>(Object key, T Function() compute) {
+  final hit = _fitCache.remove(key);
+  if (hit is T) {
+    // Re-inserted, so the map's insertion order doubles as recency.
+    _fitCache[key] = hit;
+    return hit;
+  }
+  final value = compute();
+  _fitCache[key] = value;
+  if (_fitCache.length > _fitCacheLimit) {
+    _fitCache.remove(_fitCache.keys.first);
+  }
+  return value;
 }
 
 TextStyle _baseSubtitleStyle(ThemeData theme) =>
@@ -181,6 +223,40 @@ AppBarTitleFit appBarTitleFit(
   final screenWidth = MediaQuery.sizeOf(context).width;
   final availableWidth = screenWidth > 272 ? screenWidth - 160 : 120.0;
 
+  final key = (
+    #appBarTitle,
+    title,
+    subtitle,
+    subtitleLines,
+    availableWidth,
+    titleStyle,
+    baseSubtitleStyle,
+    MediaQuery.textScalerOf(context),
+    Directionality.of(context),
+  );
+  return _memoizedFit(
+    key,
+    () => _fitAppBarTitle(
+      context,
+      title,
+      subtitle: subtitle,
+      subtitleLines: subtitleLines,
+      titleStyle: titleStyle,
+      baseSubtitleStyle: baseSubtitleStyle,
+      availableWidth: availableWidth,
+    ),
+  );
+}
+
+AppBarTitleFit _fitAppBarTitle(
+  BuildContext context,
+  String title, {
+  required String? subtitle,
+  required int subtitleLines,
+  required TextStyle titleStyle,
+  required TextStyle baseSubtitleStyle,
+  required double availableWidth,
+}) {
   final titleFit = fitText(
     context: context,
     text: title,
@@ -229,15 +305,27 @@ TextStyle subtitleStripStyle(
       ) ??
       const TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
   if (text.isEmpty) return baseStyle;
-  final fit = fitText(
-    context: context,
-    text: text,
-    style: baseStyle,
-    maxWidth: math.max(120.0, MediaQuery.sizeOf(context).width - 32),
-    maxLines: maxLines,
-    minFontSize: 8,
+  final maxWidth = math.max(120.0, MediaQuery.sizeOf(context).width - 32);
+  final key = (
+    #subtitleStrip,
+    text,
+    maxLines,
+    maxWidth,
+    baseStyle,
+    MediaQuery.textScalerOf(context),
+    Directionality.of(context),
   );
-  return baseStyle.copyWith(fontSize: fit.fontSize);
+  return _memoizedFit(key, () {
+    final fit = fitText(
+      context: context,
+      text: text,
+      style: baseStyle,
+      maxWidth: maxWidth,
+      maxLines: maxLines,
+      minFontSize: 8,
+    );
+    return baseStyle.copyWith(fontSize: fit.fontSize);
+  });
 }
 
 String formatDuration(Duration duration) {

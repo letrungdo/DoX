@@ -46,6 +46,20 @@ const _healthyRunToForgiveStalls = Duration(seconds: 30);
 /// Rebuild attempts for one wedged stream before the user is asked to retry.
 const _maxRecoveryAttempts = 3;
 
+/// How often the position is written to the watch history while a film runs.
+/// Pausing, switching episode and leaving the page save it on the spot, so
+/// this only bounds what a crash can lose.
+const _progressSaveInterval = Duration(seconds: 30);
+
+/// The least time between two seeks while the timeline is dragged without a
+/// thumbnail track, where the picture itself is the preview.
+const _dragSeekInterval = Duration(milliseconds: 200);
+
+/// How long a drag seek is waited on before it is given up on. A wedged
+/// stream may never answer one, and a drag still waiting would keep the stall
+/// watchdog — which stands aside while the timeline is held — off for good.
+const _dragSeekTimeout = Duration(seconds: 2);
+
 @RoutePage()
 class MovieDetailScreen extends StatefulScreen implements AutoRouteWrapper {
   final String movieUrl;
@@ -57,8 +71,14 @@ class MovieDetailScreen extends StatefulScreen implements AutoRouteWrapper {
   /// mini player as [minimizeProgress] goes to 0.
   final bool embedded;
 
-  /// 1 = fully expanded page, 0 = mini player bar. Only used when [embedded].
+  /// 1 = fully expanded page, 0 = mini player bar. Only used when [embedded],
+  /// and only when [minimizeAnimation] is not given.
   final double minimizeProgress;
+
+  /// [minimizeProgress] as it moves. The host hands its overlay animation in
+  /// so a drag or a snap re-lays only the pieces that change size, instead of
+  /// rebuilding the whole page on every frame of it.
+  final Animation<double>? minimizeAnimation;
 
   final ValueChanged<bool>? onFullScreenChanged;
   final MovieDetailController? controller;
@@ -79,6 +99,7 @@ class MovieDetailScreen extends StatefulScreen implements AutoRouteWrapper {
     this.initialMovie,
     this.embedded = false,
     this.minimizeProgress = 1,
+    this.minimizeAnimation,
     this.onFullScreenChanged,
     this.controller,
     this.onRelatedMovieTap,
@@ -135,7 +156,6 @@ class _MovieDetailScreenState
   /// is a pending position the arrows move and OK commits, so the film does
   /// not re-buffer on every press of the key.
   final FocusNode _timelineFocusNode = FocusNode(debugLabel: 'movie-timeline');
-  bool _isScrubbing = false;
 
   /// The episode grid laid over the picture in full screen, and the remote's
   /// place inside it.
@@ -159,17 +179,40 @@ class _MovieDetailScreenState
 
   bool _isSpeedBoosted = false;
   Offset? _doubleTapPosition;
-  int _skipForwardValue = 0;
-  int _skipBackwardValue = 0;
+
+  /// The ±seconds badges of a double tap or a held arrow. Notifiers rather
+  /// than state: they change on every press, and only the badges read them.
+  final _skipForward = ValueNotifier<int>(0);
+  final _skipBackward = ValueNotifier<int>(0);
+  late final Listenable _skipBadges = Listenable.merge([
+    _skipForward,
+    _skipBackward,
+  ]);
   Timer? _skipForwardTimer;
   Timer? _skipBackwardTimer;
 
-  bool _isDragging = false;
-  bool _isTimelineHovering = false;
-  Duration _dragPosition = Duration.zero;
-  double _dragFraction = 0;
+  /// The pointer or the remote on the timeline. It moves at pointer rate while
+  /// dragging or hovering, so only the bar, the preview and the clock follow
+  /// it — never the page around them.
+  final _timeline = ValueNotifier<_TimelineState>(const _TimelineState());
+  late final Listenable _timelineBar = Listenable.merge([
+    _timeline,
+    _timelineFocusNode,
+  ]);
+  bool get _isDragging => _timeline.value.isDragging;
+  bool get _isTimelineHovering => _timeline.value.isHovering;
+  bool get _isScrubbing => _timeline.value.isScrubbing;
+  Duration get _dragPosition => _timeline.value.position;
   bool _resumeAfterDrag = false;
-  ThumbnailCue? _hoverThumbnailCue;
+
+  /// Bumped by every drag that starts, so the end of one that is still
+  /// waiting on its seek cannot close a newer one.
+  int _dragGeneration = 0;
+
+  /// The latest drag position still to be sought to, and whether a seek is
+  /// already running — see [_requestDragSeek].
+  Duration? _pendingDragSeek;
+  bool _isDragSeekRunning = false;
 
   bool _isRotationLocked = false;
   bool _isPlayPauseKeyDown = false;
@@ -192,13 +235,29 @@ class _MovieDetailScreenState
   /// `false` keeps the whole frame visible. Toggled by the button or a pinch.
   bool _isVideoCover = false;
 
-  Duration? _virtualSeekPosition;
+  /// Where a jump just sent the film, shown by the clock until the player's
+  /// own position catches up.
+  final _virtualSeek = ValueNotifier<Duration?>(null);
   Timer? _virtualSeekTimer;
 
   /// True while the platform player is refilling its buffer. Without this the
   /// frame simply freezes and a normal stall is indistinguishable from a dead
-  /// player.
-  bool _isBuffering = false;
+  /// player. Only the spinner listens to it.
+  final _buffering = ValueNotifier<bool>(false);
+
+  /// Whether the control overlay has finished fading out. Once it has, the
+  /// hidden bar stops following the film — see [_controlsIdle].
+  bool _controlsFadedOut = false;
+
+  /// Hidden and done fading: nothing of the overlay is visible, so it neither
+  /// ticks nor follows the controller until it is shown again.
+  bool get _controlsIdle => !_showControls && _controlsFadedOut;
+
+  /// The detail body as last built, and what it was built from. The player
+  /// rebuilds this State for every control it shows or hides; the body only
+  /// changes with the film, the server or the episode.
+  Widget? _detailBody;
+  Object? _detailBodyKey;
 
   /// The stream the current controller was built from, so a stall can be
   /// recovered by rebuilding it at the position playback died at.
@@ -319,7 +378,15 @@ class _MovieDetailScreenState
     _controlsTimer?.cancel();
     _playPauseLongPressTimer?.cancel();
     _volumeHideTimer?.cancel();
+    _skipForwardTimer?.cancel();
+    _skipBackwardTimer?.cancel();
+    _virtualSeekTimer?.cancel();
     _orientationSubscription?.cancel();
+    _skipForward.dispose();
+    _skipBackward.dispose();
+    _timeline.dispose();
+    _virtualSeek.dispose();
+    _buffering.dispose();
     _videoFocusNode.dispose();
     _topControlsScope.dispose();
     _bottomControlsScope.dispose();
@@ -374,7 +441,7 @@ class _MovieDetailScreenState
 
   void _startProgressTimer() {
     _progressTimer?.cancel();
-    _progressTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    _progressTimer = Timer.periodic(_progressSaveInterval, (timer) {
       if (_isPlaying) {
         final position = _videoController?.value.position.inSeconds;
         if (position != null) {
@@ -418,10 +485,8 @@ class _MovieDetailScreenState
     if (!isRecovery) _recoveryAttempts = 0;
 
     _vm.setStreamLoading(true);
-    setState(() {
-      _showControls = true;
-      _isTimelineHovering = false;
-    });
+    setState(() => _showControls = true);
+    _timeline.value = _timeline.value.copyWith(isHovering: false);
 
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
@@ -495,10 +560,7 @@ class _MovieDetailScreenState
           return;
         }
 
-        final isBuffering = controller.value.isBuffering;
-        if (isBuffering != _isBuffering) {
-          setState(() => _isBuffering = isBuffering);
-        }
+        _buffering.value = controller.value.isBuffering;
 
         // Auto play next episode when current one ends
         final duration = controller.value.duration;
@@ -531,8 +593,8 @@ class _MovieDetailScreenState
         _videoController = controller;
         _videoValueListener = videoValueListener;
         _isPlaying = true;
-        _isBuffering = controller.value.isBuffering;
       });
+      _buffering.value = controller.value.isBuffering;
       _vm.setStreamLoading(false);
       unawaited(_setWakelock(true));
       controller.addListener(videoValueListener);
@@ -652,9 +714,9 @@ class _MovieDetailScreenState
         _videoController = null;
         _videoValueListener = null;
         _isPlaying = false;
-        _isBuffering = false;
-        _isTimelineHovering = false;
       });
+      _buffering.value = false;
+      _timeline.value = _timeline.value.copyWith(isHovering: false);
       if (listener != null) {
         controller.removeListener(listener);
       }
@@ -1133,42 +1195,78 @@ class _MovieDetailScreenState
     if (controller == null || !controller.value.isInitialized) return;
 
     final duration = controller.value.duration;
-    final currentPos = _virtualSeekPosition ?? controller.value.position;
+    final currentPos = _virtualSeek.value ?? controller.value.position;
     var target = currentPos + offset;
 
     if (target < Duration.zero) target = Duration.zero;
     if (duration > Duration.zero && target > duration) target = duration;
 
-    setState(() {
-      _virtualSeekPosition = target;
-    });
+    _virtualSeek.value = target;
 
     unawaited(controller.seekTo(target));
 
     _virtualSeekTimer?.cancel();
     _virtualSeekTimer = Timer(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        setState(() => _virtualSeekPosition = null);
-      }
+      if (mounted) _virtualSeek.value = null;
     });
 
     if (!_showControls) setState(() => _showControls = true);
     _startControlsTimer();
   }
 
+  /// Moves the drag marker to [localX] of [width]. [seek] is for a tap on the
+  /// bar, which is a seek in itself; a drag leaves the seeking to
+  /// [_requestDragSeek] and [_finishDragging].
   void _updateDragPosition(
     VideoPlayerController controller,
     double localX,
-    double width,
-  ) {
+    double width, {
+    bool seek = false,
+  }) {
     final fraction = (localX / width).clamp(0.0, 1.0);
     final target = controller.value.duration * fraction;
-    setState(() {
-      _dragFraction = fraction;
-      _dragPosition = target;
-      _hoverThumbnailCue = _vm.thumbnailTrack?.cueAt(target);
-    });
-    unawaited(controller.seekTo(target));
+    _timeline.value = _timeline.value.moveTo(
+      fraction: fraction,
+      position: target,
+      cue: _vm.thumbnailTrack?.cueAt(target),
+    );
+    if (seek) {
+      unawaited(controller.seekTo(target));
+    } else if (_vm.thumbnailTrack == null) {
+      // Without a sprite the preview is the picture itself, so it has to be
+      // moved as the finger does — but one seek at a time, or a fast drag
+      // queues up more of them than the player can ever work through.
+      _requestDragSeek(controller, target);
+    }
+    // With a sprite the preview is the sprite; the film is sought once, where
+    // the drag ends.
+  }
+
+  /// Seeks to the latest drag position, never more than one seek at a time
+  /// and never more often than [_dragSeekInterval]. Positions passed while one
+  /// is running are folded into the next.
+  void _requestDragSeek(VideoPlayerController controller, Duration target) {
+    _pendingDragSeek = target;
+    if (_isDragSeekRunning) return;
+    _isDragSeekRunning = true;
+    unawaited(() async {
+      try {
+        while (mounted && identical(controller, _videoController)) {
+          final next = _pendingDragSeek;
+          if (next == null) break;
+          _pendingDragSeek = null;
+          await Future.wait([
+            controller
+                .seekTo(next)
+                .timeout(_dragSeekTimeout)
+                .catchError((Object _) {}),
+            Future<void>.delayed(_dragSeekInterval),
+          ]);
+        }
+      } finally {
+        _isDragSeekRunning = false;
+      }
+    }());
   }
 
   void _updateHoverPreview(
@@ -1182,20 +1280,49 @@ class _MovieDetailScreenState
     if (controller == null || !controller.value.isInitialized) return;
     final target = controller.value.duration * fraction;
     _controlsTimer?.cancel();
-    setState(() {
-      _isTimelineHovering = showPreview;
-      _showControls = true;
-      _dragFraction = fraction;
-      _dragPosition = target;
-      _hoverThumbnailCue = _vm.thumbnailTrack?.cueAt(target);
-    });
+    if (!_showControls) setState(() => _showControls = true);
+    _timeline.value = _timeline.value
+        .copyWith(isHovering: showPreview)
+        .moveTo(
+          fraction: fraction,
+          position: target,
+          cue: _vm.thumbnailTrack?.cueAt(target),
+        );
   }
 
-  void _finishDragging(VideoPlayerController controller) {
+  void _startDragging(VideoPlayerController controller) {
+    _dragGeneration++;
+    _resumeAfterDrag = controller.value.isPlaying;
+    unawaited(controller.pause());
+    _controlsTimer?.cancel();
+    _timeline.value = _timeline.value.copyWith(isDragging: true);
+  }
+
+  /// Seeks to where the drag let go, and only then lets the bar go back to the
+  /// player's own position — otherwise it would flick back to where the film
+  /// was for as long as the seek takes.
+  Future<void> _finishDragging(VideoPlayerController controller) async {
+    final generation = _dragGeneration;
     final shouldResume = _resumeAfterDrag;
-    setState(() => _isDragging = false);
     _resumeAfterDrag = false;
-    if (shouldResume) unawaited(controller.play());
+    _pendingDragSeek = null;
+    try {
+      await controller.seekTo(_dragPosition).timeout(_dragSeekTimeout);
+    } catch (_) {
+      // A controller torn down mid-seek, or a stream that never answered: the
+      // drag is over either way.
+    }
+    if (!mounted) return;
+    if (generation != _dragGeneration) {
+      // Another drag began while this seek ran, with the film already paused
+      // by this one — so that drag is the one to set it playing again.
+      _resumeAfterDrag = _resumeAfterDrag || shouldResume;
+      return;
+    }
+    _timeline.value = _timeline.value.copyWith(isDragging: false);
+    if (shouldResume && identical(controller, _videoController)) {
+      unawaited(controller.play());
+    }
     _startControlsTimer();
   }
 
@@ -1310,15 +1437,15 @@ class _MovieDetailScreenState
   }) {
     if (isForward) {
       _skipForwardTimer?.cancel();
-      setState(() => _skipForwardValue += seconds);
+      _skipForward.value += seconds;
       _skipForwardTimer = Timer(const Duration(milliseconds: 600), () {
-        if (mounted) setState(() => _skipForwardValue = 0);
+        if (mounted) _skipForward.value = 0;
       });
     } else {
       _skipBackwardTimer?.cancel();
-      setState(() => _skipBackwardValue += seconds);
+      _skipBackward.value += seconds;
       _skipBackwardTimer = Timer(const Duration(milliseconds: 600), () {
-        if (mounted) setState(() => _skipBackwardValue = 0);
+        if (mounted) _skipBackward.value = 0;
       });
     }
   }
@@ -1336,33 +1463,34 @@ class _MovieDetailScreenState
 
     final base = _isScrubbing
         ? _dragPosition
-        : (_virtualSeekPosition ?? controller.value.position);
+        : (_virtualSeek.value ?? controller.value.position);
     var target = base + offset;
     if (target < Duration.zero) target = Duration.zero;
     if (target > duration) target = duration;
 
     _controlsTimer?.cancel();
-    setState(() {
-      _isScrubbing = true;
-      _showControls = true;
-      _dragPosition = target;
-      _dragFraction = target.inMilliseconds / duration.inMilliseconds;
-      _hoverThumbnailCue = _vm.thumbnailTrack?.cueAt(target);
-    });
+    if (!_showControls) setState(() => _showControls = true);
+    _timeline.value = _timeline.value
+        .copyWith(isScrubbing: true)
+        .moveTo(
+          fraction: target.inMilliseconds / duration.inMilliseconds,
+          position: target,
+          cue: _vm.thumbnailTrack?.cueAt(target),
+        );
   }
 
   void _commitScrub() {
     final controller = _videoController;
     if (!_isScrubbing || controller == null) return;
     final target = _dragPosition;
-    setState(() => _isScrubbing = false);
+    _timeline.value = _timeline.value.copyWith(isScrubbing: false);
     unawaited(controller.seekTo(target));
     _startControlsTimer();
   }
 
   void _cancelScrub() {
     if (!_isScrubbing) return;
-    setState(() => _isScrubbing = false);
+    _timeline.value = _timeline.value.copyWith(isScrubbing: false);
     _startControlsTimer();
   }
 
@@ -1652,8 +1780,15 @@ class _MovieDetailScreenState
     );
   }
 
+  /// The body, rebuilt only when what it shows changes. Handing the framework
+  /// the same widget back is what lets it skip the whole subtree — every chip
+  /// of every episode — on the many rebuilds the player causes.
   Widget _buildDetailBody() {
-    return MovieDetailBody(
+    final key = (_vm.detail, _vm.selectedServer, _vm.selectedEpisode);
+    final cached = _detailBody;
+    if (cached != null && _detailBodyKey == key) return cached;
+    _detailBodyKey = key;
+    return _detailBody = MovieDetailBody(
       detail: _vm.detail,
       selectedServer: _vm.selectedServer,
       selectedEpisode: _vm.selectedEpisode,
@@ -1676,9 +1811,14 @@ class _MovieDetailScreenState
     );
   }
 
-  /// The page as it lives inside the `MovieScreen` overlay. [minimizeProgress]
-  /// (1 = expanded, 0 = mini bar) drives every size here, so a drag reads as
-  /// the player shrinking into the bottom bar while the rest fades away.
+  /// The page as it lives inside the `MovieScreen` overlay. The minimise
+  /// progress (1 = expanded, 0 = mini bar) drives every size here, so a drag
+  /// reads as the player shrinking into the bottom bar while the rest fades
+  /// away.
+  ///
+  /// Everything that does not change size with it — the header, the body, the
+  /// player itself — is built once here and handed to the animation as it
+  /// is, so a frame of the drag only re-lays the boxes around them.
   Widget _buildEmbedded(
     BuildContext context, {
     required String title,
@@ -1688,14 +1828,15 @@ class _MovieDetailScreenState
   }) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final t = widget.minimizeProgress.clamp(0.0, 1.0);
+    final progress =
+        widget.minimizeAnimation ??
+        AlwaysStoppedAnimation(widget.minimizeProgress.clamp(0.0, 1.0));
     final mediaQuery = MediaQuery.of(context);
     final controller = _videoController;
     final aspectRatio = (controller?.value.isInitialized ?? false)
         ? controller!.value.aspectRatio
         : 16 / 9;
     final screenWidth = mediaQuery.size.width;
-    final playerWidth = miniPlayerWidth + (screenWidth - miniPlayerWidth) * t;
     // Landscape puts the notch and the rounded corners on the sides, where the
     // header controls and the body text would otherwise run underneath them.
     // The video itself stays full bleed.
@@ -1786,117 +1927,131 @@ class _MovieDetailScreenState
       ],
     );
 
+    // Built once per state change, not once per frame of the drag.
+    final headerBox = FadeTransition(
+      opacity: progress,
+      child: SizedBox(
+        height: headerHeight,
+        child: Padding(padding: sideInsets, child: header),
+      ),
+    );
+    final fullPlayer = _buildVideoPlayerArea(
+      isFullScreen: false,
+      fillParent: true,
+    );
+    final compactPlayer = _buildVideoPlayerArea(
+      isFullScreen: false,
+      fillParent: true,
+      compact: true,
+    );
+    final miniChrome = FadeTransition(
+      opacity: ReverseAnimation(progress),
+      child: _buildMiniChrome(title, alternateTitle ?? originalTitle),
+    );
+    final body = Padding(
+      padding: sideInsets,
+      child: _vm.isLoading
+          ? const Center(child: Loading())
+          : _buildDetailBody(),
+    );
+
     return LayoutBuilder(
-      builder: (context, constraints) {
-        // Capped against the space left under the header, so a wide desktop
-        // window (or a landscape phone) still leaves a body to scroll.
-        // The insets fade in with the page: expanded, the video sits inside
-        // them; collapsed to the mini bar, the host already places it clear of
-        // the edges, so applying them there would shift the bar sideways.
-        final activeSideInsets = sideInsets * t;
-        final fullPlayerHeight = inlinePlayerHeight(
-          width: screenWidth - sideInsets.horizontal,
-          aspectRatio: aspectRatio,
-          availableHeight: constraints.maxHeight - headerHeight,
-        );
-        final playerHeight = math.min(
-          miniPlayerHeight + (fullPlayerHeight - miniPlayerHeight) * t,
-          math.max(miniPlayerHeight, constraints.maxHeight - headerHeight * t),
-        );
-        // The box is still card-sized while the opening zoom runs.
-        final boxedPlayerWidth = math.min(
-          playerWidth,
-          constraints.maxWidth - activeSideInsets.horizontal,
-        );
-        return Material(
-          color: theme.colorScheme.surface,
-          child: Column(
-            children: [
-              // Align+ClipRect collapses the header without reflowing its
-              // content. Kept mounted at t == 0 so a drag that bottoms out
-              // keeps feeding this recognizer instead of being cancelled.
-              GestureDetector(
-                // The strip above the video drags the page down just like the
-                // video itself does.
-                behavior: HitTestBehavior.opaque,
-                onVerticalDragStart: widget.onPlayerDragStart,
-                onVerticalDragUpdate: widget.onPlayerDragUpdate,
-                onVerticalDragEnd: widget.onPlayerDragEnd,
-                child: ClipRect(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    heightFactor: t,
-                    child: Opacity(
-                      opacity: t,
-                      child: SizedBox(
-                        height: headerHeight,
-                        child: Padding(padding: sideInsets, child: header),
-                      ),
+      builder: (context, constraints) => AnimatedBuilder(
+        animation: progress,
+        builder: (context, _) {
+          final t = progress.value.clamp(0.0, 1.0);
+          final playerWidth =
+              miniPlayerWidth + (screenWidth - miniPlayerWidth) * t;
+          // Capped against the space left under the header, so a wide desktop
+          // window (or a landscape phone) still leaves a body to scroll.
+          // The insets fade in with the page: expanded, the video sits inside
+          // them; collapsed to the mini bar, the host already places it clear
+          // of the edges, so applying them there would shift the bar sideways.
+          final activeSideInsets = sideInsets * t;
+          final fullPlayerHeight = inlinePlayerHeight(
+            width: screenWidth - sideInsets.horizontal,
+            aspectRatio: aspectRatio,
+            availableHeight: constraints.maxHeight - headerHeight,
+          );
+          final playerHeight = math.min(
+            miniPlayerHeight + (fullPlayerHeight - miniPlayerHeight) * t,
+            math.max(
+              miniPlayerHeight,
+              constraints.maxHeight - headerHeight * t,
+            ),
+          );
+          // The box is still card-sized while the opening zoom runs.
+          final boxedPlayerWidth = math.min(
+            playerWidth,
+            constraints.maxWidth - activeSideInsets.horizontal,
+          );
+          final isBodyShown = t >= 0.99;
+          return Material(
+            color: theme.colorScheme.surface,
+            child: Column(
+              children: [
+                // Align+ClipRect collapses the header without reflowing its
+                // content. Kept mounted at t == 0 so a drag that bottoms out
+                // keeps feeding this recognizer instead of being cancelled.
+                GestureDetector(
+                  // The strip above the video drags the page down just like
+                  // the video itself does.
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragStart: widget.onPlayerDragStart,
+                  onVerticalDragUpdate: widget.onPlayerDragUpdate,
+                  onVerticalDragEnd: widget.onPlayerDragEnd,
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      heightFactor: t,
+                      child: headerBox,
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: activeSideInsets,
-                child: SizedBox(
-                  height: playerHeight,
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: boxedPlayerWidth,
-                        height: playerHeight,
-                        child: GestureDetector(
-                          onVerticalDragStart: widget.onPlayerDragStart,
-                          onVerticalDragUpdate: widget.onPlayerDragUpdate,
-                          onVerticalDragEnd: widget.onPlayerDragEnd,
-                          child: _buildVideoPlayerArea(
-                            isFullScreen: false,
-                            fillParent: true,
-                            compact: t < 0.6,
+                Padding(
+                  padding: activeSideInsets,
+                  child: SizedBox(
+                    height: playerHeight,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: boxedPlayerWidth,
+                          height: playerHeight,
+                          child: GestureDetector(
+                            onVerticalDragStart: widget.onPlayerDragStart,
+                            onVerticalDragUpdate: widget.onPlayerDragUpdate,
+                            onVerticalDragEnd: widget.onPlayerDragEnd,
+                            child: t < 0.6 ? compactPlayer : fullPlayer,
                           ),
                         ),
-                      ),
-                      if (t < 1)
-                        Expanded(
-                          child: Opacity(
-                            opacity: 1 - t,
-                            child: _buildMiniChrome(
-                              title,
-                              alternateTitle ?? originalTitle,
-                            ),
-                          ),
-                        ),
-                    ],
+                        if (t < 1) Expanded(child: miniChrome),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: ClipRect(
-                  child: Opacity(
-                    opacity: t,
-                    child: IgnorePointer(
-                      ignoring: t < 0.99,
-                      // Untappable is not enough for a remote: left in the
-                      // focus tree, a body faded out behind the mini player
-                      // still takes the D-pad. It enters the tree exactly
-                      // when it becomes visible.
-                      child: ExcludeFocus(
-                        excluding: t < 0.99,
-                        child: Padding(
-                          padding: sideInsets,
-                          child: _vm.isLoading
-                              ? const Center(child: Loading())
-                              : _buildDetailBody(),
+                Expanded(
+                  child: ClipRect(
+                    child: FadeTransition(
+                      opacity: progress,
+                      child: IgnorePointer(
+                        ignoring: !isBodyShown,
+                        // Untappable is not enough for a remote: left in the
+                        // focus tree, a body faded out behind the mini player
+                        // still takes the D-pad. It enters the tree exactly
+                        // when it becomes visible.
+                        child: ExcludeFocus(
+                          excluding: !isBodyShown,
+                          child: body,
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1960,6 +2115,70 @@ class _MovieDetailScreenState
         },
       ),
     );
+  }
+
+  /// The frame under the pointer or the remote's marker, floating over the
+  /// timeline for as long as there is one. [width] is the timeline's.
+  Widget _buildScrubPreview(VideoPlayerController controller, double width) {
+    const previewWidth = 160.0;
+    return ValueListenableBuilder<_TimelineState>(
+      valueListenable: _timeline,
+      builder: (context, timeline, _) {
+        if (!timeline.showsPreview) return const SizedBox.shrink();
+        final maxPreviewLeft = width > previewWidth
+            ? width - previewWidth
+            : 0.0;
+        final previewLeft = (width * timeline.fraction - previewWidth / 2)
+            .clamp(0.0, maxPreviewLeft);
+        return Positioned(
+          left: previewLeft,
+          bottom: 42,
+          child: PlayerScrubPreview(
+            track: _vm.thumbnailTrack,
+            cue: timeline.cue,
+            width: previewWidth,
+            referer: '${movieService.effectiveBaseUrl}/',
+            // No sprite: the live frame, where a second view of it can be
+            // had. A platform view's one surface would leave the screen
+            // behind it black.
+            fallback: pictureViewType == VideoViewType.textureView
+                ? VideoPlayer(controller)
+                : const SizedBox.shrink(),
+            position: timeline.position,
+          ),
+        );
+      },
+    );
+  }
+
+  /// `position / duration` beside the transport buttons. It stops following
+  /// the film while the overlay is hidden and nobody can read it.
+  Widget _buildPlaybackClock(VideoPlayerController controller) {
+    Widget clock(VideoPlayerValue value) {
+      final timeline = _timeline.value;
+      final currentPos = (timeline.isDragging || timeline.isScrubbing)
+          ? timeline.position
+          : (_virtualSeek.value ?? value.position);
+      return Text(
+        '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
+        style: const TextStyle(color: Colors.white, fontSize: 12),
+      );
+    }
+
+    if (_controlsIdle) return clock(controller.value);
+    return ListenableBuilder(
+      listenable: Listenable.merge([controller, _timeline, _virtualSeek]),
+      builder: (context, _) => clock(controller.value),
+    );
+  }
+
+  /// Records when the control overlay has finished fading either way, so a
+  /// hidden one can stop following the film — see [_controlsIdle].
+  void _onControlsFadeEnd() {
+    if (!mounted) return;
+    final fadedOut = !_showControls;
+    if (fadedOut == _controlsFadedOut) return;
+    setState(() => _controlsFadedOut = fadedOut);
   }
 
   Widget _buildVideoPlayerArea({
@@ -2026,8 +2245,8 @@ class _MovieDetailScreenState
                 setState(() {
                   _showControls = false;
                   _showVolumeControl = false;
-                  _isTimelineHovering = false;
                 });
+                _timeline.value = _timeline.value.copyWith(isHovering: false);
                 _releaseControlsFocus();
                 _controlsTimer?.cancel();
                 _volumeHideTimer?.cancel();
@@ -2147,12 +2366,15 @@ class _MovieDetailScreenState
                   Positioned.fill(
                     child: IgnorePointer(
                       child: Center(
-                        child:
-                            controller != null &&
-                                controller.value.isInitialized &&
-                                (_isBuffering || _vm.isLoadingStream)
-                            ? const Loading()
-                            : const SizedBox.shrink(),
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _buffering,
+                          builder: (context, isBuffering, _) =>
+                              controller != null &&
+                                  controller.value.isInitialized &&
+                                  (isBuffering || _vm.isLoadingStream)
+                              ? const Loading()
+                              : const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                   ),
@@ -2160,10 +2382,13 @@ class _MovieDetailScreenState
                   // Always-on Overlays (2x, Skip indicators)
                   if (controller != null && controller.value.isInitialized)
                     Positioned.fill(
-                      child: PlayerGestureOverlays(
-                        isSpeedBoosted: _isSpeedBoosted,
-                        skipForwardValue: _skipForwardValue,
-                        skipBackwardValue: _skipBackwardValue,
+                      child: ListenableBuilder(
+                        listenable: _skipBadges,
+                        builder: (context, _) => PlayerGestureOverlays(
+                          isSpeedBoosted: _isSpeedBoosted,
+                          skipForwardValue: _skipForward.value,
+                          skipBackwardValue: _skipBackward.value,
+                        ),
                       ),
                     ),
 
@@ -2182,595 +2407,564 @@ class _MovieDetailScreenState
                           child: AnimatedOpacity(
                             opacity: _showControls ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    // Tapping the video only shows and hides the
-                                    // controls, never plays or pauses. Play/pause
-                                    // is the centre button's job, so a tap meant to
-                                    // dismiss the controls cannot stop the film.
-                                    onTap: () {
-                                      _videoFocusNode.requestFocus();
-                                      _toggleControls();
-                                    },
-                                    onDoubleTapDown: (details) {
-                                      _doubleTapPosition =
-                                          details.localPosition;
-                                    },
-                                    onDoubleTap: () {
-                                      if (_doubleTapPosition != null) {
-                                        final width = context.size?.width ?? 0;
-                                        if (width > 0) {
-                                          if (_doubleTapPosition!.dx <
-                                              width / 2) {
-                                            _seekBy(
-                                              const Duration(seconds: -10),
-                                            );
-                                            _triggerSkipIndicator(
-                                              isForward: false,
-                                            );
-                                          } else {
-                                            _seekBy(
-                                              const Duration(seconds: 10),
-                                            );
-                                            _triggerSkipIndicator(
-                                              isForward: true,
-                                            );
+                            onEnd: _onControlsFadeEnd,
+                            // Faded out, the overlay is not drawn at all, so
+                            // nothing in it needs to tick or follow the film.
+                            child: TickerMode(
+                              enabled: !_controlsIdle,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      // Tapping the video only shows and hides the
+                                      // controls, never plays or pauses. Play/pause
+                                      // is the centre button's job, so a tap meant to
+                                      // dismiss the controls cannot stop the film.
+                                      onTap: () {
+                                        _videoFocusNode.requestFocus();
+                                        _toggleControls();
+                                      },
+                                      onDoubleTapDown: (details) {
+                                        _doubleTapPosition =
+                                            details.localPosition;
+                                      },
+                                      onDoubleTap: () {
+                                        if (_doubleTapPosition != null) {
+                                          final width =
+                                              context.size?.width ?? 0;
+                                          if (width > 0) {
+                                            if (_doubleTapPosition!.dx <
+                                                width / 2) {
+                                              _seekBy(
+                                                const Duration(seconds: -10),
+                                              );
+                                              _triggerSkipIndicator(
+                                                isForward: false,
+                                              );
+                                            } else {
+                                              _seekBy(
+                                                const Duration(seconds: 10),
+                                              );
+                                              _triggerSkipIndicator(
+                                                isForward: true,
+                                              );
+                                            }
                                           }
                                         }
-                                      }
-                                    },
-                                    onLongPressStart: (_) => _start2xSpeed(),
-                                    onLongPressEnd: (_) => _stop2xSpeed(),
+                                      },
+                                      onLongPressStart: (_) => _start2xSpeed(),
+                                      onLongPressEnd: (_) => _stop2xSpeed(),
+                                    ),
                                   ),
-                                ),
-                                // Bottom Gradient and Controls
-                                PlayerControlsFocus(
-                                  node: _bottomControlsScope,
-                                  // Up is the way off the bottom bar: back onto
-                                  // the picture, not further into the page.
-                                  //
-                                  // On a television it leads to the bar above
-                                  // instead, which the remote otherwise has no
-                                  // way to reach: up from the picture is what
-                                  // enters this bar, and down from the top bar
-                                  // is what comes back to the picture. Down
-                                  // out of this bar is left to traversal, which
-                                  // is how the episode list under an inline
-                                  // player is reached.
-                                  exit: TraversalDirection.up,
-                                  onExit: () {
-                                    _cancelScrub();
-                                    if (deviceType.isTv) {
-                                      _enterControls(true, afterFrame: false);
-                                    } else {
-                                      _videoFocusNode.requestFocus();
-                                    }
-                                    _startControlsTimer();
-                                  },
-                                  child: Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Container(
-                                      padding: EdgeInsets.only(
-                                        bottom:
-                                            4 +
-                                            (isFullScreen
-                                                ? MediaQuery.paddingOf(
-                                                    context,
-                                                  ).bottom
-                                                : 0),
-                                        left: isFullScreen
-                                            ? MediaQuery.paddingOf(context).left
-                                            : 0,
-                                        right: isFullScreen
-                                            ? MediaQuery.paddingOf(
-                                                context,
-                                              ).right
-                                            : 0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.transparent,
-                                            Colors.black.withValues(alpha: 0.7),
-                                          ],
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
+                                  // Bottom Gradient and Controls
+                                  PlayerControlsFocus(
+                                    node: _bottomControlsScope,
+                                    // Up is the way off the bottom bar: back onto
+                                    // the picture, not further into the page.
+                                    //
+                                    // On a television it leads to the bar above
+                                    // instead, which the remote otherwise has no
+                                    // way to reach: up from the picture is what
+                                    // enters this bar, and down from the top bar
+                                    // is what comes back to the picture. Down
+                                    // out of this bar is left to traversal, which
+                                    // is how the episode list under an inline
+                                    // player is reached.
+                                    exit: TraversalDirection.up,
+                                    onExit: () {
+                                      _cancelScrub();
+                                      if (deviceType.isTv) {
+                                        _enterControls(true, afterFrame: false);
+                                      } else {
+                                        _videoFocusNode.requestFocus();
+                                      }
+                                      _startControlsTimer();
+                                    },
+                                    child: Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Container(
+                                        padding: EdgeInsets.only(
+                                          bottom:
+                                              4 +
+                                              (isFullScreen
+                                                  ? MediaQuery.paddingOf(
+                                                      context,
+                                                    ).bottom
+                                                  : 0),
+                                          left: isFullScreen
+                                              ? MediaQuery.paddingOf(
+                                                  context,
+                                                ).left
+                                              : 0,
+                                          right: isFullScreen
+                                              ? MediaQuery.paddingOf(
+                                                  context,
+                                                ).right
+                                              : 0,
                                         ),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              const previewWidth = 160.0;
-                                              final maxPreviewLeft =
-                                                  constraints.maxWidth >
-                                                      previewWidth
-                                                  ? constraints.maxWidth -
-                                                        previewWidth
-                                                  : 0.0;
-                                              final previewLeft =
-                                                  (constraints.maxWidth *
-                                                              _dragFraction -
-                                                          previewWidth / 2)
-                                                      .clamp(
-                                                        0.0,
-                                                        maxPreviewLeft,
-                                                      );
-
-                                              return Stack(
-                                                clipBehavior: Clip.none,
-                                                children: [
-                                                  // The seek bar as a control
-                                                  // of its own, so a remote
-                                                  // can stand on it: the
-                                                  // arrows walk a marker
-                                                  // along it and OK commits.
-                                                  Focus(
-                                                    focusNode:
-                                                        _timelineFocusNode,
-                                                    onKeyEvent:
-                                                        _handleTimelineKeyEvent,
-                                                    // The bar thickens and
-                                                    // grows its handle when
-                                                    // the remote lands on it,
-                                                    // and it is built from
-                                                    // here — so the frame that
-                                                    // moves the focus has to
-                                                    // rebuild this one too.
-                                                    onFocusChange: (_) =>
-                                                        setState(() {}),
-                                                    child: MouseRegion(
-                                                      cursor: SystemMouseCursors
-                                                          .click,
-                                                      onEnter: (event) =>
-                                                          _updateHoverPreview(
-                                                            event
-                                                                .localPosition
-                                                                .dx,
-                                                            constraints
-                                                                .maxWidth,
-                                                          ),
-                                                      onHover: (event) =>
-                                                          _updateHoverPreview(
-                                                            event
-                                                                .localPosition
-                                                                .dx,
-                                                            constraints
-                                                                .maxWidth,
-                                                          ),
-                                                      onExit: (_) {
-                                                        if (_isTimelineHovering) {
-                                                          setState(
-                                                            () =>
-                                                                _isTimelineHovering =
-                                                                    false,
-                                                          );
-                                                        }
-                                                        _startControlsTimer();
-                                                      },
-                                                      child: GestureDetector(
-                                                        behavior:
-                                                            HitTestBehavior
-                                                                .opaque,
-                                                        onHorizontalDragStart:
-                                                            (details) {
-                                                              _resumeAfterDrag =
-                                                                  controller
-                                                                      .value
-                                                                      .isPlaying;
-                                                              unawaited(
-                                                                controller
-                                                                    .pause(),
-                                                              );
-                                                              _controlsTimer
-                                                                  ?.cancel();
-                                                              setState(
-                                                                () =>
-                                                                    _isDragging =
-                                                                        true,
-                                                              );
-                                                              _updateDragPosition(
-                                                                controller,
-                                                                details
-                                                                    .localPosition
-                                                                    .dx,
-                                                                constraints
-                                                                    .maxWidth,
-                                                              );
-                                                            },
-                                                        onHorizontalDragUpdate:
-                                                            (details) {
-                                                              _updateDragPosition(
-                                                                controller,
-                                                                details
-                                                                    .localPosition
-                                                                    .dx,
-                                                                constraints
-                                                                    .maxWidth,
-                                                              );
-                                                            },
-                                                        onHorizontalDragEnd:
-                                                            (_) =>
-                                                                _finishDragging(
-                                                                  controller,
-                                                                ),
-                                                        onHorizontalDragCancel:
-                                                            () =>
-                                                                _finishDragging(
-                                                                  controller,
-                                                                ),
-                                                        onTapDown: (details) {
-                                                          _updateDragPosition(
-                                                            controller,
-                                                            details
-                                                                .localPosition
-                                                                .dx,
-                                                            constraints
-                                                                .maxWidth,
-                                                          );
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.transparent,
+                                              Colors.black.withValues(
+                                                alpha: 0.7,
+                                              ),
+                                            ],
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                return Stack(
+                                                  clipBehavior: Clip.none,
+                                                  children: [
+                                                    // The seek bar as a control
+                                                    // of its own, so a remote
+                                                    // can stand on it: the
+                                                    // arrows walk a marker
+                                                    // along it and OK commits.
+                                                    Focus(
+                                                      focusNode:
+                                                          _timelineFocusNode,
+                                                      onKeyEvent:
+                                                          _handleTimelineKeyEvent,
+                                                      child: MouseRegion(
+                                                        cursor:
+                                                            SystemMouseCursors
+                                                                .click,
+                                                        onEnter: (event) =>
+                                                            _updateHoverPreview(
+                                                              event
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                            ),
+                                                        onHover: (event) =>
+                                                            _updateHoverPreview(
+                                                              event
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                            ),
+                                                        onExit: (_) {
+                                                          if (_isTimelineHovering) {
+                                                            _timeline.value =
+                                                                _timeline.value
+                                                                    .copyWith(
+                                                                      isHovering:
+                                                                          false,
+                                                                    );
+                                                          }
+                                                          _startControlsTimer();
                                                         },
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                top: 10,
-                                                                bottom: 2,
+                                                        child: GestureDetector(
+                                                          behavior:
+                                                              HitTestBehavior
+                                                                  .opaque,
+                                                          onHorizontalDragStart:
+                                                              (details) {
+                                                                _startDragging(
+                                                                  controller,
+                                                                );
+                                                                _updateDragPosition(
+                                                                  controller,
+                                                                  details
+                                                                      .localPosition
+                                                                      .dx,
+                                                                  constraints
+                                                                      .maxWidth,
+                                                                );
+                                                              },
+                                                          onHorizontalDragUpdate:
+                                                              (details) {
+                                                                _updateDragPosition(
+                                                                  controller,
+                                                                  details
+                                                                      .localPosition
+                                                                      .dx,
+                                                                  constraints
+                                                                      .maxWidth,
+                                                                );
+                                                              },
+                                                          onHorizontalDragEnd:
+                                                              (_) => unawaited(
+                                                                _finishDragging(
+                                                                  controller,
+                                                                ),
                                                               ),
-                                                          child: VideoSeekBar(
-                                                            controller:
-                                                                controller,
-                                                            isFocused:
-                                                                _timelineFocusNode
-                                                                    .hasFocus,
-                                                            isHovered:
-                                                                _isTimelineHovering,
-                                                            isDragging:
-                                                                _isDragging,
-                                                            isScrubbing:
-                                                                _isScrubbing,
-                                                            dragFraction:
-                                                                _dragFraction,
+                                                          onHorizontalDragCancel:
+                                                              () => unawaited(
+                                                                _finishDragging(
+                                                                  controller,
+                                                                ),
+                                                              ),
+                                                          onTapDown: (details) {
+                                                            _updateDragPosition(
+                                                              controller,
+                                                              details
+                                                                  .localPosition
+                                                                  .dx,
+                                                              constraints
+                                                                  .maxWidth,
+                                                              seek: true,
+                                                            );
+                                                          },
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  top: 10,
+                                                                  bottom: 2,
+                                                                ),
+                                                            // Follows the
+                                                            // pointer and the
+                                                            // focus without
+                                                            // rebuilding the
+                                                            // player around it.
+                                                            child: ListenableBuilder(
+                                                              listenable:
+                                                                  _timelineBar,
+                                                              builder: (context, _) {
+                                                                final timeline =
+                                                                    _timeline
+                                                                        .value;
+                                                                return VideoSeekBar(
+                                                                  controller:
+                                                                      controller,
+                                                                  isFocused:
+                                                                      _timelineFocusNode
+                                                                          .hasFocus,
+                                                                  isHovered:
+                                                                      timeline
+                                                                          .isHovering,
+                                                                  isDragging:
+                                                                      timeline
+                                                                          .isDragging,
+                                                                  isScrubbing:
+                                                                      timeline
+                                                                          .isScrubbing,
+                                                                  dragFraction:
+                                                                      timeline
+                                                                          .fraction,
+                                                                  live:
+                                                                      !_controlsIdle,
+                                                                );
+                                                              },
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  if (_isDragging ||
-                                                      _isTimelineHovering ||
-                                                      _isScrubbing)
-                                                    Positioned(
-                                                      left: previewLeft,
-                                                      bottom: 42,
-                                                      child: PlayerScrubPreview(
-                                                        track:
-                                                            _vm.thumbnailTrack,
-                                                        cue: _hoverThumbnailCue,
-                                                        width: previewWidth,
-                                                        referer:
-                                                            '${movieService.effectiveBaseUrl}/',
-                                                        // No sprite: the live frame, where a
-                                                        // second view of it can be had. A
-                                                        // platform view's one surface would
-                                                        // leave the screen behind it black.
-                                                        fallback:
-                                                            pictureViewType ==
-                                                                VideoViewType
-                                                                    .textureView
-                                                            ? VideoPlayer(
-                                                                controller,
-                                                              )
-                                                            : const SizedBox.shrink(),
-                                                        position: _dragPosition,
-                                                      ),
+                                                    _buildScrubPreview(
+                                                      controller,
+                                                      constraints.maxWidth,
                                                     ),
-                                                ],
-                                              );
-                                            },
-                                          ),
-                                          LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              final isNarrow =
-                                                  constraints.maxWidth <
-                                                  Dimens.playerNarrowThreshold;
-                                              return Row(
-                                                children: [
-                                                  const SizedBox(width: 8),
-                                                  if (!isNarrow &&
-                                                      _hasPreviousEpisode)
-                                                    IconButton(
-                                                      tooltip:
-                                                          l10n.previousEpisode,
-                                                      icon: const Icon(
-                                                        Icons
-                                                            .skip_previous_rounded,
-                                                        color: Colors.white,
-                                                        size: 24,
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                            LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                final isNarrow =
+                                                    constraints.maxWidth <
+                                                    Dimens
+                                                        .playerNarrowThreshold;
+                                                return Row(
+                                                  children: [
+                                                    const SizedBox(width: 8),
+                                                    if (!isNarrow &&
+                                                        _hasPreviousEpisode)
+                                                      IconButton(
+                                                        tooltip: l10n
+                                                            .previousEpisode,
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .skip_previous_rounded,
+                                                          color: Colors.white,
+                                                          size: 24,
+                                                        ),
+                                                        onPressed:
+                                                            _playPreviousEpisode,
                                                       ),
-                                                      onPressed:
-                                                          _playPreviousEpisode,
-                                                    ),
-                                                  if (!isNarrow)
-                                                    IconButton(
-                                                      icon: Icon(
-                                                        _isPlaying
-                                                            ? Icons
-                                                                  .pause_rounded
-                                                            : Icons
-                                                                  .play_arrow_rounded,
-                                                        color: Colors.white,
-                                                        size: 28,
+                                                    if (!isNarrow)
+                                                      IconButton(
+                                                        icon: Icon(
+                                                          _isPlaying
+                                                              ? Icons
+                                                                    .pause_rounded
+                                                              : Icons
+                                                                    .play_arrow_rounded,
+                                                          color: Colors.white,
+                                                          size: 28,
+                                                        ),
+                                                        onPressed:
+                                                            _togglePlayback,
                                                       ),
-                                                      onPressed:
-                                                          _togglePlayback,
-                                                    ),
-                                                  if (!isNarrow &&
-                                                      _hasNextEpisode)
-                                                    IconButton(
-                                                      tooltip: l10n.nextEpisode,
-                                                      icon: const Icon(
-                                                        Icons.skip_next_rounded,
-                                                        color: Colors.white,
-                                                        size: 24,
+                                                    if (!isNarrow &&
+                                                        _hasNextEpisode)
+                                                      IconButton(
+                                                        tooltip:
+                                                            l10n.nextEpisode,
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .skip_next_rounded,
+                                                          color: Colors.white,
+                                                          size: 24,
+                                                        ),
+                                                        onPressed:
+                                                            _playNextEpisode,
                                                       ),
-                                                      onPressed:
-                                                          _playNextEpisode,
+                                                    const SizedBox(width: 4),
+                                                    _buildPlaybackClock(
+                                                      controller,
                                                     ),
-                                                  const SizedBox(width: 4),
-                                                  ValueListenableBuilder(
-                                                    valueListenable: controller,
-                                                    builder:
-                                                        (
-                                                          context,
-                                                          VideoPlayerValue
-                                                          value,
-                                                          child,
-                                                        ) {
-                                                          final currentPos =
-                                                              (_isDragging ||
-                                                                  _isScrubbing)
-                                                              ? _dragPosition
-                                                              : (_virtualSeekPosition ??
-                                                                    value
-                                                                        .position);
-                                                          return Text(
-                                                            '${formatDuration(currentPos)} / ${formatDuration(value.duration)}',
-                                                            style:
-                                                                const TextStyle(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  fontSize: 12,
-                                                                ),
-                                                          );
-                                                        },
-                                                  ),
-                                                  const Spacer(),
-                                                  CompositedTransformTarget(
-                                                    link: _volumeButtonLink,
-                                                    child: PlayerVolumeButton(
-                                                      icon: _volumeIcon,
-                                                      muted: _volume == 0,
-                                                      tooltip: _volume == 0
-                                                          ? l10n.unmute
-                                                          : l10n.volume,
-                                                      onTap: _handleVolumeTap,
-                                                      onLongPress: _toggleMute,
-                                                      onHover: (hovering) {
-                                                        if (hovering) {
-                                                          if (!_showVolumeControl) {
-                                                            setState(
-                                                              () =>
-                                                                  _showVolumeControl =
-                                                                      true,
-                                                            );
-                                                            _controlsTimer
-                                                                ?.cancel();
+                                                    const Spacer(),
+                                                    CompositedTransformTarget(
+                                                      link: _volumeButtonLink,
+                                                      child: PlayerVolumeButton(
+                                                        icon: _volumeIcon,
+                                                        muted: _volume == 0,
+                                                        tooltip: _volume == 0
+                                                            ? l10n.unmute
+                                                            : l10n.volume,
+                                                        onTap: _handleVolumeTap,
+                                                        onLongPress:
+                                                            _toggleMute,
+                                                        onHover: (hovering) {
+                                                          if (hovering) {
+                                                            if (!_showVolumeControl) {
+                                                              setState(
+                                                                () =>
+                                                                    _showVolumeControl =
+                                                                        true,
+                                                              );
+                                                              _controlsTimer
+                                                                  ?.cancel();
+                                                              _volumeHideTimer
+                                                                  ?.cancel();
+                                                            }
+                                                          } else {
                                                             _volumeHideTimer
                                                                 ?.cancel();
+                                                            _volumeHideTimer = Timer(
+                                                              const Duration(
+                                                                milliseconds:
+                                                                    200,
+                                                              ),
+                                                              () {
+                                                                if (mounted) {
+                                                                  setState(
+                                                                    () => _showVolumeControl =
+                                                                        false,
+                                                                  );
+                                                                  _startControlsTimer();
+                                                                }
+                                                              },
+                                                            );
                                                           }
-                                                        } else {
-                                                          _volumeHideTimer
-                                                              ?.cancel();
-                                                          _volumeHideTimer = Timer(
-                                                            const Duration(
-                                                              milliseconds: 200,
-                                                            ),
-                                                            () {
-                                                              if (mounted) {
-                                                                setState(
-                                                                  () =>
-                                                                      _showVolumeControl =
-                                                                          false,
-                                                                );
-                                                                _startControlsTimer();
-                                                              }
-                                                            },
-                                                          );
-                                                        }
-                                                      },
+                                                        },
+                                                      ),
                                                     ),
-                                                  ),
-                                                  // Fit / fill toggle, full screen only —
-                                                  // inline there is nothing to crop to.
-                                                  if (isFullScreen)
+                                                    // Fit / fill toggle, full screen only —
+                                                    // inline there is nothing to crop to.
+                                                    if (isFullScreen)
+                                                      IconButton(
+                                                        tooltip: _isVideoCover
+                                                            ? l10n.zoomToFit
+                                                            : l10n.zoomToFill,
+                                                        icon: Icon(
+                                                          _isVideoCover
+                                                              ? Icons
+                                                                    .zoom_in_map_rounded
+                                                              : Icons
+                                                                    .zoom_out_map_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        onPressed: () =>
+                                                            _setVideoCover(
+                                                              !_isVideoCover,
+                                                            ),
+                                                      ),
+                                                    // Fullscreen button
                                                     IconButton(
-                                                      tooltip: _isVideoCover
-                                                          ? l10n.zoomToFit
-                                                          : l10n.zoomToFill,
                                                       icon: Icon(
-                                                        _isVideoCover
+                                                        isFullScreen
                                                             ? Icons
-                                                                  .zoom_in_map_rounded
+                                                                  .fullscreen_exit_rounded
                                                             : Icons
-                                                                  .zoom_out_map_rounded,
+                                                                  .fullscreen_rounded,
                                                         color: Colors.white,
                                                       ),
-                                                      onPressed: () =>
-                                                          _setVideoCover(
-                                                            !_isVideoCover,
-                                                          ),
-                                                    ),
-                                                  // Fullscreen button
-                                                  IconButton(
-                                                    icon: Icon(
-                                                      isFullScreen
-                                                          ? Icons
-                                                                .fullscreen_exit_rounded
-                                                          : Icons
-                                                                .fullscreen_rounded,
-                                                      color: Colors.white,
-                                                    ),
-                                                    onPressed:
-                                                        _toggleFullScreen,
-                                                  ),
-                                                ],
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Center Controls (Play/Pause, Next/Prev)
-                                // Only shown if the bottom bar is too narrow to hold them
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    if (constraints.maxWidth >=
-                                            Dimens.playerNarrowThreshold ||
-                                        _isDragging) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Center(
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: _hasPreviousEpisode
-                                                  ? PlayerCenterButton(
-                                                      icon: Icons
-                                                          .skip_previous_rounded,
-                                                      size: 44,
                                                       onPressed:
-                                                          _playPreviousEpisode,
-                                                    )
-                                                  : const SizedBox.shrink(),
+                                                          _toggleFullScreen,
+                                                    ),
+                                                  ],
+                                                );
+                                              },
                                             ),
-                                          ),
-                                          const SizedBox(width: 32),
-                                          PlayerCenterButton(
-                                            icon: _isPlaying
-                                                ? Icons.pause_rounded
-                                                : Icons.play_arrow_rounded,
-                                            size: 64,
-                                            onPressed: _togglePlayback,
-                                          ),
-                                          const SizedBox(width: 32),
-                                          Expanded(
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: _hasNextEpisode
-                                                  ? PlayerCenterButton(
-                                                      icon: Icons
-                                                          .skip_next_rounded,
-                                                      size: 44,
-                                                      onPressed:
-                                                          _playNextEpisode,
-                                                    )
-                                                  : const SizedBox.shrink(),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                if (_showVolumeControl)
-                                  Positioned(
-                                    left: 0,
-                                    top: 0,
-                                    // Follows the button itself, so it stays centred
-                                    // on it no matter how the bar is laid out.
-                                    child: CompositedTransformFollower(
-                                      link: _volumeButtonLink,
-                                      showWhenUnlinked: false,
-                                      targetAnchor: Alignment.topCenter,
-                                      followerAnchor: Alignment.bottomCenter,
-                                      offset: const Offset(0, -4),
-                                      child: MouseRegion(
-                                        onEnter: (_) {
-                                          _controlsTimer?.cancel();
-                                          _volumeHideTimer?.cancel();
-                                        },
-                                        onExit: (_) {
-                                          setState(
-                                            () => _showVolumeControl = false,
-                                          );
-                                          _startControlsTimer();
-                                        },
-                                        child: PlayerVolumePopup(
-                                          volume: _volume,
-                                          onChanged: _setVolume,
-                                          onChangeStart: () =>
-                                              _controlsTimer?.cancel(),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
 
-                                // Top bar with back icon and settings
-                                Positioned(
-                                  top:
-                                      12 +
-                                      (isFullScreen
-                                          ? MediaQuery.paddingOf(context).top
-                                          : 0),
-                                  left:
-                                      12 +
-                                      (isFullScreen
-                                          ? MediaQuery.paddingOf(context).left
-                                          : 0),
-                                  right:
-                                      12 +
-                                      (isFullScreen
-                                          ? MediaQuery.paddingOf(context).right
-                                          : 0),
-                                  child: PlayerControlsFocus(
-                                    node: _topControlsScope,
-                                    exit: TraversalDirection.down,
-                                    onExit: () {
-                                      _videoFocusNode.requestFocus();
-                                      _startControlsTimer();
+                                  // Center Controls (Play/Pause, Next/Prev)
+                                  // Only shown if the bottom bar is too narrow to hold them
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      if (constraints.maxWidth >=
+                                          Dimens.playerNarrowThreshold) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      // Out of the way of the finger while the
+                                      // timeline is being dragged.
+                                      return ValueListenableBuilder<
+                                        _TimelineState
+                                      >(
+                                        valueListenable: _timeline,
+                                        builder: (context, timeline, child) =>
+                                            timeline.isDragging
+                                            ? const SizedBox.shrink()
+                                            : child!,
+                                        child: Center(
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerRight,
+                                                  child: _hasPreviousEpisode
+                                                      ? PlayerCenterButton(
+                                                          icon: Icons
+                                                              .skip_previous_rounded,
+                                                          size: 44,
+                                                          onPressed:
+                                                              _playPreviousEpisode,
+                                                        )
+                                                      : const SizedBox.shrink(),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 32),
+                                              PlayerCenterButton(
+                                                icon: _isPlaying
+                                                    ? Icons.pause_rounded
+                                                    : Icons.play_arrow_rounded,
+                                                size: 64,
+                                                onPressed: _togglePlayback,
+                                              ),
+                                              const SizedBox(width: 32),
+                                              Expanded(
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: _hasNextEpisode
+                                                      ? PlayerCenterButton(
+                                                          icon: Icons
+                                                              .skip_next_rounded,
+                                                          size: 44,
+                                                          onPressed:
+                                                              _playNextEpisode,
+                                                        )
+                                                      : const SizedBox.shrink(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
                                     },
-                                    child: PlayerTopBar(
-                                      showBack: isFullScreen,
-                                      onBack: _toggleFullScreen,
-                                      onSettings: _showSettingsBottomSheet,
-                                      title: isFullScreen
-                                          ? splitMovieTitle(
-                                              _vm.detail?.title ?? '',
-                                            ).title
-                                          : null,
-                                      subtitle: isFullScreen
-                                          ? [
-                                                  splitMovieTitle(
-                                                    _vm.detail?.title ?? '',
-                                                  ).subtitle,
-                                                  _vm.selectedEpisode?.name,
-                                                ]
-                                                .whereType<String>()
-                                                .where((s) => s.isNotEmpty)
-                                                .join(' • ')
-                                          : null,
+                                  ),
+
+                                  if (_showVolumeControl)
+                                    Positioned(
+                                      left: 0,
+                                      top: 0,
+                                      // Follows the button itself, so it stays centred
+                                      // on it no matter how the bar is laid out.
+                                      child: CompositedTransformFollower(
+                                        link: _volumeButtonLink,
+                                        showWhenUnlinked: false,
+                                        targetAnchor: Alignment.topCenter,
+                                        followerAnchor: Alignment.bottomCenter,
+                                        offset: const Offset(0, -4),
+                                        child: MouseRegion(
+                                          onEnter: (_) {
+                                            _controlsTimer?.cancel();
+                                            _volumeHideTimer?.cancel();
+                                          },
+                                          onExit: (_) {
+                                            setState(
+                                              () => _showVolumeControl = false,
+                                            );
+                                            _startControlsTimer();
+                                          },
+                                          child: PlayerVolumePopup(
+                                            volume: _volume,
+                                            onChanged: _setVolume,
+                                            onChangeStart: () =>
+                                                _controlsTimer?.cancel(),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                  // Top bar with back icon and settings
+                                  Positioned(
+                                    top:
+                                        12 +
+                                        (isFullScreen
+                                            ? MediaQuery.paddingOf(context).top
+                                            : 0),
+                                    left:
+                                        12 +
+                                        (isFullScreen
+                                            ? MediaQuery.paddingOf(context).left
+                                            : 0),
+                                    right:
+                                        12 +
+                                        (isFullScreen
+                                            ? MediaQuery.paddingOf(
+                                                context,
+                                              ).right
+                                            : 0),
+                                    child: PlayerControlsFocus(
+                                      node: _topControlsScope,
+                                      exit: TraversalDirection.down,
+                                      onExit: () {
+                                        _videoFocusNode.requestFocus();
+                                        _startControlsTimer();
+                                      },
+                                      child: PlayerTopBar(
+                                        showBack: isFullScreen,
+                                        onBack: _toggleFullScreen,
+                                        onSettings: _showSettingsBottomSheet,
+                                        title: isFullScreen
+                                            ? splitMovieTitle(
+                                                _vm.detail?.title ?? '',
+                                              ).title
+                                            : null,
+                                        subtitle: isFullScreen
+                                            ? [
+                                                    splitMovieTitle(
+                                                      _vm.detail?.title ?? '',
+                                                    ).subtitle,
+                                                    _vm.selectedEpisode?.name,
+                                                  ]
+                                                  .whereType<String>()
+                                                  .where((s) => s.isNotEmpty)
+                                                  .join(' • ')
+                                            : null,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -2788,6 +2982,62 @@ class _MovieDetailScreenState
       return SizedBox.expand(child: playerWidget);
     }
     return playerWidget;
+  }
+}
+
+/// The timeline under the pointer or the remote: whether it is being dragged,
+/// hovered or scrubbed, and the position it points at.
+@immutable
+class _TimelineState {
+  const _TimelineState({
+    this.isDragging = false,
+    this.isHovering = false,
+    this.isScrubbing = false,
+    this.fraction = 0,
+    this.position = Duration.zero,
+    this.cue,
+  });
+
+  final bool isDragging;
+  final bool isHovering;
+  final bool isScrubbing;
+  final double fraction;
+  final Duration position;
+
+  /// The sprite frame for [position], when the film has a thumbnail track.
+  final ThumbnailCue? cue;
+
+  /// Whether the frame preview floats over the bar.
+  bool get showsPreview => isDragging || isHovering || isScrubbing;
+
+  _TimelineState copyWith({
+    bool? isDragging,
+    bool? isHovering,
+    bool? isScrubbing,
+  }) {
+    return _TimelineState(
+      isDragging: isDragging ?? this.isDragging,
+      isHovering: isHovering ?? this.isHovering,
+      isScrubbing: isScrubbing ?? this.isScrubbing,
+      fraction: fraction,
+      position: position,
+      cue: cue,
+    );
+  }
+
+  _TimelineState moveTo({
+    required double fraction,
+    required Duration position,
+    required ThumbnailCue? cue,
+  }) {
+    return _TimelineState(
+      isDragging: isDragging,
+      isHovering: isHovering,
+      isScrubbing: isScrubbing,
+      fraction: fraction,
+      position: position,
+      cue: cue,
+    );
   }
 }
 
