@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:dio/dio.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
+import 'package:do_x/services/hls_ad_blocker.dart';
 import 'package:do_x/services/movie_library_service.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/logger.dart';
@@ -264,8 +265,16 @@ class MovieDetailViewModel extends CoreViewModel {
     }
   }
 
-  Future<String?> getStreamUrlForMaster(String masterUrl) async {
+  /// The link the player opens for [streamUrl]: the same stream, served from
+  /// the loopback with the commercials the CDN splices in cut out. `null` when
+  /// another episode was asked for while it was being prepared.
+  Future<String?> getStreamUrlForMaster(String streamUrl) async {
     final generation = ++_qualityGeneration;
+    final masterUrl = await hlsAdBlocker.clean(
+      streamUrl,
+      headers: {'Referer': '${movieService.effectiveBaseUrl}/'},
+    );
+    if (isDispose || generation != _qualityGeneration) return null;
     _masterStreamUrl = masterUrl;
     _selectedQuality = 'Auto';
     _availableQualities = const [];
