@@ -33,6 +33,16 @@ import 'package:video_player/video_player.dart';
 /// new object every build, and the badge would rebuild with it.
 bool _isLoading(MusicViewModel vm) => vm.isLoading;
 
+/// A row of the page: which list it is in — a Discover shelf, the search
+/// results, the likes — and the track on it. A track can be on two shelves at
+/// once, and each of its rows needs a focus node of its own.
+typedef _RowKey = (String list, String track);
+
+/// The list ids a [_RowKey] is made of.
+const _searchList = 'search';
+const _likesList = 'likes';
+String _shelfList(int index) => 'shelf-$index';
+
 @RoutePage()
 class MusicScreen extends StatefulScreen implements AutoRouteWrapper {
   const MusicScreen({super.key});
@@ -70,11 +80,16 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// A search was sent from the keyboard and the remote is waiting on the
   /// Search tab to be put on the first result once the answer is in.
   bool _awaitingSearchResults = false;
-  final Map<String, FocusNode> _trackFocusNodes = {};
+  final Map<_RowKey, FocusNode> _trackFocusNodes = {};
 
   /// The heart on each row. Its own node, because on a television the remote
   /// is put on it by hand — see [MusicTrackCard].
-  final Map<String, FocusNode> _likeFocusNodes = {};
+  final Map<_RowKey, FocusNode> _likeFocusNodes = {};
+
+  /// The list the last track was picked from, so the row the remote goes
+  /// back to — and the one the list rides to — is that one, and not the
+  /// same track on a shelf above it.
+  String? _pickedFrom;
 
   final FocusNode _playPauseFocusNode = FocusNode(debugLabel: 'tv-music-play');
   final FocusNode _nextFocusNode = FocusNode(debugLabel: 'tv-music-next');
@@ -145,17 +160,17 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// [_pruneFocusNodes].
   Object? _prunedFor;
 
-  FocusNode _getNodeForTrack(String id) {
+  FocusNode _getNodeForRow(_RowKey row) {
     return _trackFocusNodes.putIfAbsent(
-      id,
-      () => FocusNode(debugLabel: 'tv-track-$id'),
+      row,
+      () => FocusNode(debugLabel: 'tv-track-${row.$1}-${row.$2}'),
     );
   }
 
-  FocusNode _getLikeNodeForTrack(String id) {
+  FocusNode _getLikeNodeForRow(_RowKey row) {
     return _likeFocusNodes.putIfAbsent(
-      id,
-      () => FocusNode(debugLabel: 'tv-track-like-$id'),
+      row,
+      () => FocusNode(debugLabel: 'tv-track-like-${row.$1}-${row.$2}'),
     );
   }
 
@@ -171,15 +186,15 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final viewModel = vm;
-      final live = <String>{
-        for (final shelf in viewModel.shelves)
-          for (final track in shelf.tracks) track.id,
-        for (final track in viewModel.searchResults) track.id,
-        for (final track in viewModel.likedTracks) track.id,
+      final live = <_RowKey>{
+        for (final (index, shelf) in viewModel.shelves.indexed)
+          for (final track in shelf.tracks) (_shelfList(index), track.id),
+        for (final track in viewModel.searchResults) (_searchList, track.id),
+        for (final track in viewModel.likedTracks) (_likesList, track.id),
       };
       for (final nodes in [_trackFocusNodes, _likeFocusNodes]) {
-        nodes.removeWhere((id, node) {
-          if (live.contains(id) || node.hasFocus) return false;
+        nodes.removeWhere((row, node) {
+          if (live.contains(row) || node.hasFocus) return false;
           node.dispose();
           return true;
         });
@@ -670,7 +685,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       // The row the track was picked from; a track that is not in the list
       // on screen — played from another tab — leaves the remote on the
       // player instead.
-      final row = _trackFocusNodes[trackId];
+      final at = _locateTrack(vm, trackId);
+      final row = at == null ? null : _trackFocusNodes[(at.list, trackId)];
       if (row != null && row.context != null && row.canRequestFocus) {
         row.requestFocus();
       } else {
@@ -700,17 +716,20 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     _awaitingSearchResults = true;
     // Already answered, the list only needs bringing to its first row;
     // otherwise the list's rebuild with the answer asks again.
-    if (!viewModel.isLoading) _onSearchAnswered();
+    if (!viewModel.isTabLoading(MusicTab.search)) _onSearchAnswered();
   }
 
   /// Puts the remote on the first search result, if one is on screen.
   bool _focusFirstResult() {
     final viewModel = vm;
-    if (viewModel.isLoading || viewModel.currentTab != MusicTab.search) {
+    if (viewModel.isTabLoading(MusicTab.search) ||
+        viewModel.currentTab != MusicTab.search) {
       return false;
     }
     final first = viewModel.searchResults.firstOrNull;
-    final row = first == null ? null : _trackFocusNodes[first.id];
+    final row = first == null
+        ? null
+        : _trackFocusNodes[(_searchList, first.id)];
     if (row == null || row.context == null || !row.canRequestFocus) {
       return false;
     }
@@ -725,7 +744,8 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     WidgetsBinding.instance
       ..ensureVisualUpdate()
       ..addPostFrameCallback((_) {
-        if (!mounted || !_awaitingSearchResults || vm.isLoading) return;
+        if (!mounted || !_awaitingSearchResults) return;
+        if (vm.isTabLoading(MusicTab.search)) return;
         _awaitingSearchResults = false;
         if (FocusManager.instance.primaryFocus != _searchTabFocusNode) return;
         if (_focusFirstResult()) return;
@@ -817,7 +837,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   double? _followTarget(String id) {
     if (!mounted || !_scrollController.hasClients) return null;
     if (_scrollController.positions.length != 1) return null;
-    final offset = _trackOffset(vm, id);
+    final offset = _locateTrack(vm, id)?.offset;
     // Not in the list on screen: the track came from another tab's list,
     // or from one refreshed since.
     if (offset == null) return null;
@@ -829,33 +849,48 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     return target.clamp(position.minScrollExtent, position.maxScrollExtent);
   }
 
-  /// Where [id]'s row starts in the current tab's list, or null when it is
-  /// not there. Mirrors the padding each list is built with.
-  double? _trackOffset(MusicViewModel viewModel, String id) {
+  /// Which of the current tab's lists [id]'s row is in, and where the row
+  /// starts, or null when it is not there. Of a track on two shelves, the
+  /// row on the shelf it was picked from; otherwise the first. Mirrors the
+  /// padding each list is built with.
+  ({String list, double offset})? _locateTrack(
+    MusicViewModel viewModel,
+    String id,
+  ) {
     const spacing = Dimens.musicTrackSpacing;
     final stride = Dimens.musicTrackTileHeight + spacing;
-    double? inGrid(List<MusicTrack> tracks, double leading) {
+    ({String list, double offset})? inGrid(
+      String list,
+      List<MusicTrack> tracks,
+      double leading,
+    ) {
       final index = tracks.indexWhere((t) => t.id == id);
-      return index < 0 ? null : leading + index * stride;
+      return index < 0 ? null : (list: list, offset: leading + index * stride);
     }
 
     switch (viewModel.currentTab) {
       case MusicTab.home:
         final heading = _shelfHeadingHeight(deviceType.isTv);
         var offset = 0.0;
-        for (final shelf in viewModel.shelves) {
+        ({String list, double offset})? first;
+        for (final (index, shelf) in viewModel.shelves.indexed) {
           offset += heading;
-          final found = inGrid(shelf.tracks, offset);
-          if (found != null) return found;
+          final found = inGrid(_shelfList(index), shelf.tracks, offset);
+          if (found != null && found.list == _pickedFrom) return found;
+          first ??= found;
           if (shelf.tracks.isNotEmpty) {
             offset += shelf.tracks.length * stride - spacing;
           }
         }
-        return null;
+        return first;
       case MusicTab.search:
-        return inGrid(viewModel.searchResults, _searchListPadding.top);
+        return inGrid(
+          _searchList,
+          viewModel.searchResults,
+          _searchListPadding.top,
+        );
       case MusicTab.likes:
-        return inGrid(viewModel.likedTracks, _trackListPadding.top);
+        return inGrid(_likesList, viewModel.likedTracks, _trackListPadding.top);
     }
   }
 
@@ -1050,8 +1085,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       MusicViewModel,
       (bool, MusicTab, List<MusicShelf>, List<MusicTrack>, List<MusicTrack>)
     >(
+      // The open tab's own load: a Discover refresh running behind the
+      // Search tab does not cover the search results.
       selector: (_, vm) => (
-        vm.isLoading,
+        vm.isTabLoading(vm.currentTab),
         vm.currentTab,
         vm.shelves,
         vm.searchResults,
@@ -1072,6 +1109,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
           case MusicTab.search:
             return _buildSearchTab(viewModel);
           case MusicTab.likes:
+            // Not "no likes yet" while they are still on their way.
+            if (isLoading && likedTracks.isEmpty) {
+              return const Center(child: Loading());
+            }
             return _buildTrackListSection(
               MusicTab.likes,
               viewModel.likedTracks,
@@ -1091,11 +1132,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         // The rows, and their headings, are whatever the service sent for this
         // account — so the page is built from them rather than from a fixed
         // pair of sections.
-        for (final shelf in viewModel.shelves) ...[
+        for (final (index, shelf) in viewModel.shelves.indexed) ...[
           SliverToBoxAdapter(
             child: Padding(
               padding: _shelfHeadingPadding,
-              // One line, so [_trackOffset] knows how tall it is.
+              // One line, so [_locateTrack] knows how tall it is.
               child: Text(
                 shelf.title,
                 maxLines: 1,
@@ -1104,7 +1145,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               ),
             ),
           ),
-          _buildSliverGrid(shelf.tracks),
+          _buildSliverGrid(_shelfList(index), shelf.tracks),
         ],
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
@@ -1145,7 +1186,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
           ),
         ),
         Expanded(
-          child: viewModel.isLoading
+          child: viewModel.isTabLoading(MusicTab.search)
               ? const Center(child: Loading())
               : viewModel.searchResults.isEmpty
               ? Center(
@@ -1171,7 +1212,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   slivers: [
                     SliverPadding(
                       padding: _searchListPadding,
-                      sliver: _buildSliverGrid(viewModel.searchResults),
+                      sliver: _buildSliverGrid(
+                        _searchList,
+                        viewModel.searchResults,
+                      ),
                     ),
                   ],
                 ),
@@ -1204,7 +1248,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
       slivers: [
         SliverPadding(
           padding: _trackListPadding,
-          sliver: _buildSliverGrid(tracks),
+          sliver: _buildSliverGrid(_likesList, tracks),
         ),
       ],
     );
@@ -1218,7 +1262,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// as tall as the row, so a short column is a wide picture and no words.
   /// The height is fixed for the same reason, rather than being whatever an
   /// aspect ratio makes of the column's width.
-  Widget _buildSliverGrid(List<MusicTrack> trackList) {
+  Widget _buildSliverGrid(String list, List<MusicTrack> trackList) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       sliver: SliverGrid(
@@ -1233,11 +1277,12 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
           return _TrackRow(
             key: ValueKey(track.id),
             track: track,
-            focusNode: _getNodeForTrack(track.id),
-            likeFocusNode: _getLikeNodeForTrack(track.id),
+            focusNode: _getNodeForRow((list, track.id)),
+            likeFocusNode: _getLikeNodeForRow((list, track.id)),
             onTap: () {
               // Chosen from the list, so the list stays where it is.
               _followedTrackId = track.id;
+              _pickedFrom = list;
               context.read<MusicViewModel>().playFromList(track);
             },
             onToggleLike: () => _onToggleLike(track),
@@ -1511,12 +1556,16 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   tooltip: viewModel.isVideoEnabled
                       ? context.l10n.musicVideoHide
                       : context.l10n.musicVideoShow,
-                  icon: Icon(
-                    viewModel.isVideoEnabled
-                        ? Icons.videocam_rounded
-                        : Icons.videocam_off_rounded,
-                    size: 20,
-                  ),
+                  // The picture's wait, with the music already playing, is
+                  // shown here rather than over the picture.
+                  icon: viewModel.isVideoLoadingOverSound
+                      ? const Loading(size: Dimens.musicMiniIconSize)
+                      : Icon(
+                          viewModel.isVideoEnabled
+                              ? Icons.videocam_rounded
+                              : Icons.videocam_off_rounded,
+                          size: Dimens.musicMiniIconSize,
+                        ),
                   color: context.theme.hintColor,
                   onPressed: viewModel.hasVideo ? viewModel.toggleVideo : null,
                 ),
@@ -1674,6 +1723,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   : Icons.videocam_off_rounded,
               focusNode: _videoToggleFocusNode,
               size: 36,
+              loading: viewModel.isVideoLoadingOverSound,
               tooltip: viewModel.isVideoEnabled
                   ? context.l10n.musicVideoHide
                   : context.l10n.musicVideoShow,

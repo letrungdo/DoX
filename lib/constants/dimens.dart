@@ -238,6 +238,10 @@ class Dimens {
   /// The video in the phone's player, where the artwork is otherwise: the
   /// artwork's height, in the shape of a widescreen picture.
   static const musicMiniVideoHeight = 44.0;
+
+  /// The icons of the phone's mini player, and the spinner on its video
+  /// button while the picture is on its way.
+  static const musicMiniIconSize = 20.0;
   static const musicMiniVideoAspect = 16 / 9;
 
   /// The video's run between the phone's player and the whole screen: how
@@ -260,6 +264,10 @@ class Dimens {
       deviceType.isTv ? 72.0 : 56.0;
   static double get musicFullscreenControlSpacing =>
       deviceType.isTv ? 20.0 : 12.0;
+
+  /// How much of a full-screen control its icon, or the spinner standing in
+  /// for it, fills.
+  static const musicFullscreenIconShare = 0.55;
   static const musicFullscreenControlsTop = 64.0;
   static const musicFullscreenWaitingArtSize = 240.0;
   static const musicFullscreenControlsHideDelay = Duration(seconds: 5);

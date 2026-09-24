@@ -1,4 +1,5 @@
 import 'package:do_x/extensions/context_extensions.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/neu/neu_press.dart';
 import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:flutter/material.dart';
@@ -114,9 +115,14 @@ class NeuIconButton extends StatelessWidget {
     this.tooltip,
     this.depth = 0.6,
     this.focusNode,
+    this.loading = false,
   });
 
   final IconData icon;
+
+  /// Shows a spinner, the icon's size, in the icon's place. The button
+  /// stays what it was, pressable or not.
+  final bool loading;
   final VoidCallback? onPressed;
   final double size;
   final double iconSize;
@@ -139,14 +145,17 @@ class NeuIconButton extends StatelessWidget {
       child: SizedBox.square(
         dimension: size,
         child: Center(
-          child: Icon(
-            icon,
-            size: iconSize,
-            // Greyed out with the rest of the button when it is disabled.
-            color: onPressed == null
-                ? context.colors.disabled
-                : color ?? context.colors.iconColor,
-          ),
+          child: loading
+              ? Loading(size: iconSize)
+              : Icon(
+                  icon,
+                  size: iconSize,
+                  // Greyed out with the rest of the button when it is
+                  // disabled.
+                  color: onPressed == null
+                      ? context.colors.disabled
+                      : color ?? context.colors.iconColor,
+                ),
         ),
       ),
     );

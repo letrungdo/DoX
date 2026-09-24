@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:do_x/l10n/app_localizations.dart';
+import 'package:do_x/model/music_shelf.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/model/music_video.dart';
 import 'package:do_x/screen/music/music_fullscreen_video_player.dart';
@@ -57,7 +58,11 @@ void main() {
   late Completer<List<MusicTrack>> answer;
   late MusicViewModel vm;
 
+  /// What Discover's rows come back as; a test sets its own.
+  late Future<List<MusicShelf>> Function() shelves;
+
   setUp(() {
+    shelves = () async => [];
     deviceType.isTv = true;
     FocusManager.instance.highlightStrategy =
         FocusHighlightStrategy.alwaysTraditional;
@@ -74,7 +79,7 @@ void main() {
         muxedUrl: 'https://yt/muxed',
       ),
       findHdVideo: (_) async => null,
-      discoverShelves: () async => [],
+      discoverShelves: () => shelves(),
       search: (_) => answer.future,
       videoEnabled: true,
     );
@@ -85,7 +90,7 @@ void main() {
     FocusManager.instance.highlightStrategy = FocusHighlightStrategy.automatic;
   });
 
-  Future<void> pumpPage(WidgetTester tester) async {
+  Future<void> pumpPage(WidgetTester tester, {bool search = true}) async {
     // Made inside the test: completed from outside its zone, the answer
     // would be delivered to an event loop the fake clock never runs.
     answer = Completer<List<MusicTrack>>();
@@ -105,8 +110,21 @@ void main() {
       ),
     );
     await tester.pump();
+    if (!search) return;
     vm.switchTab(MusicTab.search);
     await tester.pump();
+  }
+
+  FocusNode node(String label) => FocusManager.instance.rootScope.descendants
+      .singleWhere((node) => node.debugLabel == label);
+
+  /// OK on the row the remote is on, then the stream and the picture coming
+  /// up full screen.
+  Future<void> pick(WidgetTester tester) async {
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
   }
 
   /// Types [query] into the search box and presses the keyboard's search key.
@@ -142,7 +160,7 @@ void main() {
 
     answer.complete(_results);
     await settle(tester);
-    expect(_focused(), 'tv-track-a');
+    expect(_focused(), 'tv-track-search-a');
 
     await tearDownPage(tester);
   });
@@ -175,12 +193,8 @@ void main() {
     // Picked with the remote: OK on the second row.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
-    expect(_focused(), 'tv-track-b');
-    await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    // The card's press, then the stream and the picture coming up.
-    for (var i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
-    }
+    expect(_focused(), 'tv-track-search-b');
+    await pick(tester);
     expect(vm.currentTrack?.id, 'b');
     expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
 
@@ -189,7 +203,59 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.byType(MusicFullscreenVideoPlayer), findsNothing);
-    expect(_focused(), 'tv-track-b');
+    expect(_focused(), 'tv-track-search-b');
+
+    await tearDownPage(tester);
+  });
+
+  testWidgets('a track on two shelves is two rows, and backing out of full '
+      'screen lands on the one it was picked from', (tester) async {
+    shelves = () async => [
+      MusicShelf(title: 'One', tracks: [_track('x'), _track('b')]),
+      MusicShelf(title: 'Two', tracks: [_track('b'), _track('c')]),
+    ];
+    await pumpPage(tester, search: false);
+    await vm.loadHomeData();
+    await settle(tester);
+    expect(node('tv-track-shelf-0-b'), isNot(node('tv-track-shelf-1-b')));
+
+    node('tv-track-shelf-1-b').requestFocus();
+    await tester.pump();
+    await pick(tester);
+    expect(vm.currentTrack?.id, 'b');
+    expect(find.byType(MusicFullscreenVideoPlayer), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.byType(MusicFullscreenVideoPlayer), findsNothing);
+    expect(_focused(), 'tv-track-shelf-1-b');
+
+    await tearDownPage(tester);
+  });
+
+  testWidgets('a Discover refresh behind the Search tab leaves the results '
+      'on screen', (tester) async {
+    await pumpPage(tester);
+    await search(tester, 'abc');
+    answer.complete(_results);
+    await settle(tester);
+    expect(find.text('Track a'), findsOneWidget);
+
+    final refresh = Completer<List<MusicShelf>>();
+    shelves = () => refresh.future;
+    unawaited(vm.loadHomeData());
+    await settle(tester);
+    expect(vm.isLoading, isTrue, reason: 'the sync badge still turns');
+    expect(vm.isTabLoading(MusicTab.home), isTrue);
+    expect(vm.isTabLoading(MusicTab.search), isFalse);
+    expect(find.text('Track a'), findsOneWidget);
+
+    // Not empty: an empty Discover falls back to a search of the network.
+    refresh.complete([
+      MusicShelf(title: 'One', tracks: [_track('x')]),
+    ]);
+    await settle(tester);
+    expect(vm.isLoading, isFalse);
 
     await tearDownPage(tester);
   });

@@ -249,8 +249,13 @@ class _MusicFullscreenVideoPlayerState
                           : _buildWaiting(
                               track,
                               // Off, or none to be had: the artwork stands in
-                              // for it, with nothing to wait for.
-                              loading: vm.isVideoEnabled && vm.isVideoPending,
+                              // for it, with nothing to wait for. With the
+                              // music already playing, the picture's wait is
+                              // shown on the video button instead.
+                              loading:
+                                  vm.isVideoEnabled &&
+                                  vm.isVideoPending &&
+                                  !vm.isVideoLoadingOverSound,
                             ),
                     ),
                   ),
@@ -471,6 +476,7 @@ class _MusicFullscreenVideoPlayerState
                       tooltip: vm.isVideoEnabled
                           ? l10n.musicVideoHide
                           : l10n.musicVideoShow,
+                      loading: vm.isVideoLoadingOverSound,
                       onTap: vm.hasVideo ? vm.toggleVideo : null,
                     ),
                     _ControlButton(
@@ -509,6 +515,7 @@ class _ControlButton extends StatelessWidget {
     this.color,
     this.tooltip,
     this.large = false,
+    this.loading = false,
   });
 
   final IconData icon;
@@ -519,6 +526,9 @@ class _ControlButton extends StatelessWidget {
   final Color? color;
   final String? tooltip;
   final bool large;
+
+  /// A spinner in the icon's place, the control still what it was.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -535,13 +545,17 @@ class _ControlButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: Colors.white.withValues(alpha: large ? 0.25 : 0.12),
         ),
-        child: Icon(
-          icon,
-          size: size * 0.55,
-          color: onTap == null
-              ? Colors.white.withValues(alpha: 0.35)
-              : color ?? Colors.white,
-        ),
+        child: loading
+            ? Center(
+                child: Loading(size: size * Dimens.musicFullscreenIconShare),
+              )
+            : Icon(
+                icon,
+                size: size * Dimens.musicFullscreenIconShare,
+                color: onTap == null
+                    ? Colors.white.withValues(alpha: 0.35)
+                    : color ?? Colors.white,
+              ),
       ),
     );
     return tooltip == null ? button : Tooltip(message: tooltip!, child: button);

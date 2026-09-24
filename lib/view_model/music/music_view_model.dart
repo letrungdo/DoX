@@ -139,8 +139,32 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   MusicTab _currentTab = MusicTab.home;
   MusicTab get currentTab => _currentTab;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
+  /// The loads under way for each tab. Counted, not flagged: a refresh can
+  /// start while the load before it is still out, and the first of them to
+  /// land must not take the spinner down for the other.
+  final _loads = <MusicTab, int>{};
+
+  /// Anything at all is being fetched — for the page's sync badge.
+  bool get isLoading => _loads.isNotEmpty;
+
+  /// [tab]'s own list is being fetched. A Discover refresh running while
+  /// the Search tab is open is no reason to cover the search results.
+  bool isTabLoading(MusicTab tab) => _loads.containsKey(tab);
+
+  void _beginLoad(MusicTab tab) {
+    _loads[tab] = (_loads[tab] ?? 0) + 1;
+    notifyListenersSafe();
+  }
+
+  void _endLoad(MusicTab tab) {
+    final left = (_loads[tab] ?? 1) - 1;
+    if (left > 0) {
+      _loads[tab] = left;
+    } else {
+      _loads.remove(tab);
+    }
+    notifyListenersSafe();
+  }
 
   MusicTrack? _currentTrack;
   MusicTrack? get currentTrack => _currentTrack;
@@ -184,6 +208,15 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// rather than closing in the gap — the lookup can answer before the
   /// picture it found has opened.
   bool get isVideoPending => _isFindingVideo || _isPreparingPicture;
+
+  /// The sound is up and only the picture is still on its way. The page
+  /// shows that on the video's button rather than with a spinner over the
+  /// whole picture, which reads as the music itself not having started.
+  bool get isVideoLoadingOverSound =>
+      _isVideoEnabled &&
+      isVideoPending &&
+      _audioController != null &&
+      _videoController == null;
 
   DateTime _lastVideoResync = DateTime(0);
 
@@ -307,8 +340,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     // service has no selections for. Read before the first await, while the
     // page is certainly still there.
     final fallbackTitle = context.l10n.musicShelfTrending;
-    _isLoading = true;
-    notifyListenersSafe();
+    _beginLoad(MusicTab.home);
     try {
       // The hearts come along with the rows: a liked track has to look liked
       // wherever it turns up, not only in the likes tab. Asked for together,
@@ -328,14 +360,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     } catch (e, st) {
       logger.e('MusicViewModel loadHomeData failed', error: e, stackTrace: st);
     } finally {
-      _isLoading = false;
-      notifyListenersSafe();
+      _endLoad(MusicTab.home);
     }
   }
 
   Future<void> loadLikedTracks() async {
-    _isLoading = true;
-    notifyListenersSafe();
+    _beginLoad(MusicTab.likes);
     try {
       _likedTracks = await musicService.getLikedTracks();
       _likedTracksStale = false;
@@ -346,8 +376,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         stackTrace: st,
       );
     } finally {
-      _isLoading = false;
-      notifyListenersSafe();
+      _endLoad(MusicTab.likes);
     }
   }
 
@@ -373,8 +402,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   }
 
   Future<void> _runSearch(String query) async {
-    _isLoading = true;
-    notifyListenersSafe();
+    _beginLoad(MusicTab.search);
     try {
       final results = await _search(query);
       // Typed over while it was on its way: the newer search's answer is
@@ -384,11 +412,9 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     } catch (e, st) {
       logger.e('MusicViewModel searchTracks failed', error: e, stackTrace: st);
     } finally {
-      // A superseded search leaves the spinner to the one after it.
-      if (query == _searchQuery) {
-        _isLoading = false;
-        notifyListenersSafe();
-      }
+      // Counted, so a superseded search landing leaves the spinner up for
+      // the one after it.
+      _endLoad(MusicTab.search);
     }
   }
 
