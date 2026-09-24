@@ -1,11 +1,11 @@
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// A shared rounded card for chicken feature lists.
 ///
-/// Taps are handled by the surrounding [NeuCard] rather than the [ListTile], so
-/// the whole panel sinks while held — the neumorphic press cue — instead of only
-/// the tile showing an ink highlight.
+/// Taps are handled by the surrounding [AppCard] rather than the [ListTile], so
+/// the whole panel takes the press layer while held instead of only the tile
+/// showing an ink highlight.
 class ChickenListTileCard extends StatelessWidget {
   const ChickenListTileCard({
     super.key,
@@ -29,13 +29,13 @@ class ChickenListTileCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  /// Tint that carries the row's state. Neumorphic cards have no border, so the
-  /// fill is the only place that signal can live.
+  /// Tint that carries the row's state. Cards have no border, so the fill is
+  /// the only place that signal can live.
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return NeuCard(
+    return AppCard(
       margin: margin,
       color: color,
       radius: 16,

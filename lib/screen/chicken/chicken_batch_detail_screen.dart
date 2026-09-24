@@ -32,9 +32,9 @@ import 'package:do_x/widgets/input/cute_money_field.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -171,7 +171,7 @@ class _ChickenBatchDetailScreenState
     Color? color,
     required List<Widget> children,
   }) {
-    return NeuCard(
+    return AppCard(
       color: color,
       radius: 16,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -205,7 +205,7 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.all(6),
       // Opaque so the badge keeps the same look on the tinted section cards.
-      decoration: context.neuRaised(radius: 10, depth: 0.45),
+      decoration: context.panelDecoration(radius: 10, depth: 0.45),
       child: asset.svg(width: size, height: size),
     );
   }
@@ -216,9 +216,9 @@ class _ChickenBatchDetailScreenState
     final color = context.theme.colorScheme.primary;
     // A raised tile that sinks when held, like every other control: the flat
     // tinted Material it used to be had no press cue of its own.
-    return NeuButton(
+    return AppButton(
       onPressed: onTap,
-      accent: context.neuTint(color),
+      accent: context.tintOnSurface(color),
       foreground: color,
       radius: 10,
       depth: 0.4,
@@ -234,7 +234,7 @@ class _ChickenBatchDetailScreenState
   Widget _buildStatTile(String value, String label, {Color? valueColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: context.neuRaised(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12, depth: 0.5),
       child: Column(
         children: [
           Text(
@@ -273,7 +273,7 @@ class _ChickenBatchDetailScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: context.neuTint(color),
+        color: context.tintOnSurface(color),
         borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Row(
@@ -329,7 +329,7 @@ class _ChickenBatchDetailScreenState
     final hatched = batch.ageInDays >= 0;
     final hasSales = batch.sales.isNotEmpty;
     final soldOut = hasSales && batch.remainingQuantity <= 0;
-    return NeuCard(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
         child: Column(
@@ -763,7 +763,7 @@ class _ChickenBatchDetailScreenState
         // Sold out: nothing left to sell, so hide the record button.
         if (!soldOut && !vm.isReadOnly) ...[
           const SizedBox(height: 12),
-          NeuButton(
+          AppButton(
             onPressed: () => _showSaleDialog(batch),
             accent: context.theme.colorScheme.primary,
             expand: true,
@@ -792,7 +792,7 @@ class _ChickenBatchDetailScreenState
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       // Opaque base fill, so the section's tint can't bleed through and dull
       // the numbers on it.
-      decoration: context.neuRaised(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,
@@ -808,7 +808,7 @@ class _ChickenBatchDetailScreenState
       padding: const EdgeInsets.only(bottom: 12),
       // Its own raised panel on top of the tinted section, instead of the
       // outline plus hand-rolled drop shadow it used to carry.
-      child: NeuCard(
+      child: AppCard(
         radius: 12,
         depth: 0.6,
         onTap: vm.isReadOnly ? null : () => _showSaleDialog(batch, sale: sale),
@@ -1404,17 +1404,13 @@ class _ChickenBatchDetailScreenState
               controller: deadQuantityController,
               label: l10n.deadQuantityLabel,
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             CuteTextField(
               controller: keptQuantityController,
               label: l10n.keptQuantityLabel,
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             LunarDateField(
               label: l10n.incubationDate,

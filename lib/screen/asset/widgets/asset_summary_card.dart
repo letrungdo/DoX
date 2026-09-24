@@ -3,7 +3,7 @@ import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/model/asset/asset_summary.dart';
 import 'package:do_x/screen/asset/widgets/asset_summary_stats.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -29,7 +29,7 @@ class AssetSummaryCard extends StatelessWidget {
     final dateFormat = DateFormat('dd/MM/yy');
     final maturity = summary.nextMaturityDate;
 
-    return NeuCard(
+    return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [

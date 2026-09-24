@@ -5,7 +5,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/utils/device_type.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -64,12 +64,10 @@ class MusicTrackCard extends StatelessWidget {
       skipTraversal: true,
       onFocusChange: (hasFocus) => _rideIntoView(context, hasFocus),
       onKeyEvent: isTv ? _onKey : null,
-      child: NeuCard(
+      child: AppCard(
         focusNode: focusNode,
         onTap: onTap,
-        color: isCurrent
-            ? context.theme.colorScheme.primaryContainer.withValues(alpha: 0.7)
-            : null,
+        color: isCurrent ? context.surfaces.primarySoft : null,
         child: Row(
           children: [
             Padding(

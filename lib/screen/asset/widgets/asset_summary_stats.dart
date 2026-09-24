@@ -3,7 +3,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/model/asset/asset_summary.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// Height of the stacked bar that shows what share each class holds.
@@ -22,9 +22,8 @@ const _valueFlex = 4;
 /// The portfolio's yearly rate, and what that rate is worth in đồng.
 ///
 /// The card carries the tint of the figure it holds. That fill is one of the
-/// opaque `*Soft` colours rather than `accent.withValues(...)`: a translucent
-/// fill lets the neumorphic shadow pair show through the panel, which reads as
-/// a smudge behind the text instead of a tint.
+/// opaque `*Soft` colours rather than `accent.withValues(...)`, so it keeps its
+/// hue whatever surface the card lands on.
 class AssetReturnCard extends StatelessWidget {
   const AssetReturnCard({super.key, required this.summary});
 
@@ -39,7 +38,7 @@ class AssetReturnCard extends StatelessWidget {
     final positive = summary.averageAnnualReturn >= 0;
     final accent = positive ? colors.success : colors.danger;
 
-    return NeuCard(
+    return AppCard(
       // The same inset as every other card on the page: the figures down the
       // right-hand side are read as one column, and 4px of drift there is
       // visible even though the cards are separate panels.
@@ -125,7 +124,7 @@ class AssetAllocationCard extends StatelessWidget {
       ),
     ];
 
-    return NeuCard(
+    return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +292,7 @@ class AssetPerformanceCard extends StatelessWidget {
     final worst = summary.worst;
     if (best == null) return const SizedBox.shrink();
 
-    return NeuCard(
+    return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

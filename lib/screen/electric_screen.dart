@@ -21,9 +21,9 @@ import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/input/cute_input_decoration.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -136,7 +136,7 @@ class _ElectricScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final settingsButton = NeuIconButton(
+    final settingsButton = AppIconButton(
       size: Dimens.appBarActionSize,
       iconSize: 18,
       depth: Dimens.appBarActionDepth,
@@ -245,9 +245,9 @@ class _ElectricScreenState
   /// Gray placeholders mirroring the real sections while the first fetch of
   /// an account is running (the progress bar on top provides the motion).
   Widget _buildSkeleton() {
-    // Flat sunken fill, so the placeholders read as holes rather than as the
-    // raised panels they are standing in for.
-    final color = context.neu.sunken;
+    // The muted fill, so the placeholders read as holes rather than as the
+    // cards they are standing in for.
+    final color = context.surfaces.sunken;
 
     Widget box({required double height, double? width}) {
       return Container(
@@ -330,9 +330,9 @@ class _ElectricScreenState
     required VoidCallback onTap,
   }) {
     final foreground = selected ? scheme.onTertiary : scheme.onSurface;
-    // Selection is carried by the fill, the way it is on the neumorphic cards:
-    // an outline next to the shadow pair reads as a competing border.
-    return NeuCard(
+    // Selection is carried by the fill, the way it is on every card: no
+    // outline is drawn at rest.
+    return AppCard(
       radius: 14,
       depth: 0.5,
       color: selected ? scheme.tertiary : null,
@@ -367,7 +367,7 @@ class _ElectricScreenState
     return Selector<ElectricViewModel, ElectricCustomer?>(
       selector: (_, vm) => vm.customer,
       builder: (context, customer, _) {
-        return NeuCard(
+        return AppCard(
           radius: 14,
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -474,38 +474,37 @@ class _ElectricScreenState
   Widget _buildUsageTile(String label, num? kwh) {
     final accent = _ChartColors.current(context);
     return Expanded(
-      // Opaque blend rather than a translucent tint: a raised panel's shadows
-      // would otherwise show through its own fill.
-      child: NeuCard(
-        radius: 12,
-        depth: 0.6,
-        color: Color.alphaBlend(
-          accent.withValues(alpha: 0.08),
-          context.neu.base,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: context.textTheme.secondary.size13,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text.rich(
-              TextSpan(
-                text: kwh.formatUnit(digit: 1),
-                style: context.textTheme.primary.bold,
-                children: [
-                  TextSpan(
-                    text: " kWh",
-                    style: context.textTheme.secondary.size13,
-                  ),
-                ],
+      // Opaque blend over the card it sits on (hence the builder, which reads
+      // that card) rather than a translucent tint, so the tint keeps its hue.
+      child: Builder(
+        builder: (context) => AppCard(
+          radius: 12,
+          depth: 0.6,
+          color: context.tintOnSurface(accent, amount: 0.08),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          child: Column(
+            children: [
+              Text(
+                label,
+                style: context.textTheme.secondary.size13,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text.rich(
+                TextSpan(
+                  text: kwh.formatUnit(digit: 1),
+                  style: context.textTheme.primary.bold,
+                  children: [
+                    TextSpan(
+                      text: " kWh",
+                      style: context.textTheme.secondary.size13,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -650,68 +649,67 @@ class _ElectricScreenState
     required bool highlighted,
   }) {
     final highlightColor = _ChartColors.current(context);
-    return AnimatedContainer(
+    // A builder, so the tint below is flattened onto the card the month sits
+    // in rather than onto the page.
+    return Builder(
       key: highlighted ? _highlightedMonthlyItemKey : null,
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
-      // The focused month lifts off the list as a tinted raised panel; the old
-      // outline competed with the shadow pair around it.
-      decoration: highlighted
-          ? context.neuRaised(
-              radius: 12,
-              depth: 0.6,
-              color: Color.alphaBlend(
-                highlightColor.withValues(alpha: 0.16),
-                context.neu.base,
+      builder: (context) => AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
+        // The focused month stands out of the list as a tinted plate.
+        decoration: highlighted
+            ? BoxDecoration(
+                color: context.tintOnSurface(highlightColor),
+                borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
+              )
+            : const BoxDecoration(
+                borderRadius: BorderRadius.all(
+                  Radius.circular(Dimens.radiusControlSmall),
+                ),
               ),
-            )
-          : const BoxDecoration(
-              borderRadius: BorderRadius.all(
-                Radius.circular(Dimens.radiusControlSmall),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.monthLabel("${item.month}", "${item.year}"),
+                    style: context.textTheme.primary.bold.copyWith(
+                      color: highlighted ? highlightColor : null,
+                    ),
+                  ),
+                  Text(
+                    l10n.sameMonthLastYear(
+                      "${item.lastYearUsageKwh.formatUnit()} kWh · ${item.lastYearTotalAmount.formatUnit()} đ",
+                    ),
+                    style: context.textTheme.secondary.size13,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  l10n.monthLabel("${item.month}", "${item.year}"),
+                  "${item.totalAmount.formatUnit()} đ",
                   style: context.textTheme.primary.bold.copyWith(
-                    color: highlighted ? highlightColor : null,
+                    color: context.colors.money,
                   ),
                 ),
                 Text(
-                  l10n.sameMonthLastYear(
-                    "${item.lastYearUsageKwh.formatUnit()} kWh · ${item.lastYearTotalAmount.formatUnit()} đ",
-                  ),
+                  "${item.usageKwh.formatUnit()} kWh",
                   style: context.textTheme.secondary.size13,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                "${item.totalAmount.formatUnit()} đ",
-                style: context.textTheme.primary.bold.copyWith(
-                  color: context.colors.money,
-                ),
-              ),
-              Text(
-                "${item.usageKwh.formatUnit()} kWh",
-                style: context.textTheme.secondary.size13,
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -783,7 +781,7 @@ class _ElectricScreenState
     ElectricMergedGroup group,
   ) {
     final accent = _ChartColors.current(context);
-    return NeuCard(
+    return AppCard(
       radius: 14,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -852,12 +850,12 @@ class _ElectricScreenState
   }
 
   Widget _buildMergedNotice(String message) {
-    // Sunken fill: a notice is a hole in the page, not another raised panel
-    // competing with the cards below it.
+    // Muted fill: a notice is a hole in the page, not another card competing
+    // with the cards below it.
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.neu.sunken,
+        color: context.surfaces.sunken,
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Text(message, style: context.textTheme.secondary.size13),
@@ -870,10 +868,10 @@ class _ElectricScreenState
     // the expected sign; a negative total is worth flagging in red.
     final accent = saved >= 0 ? context.colors.success : context.colors.danger;
     final months = merged.months.length;
-    return NeuCard(
+    return AppCard(
       radius: 14,
       padding: const EdgeInsets.all(16),
-      color: Color.alphaBlend(accent.withValues(alpha: 0.10), context.neu.base),
+      color: context.tintOnSurface(accent, amount: 0.10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1320,7 +1318,7 @@ class _LoginFormState extends State<_LoginForm> {
                     ),
               ),
               const SizedBox(height: 24),
-              NeuButton(
+              AppButton(
                 onPressed: _submit, //
                 accent: context.theme.colorScheme.primary,
                 expand: true,
@@ -1513,7 +1511,7 @@ class _SavedAccountPicker extends StatelessWidget {
     ColorScheme scheme,
     ElectricAccount account,
   ) {
-    return NeuCard(
+    return AppCard(
       radius: 14,
       depth: 0.5,
       onTap: () => onSelect(account),

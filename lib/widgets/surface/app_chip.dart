@@ -1,16 +1,19 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
-import 'package:do_x/widgets/neu/neu_press.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
-class NeuChip extends StatelessWidget {
-  const NeuChip({
+/// A flat filter chip: the neutral fill step when unselected, solid primary
+/// with [ColorScheme.onPrimary] text when selected.
+class AppChip extends StatelessWidget {
+  const AppChip({
     super.key,
     required this.label,
     required this.isSelected,
     required this.onTap,
     this.fontSize = 13,
-    this.radius = 12,
+    this.radius = Dimens.radiusControlSmall,
     this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
     this.trailing,
   });
@@ -28,14 +31,11 @@ class NeuChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final neu = context.neu;
+    final surfaces = context.surfaces;
     final scheme = context.theme.colorScheme;
-    final background = NeuSurface.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final color = isSelected
-        ? Colors.white
-        : (isDark ? Colors.white70 : Colors.black87);
+    final background = SurfaceScope.of(context);
+    final fill = isSelected ? scheme.primary : surfaces.panelOn(background);
+    final color = isSelected ? scheme.onPrimary : scheme.onSurfaceVariant;
     final text = Text(
       label,
       textAlign: TextAlign.center,
@@ -56,17 +56,18 @@ class NeuChip extends StatelessWidget {
       ),
     );
 
-    Widget chip(bool pressed) => AnimatedContainer(
-      duration: NeuPress.duration,
+    Widget chip(AppPressState state) => AnimatedContainer(
+      duration: AppPressable.duration,
+      curve: Curves.easeOut,
       padding: padding,
-      decoration: neu.raised(
-        radius: radius,
-        // Held down, the lift goes to nothing and the chip settles flat into
-        // the page — the same press every other neu surface shows.
-        depth: pressed ? 0 : 0.6,
-        color: isSelected ? scheme.primary : null,
-        background: background,
-        inset: isSelected,
+      decoration: BoxDecoration(
+        color: surfaces.stateFill(
+          fill,
+          content: color,
+          pressed: state.pressed,
+          focused: state.focused,
+        ),
+        borderRadius: BorderRadius.circular(radius),
       ),
       child: trailing == null
           ? text
@@ -80,10 +81,10 @@ class NeuChip extends StatelessWidget {
             ),
     );
 
-    return NeuPress(
+    return AppPressable(
       onTap: onTap,
-      builder: (context, pressed) =>
-          Center(widthFactor: 1, heightFactor: 1, child: chip(pressed)),
+      stateBuilder: (context, state) =>
+          Center(widthFactor: 1, heightFactor: 1, child: chip(state)),
     );
   }
 }

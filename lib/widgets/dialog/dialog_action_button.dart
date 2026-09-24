@@ -1,18 +1,16 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 
 enum DialogActionKind { cancel, primary, destructive, destructiveOutline }
 
-/// Lays a dialog's buttons out as one row, spaced far enough apart for their
-/// shadows.
+/// Lays a dialog's buttons out as one row with an even gap between them.
 ///
 /// [AlertDialog] packs its actions into an [OverflowBar] that leaves only a few
-/// pixels between them — well inside the reach of a [NeuButton]'s rims (offset
-/// plus blur is ~14dp at the button's depth), so the right-hand button paints
-/// over the left one's shade and the pair reads as clipped. Pass this as the
-/// dialog's single action instead: the buttons share the width evenly with a gap
-/// that clears both rims, and one button no longer overlaps the next.
+/// pixels between them, so two filled [AppButton]s read as one split pill.
+/// Pass this as the dialog's single action instead: the buttons share the
+/// width evenly with a clear gap between them.
 class DialogActions extends StatelessWidget {
   const DialogActions({super.key, required this.children, this.expand = true});
 
@@ -23,9 +21,8 @@ class DialogActions extends StatelessWidget {
   /// hug their own width and sit at the trailing edge.
   final bool expand;
 
-  /// Clears the shaded rim of the button on its left (~14dp) with a little air
-  /// to spare.
-  static const gap = 18.0;
+  /// Enough air that two adjacent fills read as separate buttons.
+  static const gap = 12.0;
 
   @override
   Widget build(BuildContext context) {
@@ -46,13 +43,12 @@ class DialogActions extends StatelessWidget {
 
 /// A semantic action button shared by modal and dialog surfaces.
 ///
-/// Built on [NeuButton], so save/cancel/delete carry the same raised-to-pressed
-/// cue as the rest of the app. What used to separate the kinds was the button
-/// *class* — filled vs outlined — which put an outline on the cancel and the
-/// secondary destructive variant; the fill carries that difference now:
+/// Built on [AppButton], so save/cancel/delete carry the same press cue as the
+/// rest of the app. The fill is what separates the kinds — nothing is
+/// outlined, whatever the variant's name says:
 ///
 /// * [DialogActionKind.primary] — the accent fill,
-/// * [DialogActionKind.cancel] — the plain surface, lifted like any panel,
+/// * [DialogActionKind.cancel] — the neutral fill, one step off the dialog,
 /// * [DialogActionKind.destructive] — filled with the error colour,
 /// * [DialogActionKind.destructiveOutline] — surface fill with an error label,
 ///   for a destructive action that is not the dialog's main one.
@@ -87,11 +83,11 @@ class DialogActionButton extends StatelessWidget {
       DialogActionKind.cancel => (null, null),
     };
 
-    return NeuButton(
+    return AppButton(
       onPressed: loading ? null : onPressed,
       accent: accent,
       foreground: foreground,
-      radius: 14,
+      radius: Dimens.radiusControl,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
       child: loading
           ? const Center(

@@ -31,9 +31,9 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/line_area_chart.dart';
 import 'package:do_x/widgets/text/text_auto_scale_widget.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -211,7 +211,7 @@ class _NewsScreenState<V extends NewsViewModel>
         icon: Icons.show_chart_rounded, //
         color: colors.money,
         title: l10n.market,
-        action: NeuIconButton(
+        action: AppIconButton(
           icon: Icons.tune_rounded,
           size: 32,
           iconSize: 17,
@@ -330,7 +330,7 @@ class _NewsScreenState<V extends NewsViewModel>
     Color softColor,
     String? Function(V vm) selector,
   ) {
-    return NeuCard(
+    return AppCard(
       color: softColor,
       radius: 10,
       depth: 0.5,
@@ -366,7 +366,7 @@ class _NewsScreenState<V extends NewsViewModel>
 
   Widget _buildGoldCard(AppLocalizations l10n) {
     final headerStyle = context.textTheme.title.size13.medium;
-    return NeuCard(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         child: Column(
@@ -462,7 +462,7 @@ class _NewsScreenState<V extends NewsViewModel>
     // With no bullets there is no toggle, so nothing would ever open the
     // advice: show it straight away instead of hiding it for good.
     final showAdvice = expanded || news.highlights.isEmpty;
-    return NeuCard(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
         child: Column(
@@ -549,7 +549,7 @@ class _NewsScreenState<V extends NewsViewModel>
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: context.neuTint(color, amount: 0.14),
+        color: context.tintOnSurface(color, amount: 0.14),
         borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Column(
@@ -598,7 +598,7 @@ class _NewsScreenState<V extends NewsViewModel>
     return Selector<V, GoldNews?>(
       selector: (_, vm) => vm.goldNews,
       builder: (context, news, _) {
-        return NeuCard(
+        return AppCard(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: news == null
@@ -748,7 +748,7 @@ class _NewsScreenState<V extends NewsViewModel>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: context.neuTint(color, amount: 0.14),
+        color: context.tintOnSurface(color, amount: 0.14),
         borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Row(
@@ -813,7 +813,7 @@ class _NewsScreenState<V extends NewsViewModel>
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: context.neuTint(color, amount: 0.14),
+                color: context.tintOnSurface(color, amount: 0.14),
                 borderRadius: BorderRadius.circular(Dimens.radiusSmall),
               ),
               child: Icon(icon, size: 18, color: color),
@@ -876,7 +876,7 @@ class _NewsScreenState<V extends NewsViewModel>
   }
 
   Widget _buildMarketCard(AppLocalizations l10n) {
-    return NeuCard(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         // Driven by the picked list rather than the fetched charts, so a market
@@ -1063,7 +1063,7 @@ class _NewsScreenState<V extends NewsViewModel>
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: context.neuTint(iconColor, amount: 0.14),
+        color: context.tintOnSurface(iconColor, amount: 0.14),
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Icon(iconData, size: 20, color: iconColor),
@@ -1184,7 +1184,7 @@ class _SectionHeader extends StatelessWidget {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: context.neuTint(color, amount: 0.14),
+            color: context.tintOnSurface(color, amount: 0.14),
             borderRadius: BorderRadius.circular(Dimens.radiusSmall),
           ),
           child: Icon(icon, size: 17, color: color),
@@ -1199,7 +1199,7 @@ class _SectionHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: context.neuTint(color, amount: 0.14),
+              color: context.tintOnSurface(color, amount: 0.14),
               borderRadius: BorderRadius.circular(Dimens.radiusPanel),
             ),
             child: Text(

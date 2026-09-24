@@ -15,7 +15,6 @@ import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/view_model/main_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
 import 'package:do_x/widgets/update_download_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -232,8 +231,16 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     required AppLocalizations l10n,
   }) {
     final selected = tabsRouter.activeIndex.clamp(0, routes.length - 1);
-    return ColoredBox(
-      color: context.neu.base,
+    final surfaces = context.surfaces;
+    return DecoratedBox(
+      // On the page colour, with a hairline down the trailing edge to part it
+      // from the tab beside it.
+      decoration: BoxDecoration(
+        color: surfaces.base,
+        border: Border(
+          right: BorderSide(color: surfaces.hairline, width: Dimens.hairline),
+        ),
+      ),
       // The tab host does not inset its own body (each tab is a full page
       // that insets itself), so the rail keeps its own margin. Top and
       // bottom clear the television's overscan band in full; the left is a
@@ -283,13 +290,24 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
   }) {
     final visuals = _navVisualsOf(page, l10n);
     final scheme = context.theme.colorScheme;
+    final surfaces = context.surfaces;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: FocusableTap(
         onTap: onTap,
-        child: DecoratedBox(
+        builder: (context, focused) => DecoratedBox(
           decoration: BoxDecoration(
-            color: isSelected ? context.neuTint(scheme.primary) : null,
+            // The selected row is a tonal plate; an unselected row the remote
+            // rests on brightens a step, on top of the shell's ring.
+            color: isSelected
+                ? surfaces.primarySoft
+                : focused
+                ? surfaces.stateFill(
+                    surfaces.base,
+                    content: scheme.onSurface,
+                    focused: true,
+                  )
+                : null,
             borderRadius: BorderRadius.circular(Dimens.radiusControl),
           ),
           child: Padding(
@@ -363,15 +381,24 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
               // Each tab is a full page with its own app bar, so it applies its
               // own side insets; consuming them here would inset it twice.
               bodyHorizontal: false,
-              // Flush with the scaffold, no shade: an upward shadow here read as
-              // a seam across the whole screen instead of a lifted bar.
+              // The card fill with a hairline along the top: the bar spans the
+              // full width and has no corners to announce it, so this is the
+              // one place a line parts two neutral surfaces.
               bottomNavigationBar: isTv
                   ? null
                   : _hideWhileImmersive(
                       _tightenSafeArea(
                         context,
-                        ColoredBox(
-                          color: context.neu.base,
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: context.surfaces.surface,
+                            border: Border(
+                              top: BorderSide(
+                                color: context.surfaces.hairline,
+                                width: Dimens.hairline,
+                              ),
+                            ),
+                          ),
                           child: BottomNavigationBar(
                             currentIndex: tabsRouter.activeIndex.clamp(
                               0,

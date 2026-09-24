@@ -14,8 +14,8 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chart/cute_bar_chart.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -380,7 +380,7 @@ class _ChickenStatisticsScreenState
     final accent = isUp ? colors.money : colors.danger;
     final margin = revenue > 0 ? total.profit / revenue * 100 : null;
 
-    return NeuCard(
+    return AppCard(
       radius: 20,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
@@ -565,7 +565,7 @@ class _ChickenStatisticsScreenState
   Widget _buildChartCard(List<_Period> periods) {
     final l10n = AppLocalizations.of(context);
     final colors = context.colors;
-    return NeuCard(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
@@ -628,7 +628,7 @@ class _ChickenStatisticsScreenState
     final isUp = data.profit >= 0;
     final accent = isUp ? colors.success : colors.danger;
 
-    return NeuCard(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
@@ -761,7 +761,7 @@ class _ChickenStatisticsScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: context.neuTint(accent),
+        color: context.tintOnSurface(accent),
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
@@ -940,7 +940,7 @@ class _ChickenStatisticsScreenState
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: context.neuRaised(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -987,7 +987,7 @@ class _ChickenStatisticsScreenState
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: context.neuRaised(radius: 12, depth: 0.5),
+      decoration: context.panelDecoration(radius: 12, depth: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

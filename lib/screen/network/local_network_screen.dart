@@ -4,8 +4,8 @@ import 'package:do_x/extensions/widget_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/local_network_service.dart';
 import 'package:do_x/view_model/local_network_view_model.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -161,16 +161,16 @@ class LocalNetworkView extends StatelessWidget {
         ? context.colors.success
         : context.theme.colorScheme.primary;
 
-    return NeuCard(
+    return AppCard(
       radius: 12,
-      color: context.neuTint(color, amount: 0.08),
+      color: context.tintOnSurface(color, amount: 0.08),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       child: Row(
         spacing: 12,
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: context.neuTint(color, amount: 0.14),
+            backgroundColor: context.tintOnSurface(color, amount: 0.14),
             foregroundColor: color,
             child: Icon(_deviceIcon(device), size: 22),
           ),
@@ -237,7 +237,7 @@ class LocalNetworkView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.neuTint(color, amount: 0.1),
+        color: context.tintOnSurface(color, amount: 0.1),
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(

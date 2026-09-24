@@ -23,12 +23,14 @@ class _StorageService {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
+  /// The theme the user picked. Dark until they pick one: a fresh install
+  /// opens in dark whatever the device is set to.
   ThemeMode getThemeMode() {
     final raw = prefs.getString(StorageKey.themeMode);
     return switch (raw) {
-      "dark" => ThemeMode.dark,
       "light" => ThemeMode.light,
-      _ => ThemeMode.system,
+      "system" => ThemeMode.system,
+      _ => ThemeMode.dark,
     };
   }
 

@@ -16,7 +16,7 @@ import 'package:do_x/view_model/menu_view_model.dart';
 import 'package:do_x/widgets/account_avatar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -62,7 +62,7 @@ class _MenuScreenState<V extends MenuViewModel>
       appBar: DoAppBar(
         title: l10n.menu,
         actions: [
-          NeuIconButton(
+          AppIconButton(
             icon: Icons.settings_rounded,
             tooltip: l10n.settings,
             // Sized to the 44dp toolbar: a full-size button would leave the
@@ -138,10 +138,10 @@ class _MenuScreenState<V extends MenuViewModel>
     return _buildSupabaseAccountControl(l10n);
   }
 
-  /// Full-width neumorphic row. The menu is nothing but actions, so it is where
-  /// the raised-to-sunken press cue does the most work.
+  /// Full-width flat row. The menu is nothing but actions, so it is where the
+  /// press layer does the most work.
   Widget _menuButton(IconData icon, String label, VoidCallback onPressed) {
-    return NeuButton(
+    return AppButton(
       onPressed: onPressed,
       expand: true,
       radius: 16,
@@ -162,7 +162,7 @@ class _MenuScreenState<V extends MenuViewModel>
     // Signing out lives on the account page now, next to the password and the
     // delete button — one place that owns the account instead of a menu row
     // whose only trick was logging out.
-    return NeuButton(
+    return AppButton(
       onPressed: () => context.pushRoute(const AppAccountRoute()),
       expand: true,
       radius: 16,

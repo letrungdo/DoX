@@ -22,9 +22,8 @@ import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -917,14 +916,20 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
 
   /// The tab rail, in the shape the home page's rail already has.
   ///
-  /// Same rows, same numbers: a tinted plate behind the selected one rather
-  /// than a raised button, the icon and label in the primary colour, and the
-  /// rail only as wide as its longest label. A second rail with a style of its
-  /// own reads as a different app one screen along.
+  /// Same rows, same numbers: a tonal plate behind the selected one, the icon
+  /// and label in the primary colour, a hairline down the trailing edge, and
+  /// the rail only as wide as its longest label. A second rail with a style of
+  /// its own reads as a different app one screen along.
   Widget _buildTvSidebarNavigation(MusicViewModel viewModel) {
     final l10n = context.l10n;
-    return ColoredBox(
-      color: context.neu.base,
+    final surfaces = context.surfaces;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: surfaces.base,
+        border: Border(
+          right: BorderSide(color: surfaces.hairline, width: Dimens.hairline),
+        ),
+      ),
       // Its own margin, top and bottom clearing the television's overscan
       // band; the sides are a plain margin, as on the home page's rail.
       child: SafeArea(
@@ -976,15 +981,26 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     FocusNode? focusNode,
   }) {
     final scheme = context.theme.colorScheme;
+    final surfaces = context.surfaces;
     final isSelected = viewModel.currentTab == tab;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: FocusableTap(
         focusNode: focusNode,
         onTap: () => viewModel.switchTab(tab),
-        child: DecoratedBox(
+        builder: (context, focused) => DecoratedBox(
           decoration: BoxDecoration(
-            color: isSelected ? context.neuTint(scheme.primary) : null,
+            // As on the home page's rail: a tonal plate when selected, one
+            // step brighter while the remote rests on an unselected row.
+            color: isSelected
+                ? surfaces.primarySoft
+                : focused
+                ? surfaces.stateFill(
+                    surfaces.base,
+                    content: scheme.onSurface,
+                    focused: true,
+                  )
+                : null,
             borderRadius: BorderRadius.circular(Dimens.radiusControl),
           ),
           child: Padding(
@@ -1463,7 +1479,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     final video = viewModel.isVideoEnabled ? viewModel.videoController : null;
     final miniArtPixels =
         Dimens.musicMiniVideoHeight * MediaQuery.devicePixelRatioOf(context);
-    final player = NeuCard(
+    final player = AppCard(
       margin: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1668,7 +1684,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            NeuIconButton(
+            AppIconButton(
               icon: viewModel.isShuffleEnabled
                   ? Icons.shuffle_on_rounded
                   : Icons.shuffle_rounded,
@@ -1676,13 +1692,13 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               size: 36,
               onPressed: viewModel.toggleShuffle,
             ),
-            NeuIconButton(
+            AppIconButton(
               icon: Icons.skip_previous_rounded,
               focusNode: _prevFocusNode,
               size: 36,
               onPressed: viewModel.previousTrack,
             ),
-            NeuIconButton(
+            AppIconButton(
               icon: viewModel.isPlaying
                   ? Icons.pause_rounded
                   : Icons.play_arrow_rounded,
@@ -1690,7 +1706,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               size: 44,
               onPressed: viewModel.togglePlay,
             ),
-            NeuIconButton(
+            AppIconButton(
               icon: Icons.skip_next_rounded,
               focusNode: _nextFocusNode,
               size: 36,
@@ -1706,7 +1722,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
           mainAxisAlignment: MainAxisAlignment.center,
           spacing: Dimens.musicDashboardActionSpacing,
           children: [
-            NeuIconButton(
+            AppIconButton(
               icon: isTrackLiked
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
@@ -1717,7 +1733,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             ),
             // Both always there, and live only while they have something to
             // do: coming and going with each skip, they shoved the row along.
-            NeuIconButton(
+            AppIconButton(
               icon: viewModel.isVideoEnabled
                   ? Icons.videocam_rounded
                   : Icons.videocam_off_rounded,
@@ -1730,7 +1746,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
               onPressed: viewModel.hasVideo ? viewModel.toggleVideo : null,
             ),
             // The way back to the full-screen video after leaving it.
-            NeuIconButton(
+            AppIconButton(
               icon: Icons.fullscreen_rounded,
               focusNode: _fullscreenFocusNode,
               size: 36,

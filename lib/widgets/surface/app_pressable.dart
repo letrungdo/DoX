@@ -5,45 +5,67 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// The app's press behaviour for every neumorphic surface that can be tapped.
+/// What a [AppPressable] surface should draw.
+@immutable
+class AppPressState {
+  const AppPressState({required this.pressed, required this.focused});
+
+  /// True from the moment the finger lands until the press has both finished
+  /// and been released.
+  final bool pressed;
+
+  /// True only on a TV while the remote rests on this control.
+  final bool focused;
+}
+
+/// The app's press behaviour for every flat surface that can be tapped.
 ///
-/// Deliberately not an [InkWell]: a ripple recolours the panel, and on a
-/// neumorphic surface the press is meant to read as the panel sinking into the
-/// page, not as a tint washing over it. [builder] gets the pressed flag and
-/// draws that sink itself — usually inset shadows.
+/// Deliberately not an [InkWell]: a ripple spreads from the finger and gets
+/// clipped by whatever the surface happens to hold. Here the whole surface
+/// takes the press at once — [stateBuilder] gets the pressed and focused flags
+/// and draws the flat state layer itself, usually through
+/// `SurfaceTheme.stateFill` — and the surface shrinks a little while held.
 ///
 /// It is also the app's single focus target. Cards, buttons and chips all end
 /// up here, so giving this one widget a focus node is what makes the whole
-/// neumorphic surface family reachable with a TV remote's D-pad. It draws no
-/// focus *marker* of its own — `TvShell` outlines whatever the remote is on,
-/// for every widget in the app, and a second marker here only read as a stray
-/// line inside the first.
+/// surface family reachable with a TV remote's D-pad. It draws no focus
+/// *ring* of its own — `TvShell` outlines whatever the remote is on, for every
+/// widget in the app, and a second marker here only read as a stray line
+/// inside the first. What the surface does draw is a brighter focused fill.
 ///
 /// What it does do on a television is grow. An outline alone is a thin line
 /// on a panel being read from across a room; the control lifting off the page
 /// is what can be seen from the sofa, and it is what every television
 /// interface does. `TvShell` measures the outline from where the control is
 /// actually painted, so the ring grows with it.
-class NeuPress extends StatefulWidget {
-  const NeuPress({
+class AppPressable extends StatefulWidget {
+  const AppPressable({
     super.key,
-    required this.builder,
+    this.builder,
+    this.stateBuilder,
     this.onTap,
     this.onLongPress,
-    this.pressedScale = 0.97,
+    this.pressedScale = Dimens.pressedScaleControl,
     this.autofocus = false,
     this.focusNode,
-  });
+  }) : assert(
+         (builder == null) != (stateBuilder == null),
+         'Pass exactly one of builder and stateBuilder.',
+       );
 
-  /// Draws the surface. `pressed` is true from the moment the finger lands
-  /// until the sink has both finished and been released.
-  final Widget Function(BuildContext context, bool pressed) builder;
+  /// Draws the surface from the pressed flag alone. Prefer [stateBuilder],
+  /// which also says when the TV remote is on the surface.
+  final Widget Function(BuildContext context, bool pressed)? builder;
+
+  /// Draws the surface for its current [AppPressState].
+  final Widget Function(BuildContext context, AppPressState state)?
+  stateBuilder;
 
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  /// How far the surface shrinks while held. The shadows alone change too
-  /// little to read as movement; a small shrink is what sells the press. Keep
+  /// How far the surface shrinks while held. The state layer alone is a
+  /// colour change; a small shrink is what sells the press as movement. Keep
   /// it nearer 1 for a large panel, where 3% is a visible lurch.
   final double pressedScale;
 
@@ -58,14 +80,14 @@ class NeuPress extends StatefulWidget {
   /// Lets a caller move the remote onto this control. See [autofocus].
   final FocusNode? focusNode;
 
-  /// Long enough for the sink to be seen, short enough not to feel laggy.
+  /// Long enough for the press to be seen, short enough not to feel laggy.
   static const duration = Duration(milliseconds: 130);
 
   @override
-  State<NeuPress> createState() => _NeuPressState();
+  State<AppPressable> createState() => _AppPressableState();
 }
 
-class _NeuPressState extends State<NeuPress> {
+class _AppPressableState extends State<AppPressable> {
   bool _pressed = false;
   bool _fingerDown = false;
   bool _sinkFinished = true;
@@ -79,7 +101,7 @@ class _NeuPressState extends State<NeuPress> {
   /// the same number of pixels whatever the control is.
   double? _width;
 
-  /// How big the surface is drawn: sunk while held, lifted while the remote
+  /// How big the surface is drawn: shrunk while held, lifted while the remote
   /// is on it, its own size otherwise. Pressing wins, because a press is
   /// something the viewer is doing right now.
   double get _scale {
@@ -97,18 +119,17 @@ class _NeuPressState extends State<NeuPress> {
   bool get _enabled => widget.onTap != null || widget.onLongPress != null;
 
   /// Presses the surface in and holds it there for at least
-  /// [NeuPress.duration].
+  /// [AppPressable.duration].
   ///
   /// Without the hold, a quick tap lifts the finger before the animation has
-  /// travelled anywhere and nothing visibly moves — the same problem
-  /// `flutter_neumorphic` solves by waiting for the down animation before it
-  /// lets the release through.
+  /// travelled anywhere and nothing visibly changes, so the release waits for
+  /// the down animation before it is let through.
   Future<void> _sink() async {
     _fingerDown = true;
     _sinkFinished = false;
     setState(() => _pressed = true);
     HapticFeedback.lightImpact();
-    await Future.delayed(NeuPress.duration);
+    await Future.delayed(AppPressable.duration);
     _sinkFinished = true;
     _riseIfReleased();
   }
@@ -124,7 +145,7 @@ class _NeuPressState extends State<NeuPress> {
   }
 
   /// The remote's OK button. A key press has no down/up the way a finger does,
-  /// so the sink is played out in full first and the tap fires on the way back
+  /// so the press is played out in full first and the tap fires on the way back
   /// up — otherwise the surface would never visibly move on a TV.
   Future<void> _activate() async {
     await _sink();
@@ -158,7 +179,7 @@ class _NeuPressState extends State<NeuPress> {
     // rect the shell measures is the one that is actually on screen.
     return AnimatedScale(
       scale: _scale,
-      duration: NeuPress.duration,
+      duration: AppPressable.duration,
       curve: Curves.easeOut,
       child: FocusableActionDetector(
         enabled: _enabled,
@@ -182,7 +203,12 @@ class _NeuPressState extends State<NeuPress> {
           onTapCancel: _enabled ? _release : null,
           onTap: widget.onTap,
           onLongPress: widget.onLongPress,
-          child: widget.builder(context, _pressed),
+          child:
+              widget.stateBuilder?.call(
+                context,
+                AppPressState(pressed: _pressed, focused: _focused),
+              ) ??
+              widget.builder!(context, _pressed),
         ),
       ),
     );

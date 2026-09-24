@@ -27,9 +27,10 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_chip.dart';
-import 'package:do_x/widgets/neu/neu_press.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_chip.dart';
+import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -432,7 +433,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   /// Turns selection mode on with nothing selected yet.
   ///
   /// The only other way in is a long press, which a remote cannot produce —
-  /// `NeuPress` answers the D-pad's OK with `ActivateIntent`, and that fires
+  /// `AppPressable` answers the D-pad's OK with `ActivateIntent`, and that fires
   /// `onTap` alone. Without this the bulk delete is dead on a television.
   void _startSelectionMode() {
     setState(() {
@@ -846,7 +847,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           ],
         ),
         actions: [
-          NeuIconButton(
+          AppIconButton(
             key: _searchButtonKey,
             size: Dimens.appBarActionSize,
             iconSize: 18,
@@ -889,7 +890,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isWatched) ...[
-                    NeuIconButton(
+                    AppIconButton(
                       key: const ValueKey('movie-select'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
@@ -901,7 +902,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                     const SizedBox(key: ValueKey('movie-select-gap'), width: 8),
                   ],
                   if (showAll) ...[
-                    NeuIconButton(
+                    AppIconButton(
                       key: const ValueKey('movie-watched'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
@@ -915,7 +916,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                           _selectCollection(MovieCollection.watched),
                     ),
                     const SizedBox(width: 8),
-                    NeuIconButton(
+                    AppIconButton(
                       key: const ValueKey('movie-favorites'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
@@ -929,7 +930,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                           _selectCollection(MovieCollection.favorites),
                     ),
                   ] else
-                    NeuIconButton(
+                    AppIconButton(
                       key: const ValueKey('movie-collections'),
                       size: Dimens.appBarActionSize,
                       iconSize: 18,
@@ -999,7 +1000,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
                 if (_showScrollToTop && !isBottomTab)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: NeuIconButton(
+                    child: AppIconButton(
                       tooltip: l10n.scrollToTop,
                       icon: Icons.vertical_align_top_rounded,
                       onPressed: _scrollToTop,
@@ -1339,8 +1340,8 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
   Widget _buildFilterRow(MovieViewModel vm, AppLocalizations l10n) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      // Vertical padding leaves the neu shadow room inside the pinned header,
-      // which clips to its own extent.
+      // Vertical padding leaves the TV focus growth room inside the pinned
+      // header, which clips to its own extent.
       padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
       clipBehavior: Clip.none,
       child: Row(
@@ -1392,7 +1393,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
           _ => cat.name,
         };
 
-        return NeuChip(
+        return AppChip(
           label: label,
           isSelected: isSelected,
           onTap: () => _selectCategory(cat),
@@ -1401,8 +1402,9 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     );
   }
 
-  /// A neu pill that opens the country / genre sheet and, once something is
-  /// picked, shows the active value in place of its own label.
+  /// A chip-shaped button that opens the country / genre sheet and, once
+  /// something is picked, shows the active value in place of its own label —
+  /// solid primary then, like a selected [AppChip].
   Widget _buildFilterButton({
     required MovieViewModel vm,
     required IconData icon,
@@ -1411,25 +1413,33 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
     required bool isCountry,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final surfaces = context.surfaces;
     final selected = isCountry ? vm.selectedCountry : vm.selectedGenre;
     final isSelected = selected != null;
-    final foreground = isSelected ? Colors.white : scheme.onSurfaceVariant;
+    final foreground = isSelected ? scheme.onPrimary : scheme.onSurfaceVariant;
 
-    return NeuPress(
+    return AppPressable(
       onTap: () => _showFilterSheet(
         title: fallbackLabel,
         options: options,
         isCountry: isCountry,
       ),
-      builder: (context, pressed) => AnimatedContainer(
-        duration: NeuPress.duration,
+      stateBuilder: (context, state) => AnimatedContainer(
+        duration: AppPressable.duration,
+        curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: context.neu.raised(
-          radius: 12,
-          // Held down, the lift goes to nothing, as on every other neu surface.
-          depth: pressed ? 0 : 0.6,
-          color: isSelected ? scheme.primary : null,
-          inset: isSelected,
+        decoration: BoxDecoration(
+          color: surfaces.stateFill(
+            // Read here, under the press, so it is the surface the control
+            // actually sits on.
+            isSelected
+                ? scheme.primary
+                : surfaces.panelOn(SurfaceScope.of(context)),
+            content: foreground,
+            pressed: state.pressed,
+            focused: state.focused,
+          ),
+          borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1647,7 +1657,7 @@ class _MovieScreenState extends ScreenState<MovieScreen, MovieViewModel>
               ),
             ),
             const SizedBox(height: 14),
-            NeuButton(
+            AppButton(
               onPressed: vm.isFetching
                   ? null
                   : () => _updateMovieServer(_serverUrlController.text),

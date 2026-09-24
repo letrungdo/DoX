@@ -1,7 +1,7 @@
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_chip.dart';
+import 'package:do_x/widgets/surface/app_chip.dart';
 import 'package:flutter/material.dart';
 
 /// Result of the filter sheet: `null` means dismissed, a record with a `null`
@@ -42,13 +42,13 @@ class MovieFilterSheet extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        NeuChip(
+        AppChip(
           label: l10n.all,
           isSelected: selectedId == null,
           onTap: () => Navigator.pop(context, (category: null)),
         ),
         for (final option in options)
-          NeuChip(
+          AppChip(
             label: option.name,
             isSelected: option.id == selectedId,
             onTap: () => Navigator.pop(context, (category: option)),

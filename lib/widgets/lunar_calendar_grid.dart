@@ -1,7 +1,7 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/utils/lunar_calendar.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
@@ -121,7 +121,7 @@ class LunarCalendarGrid extends StatelessWidget {
         color: isSelected
             ? scheme.primaryContainer
             : isToday
-            ? context.neuTint(scheme.primary, amount: 0.14)
+            ? context.tintOnSurface(scheme.primary, amount: 0.14)
             : null,
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),

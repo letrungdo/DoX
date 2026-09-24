@@ -1,5 +1,5 @@
 import 'package:do_x/theme/app_theme.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,7 +10,7 @@ void main() {
         theme: AppTheme.lightTheme,
         home: Scaffold(
           body: Center(
-            child: NeuCard(onTap: onTap, child: const Text('Chi phí chung')),
+            child: AppCard(onTap: onTap, child: const Text('Chi phí chung')),
           ),
         ),
       ),
@@ -40,5 +40,29 @@ void main() {
   testWidgets('a plain card has nothing to press', (tester) async {
     await pump(tester);
     expect(find.byType(AnimatedScale), findsNothing);
+  });
+
+  testWidgets('a pressed card lays a state layer over its fill', (
+    tester,
+  ) async {
+    await pump(tester, onTap: () {});
+
+    Color? fill() =>
+        (tester
+                    .widget<AnimatedContainer>(find.byType(AnimatedContainer))
+                    .decoration!
+                as BoxDecoration)
+            .color;
+    final resting = fill();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Chi phí chung')),
+    );
+    await tester.pump();
+    expect(fill(), isNot(resting));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(fill(), resting);
   });
 }

@@ -8,7 +8,7 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/tv/tv_view_model.dart';
-import 'package:do_x/widgets/neu/neu_chip.dart';
+import 'package:do_x/widgets/surface/app_chip.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,7 +129,7 @@ void main() {
 
       final row = find.byType(ListView);
       final chip = find
-          .descendant(of: row, matching: find.byType(NeuChip))
+          .descendant(of: row, matching: find.byType(AppChip))
           .first;
 
       // Measured, not laid out. A horizontal list hands its children the

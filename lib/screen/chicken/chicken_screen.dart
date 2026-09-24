@@ -31,9 +31,9 @@ import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:flutter/services.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -141,7 +141,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
           ],
         ),
         actions: [
-          NeuIconButton(
+          AppIconButton(
             size: Dimens.appBarActionSize,
             iconSize: 18,
             depth: Dimens.appBarActionDepth,
@@ -158,7 +158,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             ),
           ),
           const SizedBox(width: 8),
-          NeuIconButton(
+          AppIconButton(
             key: _menuButtonKey,
             size: Dimens.appBarActionSize,
             iconSize: 18,
@@ -405,7 +405,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   }
 
   /// Anchored under the button by hand, the way the movie screen does it: a
-  /// `PopupMenuButton` would draw its own plain icon in place of the neu one.
+  /// `PopupMenuButton` would draw its own plain icon in place of the app's one.
   Future<void> _showOverflowMenu() async {
     final l10n = AppLocalizations.of(context);
     final button =
@@ -458,7 +458,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
   }) {
     // The tap belongs to the card, not to an inner InkWell: that way the whole
     // panel flattens while held and the ripple is clipped to its rounded shape.
-    return NeuCard(
+    return AppCard(
       margin: EdgeInsets.zero,
       onTap: onTap,
       padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
@@ -570,7 +570,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                 decoration: BoxDecoration(
                   // Tinted fill instead of an outline: the pill carries its
                   // colour the same way every other chip in the app does.
-                  color: context.neuTint(statusColor),
+                  color: context.tintOnSurface(statusColor),
                   borderRadius: BorderRadius.circular(
                     Dimens.radiusControlSmall,
                   ),
@@ -603,7 +603,10 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                         null,
                         batch.sales.isEmpty
                             ? l10n.chickenQuantity(batch.quantity)
-                            : l10n.soldOfTotal(batch.soldQuantity, batch.quantity),
+                            : l10n.soldOfTotal(
+                                batch.soldQuantity,
+                                batch.quantity,
+                              ),
                         highlighted: true,
                       ),
                       if (batch.deadQuantity > 0 || batch.keptQuantity > 0) ...[
@@ -731,7 +734,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
       decoration: BoxDecoration(
         // Opaque tint of the badge's own colour, blended onto whatever card it
         // sits on — a translucent fill turns muddy on the tinted rows.
-        color: context.neuTint(color),
+        color: context.tintOnSurface(color),
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Text(

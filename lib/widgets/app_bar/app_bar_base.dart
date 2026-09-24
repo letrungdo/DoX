@@ -114,8 +114,8 @@ class _DoAppBarState extends State<DoAppBar> {
       title: titleWidget,
       leading: widget.leading,
       leadingWidth: widget.leadingWidth,
-      // AppBar stretches actions to the full toolbar height, which pushes a
-      // neumorphic button's shadow past the bar; centring keeps it intact.
+      // AppBar stretches actions to the full toolbar height; centring keeps a
+      // square button square, with room above and below it in the bar.
       actions: widget.actions?.map((action) => Center(child: action)).toList(),
       toolbarHeight: widget.height,
       actionsPadding: const EdgeInsets.only(right: 10),

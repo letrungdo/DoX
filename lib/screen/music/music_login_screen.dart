@@ -13,7 +13,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:do_x/widgets/tv_web_navigator.dart';
 import 'dart:collection';
 
@@ -154,7 +154,7 @@ class _MusicLoginScreenState
               color: context.theme.colorScheme.primary,
             ),
             const SizedBox(height: 16),
-            NeuCard(
+            AppCard(
               radius: Dimens.radiusCard,
               depth: 0.5,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

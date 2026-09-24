@@ -1,6 +1,6 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/gen/assets.gen.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 
 /// Shared add icon for the chicken feature screens.
@@ -61,7 +61,7 @@ class ChickenAddIcon extends StatelessWidget {
   }
 }
 
-/// [ChickenAddIcon] as an app bar action, on the same neumorphic button the
+/// [ChickenAddIcon] as an app bar action, on the same [AppIconButton] the
 /// other bar actions use. A null [onPressed] dims the mark as well as
 /// disabling the button, which is how read-only mode reads across the feature.
 class ChickenAddButton extends StatelessWidget {
@@ -72,9 +72,9 @@ class ChickenAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // NeuButton rather than NeuIconButton: the mark is an illustration with a
+    // AppButton rather than AppIconButton: the mark is an illustration with a
     // badge, not an [IconData].
-    return NeuButton(
+    return AppButton(
       radius: 14,
       depth: Dimens.appBarActionDepth,
       padding: EdgeInsets.zero,

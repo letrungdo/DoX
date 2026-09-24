@@ -15,7 +15,7 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
 import 'package:do_x/widgets/input/password_field.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -316,7 +316,7 @@ class _SavedAccountPicker extends StatelessWidget {
     ColorScheme scheme,
     SupabaseAccount account,
   ) {
-    return NeuCard(
+    return AppCard(
       radius: 14,
       depth: 0.5,
       onTap: enabled ? () => onSelect(account) : null,

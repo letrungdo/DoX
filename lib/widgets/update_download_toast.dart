@@ -1,10 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/services/update_controller.dart';
 import 'package:do_x/utils/device_type.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// A small fixed toast that shows the background APK download progress and,
@@ -81,6 +82,7 @@ class _ToastCardState extends State<_ToastCard> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final surfaces = context.surfaces;
 
     final isDone = widget.phase == UpdatePhase.done;
     final isError = widget.phase == UpdatePhase.error;
@@ -96,52 +98,59 @@ class _ToastCardState extends State<_ToastCard> {
 
     return SafeArea(
       minimum: const EdgeInsets.only(bottom: 4),
-      child: NeuCard(
-        radius: 12,
-        // Floats over the page, so it lifts a little higher than a normal card.
-        depth: 1.3,
-        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-        child: Row(
-          children: [
-            _leadingIcon(scheme, isDone, isError),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isError ? scheme.error : null,
-                    ),
-                  ),
-                  if (!isDone && !isError) ...[
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(Dimens.radiusTiny),
-                      child: LinearProgressIndicator(
-                        value: widget.progress,
-                        minHeight: 6,
+      // Floats over the tab body, so it is one of the few surfaces that keeps
+      // a shadow.
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
+          boxShadow: surfaces.floatShadow,
+        ),
+        child: AppCard(
+          radius: 12,
+          color: surfaces.elevated,
+          padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+          child: Row(
+            children: [
+              _leadingIcon(scheme, isDone, isError),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isError ? scheme.error : null,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.progress != null
-                          ? "${(widget.progress! * 100).toStringAsFixed(0)}%"
-                          : l10n.preparing,
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    if (!isDone && !isError) ...[
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(Dimens.radiusTiny),
+                        child: LinearProgressIndicator(
+                          value: widget.progress,
+                          minHeight: 6,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.progress != null
+                            ? "${(widget.progress! * 100).toStringAsFixed(0)}%"
+                            : l10n.preparing,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
-            _trailing(context, l10n, isDone, isError),
-          ],
+              const SizedBox(width: 4),
+              _trailing(context, l10n, isDone, isError),
+            ],
+          ),
         ),
       ),
     );
@@ -167,12 +176,11 @@ class _ToastCardState extends State<_ToastCard> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          NeuButton(
+          AppButton(
             focusNode: _installFocusNode,
             onPressed: updateController.install,
             accent: Theme.of(context).colorScheme.primary,
             radius: 12,
-            depth: 0.6,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             child: Text(l10n.install),
           ),

@@ -2,8 +2,8 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/screen/movie/movie_poster_card.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_chip.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/app_chip.dart';
 import 'package:flutter/material.dart';
 
 /// Everything under the pinned player: chips, server/episode picker,
@@ -172,7 +172,7 @@ class MovieDetailBody extends StatelessWidget {
                   ],
                   // Server selector
                   if (detail?.servers.isNotEmpty ?? false) ...[
-                    NeuCard(
+                    AppCard(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -204,7 +204,7 @@ class MovieDetailBody extends StatelessWidget {
                                     children: detail!.servers.map((srv) {
                                       final isSelected =
                                           selectedServer?.name == srv.name;
-                                      return NeuChip(
+                                      return AppChip(
                                         label: srv.name,
                                         isSelected: isSelected,
                                         fontSize: 12,
@@ -237,7 +237,7 @@ class MovieDetailBody extends StatelessWidget {
                                 children: selectedServer!.episodes.map((ep) {
                                   final isSelected =
                                       selectedEpisode?.slug == ep.slug;
-                                  return NeuChip(
+                                  return AppChip(
                                     label: ep.name,
                                     isSelected: isSelected,
                                     fontSize: 12,
@@ -257,7 +257,7 @@ class MovieDetailBody extends StatelessWidget {
 
                   // Description
                   if (detail?.description.isNotEmpty ?? false)
-                    NeuCard(
+                    AppCard(
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       padding: const EdgeInsets.all(12),
                       // Already plain text: the service strips the markup
@@ -274,7 +274,7 @@ class MovieDetailBody extends StatelessWidget {
                       (detail?.actors.isNotEmpty ?? false) ||
                       (detail?.directors.isNotEmpty ?? false)) ...[
                     const SizedBox(height: 12),
-                    NeuCard(
+                    AppCard(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 4,

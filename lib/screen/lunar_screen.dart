@@ -9,9 +9,9 @@ import 'package:do_x/utils/lunar_calendar.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/lunar_calendar_grid.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -82,7 +82,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
       appBar: DoAppBar(
         title: l10n.lunarCalendar,
         actions: [
-          NeuIconButton(
+          AppIconButton(
             size: Dimens.appBarActionSize,
             iconSize: 18,
             depth: Dimens.appBarActionDepth,
@@ -111,7 +111,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
   }
 
   Widget _buildCalendarCard(BuildContext context) {
-    return NeuCard(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
@@ -141,7 +141,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
 
     return Row(
       children: [
-        NeuIconButton(
+        AppIconButton(
           icon: Icons.chevron_left_rounded,
           onPressed: () => _shiftMonth(-1),
         ),
@@ -164,7 +164,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
             ],
           ),
         ),
-        NeuIconButton(
+        AppIconButton(
           icon: Icons.chevron_right_rounded,
           onPressed: () => _shiftMonth(1),
         ),
@@ -208,7 +208,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
     final tide = LunarCalendar.tideLabel(lunar.day);
     final goodHours = LunarCalendar.goodHours(s.day, s.month, s.year);
 
-    return NeuCard(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -278,7 +278,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: context.neuTint(color, amount: 0.14),
+        color: context.tintOnSurface(color, amount: 0.14),
         borderRadius: BorderRadius.circular(Dimens.radiusPanel),
       ),
       child: Row(
@@ -304,7 +304,7 @@ class _LunarScreenState extends State<LunarScreen> with TabReselect {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: context.neuTint(scheme.primary, amount: 0.14),
+        color: context.tintOnSurface(scheme.primary, amount: 0.14),
         borderRadius: BorderRadius.circular(Dimens.radiusSmall),
       ),
       child: Text(

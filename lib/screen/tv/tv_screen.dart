@@ -18,8 +18,8 @@ import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_chip.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -309,7 +309,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
     final country = viewModel.country;
     return Tooltip(
       message: country.name.isEmpty ? l10n.tvCountry : country.name,
-      child: NeuChip(
+      child: AppChip(
         label: country.flag.isEmpty ? country.code : country.flag,
         isSelected: false,
         fontSize: 18,
@@ -341,7 +341,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
   /// The way into the search on a television: one button in the app bar,
   /// like the movie page's.
   Widget _buildSearchButton(AppLocalizations l10n) {
-    return NeuIconButton(
+    return AppIconButton(
       size: Dimens.appBarActionSize,
       iconSize: 18,
       depth: Dimens.appBarActionDepth,
@@ -400,14 +400,14 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 if (index == 0) {
-                  return NeuChip(
+                  return AppChip(
                     label: l10n.all,
                     isSelected: viewModel.selectedGroup == null,
                     onTap: () => viewModel.selectGroup(null),
                   );
                 }
                 final group = viewModel.groups[index - 1];
-                return NeuChip(
+                return AppChip(
                   label: tvCategoryLabel(group, l10n),
                   isSelected: viewModel.selectedGroup == group,
                   onTap: () => viewModel.selectGroup(group),
@@ -437,7 +437,7 @@ class _TvScreenState extends ScreenState<TvScreen, TvViewModel>
         child: _buildMessage(
           icon: Icons.cloud_off_rounded,
           message: l10n.tvLoadFailed,
-          action: NeuButton(
+          action: AppButton(
             onPressed: viewModel.onRefresh,
             child: Text(l10n.retry),
           ),

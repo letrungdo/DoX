@@ -3,10 +3,12 @@ import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -46,7 +48,8 @@ void _restoreFocusAfterModal(FocusNode? previousFocus, BuildContext context) {
 /// Shows [builder]'s widget as a dialog.
 ///
 /// `useSafeArea` is what keeps the dialog clear of the display cutout, which in
-/// landscape sits on the side the dialog would otherwise reach.
+/// landscape sits on the side the dialog would otherwise reach. The barrier is
+/// the theme's scrim (`dialogTheme.barrierColor`).
 Future<T?> showAppModal<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -143,7 +146,9 @@ class _TvModalFocusState extends State<TvModalFocus> {
 ///
 /// Use it instead of a bare [AlertDialog] — it carries the shared inset,
 /// radius and [Dimens.dialogMaxWidth] cap, which an [AlertDialog] on its own
-/// does not (it grows to whatever the screen offers).
+/// does not (it grows to whatever the screen offers). It also publishes the
+/// elevated fill through [SurfaceScope], so a cancel button or card inside steps
+/// off the dialog instead of vanishing into it.
 class AppDialog extends StatelessWidget {
   const AppDialog({
     super.key,
@@ -205,18 +210,21 @@ class AppDialog extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: maxWidth + insetPadding.horizontal,
         ),
-        child: AlertDialog(
-          insetPadding: insetPadding,
-          scrollable: scrollable,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Dimens.dialogRadius),
+        child: SurfaceScope(
+          color: context.surfaces.elevated,
+          child: AlertDialog(
+            insetPadding: insetPadding,
+            scrollable: scrollable,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Dimens.dialogRadius),
+            ),
+            title: titleWidget ?? (title == null ? null : Text(title)),
+            content: body,
+            contentPadding: contentPadding,
+            actions: actions == null || actions.isEmpty
+                ? null
+                : [DialogActions(expand: expandActions, children: actions)],
           ),
-          title: titleWidget ?? (title == null ? null : Text(title)),
-          content: body,
-          contentPadding: contentPadding,
-          actions: actions == null || actions.isEmpty
-              ? null
-              : [DialogActions(expand: expandActions, children: actions)],
         ),
       ),
     );
@@ -355,6 +363,7 @@ class AppBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final elevated = context.surfaces.elevated;
     final title = this.title;
     final screenSize = MediaQuery.sizeOf(context);
     final viewPadding = MediaQuery.paddingOf(context);
@@ -405,7 +414,7 @@ class AppBottomSheet extends StatelessWidget {
           // the keyboard instead of running behind it.
           padding: EdgeInsets.only(bottom: keyboardInset),
           child: Material(
-            color: theme.colorScheme.surface,
+            color: elevated,
             clipBehavior: Clip.antiAlias,
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(Dimens.sheetRadius),
@@ -427,63 +436,68 @@ class AppBottomSheet extends StatelessWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onTap: () => FocusScope.of(context).unfocus(),
-                child: Padding(
-                  padding: EdgeInsets.only(left: left, right: right),
-                  child: Stack(
-                    children: [
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (showDragHandle) const _SheetDragHandle(),
-                          if (title != null) ...[
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                16,
-                                showDragHandle ? 0 : 12,
-                                16,
-                                0,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Balances the button on the other side so the
-                                  // title stays centred on the sheet rather than on
-                                  // the space left beside it.
-                                  if (showCloseButton)
-                                    const SizedBox(width: _closeButtonSize),
-                                  Expanded(
-                                    child: Text(
-                                      title,
-                                      textAlign: TextAlign.center,
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                // Cards and neutral buttons in the body step off the sheet's
+                // fill rather than the page's.
+                child: SurfaceScope(
+                  color: elevated,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: left, right: right),
+                    child: Stack(
+                      children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (showDragHandle) const _SheetDragHandle(),
+                            if (title != null) ...[
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  16,
+                                  showDragHandle ? 0 : 12,
+                                  16,
+                                  0,
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Balances the button on the other side so the
+                                    // title stays centred on the sheet rather than on
+                                    // the space left beside it.
+                                    if (showCloseButton)
+                                      const SizedBox(width: _closeButtonSize),
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        textAlign: TextAlign.center,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
                                     ),
-                                  ),
-                                  if (showCloseButton)
-                                    const _SheetCloseButton(),
-                                ],
+                                    if (showCloseButton)
+                                      const _SheetCloseButton(),
+                                  ],
+                                ),
                               ),
+                              const Divider(height: 20),
+                            ],
+                            Flexible(
+                              child: scrollable
+                                  ? SingleChildScrollView(child: body)
+                                  : body,
                             ),
-                            const Divider(height: 20),
                           ],
-                          Flexible(
-                            child: scrollable
-                                ? SingleChildScrollView(child: body)
-                                : body,
-                          ),
-                        ],
-                      ),
-                      // A titleless sheet has no header row to sit the button in,
-                      // so there it is overlaid on the body's top-right corner
-                      // instead — the same corner either way.
-                      if (showCloseButton && title == null)
-                        const Positioned(
-                          top: 8,
-                          right: 16,
-                          child: _SheetCloseButton(),
                         ),
-                    ],
+                        // A titleless sheet has no header row to sit the button in,
+                        // so there it is overlaid on the body's top-right corner
+                        // instead — the same corner either way.
+                        if (showCloseButton && title == null)
+                          const Positioned(
+                            top: 8,
+                            right: 16,
+                            child: _SheetCloseButton(),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -498,19 +512,17 @@ class AppBottomSheet extends StatelessWidget {
 /// Kept in step with the spacer that balances it across the title.
 const _closeButtonSize = 32.0;
 
-/// The dismiss affordance in a sheet's top-right corner. A neu button, like
-/// every other control in the app — shallow, because it sits on the sheet's
-/// header where a full-depth rim would read as a raised card.
+/// The dismiss affordance in a sheet's top-right corner: a neutral icon button,
+/// like every other control in the app, so a nested grey square on the sheet.
 class _SheetCloseButton extends StatelessWidget {
   const _SheetCloseButton();
 
   @override
   Widget build(BuildContext context) {
-    return NeuIconButton(
+    return AppIconButton(
       icon: Icons.close_rounded,
       size: _closeButtonSize,
       iconSize: 18,
-      depth: 0.5,
       tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
       onPressed: () => Navigator.of(context).pop(),
     );
@@ -558,6 +570,7 @@ Future<T?> showAppOptionSheet<T>(
     padding: EdgeInsets.zero,
     builder: (sheetContext) {
       final scheme = Theme.of(sheetContext).colorScheme;
+      final selectedFill = sheetContext.surfaces.primarySoft;
       final bottomInset = MediaQuery.paddingOf(sheetContext).bottom;
       return Material(
         type: MaterialType.transparency,
@@ -581,6 +594,7 @@ Future<T?> showAppOptionSheet<T>(
                 ),
               ),
               selected: isSelected,
+              selectedTileColor: selectedFill,
               trailing: isSelected
                   ? Icon(Icons.check, color: scheme.primary)
                   : null,

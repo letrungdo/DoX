@@ -1,6 +1,6 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/theme/color_theme.dart';
-import 'package:do_x/theme/neu_theme.dart';
+import 'package:do_x/theme/surface_theme.dart';
 import 'package:do_x/theme/text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,10 +15,9 @@ class AppTheme {
 
   static ThemeData _buildTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    // Neumorphism only reads when panels share the scaffold's colour, so the
-    // background comes straight from the neumorphic tokens and every surface
-    // below is derived from them.
-    final neu = isDark ? NeuTheme.dark : NeuTheme.light;
+    // The page, card, elevated and muted fills all come from the surface
+    // tokens, so the ColorScheme and the hand-drawn primitives agree.
+    final surfaces = isDark ? SurfaceTheme.dark : SurfaceTheme.light;
     final baseScheme = ColorScheme.fromSeed(
       seedColor: _seed,
       brightness: brightness,
@@ -37,28 +36,29 @@ class AppTheme {
       onSecondary: isDark ? const Color(0xFF1C3531) : Colors.white,
       tertiary: isDark ? const Color(0xFF37718B) : const Color(0xFF1F4E5C),
       onTertiary: Colors.white,
-      // Panels must be the same colour as the scaffold, so the only steps left
-      // are the sunken well and two slightly lifted tints for nested blocks.
-      surface: neu.base,
-      onSurface: isDark ? const Color(0xFFDDE5E1) : const Color(0xFF0C1211),
+      // `surface` is the card, not the page: Material widgets that paint it
+      // (a stray Card, a menu) land one fill step above the scaffold.
+      surface: surfaces.surface,
+      onSurface: isDark ? const Color(0xFFE6EDEB) : const Color(0xFF0F1716),
       onSurfaceVariant: isDark
-          ? const Color(0xFFBFC9C5)
-          : const Color(0xFF3D4A47),
-      surfaceContainerLowest: neu.sunken,
-      surfaceContainerLow: neu.sunken,
-      surfaceContainer: neu.base,
-      surfaceContainerHigh: isDark
-          ? const Color(0xFF1E2826)
-          : const Color(0xFFEFF6F3),
-      surfaceContainerHighest: isDark
-          ? const Color(0xFF27322F)
-          : const Color(0xFFF6FAF8),
-      outline: isDark ? const Color(0xFF89938F) : const Color(0xFF556059),
-      outlineVariant: isDark
-          ? const Color(0xFF3F4946)
-          : const Color(0xFFA7B5B0),
+          ? const Color(0xFFA9B5B2)
+          : const Color(0xFF46534F),
+      surfaceContainerLowest: isDark
+          ? const Color(0xFF0A0F0E)
+          : const Color(0xFFFFFFFF),
+      surfaceContainerLow: surfaces.base,
+      surfaceContainer: surfaces.surface,
+      surfaceContainerHigh: surfaces.elevated,
+      surfaceContainerHighest: surfaces.sunken,
+      outline: isDark ? const Color(0xFF7F8B88) : const Color(0xFF6F7C78),
+      outlineVariant: surfaces.hairline,
     );
-    final background = neu.base;
+    final background = surfaces.base;
+    // Hints, captions and counters: a step below `onSurfaceVariant` that still
+    // passes AA on the card and on the muted input fill.
+    final textTertiary = isDark
+        ? const Color(0xFF8E9A97)
+        : const Color(0xFF5F6B68);
     // Transparent system bars: with edge-to-edge the app paints behind them, so
     // the gesture navigation area picks up the bottom nav's colour.
     final systemOverlayStyle = SystemUiOverlayStyle(
@@ -78,6 +78,14 @@ class AppTheme {
     final rounded16 = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(Dimens.radiusCard),
     );
+    // A floating menu. Dark mode adds a hairline: the elevated fill is too
+    // close to the card beneath it for a layer that floats over content.
+    final menuShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Dimens.radiusControl),
+      side: isDark
+          ? BorderSide(color: surfaces.hairline, width: Dimens.hairline)
+          : BorderSide.none,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -85,14 +93,14 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
       canvasColor: background,
+      hintColor: textTertiary,
       textTheme: textTheme,
       splashFactory: InkSparkle.splashFactory,
       visualDensity: VisualDensity.standard,
       // What an `InkWell` paints when the focus lands on it. Material's default
-      // is a faint `onSurface` wash, which disappears on a neumorphic panel —
-      // the panel is already the same colour as the page. Tinted with the
-      // primary instead, so it matches the outline `TvShell` draws and stays
-      // legible across a room, which is where a TV remote is used from.
+      // is a faint `onSurface` wash, too weak to read across a room, which is
+      // where a TV remote is used from. Tinted with the primary instead, so it
+      // matches the outline `TvShell` draws.
       focusColor: scheme.primary.withValues(alpha: isDark ? 0.34 : 0.24),
       appBarTheme: AppBarTheme(
         backgroundColor: background,
@@ -108,38 +116,40 @@ class AppTheme {
         actionsIconTheme: IconThemeData(color: scheme.onSurface, size: 23),
         systemOverlayStyle: systemOverlayStyle,
       ),
-      // Cards are drawn by `NeuCard`, which paints its own shadow pair. This
-      // theme only covers stray Material [Card]s: flat and borderless, so they
-      // don't reintroduce an outline next to a neumorphic panel.
+      // Cards are drawn by `AppCard`. This theme only covers stray Material
+      // [Card]s: the same card fill, flat and borderless, so they match it.
       cardTheme: CardThemeData(
-        color: neu.base,
+        color: surfaces.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: rounded16,
       ),
+      // No shadow: the scrim is what separates a dialog from the page.
       dialogTheme: DialogThemeData(
-        backgroundColor: neu.base,
+        backgroundColor: surfaces.elevated,
+        barrierColor: surfaces.scrim,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Dimens.dialogRadius),
         ),
-        // The action buttons are raised: the top gap has to clear their lit rim
-        // so it does not land on the message above.
-        actionsPadding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        contentTextStyle: textTheme.bodyMedium,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+        ),
       ),
       // Sheets are opened through `showAppBottomSheet`, which paints its own
       // surface; this only covers a stray `showModalBottomSheet` so it lands on
       // the same colour, radius and width cap instead of a Material default.
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: neu.base,
+        backgroundColor: surfaces.elevated,
         surfaceTintColor: Colors.transparent,
+        modalBarrierColor: surfaces.scrim,
         elevation: 0,
         modalElevation: 0,
         // Deliberately not `showDragHandle`: `AppBottomSheet` draws its own, and
@@ -155,40 +165,36 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
-          disabledBackgroundColor: scheme.onSurface.withValues(alpha: 0.12),
+          disabledBackgroundColor: surfaces.sunken,
           disabledForegroundColor: scheme.onSurface.withValues(alpha: 0.38),
-          // Material can only drop a directional shadow, not a neumorphic pair
-          // — enough to keep themed buttons lifted. `NeuButton` is the
-          // full-fidelity version, with the press-to-sink cue.
-          elevation: 4,
-          shadowColor: neu.darkShadow,
-          minimumSize: const Size(64, 48),
+          // Flat, like `AppButton`: the fill is the button.
+          elevation: 0,
+          minimumSize: const Size(64, Dimens.buttonMinHeight),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           shape: rounded14,
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(64, 48),
+          minimumSize: const Size(64, Dimens.buttonMinHeight),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           shape: rounded14,
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: scheme.primary,
-          backgroundColor: neu.base,
-          minimumSize: const Size(64, 48),
+          // The neutral button: the card fill carries the secondary action,
+          // so no outline is drawn.
+          backgroundColor: surfaces.surface,
+          minimumSize: const Size(64, Dimens.buttonMinHeight),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          // The outline is exactly what neumorphism replaces; a lifted
-          // same-colour pill carries the secondary action instead.
           side: BorderSide.none,
-          elevation: 3,
-          shadowColor: neu.darkShadow,
+          elevation: 0,
           shape: rounded14,
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -211,22 +217,21 @@ class AppTheme {
           ),
         ),
       ),
-      // Inputs are the concave half of the language: sunken fill, no resting
-      // outline. Only focus draws a line, because a colour-only focus cue is
-      // too weak on a surface this low-contrast.
+      // Inputs take the muted fill and no resting outline. Only focus draws a
+      // line, because a colour-only focus cue is too weak on its own.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: neu.sunken,
+        fillColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? surfaces.sunken.withValues(alpha: 0.5)
+              : surfaces.sunken,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 15,
         ),
         labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        hintStyle: TextStyle(
-          color: scheme.onSurfaceVariant.withValues(
-            alpha: isDark ? 0.58 : 0.52,
-          ),
-        ),
+        hintStyle: TextStyle(color: textTertiary),
         prefixIconColor: scheme.onSurfaceVariant,
         suffixIconColor: scheme.onSurfaceVariant,
         border: OutlineInputBorder(
@@ -239,29 +244,32 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dimens.radiusControl),
-          borderSide: BorderSide(color: scheme.primary, width: 1.8),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dimens.radiusControl),
-          borderSide: BorderSide(color: scheme.error),
+          borderSide: BorderSide(color: scheme.error, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dimens.radiusControl),
-          borderSide: BorderSide(color: scheme.error, width: 1.8),
+          borderSide: BorderSide(color: scheme.error, width: 2),
         ),
       ),
       dropdownMenuTheme: DropdownMenuThemeData(
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: neu.sunken,
+          fillColor: surfaces.sunken,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(Dimens.radiusControl),
             borderSide: BorderSide.none,
           ),
         ),
         menuStyle: MenuStyle(
-          backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainer),
-          shape: WidgetStatePropertyAll(rounded14),
+          backgroundColor: WidgetStatePropertyAll(surfaces.elevated),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(3),
+          shadowColor: WidgetStatePropertyAll(surfaces.darkShadow),
+          shape: WidgetStatePropertyAll(menuShape),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -276,15 +284,13 @@ class AppTheme {
           color: scheme.onSurfaceVariant,
         ),
       ),
-      // A hard rule reads as a seam between two same-coloured panels, so
-      // dividers are dialled down; separation comes from the shadows.
       dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant.withValues(alpha: isDark ? 0.28 : 0.40),
-        thickness: 1,
+        color: surfaces.hairline,
+        thickness: Dimens.hairline,
         space: 24,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: neu.sunken,
+        backgroundColor: surfaces.sunken,
         selectedColor: scheme.primaryContainer,
         side: BorderSide.none,
         shape: RoundedRectangleBorder(
@@ -298,7 +304,7 @@ class AppTheme {
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? scheme.primary
-              : neu.sunken,
+              : surfaces.sunken,
         ),
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
@@ -319,7 +325,7 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: background,
+        backgroundColor: surfaces.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 68,
@@ -367,7 +373,7 @@ class AppTheme {
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: background,
+        backgroundColor: surfaces.surface,
         selectedItemColor: scheme.primary,
         unselectedItemColor: scheme.onSurfaceVariant,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
@@ -378,43 +384,50 @@ class AppTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
-        elevation: 6,
-        focusElevation: 6,
-        hoverElevation: 6,
+        // Flat, like every other control: the container colour is its edge.
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Dimens.radiusCard),
         ),
       ),
+      // Inverse in both modes: a dark snack bar on a dark page was the
+      // weakest element of the old theme. It floats, so it keeps the shadow.
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: isDark
-            ? scheme.surfaceContainerHighest
-            : const Color(0xFF263330),
+            ? const Color(0xFFE6EDEB)
+            : const Color(0xFF1E2B29),
         contentTextStyle: TextStyle(
-          color: isDark ? scheme.onSurface : Colors.white,
+          color: isDark ? const Color(0xFF0F1716) : Colors.white,
           fontWeight: FontWeight.w500,
         ),
-        actionTextColor: isDark ? scheme.primary : const Color(0xFF8CE4D6),
+        actionTextColor: isDark
+            ? const Color(0xFF00695C)
+            : const Color(0xFF8CE4D6),
         shape: rounded14,
+        elevation: 3,
         insetPadding: const EdgeInsets.all(12),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
-        linearTrackColor: neu.sunken,
-        circularTrackColor: neu.sunken,
+        linearTrackColor: surfaces.sunken,
+        circularTrackColor: surfaces.sunken,
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: neu.base,
+        color: surfaces.elevated,
         surfaceTintColor: Colors.transparent,
-        shadowColor: neu.darkShadow,
-        elevation: 6,
-        shape: rounded14,
+        shadowColor: surfaces.darkShadow,
+        elevation: 3,
+        shape: menuShape,
         textStyle: textTheme.bodyMedium,
       ),
       extensions: [
         isDark ? ColorTheme.dark : ColorTheme.light,
         isDark ? DoTextTheme.dark : DoTextTheme.light,
-        neu,
+        surfaces,
       ],
     );
   }
@@ -427,24 +440,28 @@ class AppTheme {
             fontSize: 36,
             height: 1.15,
             fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
             color: scheme.onSurface,
           ),
           headlineLarge: TextStyle(
             fontSize: 30,
             height: 1.2,
             fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
             color: scheme.onSurface,
           ),
           headlineMedium: TextStyle(
             fontSize: 26,
             height: 1.2,
             fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
             color: scheme.onSurface,
           ),
           headlineSmall: TextStyle(
             fontSize: 22,
             height: 1.25,
             fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
             color: scheme.onSurface,
           ),
           titleLarge: TextStyle(

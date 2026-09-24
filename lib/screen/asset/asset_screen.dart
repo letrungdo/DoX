@@ -18,7 +18,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -68,7 +68,7 @@ class _AssetScreenState extends ScreenState<AssetScreen, AssetViewModel>
           selector: (vm) => vm.isBusy,
         ),
         actions: [
-          NeuIconButton(
+          AppIconButton(
             icon: Icons.account_balance_wallet_rounded,
             tooltip: l10n.assetSummary,
             size: 34,

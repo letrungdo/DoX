@@ -1,7 +1,7 @@
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// Year filter: a label plus a tappable pill that opens a bottom sheet to pick
@@ -49,7 +49,7 @@ class YearFilter extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(width: 8),
-        NeuCard(
+        AppCard(
           radius: 20,
           depth: 0.5,
           onTap: () => _openSheet(context),

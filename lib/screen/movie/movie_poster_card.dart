@@ -4,7 +4,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/movie_model.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/services/movie_library_service.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// The pixel width to decode a poster drawn [width] logical pixels wide at.
@@ -42,7 +42,7 @@ class MoviePosterCard extends StatelessWidget {
 
   /// Lets the grid move the remote back onto this exact card — after the
   /// player overlay closes, say, when the node that held focus has gone with
-  /// it. Handed straight down to the [NeuCard]'s press surface.
+  /// it. Handed straight down to the [AppCard]'s press surface.
   final FocusNode? focusNode;
 
   /// Receives the card's rect on screen so a caller can zoom out of exactly
@@ -69,11 +69,10 @@ class MoviePosterCard extends StatelessWidget {
     final progressSeconds = libraryState?.lastPositionSeconds;
     final progressEpisode = libraryState?.lastEpisodeName;
 
-    return NeuCard(
+    return AppCard(
       margin: EdgeInsets.zero,
       padding: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      depth: isSelected ? 0 : 0.6,
       onTap: () {
         final box = context.findRenderObject() as RenderBox?;
         if (box == null || !box.hasSize) return;

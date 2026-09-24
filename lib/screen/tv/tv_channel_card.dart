@@ -5,7 +5,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/tv_channel.dart';
 import 'package:do_x/utils/device_type.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// One channel in the grid: its logo over its name.
@@ -56,7 +56,7 @@ class TvChannelCard extends StatelessWidget {
       canRequestFocus: false,
       skipTraversal: true,
       onFocusChange: (hasFocus) => _rideIntoView(context, hasFocus),
-      child: NeuCard(
+      child: AppCard(
         margin: EdgeInsets.zero,
         padding: EdgeInsets.zero,
         radius: Dimens.radiusCard,

@@ -5,7 +5,7 @@ import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/app_view_model.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -531,7 +531,7 @@ void main() {
                     child: ListView.builder(
                       itemCount: 200,
                       itemBuilder: (_, index) =>
-                          NeuCard(onTap: () {}, child: Text('row $index')),
+                          AppCard(onTap: () {}, child: Text('row $index')),
                     ),
                   ),
                 ],
@@ -619,7 +619,7 @@ void main() {
           home: TvShell(
             child: Scaffold(
               body: Center(
-                child: NeuCard(
+                child: AppCard(
                   onTap: () => taps++,
                   child: const Text('Chi phí chung'),
                 ),
@@ -630,7 +630,7 @@ void main() {
       );
 
       // The remote walks onto the card — the nearest focus node above the
-      // label is the one `NeuPress` installs.
+      // label is the one `AppPressable` installs.
       Focus.of(tester.element(find.text('Chi phí chung'))).requestFocus();
       await tester.pumpAndSettle();
 

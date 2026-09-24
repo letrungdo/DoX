@@ -65,15 +65,15 @@ void main() {
   );
 }
 
-/// The theme the app was last set to, or the device's own preference when
-/// that cannot be read.
+/// The theme the app was last set to, or the default dark one when that
+/// cannot be read.
 Future<ThemeMode> _storedThemeMode() async {
   try {
     await storageService.init();
     return storageService.getThemeMode();
   } on Object catch (e, st) {
     logger.e('Could not read the stored theme', error: e, stackTrace: st);
-    return ThemeMode.system;
+    return ThemeMode.dark;
   }
 }
 
@@ -127,7 +127,7 @@ class AppBootstrap extends StatefulWidget {
   const AppBootstrap({
     required this.initialize,
     this.app = const MyApp(),
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.dark,
     super.key,
   });
 

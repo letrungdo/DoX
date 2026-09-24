@@ -1,6 +1,8 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/theme/app_theme.dart';
+import 'package:do_x/theme/surface_theme.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 Future<void> _openSheet(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
     MaterialApp(
-      // The sheet's close button is a neu control, which reads the app theme's
+      // The sheet's close button is an [AppIconButton], which reads the app theme's
       // colour extensions — a bare ThemeData has none of them.
       theme: AppTheme.lightTheme,
       home: Scaffold(
@@ -105,6 +107,34 @@ void main() {
     expect(
       tester.getBottomLeft(find.byType(ListView)).dy,
       tester.getBottomLeft(find.byType(AppBottomSheet)).dy,
+    );
+  });
+
+  testWidgets('an untinted card in a sheet steps off the sheet\'s fill', (
+    tester,
+  ) async {
+    await _openSheet(tester, const AppCard(child: Text('card')));
+
+    final cardFill =
+        (tester
+                    .widget<AnimatedContainer>(
+                      find.ancestor(
+                        of: find.text('card'),
+                        matching: find.byType(AnimatedContainer),
+                      ),
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color;
+    // Light mode: the sheet is white, and so is a card on the page — without
+    // the sheet publishing its fill the card would vanish into it.
+    expect(cardFill, isNot(SurfaceTheme.light.elevated));
+    expect(
+      cardFill,
+      Color.alphaBlend(
+        SurfaceTheme.light.nestOverlay,
+        SurfaceTheme.light.elevated,
+      ),
     );
   });
 }

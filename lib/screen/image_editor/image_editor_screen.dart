@@ -18,11 +18,11 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_chip.dart';
-import 'package:do_x/widgets/neu/neu_press.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/app_chip.dart';
+import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -408,10 +408,10 @@ class _ImageEditorScreenState
       bottom: true,
       appBar: DoAppBar(
         title: l10n.imageEditor,
-        // Neu buttons, like every other app bar in the app — a flat Material
+        // App icon buttons, like every other app bar in the app — a flat Material
         // icon button here reads as a control from a different product.
         actions: [
-          NeuIconButton(
+          AppIconButton(
             icon: Icons.undo_rounded,
             size: Dimens.appBarActionSize,
             iconSize: 18,
@@ -420,7 +420,7 @@ class _ImageEditorScreenState
             onPressed: vm.canUndo && !busy ? vm.undo : null,
           ),
           const SizedBox(width: 8),
-          NeuIconButton(
+          AppIconButton(
             key: _saveButtonKey,
             icon: Icons.ios_share_rounded,
             size: Dimens.appBarActionSize,
@@ -430,7 +430,7 @@ class _ImageEditorScreenState
             onPressed: vm.hasImage && !busy ? _save : null,
           ),
           const SizedBox(width: 8),
-          NeuIconButton(
+          AppIconButton(
             icon: Icons.more_vert_rounded,
             size: Dimens.appBarActionSize,
             iconSize: 18,
@@ -476,20 +476,19 @@ class _ImageEditorScreenState
           child: Padding(
             padding: Dimens.screenPadding,
             child: Center(
-              child: NeuCard(
+              child: AppCard(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                 child: Column(
                   spacing: 12,
                   children: [
-                    // The icon sits in its own sunken disc: the picture that
+                    // The icon sits in its own muted disc: the picture that
                     // isn't there yet, with a place already made for it.
                     Container(
                       width: 84,
                       height: 84,
-                      decoration: context.neuRaised(
-                        radius: Dimens.radiusPill,
-                        depth: 0.7,
-                        inset: true,
+                      decoration: BoxDecoration(
+                        color: context.surfaces.sunken,
+                        borderRadius: BorderRadius.circular(Dimens.radiusPill),
                       ),
                       child: Icon(
                         Icons.add_photo_alternate_outlined,
@@ -511,7 +510,7 @@ class _ImageEditorScreenState
                       style: context.textTheme.title,
                     ),
                     const SizedBox(height: 4),
-                    NeuButton(
+                    AppButton(
                       expand: true,
                       accent: scheme.primary,
                       onPressed: () => _pick(ImageSource.gallery),
@@ -520,7 +519,7 @@ class _ImageEditorScreenState
                         l10n.chooseFromGallery,
                       ),
                     ),
-                    NeuButton(
+                    AppButton(
                       expand: true,
                       onPressed: () => _pick(ImageSource.camera),
                       child: _buttonLabel(
@@ -627,15 +626,14 @@ class _ImageEditorScreenState
     // picture still shows, contained, so the page never blanks.
     if (size == null) return canvas;
 
-    // Rounded corners and a sunken rim, so the picture reads as set into the
-    // page the way every other surface in the app is. Both live *outside* the
-    // repaint boundary on purpose: the frame is the app's, not the photo's, and
-    // baking rounded corners into an exported file would be a bug.
+    // Rounded corners on a muted fill, so the picture reads as a placed
+    // surface like every other one in the app. Both live *outside* the repaint
+    // boundary on purpose: the frame is the app's, not the photo's, and baking
+    // rounded corners into an exported file would be a bug.
     canvas = DecoratedBox(
-      decoration: context.neuRaised(
-        radius: Dimens.radiusCard,
-        depth: 0.8,
-        inset: true,
+      decoration: BoxDecoration(
+        color: context.surfaces.sunken,
+        borderRadius: BorderRadius.circular(Dimens.radiusCard),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(Dimens.radiusCard),
@@ -724,7 +722,7 @@ class _ImageEditorScreenState
   );
 
   Widget _buildPanel(ImageEditorViewModel vm, AppLocalizations l10n) {
-    return NeuCard(
+    return AppCard(
       margin: const EdgeInsets.all(Dimens.pagePadding),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       // Scrolls only when it has to: at a normal text size the panel shrink
@@ -757,8 +755,8 @@ class _ImageEditorScreenState
     ).contentConstrainedBox();
   }
 
-  /// One cell of the tool bar: icon over label, lit and sunken when it is the
-  /// tool in hand.
+  /// One cell of the tool bar: icon over label, filled with the primary when
+  /// it is the tool in hand.
   ///
   /// The icon carries the meaning at a glance and the label removes the guess —
   /// an icon-only bar would make the two flips and the two grading tools a
@@ -766,23 +764,30 @@ class _ImageEditorScreenState
   Widget _toolButton(_EditorTool tool, AppLocalizations l10n) {
     final isSelected = _tool == tool;
     final scheme = context.theme.colorScheme;
+    final surfaces = context.surfaces;
     final foreground = isSelected ? scheme.onPrimary : scheme.onSurface;
 
     return Padding(
-      // Room for the shadow pair, which a tight Row would otherwise clip
-      // against its neighbour.
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-      child: NeuPress(
+      // A gap between neighbouring cells, so two fills do not run together.
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: AppPressable(
         onTap: () => _selectTool(tool),
-        builder: (context, pressed) => AnimatedContainer(
-          duration: NeuPress.duration,
+        stateBuilder: (context, state) => AnimatedContainer(
+          duration: AppPressable.duration,
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-          decoration: context.neuRaised(
-            radius: Dimens.radiusControlSmall,
-            depth: pressed ? 0 : 0.6,
-            color: isSelected ? scheme.primary : null,
-            inset: isSelected,
+          decoration: BoxDecoration(
+            color: surfaces.stateFill(
+              // Read here, under the press, so it is the surface the control
+              // actually sits on.
+              isSelected
+                  ? scheme.primary
+                  : surfaces.panelOn(SurfaceScope.of(context)),
+              content: foreground,
+              pressed: state.pressed,
+              focused: state.focused,
+            ),
+            borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -819,7 +824,7 @@ class _ImageEditorScreenState
             spacing: 8,
             children: [
               for (final option in _aspectOptions)
-                NeuChip(
+                AppChip(
                   label: option.label(l10n),
                   isSelected: _cropAspect == option.ratio,
                   onTap: () => _setCropAspect(option.ratio),
@@ -831,14 +836,14 @@ class _ImageEditorScreenState
           spacing: 12,
           children: [
             Expanded(
-              child: NeuButton(
+              child: AppButton(
                 expand: true,
                 onPressed: () => _setTool(_EditorTool.adjust),
                 child: Text(l10n.cancel),
               ),
             ),
             Expanded(
-              child: NeuButton(
+              child: AppButton(
                 expand: true,
                 accent: context.theme.colorScheme.primary,
                 onPressed: _applyCrop,
@@ -874,7 +879,7 @@ class _ImageEditorScreenState
         height: 44,
         child: Center(
           child: AnimatedContainer(
-            duration: NeuPress.duration,
+            duration: AppPressable.duration,
             curve: Curves.easeOut,
             width: isSelected ? 34 : 28,
             height: isSelected ? 34 : 28,
@@ -1138,14 +1143,14 @@ class _ImageEditorScreenState
           spacing: 12,
           children: [
             Expanded(
-              child: NeuButton(
+              child: AppButton(
                 expand: true,
                 onPressed: _hasDrawing ? _undoStroke : null,
                 child: Text(l10n.undo),
               ),
             ),
             Expanded(
-              child: NeuButton(
+              child: AppButton(
                 expand: true,
                 accent: scheme.primary,
                 onPressed: _hasDrawing ? _applyDrawing : null,
@@ -1171,7 +1176,7 @@ class _ImageEditorScreenState
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: NeuButton(
+              child: AppButton(
                 expand: true,
                 onPressed: () => vm.applyGeometryOp(op),
                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1274,7 +1279,7 @@ class _ImageEditorScreenState
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: AnimatedContainer(
-                      duration: NeuPress.duration,
+                      duration: AppPressable.duration,
                       curve: Curves.easeOut,
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
@@ -1441,9 +1446,9 @@ class _ImageEditorScreenState
 
 enum _MoreAction { gallery, camera, reset }
 
-/// Room a chip's neumorphic shadow needs inside a scroller, which clips at its
-/// own edge. Matches the inset the movie screen's chip rows use.
-const _scrollerPadding = EdgeInsets.symmetric(horizontal: 6, vertical: 4);
+/// Inset of a chip row inside its scroller, so the first and last chips do
+/// not sit flush against the scroller's clipped edge.
+const _scrollerPadding = EdgeInsets.symmetric(horizontal: 6);
 
 /// Fills the custom swatch before a colour has been mixed: the spectrum reads
 /// as "any colour", where a grey dot would read as "no colour".

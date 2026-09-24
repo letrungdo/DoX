@@ -16,8 +16,8 @@ import 'package:do_x/widgets/cute_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -210,9 +210,9 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     final isRepeating = status?.isRepeating ?? false;
     final color = isRepeating ? context.colors.success : context.colors.info;
 
-    return NeuCard(
+    return AppCard(
       radius: 14,
-      color: context.neuTint(color, amount: 0.12),
+      color: context.tintOnSurface(color, amount: 0.12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,11 +407,11 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       wifi.isOpen ? l10n.repeaterOpenNetwork : (wifi.encryption ?? ""),
     ].where((part) => part.isNotEmpty).join(" · ");
 
-    return NeuCard(
+    return AppCard(
       radius: 14,
       depth: 0.8,
       color: isCurrent
-          ? context.neuTint(context.colors.success, amount: 0.12)
+          ? context.tintOnSurface(context.colors.success, amount: 0.12)
           : null,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       onTap: vm.isApplyingUpstream ? null : () => _pickUpstream(vm, wifi),
@@ -563,11 +563,11 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     required Color color,
     required AppLocalizations l10n,
   }) {
-    return NeuCard(
+    return AppCard(
       radius: 14,
       // A row under test lifts higher instead of taking a thicker outline.
       depth: isTesting ? 1.2 : 0.8,
-      color: context.neuTint(color, amount: isTesting ? 0.16 : 0.1),
+      color: context.tintOnSurface(color, amount: isTesting ? 0.16 : 0.1),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(
         spacing: 14,
@@ -660,7 +660,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: context.neu.sunken,
+          color: context.surfaces.sunken,
           borderRadius: BorderRadius.circular(Dimens.radiusSmall),
         ),
         child: Row(
@@ -697,7 +697,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: context.neuTint(color, amount: 0.1),
+        color: context.tintOnSurface(color, amount: 0.1),
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(
@@ -881,7 +881,7 @@ class _WifiManagementScreenState<V extends WifiManagementViewModel>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: context.neuTint(color, amount: 0.14),
+        color: context.tintOnSurface(color, amount: 0.14),
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Column(

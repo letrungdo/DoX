@@ -1,12 +1,17 @@
 import 'dart:async';
 
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
 /// Large rounded dialog with a cute SVG icon next to the title, shared by input forms.
+///
+/// Publishes the elevated fill through [SurfaceScope], so cards and neutral
+/// buttons inside step off the dialog instead of vanishing into it.
 class CuteDialog extends StatefulWidget {
   final SvgGenImage? icon;
   final String title;
@@ -110,6 +115,7 @@ class _CuteDialogState extends State<CuteDialog> {
     final confirmText = widget.confirmText;
     final destructiveText = widget.destructiveText;
     final accentColor = accent ?? theme.colorScheme.primary;
+    final elevated = context.surfaces.elevated;
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.bold,
       fontSize: 18,
@@ -132,92 +138,100 @@ class _CuteDialogState extends State<CuteDialog> {
       ),
       clipBehavior: Clip.antiAlias,
       insetPadding: Dimens.dialogInsetPadding,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: Dimens.dialogMaxWidth),
-        // Tapping outside a field (but still inside the dialog) dismisses the
-        // keyboard without closing the dialog.
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-          child: Padding(
-            padding: Dimens.dialogPadding,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header scrolls together with the fields so the content keeps
-                // its space when the keyboard shrinks the dialog.
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (icon != null || deleteButton != null)
-                          Row(
-                            children: [
-                              if (icon != null) ...[
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: accentColor.withValues(
-                                    alpha: 0.12,
+      child: SurfaceScope(
+        color: elevated,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: Dimens.dialogMaxWidth),
+          // Tapping outside a field (but still inside the dialog) dismisses the
+          // keyboard without closing the dialog.
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            child: Padding(
+              padding: Dimens.dialogPadding,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header scrolls together with the fields so the content keeps
+                  // its space when the keyboard shrinks the dialog.
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (icon != null || deleteButton != null)
+                            Row(
+                              children: [
+                                if (icon != null) ...[
+                                  CircleAvatar(
+                                    radius: 22,
+                                    // Opaque, like every other tint: the accent
+                                    // flattened onto the dialog's fill.
+                                    backgroundColor: Color.alphaBlend(
+                                      accentColor.withValues(alpha: 0.14),
+                                      elevated,
+                                    ),
+                                    child: icon.svg(width: 28, height: 28),
                                   ),
-                                  child: icon.svg(width: 28, height: 28),
+                                  const SizedBox(width: 12),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    textAlign: icon == null
+                                        ? TextAlign.center
+                                        : TextAlign.start,
+                                    style: titleStyle,
+                                  ),
                                 ),
-                                const SizedBox(width: 12),
+                                ?deleteButton,
                               ],
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  textAlign: icon == null
-                                      ? TextAlign.center
-                                      : TextAlign.start,
-                                  style: titleStyle,
-                                ),
-                              ),
-                              ?deleteButton,
-                            ],
-                          )
-                        else
-                          Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: titleStyle,
-                          ),
-                        const SizedBox(height: 16),
-                        for (var i = 0; i < children.length; i++) ...[
-                          if (i > 0)
-                            const SizedBox(height: Dimens.modalItemSpacing),
-                          children[i],
+                            )
+                          else
+                            Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              style: titleStyle,
+                            ),
+                          const SizedBox(height: 16),
+                          for (var i = 0; i < children.length; i++) ...[
+                            if (i > 0)
+                              const SizedBox(height: Dimens.modalItemSpacing),
+                            children[i],
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                DialogActions(
-                  children: [
-                    DialogActionButton(
-                      text:
-                          widget.cancelText ??
-                          AppLocalizations.of(context).cancel,
-                      // Closing the dialog mid-save would leave the user
-                      // guessing whether the write went through.
-                      onPressed: _saving ? null : () => Navigator.pop(context),
-                      kind: DialogActionKind.cancel,
-                    ),
-                    if (confirmText != null)
+                  const SizedBox(height: 16),
+                  DialogActions(
+                    children: [
                       DialogActionButton(
-                        text: confirmText,
-                        onPressed: _saving ? null : _handleConfirm,
-                        loading: _saving && !_paused,
-                        kind: widget.isDestructive
-                            ? DialogActionKind.destructive
-                            : DialogActionKind.primary,
+                        text:
+                            widget.cancelText ??
+                            AppLocalizations.of(context).cancel,
+                        // Closing the dialog mid-save would leave the user
+                        // guessing whether the write went through.
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.pop(context),
+                        kind: DialogActionKind.cancel,
                       ),
-                  ],
-                ),
-              ],
+                      if (confirmText != null)
+                        DialogActionButton(
+                          text: confirmText,
+                          onPressed: _saving ? null : _handleConfirm,
+                          loading: _saving && !_paused,
+                          kind: widget.isDestructive
+                              ? DialogActionKind.destructive
+                              : DialogActionKind.primary,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

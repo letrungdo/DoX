@@ -24,7 +24,7 @@ import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/player_controls_focus.dart';
 import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/foundation.dart';
@@ -1645,7 +1645,7 @@ class _MovieDetailScreenState
                     titleMaxLines: titleMaxLines,
                     height: titleFit.height,
                     actions: [
-                      NeuIconButton(
+                      AppIconButton(
                         size: Dimens.appBarActionSize,
                         iconSize: 18,
                         depth: Dimens.appBarActionDepth,
@@ -1890,7 +1890,7 @@ class _MovieDetailScreenState
                 ),
               ),
               const SizedBox(width: 8),
-              NeuIconButton(
+              AppIconButton(
                 size: Dimens.appBarActionSize,
                 iconSize: 18,
                 depth: Dimens.appBarActionDepth,
@@ -2294,7 +2294,7 @@ class _MovieDetailScreenState
                             color: Colors.white54,
                           ),
                           const SizedBox(height: 12),
-                          NeuButton(
+                          AppButton(
                             onPressed: () {
                               if (_vm.selectedEpisode != null) {
                                 _playEpisode(_vm.selectedEpisode!);

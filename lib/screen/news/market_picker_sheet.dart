@@ -3,7 +3,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 
 /// Picks which markets the news page charts. Returns the new list — already in
@@ -136,7 +136,7 @@ class _MarketPickerBodyState extends State<_MarketPickerBody> {
           // Close lives in the sheet's own top-right corner, so the foot of the
           // list carries only the action that commits the picks.
           child: Center(
-            child: NeuButton(
+            child: AppButton(
               accent: context.colors.info,
               padding: _actionPadding,
               onPressed: _selected.isEmpty ? null : _save,

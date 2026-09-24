@@ -10,7 +10,7 @@ import 'package:do_x/utils/feng_shui.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
@@ -208,7 +208,7 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
 
   Widget _buildFacingCard(BuildContext context, AppLocalizations l10n) {
     final scheme = context.theme.colorScheme;
-    return NeuCard(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -287,7 +287,7 @@ class _FengShuiCompassScreenState extends State<FengShuiCompassScreen> {
       decoration: BoxDecoration(
         // A hint is not a panel: the flat sunken fill is how this design says
         // "sits in the page" rather than "lifted off it".
-        color: context.neu.sunken,
+        color: context.surfaces.sunken,
         borderRadius: BorderRadius.circular(Dimens.radiusControlSmall),
       ),
       child: Row(

@@ -1,5 +1,5 @@
 import 'package:do_x/theme/app_theme.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,7 +13,7 @@ void main() {
         theme: AppTheme.lightTheme,
         home: Scaffold(
           body: Center(
-            child: NeuButton(onPressed: onPressed, child: const Text('Lưu')),
+            child: AppButton(onPressed: onPressed, child: const Text('Lưu')),
           ),
         ),
       ),

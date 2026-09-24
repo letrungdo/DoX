@@ -16,7 +16,7 @@ import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
@@ -190,7 +190,7 @@ class _GlobalExpensesScreenState
                                           if (vm.globalExpenses.isEmpty &&
                                               !vm.isReadOnly) ...[
                                             const SizedBox(height: 16),
-                                            NeuButton(
+                                            AppButton(
                                               onPressed: () =>
                                                   _showExpenseDialog(),
                                               accent: context

@@ -34,7 +34,7 @@ class LineAreaChart extends StatelessWidget {
         decoration: BoxDecoration(
           // Empty-state well, not an outlined box: the flat sunken fill is how
           // this design marks a placeholder.
-          color: context.neu.sunken,
+          color: context.surfaces.sunken,
           borderRadius: BorderRadius.circular(Dimens.radiusTiny),
         ),
         child: const Center(

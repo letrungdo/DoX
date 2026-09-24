@@ -1,7 +1,7 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 
 /// One rate on the news page: the currency pair on the left, the figure on the
@@ -53,7 +53,7 @@ class FxRateRow extends StatelessWidget {
     final textTheme = context.textTheme;
     final caption = this.caption;
 
-    return NeuCard(
+    return AppCard(
       color: softColor,
       radius: 10,
       depth: 0.5,

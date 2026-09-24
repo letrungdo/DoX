@@ -1,23 +1,25 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/widgets/loading.dart';
-import 'package:do_x/widgets/neu/neu_press.dart';
-import 'package:do_x/widgets/neu/neu_surface.dart';
+import 'package:do_x/widgets/surface/app_pressable.dart';
+import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
-/// A neumorphic pill that sinks into the surface while held.
+/// A flat button: an opaque fill, a state layer while held, no shadow.
 ///
-/// The two rims swapping on press is the affordance: without borders or
-/// elevation, that flip is what tells the user the thing is a control. [accent]
-/// tints the fill for primary actions; a plain button keeps the surface colour.
-class NeuButton extends StatefulWidget {
-  const NeuButton({
+/// Without [accent] it is the neutral button — the next fill step off whatever
+/// it sits on (white on the page, a nested grey in a dialog). [accent] fills it
+/// for a primary or destructive action; `accent: surfaces.primarySoft` with
+/// `foreground: scheme.primary` makes the tonal variant.
+class AppButton extends StatefulWidget {
+  const AppButton({
     super.key,
     required this.child,
     this.onPressed,
     this.accent,
     this.foreground,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-    this.radius = 16,
+    this.radius = Dimens.radiusControl,
     this.depth = 0.85,
     this.expand = false,
     this.focusNode,
@@ -36,6 +38,8 @@ class NeuButton extends StatefulWidget {
 
   final EdgeInsetsGeometry padding;
   final double radius;
+
+  /// Ignored; kept for source compatibility.
   final double depth;
 
   /// Stretch to the parent's width, for bottom-of-sheet actions.
@@ -45,18 +49,22 @@ class NeuButton extends StatefulWidget {
   final FocusNode? focusNode;
 
   @override
-  State<NeuButton> createState() => _NeuButtonState();
+  State<AppButton> createState() => _AppButtonState();
 }
 
-class _NeuButtonState extends State<NeuButton> {
+class _AppButtonState extends State<AppButton> {
+  /// Press layer on a primary or error fill, where the theme's 10% is too
+  /// faint to read.
+  static const _saturatedPressOpacity = 0.12;
+
   @override
   Widget build(BuildContext context) {
-    final neu = context.neu;
+    final surfaces = context.surfaces;
     final scheme = context.theme.colorScheme;
     final enabled = widget.onPressed != null;
     final borderRadius = BorderRadius.circular(widget.radius);
-    final background = NeuSurface.of(context);
-    final fill = widget.accent ?? neu.panelOn(background);
+    final background = SurfaceScope.of(context);
+    final fill = widget.accent ?? surfaces.panelOn(background);
     final foreground = !enabled
         ? context.colors.disabled
         : widget.foreground ??
@@ -66,7 +74,7 @@ class _NeuButtonState extends State<NeuButton> {
       style: TextStyle(
         color: foreground,
         fontSize: 15,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
       ),
       child: IconTheme.merge(
         data: IconThemeData(color: foreground, size: 20),
@@ -74,24 +82,27 @@ class _NeuButtonState extends State<NeuButton> {
       ),
     );
 
-    final button = NeuPress(
+    // A saturated fill needs a slightly stronger press layer to show.
+    final saturated =
+        widget.accent == scheme.primary || widget.accent == scheme.error;
+
+    final button = AppPressable(
       focusNode: widget.focusNode,
       onTap: widget.onPressed,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: NeuPress.duration,
+      stateBuilder: (context, state) => AnimatedContainer(
+        duration: AppPressable.duration,
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: enabled ? fill : neu.sunken,
+          color: enabled
+              ? surfaces.stateFill(
+                  fill,
+                  content: foreground,
+                  pressed: state.pressed,
+                  focused: state.focused,
+                  pressOpacity: saturated ? _saturatedPressOpacity : null,
+                )
+              : surfaces.sunken,
           borderRadius: borderRadius,
-          boxShadow: !enabled
-              ? null
-              // Held down, the lift goes to nothing: the button settles flat
-              // into the page, which is how `flutter_neumorphic` presses too.
-              // An inverted rim pair reads as a relit panel, not a pressed one.
-              : neu.raisedShadows(
-                  fill: fill,
-                  depth: pressed ? 0 : widget.depth,
-                ),
         ),
         child: content,
       ),
@@ -103,13 +114,15 @@ class _NeuButtonState extends State<NeuButton> {
   }
 }
 
-/// Square neumorphic icon button, for app bar actions and toolbars.
-class NeuIconButton extends StatelessWidget {
-  const NeuIconButton({
+/// Square flat icon button, for app bar actions and toolbars. A neutral
+/// [AppButton] underneath: a white (or slate) rounded square on the page, a
+/// nested grey one inside a card or sheet.
+class AppIconButton extends StatelessWidget {
+  const AppIconButton({
     super.key,
     required this.icon,
     this.onPressed,
-    this.size = 42,
+    this.size = Dimens.iconButtonSize,
     this.iconSize = 20,
     this.color,
     this.tooltip,
@@ -130,16 +143,14 @@ class NeuIconButton extends StatelessWidget {
   final String? tooltip;
   final FocusNode? focusNode;
 
-  /// How far the button sits above the surface. Lower it where the shadow has
-  /// little room to spread, e.g. inside a short app bar.
+  /// Ignored; kept for source compatibility.
   final double depth;
 
   @override
   Widget build(BuildContext context) {
-    final button = NeuButton(
+    final button = AppButton(
       onPressed: onPressed,
-      radius: 14,
-      depth: depth,
+      radius: Dimens.radiusControlSmall,
       padding: EdgeInsets.zero,
       focusNode: focusNode,
       child: SizedBox.square(

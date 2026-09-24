@@ -4,7 +4,7 @@ import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:flutter/material.dart';
 
 /// Big enough to hit comfortably while its shadow still clears the row.
@@ -147,7 +147,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
             ),
           ),
           if (!isInputMode)
-            NeuIconButton(
+            AppIconButton(
               size: _actionButtonSize,
               iconSize: 20,
               depth: 0.4,
@@ -261,7 +261,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                                     // The primary server cannot be deleted, so
                                     // its row only keeps the edit button.
                                     if (!isPrimary)
-                                      NeuIconButton(
+                                      AppIconButton(
                                         size: _actionButtonSize,
                                         iconSize: 20,
                                         depth: 0.4,
@@ -275,7 +275,7 @@ class _MovieServerDialogState extends State<MovieServerDialog> {
                                           }
                                         },
                                       ),
-                                    NeuIconButton(
+                                    AppIconButton(
                                       size: _actionButtonSize,
                                       iconSize: 20,
                                       depth: 0.4,

@@ -4,8 +4,8 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/screen/image_editor/image_editor_screen.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/image_editor_view_model.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,8 +69,8 @@ void main() {
   ) async {
     await _pump(tester);
 
-    NeuIconButton button(IconData icon) =>
-        tester.widget<NeuIconButton>(find.widgetWithIcon(NeuIconButton, icon));
+    AppIconButton button(IconData icon) =>
+        tester.widget<AppIconButton>(find.widgetWithIcon(AppIconButton, icon));
 
     // Sharing nothing, and undoing an edit that was never made, are the two
     // taps an empty editor has to refuse.
@@ -90,8 +90,8 @@ void main() {
     }
     expect(
       tester
-          .widget<NeuIconButton>(
-            find.widgetWithIcon(NeuIconButton, Icons.ios_share_rounded),
+          .widget<AppIconButton>(
+            find.widgetWithIcon(AppIconButton, Icons.ios_share_rounded),
           )
           .onPressed,
       isNotNull,
@@ -105,8 +105,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Nothing drawn yet, so there is nothing to apply.
-    NeuButton applyButton() => tester.widget<NeuButton>(
-      find.ancestor(of: find.text('Áp dụng'), matching: find.byType(NeuButton)),
+    AppButton applyButton() => tester.widget<AppButton>(
+      find.ancestor(of: find.text('Áp dụng'), matching: find.byType(AppButton)),
     );
     expect(applyButton().onPressed, isNull);
 
@@ -149,7 +149,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(
       find.descendant(
-        of: find.byType(NeuCard),
+        of: find.byType(AppCard),
         matching: find.byType(Scrollable),
       ),
       findsWidgets,

@@ -11,10 +11,36 @@ class Dimens {
 
   static const appBarHeight = kIsWeb ? 60.0 : 44.0;
 
-  /// App bar actions are sized so their neumorphic shadow (offset + blur, about
-  /// 5px at this depth) still fits inside the bar instead of spilling out of it.
-  static const appBarActionSize = 32.0;
+  /// App bar actions: a button that sits centred in the 44dp bar with room
+  /// above and below it.
+  static const appBarActionSize = 36.0;
+
+  /// No-op, remove: `depth` is ignored by the flat primitives, and the call
+  /// sites that still pass this go with it.
   static const appBarActionDepth = 0.4;
+
+  /// Default side of a `AppIconButton` outside an app bar.
+  static const iconButtonSize = 40.0;
+
+  /// The least height a filled, outlined or dialog button is laid out at.
+  static const buttonMinHeight = 48.0;
+
+  /// Padding inside a card, for new code.
+  static const cardPadding = EdgeInsets.all(16);
+
+  /// Gap between stacked tappable full-width rows (menu, settings).
+  static const rowSpacing = 8.0;
+
+  /// Gap between cards within a page section.
+  static const cardSpacing = 12.0;
+
+  /// Thickness of a divider, the bottom bar's top edge and the TV rail's edge.
+  static const hairline = 1.0;
+
+  /// How far a control shrinks while held, and a card — a wide surface, where
+  /// the same 3% reads as the whole panel lurching.
+  static const pressedScaleControl = 0.97;
+  static const pressedScaleCard = 0.99;
 
   /// Widest a page's content column ever gets, the app bar's title row
   /// included. Landscape hands a phone twice the width it was designed for, and
@@ -67,10 +93,9 @@ class Dimens {
 
   /// The radius scale, named by the role a corner plays rather than by size.
   ///
-  /// Neumorphism leans on the shadow pair rather than an outline, so a corner is
-  /// the only other thing telling two stacked panels apart — a radius that
-  /// drifts by a pixel or two per screen reads as sloppiness rather than as
-  /// hierarchy. Pick the step whose *role* matches; do not add a value in
+  /// Fill steps and corners, not shadows, tell stacked panels apart — so a
+  /// radius that drifts by a pixel or two per screen reads as sloppiness
+  /// rather than as hierarchy. Pick the step whose *role* matches; do not add a value in
   /// between.
   ///
   /// When nesting, the inner radius is the outer one minus the gap between them,
@@ -119,8 +144,9 @@ class Dimens {
 
   /// Thickness of the outline drawn around whatever the TV remote's D-pad is
   /// pointing at. Heavier than a desktop focus ring on purpose: it is read
-  /// from across a room, and it is the only cue a television gets.
-  static const focusRingWidth = 2.5;
+  /// from across a room, and with no shadow lifting the control it carries
+  /// more of the load than the growth and the focused fill beside it.
+  static const focusRingWidth = 3.0;
 
   /// Shared television margins, injected by `TvShell` for every page.
   ///

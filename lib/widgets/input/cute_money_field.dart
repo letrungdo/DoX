@@ -1,4 +1,5 @@
 import 'package:do_x/constants/app_const.dart';
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/widgets/input/cute_text_field.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
@@ -147,42 +148,54 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
 
     final mq = MediaQuery.of(overlayContext);
     final theme = Theme.of(context);
+    final surfaces = context.surfaces;
 
     return Positioned(
       left: 0,
       right: 0,
       bottom: mq.viewInsets.bottom,
-      child: Material(
-        color: context.neu.base,
-        shadowColor: context.neu.darkShadow,
-        elevation: 8,
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 48,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              itemCount: suggestions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, index) {
-                final value = suggestions[index];
-                return ActionChip(
-                  label: Text(_formatCompact(value)),
-                  labelStyle: TextStyle(
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  backgroundColor: theme.colorScheme.surface,
-                  side: BorderSide(
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.6,
+      // Floats over the page above the keyboard, so it is one of the few
+      // surfaces that keeps a shadow; the hairline marks its top edge where
+      // the shadow is faint.
+      child: DecoratedBox(
+        decoration: BoxDecoration(boxShadow: surfaces.floatShadow),
+        child: Material(
+          color: surfaces.elevated,
+          elevation: 0,
+          shape: Border(
+            top: BorderSide(color: surfaces.hairline, width: Dimens.hairline),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 48,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                itemCount: suggestions.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, index) {
+                  final value = suggestions[index];
+                  return ActionChip(
+                    label: Text(_formatCompact(value)),
+                    labelStyle: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _applySuggestion(value),
-                );
-              },
+                    backgroundColor: theme.colorScheme.surface,
+                    side: BorderSide(
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.6,
+                      ),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _applySuggestion(value),
+                  );
+                },
+              ),
             ),
           ),
         ),

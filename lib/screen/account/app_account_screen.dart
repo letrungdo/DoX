@@ -12,7 +12,7 @@ import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
-import 'package:do_x/widgets/neu/neu_card.dart';
+import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -117,7 +117,7 @@ class _AppAccountScreenState
     final email = user.email ?? '';
     final confirmed = user.emailConfirmedAt != null;
 
-    return NeuCard(
+    return AppCard(
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,7 +237,7 @@ class _AppAccountScreenState
     VoidCallback? onTap,
   }) {
     final foreground = color ?? context.theme.colorScheme.onSurface;
-    return NeuCard(
+    return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(

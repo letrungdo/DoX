@@ -28,7 +28,7 @@ import 'package:do_x/widgets/input/cute_segmented_button.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
-import 'package:do_x/widgets/neu/neu_button.dart';
+import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -233,7 +233,7 @@ class _CockSalesScreenState
                                           if (vm.globalCockSales.isEmpty &&
                                               !vm.isReadOnly) ...[
                                             const SizedBox(height: 16),
-                                            NeuButton(
+                                            AppButton(
                                               onPressed: () =>
                                                   _showSaleDialog(),
                                               accent: context
