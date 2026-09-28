@@ -27,6 +27,7 @@ class MusicTrackCard extends StatelessWidget {
     required this.likeFocusNode,
     required this.onTap,
     required this.onToggleLike,
+    this.onExitRight,
   });
 
   final MusicTrack track;
@@ -42,6 +43,9 @@ class MusicTrackCard extends StatelessWidget {
 
   final VoidCallback onTap;
   final VoidCallback onToggleLike;
+
+  /// Where right off the heart goes; wherever traversal finds if null.
+  final VoidCallback? onExitRight;
 
   static String _formatNumber(int number) {
     if (number >= 1000000) return '${(number / 1000000).toStringAsFixed(1)}M';
@@ -216,6 +220,10 @@ class MusicTrackCard extends StatelessWidget {
       return KeyEventResult.handled;
     }
 
+    if (direction == TraversalDirection.right && onExitRight != null) {
+      onExitRight!();
+      return KeyEventResult.handled;
+    }
     focusNode.requestFocus();
     if (direction == TraversalDirection.left) return KeyEventResult.handled;
     // The row is where the move is measured from, so it has to hold the focus

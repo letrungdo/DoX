@@ -694,6 +694,27 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
     });
   }
 
+  /// Right off the list, onto the player beside it: its play button.
+  ///
+  /// Named rather than left to traversal, which only finds what lies level
+  /// with the row. With the picture off the remote's path that is nothing, and
+  /// it went for the account button in the app bar instead. With nothing
+  /// playing there is no button, and the remote stays on the list.
+  ///
+  /// The traversal's memory of its own moves is wiped on the way: it would
+  /// otherwise take the next left as undoing the last right it made itself —
+  /// the one from the tab rail into the list — and send the remote from the
+  /// play button straight back to that tab.
+  void _enterPlayerDashboard() {
+    final play = _playPauseFocusNode;
+    if (play.context == null || !play.canRequestFocus) return;
+    final scope = play.nearestScope;
+    if (scope != null) {
+      FocusTraversalGroup.maybeOfNode(play)?.invalidateScopeData(scope);
+    }
+    play.requestFocus();
+  }
+
   /// Moves the list straight to [id]'s row, parked where [_followTrack]
   /// parks it.
   void _jumpToTrack(String id) {
@@ -1300,6 +1321,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             track: track,
             focusNode: _getNodeForRow((list, track.id)),
             likeFocusNode: _getLikeNodeForRow((list, track.id)),
+            onExitRight: deviceType.isTv ? _enterPlayerDashboard : null,
             onTap: () {
               // Chosen from the list, so the list stays where it is.
               _followedTrackId = track.id;
@@ -1759,6 +1781,7 @@ class _TrackRow extends StatelessWidget {
     required this.likeFocusNode,
     required this.onTap,
     required this.onToggleLike,
+    this.onExitRight,
   });
 
   final MusicTrack track;
@@ -1766,6 +1789,7 @@ class _TrackRow extends StatelessWidget {
   final FocusNode likeFocusNode;
   final VoidCallback onTap;
   final VoidCallback onToggleLike;
+  final VoidCallback? onExitRight;
 
   @override
   Widget build(BuildContext context) {
@@ -1781,6 +1805,7 @@ class _TrackRow extends StatelessWidget {
       likeFocusNode: likeFocusNode,
       onTap: onTap,
       onToggleLike: onToggleLike,
+      onExitRight: onExitRight,
     );
   }
 }
