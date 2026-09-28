@@ -476,19 +476,13 @@ class _MusicFullscreenVideoPlayerState
                 style: TextStyle(color: muted, fontSize: isTv ? 14 : 12),
               ),
               MusicSeekBar(
+                // Over the picture, as the film player's bar is.
+                trackColor: Colors.white30,
                 builder: (context, position, slider) => Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 4,
-                        activeTrackColor: white,
-                        inactiveTrackColor: Colors.white24,
-                        thumbColor: white,
-                      ),
-                      child: widget.seekable(slider),
-                    ),
+                    widget.seekable(slider),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

@@ -1382,15 +1382,21 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                             // Up on the full screen; one picture is all a
                             // platform view has.
                             ? const SizedBox.shrink()
-                            : MusicVideoView(
-                                key: _tvVideoKey,
-                                controller: viewModel.videoController!,
-                                isOfficialAudio: viewModel.isAudioFromVideo,
-                                // Square: a rounded clip over a platform
-                                // view is paid for on every frame of the
-                                // video, and it also lets the picture move
-                                // to the full screen unchanged.
-                                borderRadius: BorderRadius.zero,
+                            // Kept off the remote's path: the platform view
+                            // takes the focus of its own accord, and OK on it
+                            // does nothing — the full-screen button beside it
+                            // is the way in.
+                            : ExcludeFocus(
+                                child: MusicVideoView(
+                                  key: _tvVideoKey,
+                                  controller: viewModel.videoController!,
+                                  isOfficialAudio: viewModel.isAudioFromVideo,
+                                  // Square: a rounded clip over a platform
+                                  // view is paid for on every frame of the
+                                  // video, and it also lets the picture move
+                                  // to the full screen unchanged.
+                                  borderRadius: BorderRadius.zero,
+                                ),
                               )
                       : AspectRatio(
                           aspectRatio: 1,
@@ -1607,22 +1613,10 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
             ),
           ),
           const SizedBox(height: 4),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 2,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 8),
-              activeTrackColor: context.theme.colorScheme.primary,
-              inactiveTrackColor: context.theme.disabledColor.withValues(
-                alpha: 0.2,
-              ),
-              thumbColor: context.theme.colorScheme.primary,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: MusicSeekBar(
-                builder: (context, _, slider) => _seekable(slider),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: MusicSeekBar(
+              builder: (context, _, slider) => _seekable(slider),
             ),
           ),
         ],
@@ -1647,20 +1641,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
         MusicSeekBar(
           builder: (context, position, slider) => Column(
             children: [
-              _seekable(
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 4,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 6,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 14,
-                    ),
-                  ),
-                  child: slider,
-                ),
-              ),
+              _seekable(slider),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Row(

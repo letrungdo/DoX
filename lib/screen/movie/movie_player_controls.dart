@@ -1,9 +1,8 @@
-import 'dart:ui' show lerpDouble;
-
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/screen/movie/movie_player_layout.dart';
 import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
+import 'package:do_x/widgets/seek_bar_style.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -392,9 +391,8 @@ class _RoundIconButton extends StatelessWidget {
 }
 
 /// How long the bar takes to thicken when it is focused, hovered or held.
-const _seekBarActiveDuration = Duration(milliseconds: 150);
-
-/// Sleek seek bar with animated track expansion and glowing thumb handle.
+/// Sleek seek bar with animated track expansion and glowing thumb handle, in
+/// the look every seek bar shares — see [SeekBarStyle].
 ///
 /// Only the thickness animates. The played and buffered lengths are set
 /// outright: animating them turned every position report into 150ms of frames,
@@ -409,7 +407,7 @@ class VideoSeekBar extends StatelessWidget {
     required this.isScrubbing,
     this.dragFraction,
     this.live = true,
-    this.playedColor = Colors.pinkAccent,
+    this.playedColor,
     this.bufferedColor = Colors.white30,
     this.backgroundColor = Colors.white12,
   });
@@ -425,7 +423,10 @@ class VideoSeekBar extends StatelessWidget {
   /// hidden: nobody can see the bar then, and following it would still cost a
   /// frame on every position report.
   final bool live;
-  final Color playedColor;
+
+  /// The played length and the thumb's ring; the theme's primary colour if
+  /// null, as on the music player's bar.
+  final Color? playedColor;
   final Color bufferedColor;
   final Color backgroundColor;
 
@@ -434,13 +435,15 @@ class VideoSeekBar extends StatelessWidget {
     final activeController = controller;
     if (activeController == null || !activeController.value.isInitialized) {
       return SizedBox(
-        height: 20,
+        height: Dimens.seekBarTouchHeight,
         child: Center(
           child: Container(
-            height: 4,
+            height: Dimens.seekBarTrackHeight,
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(
+                Dimens.seekBarTrackHeight / 2,
+              ),
             ),
           ),
         ),
@@ -451,12 +454,13 @@ class VideoSeekBar extends StatelessWidget {
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(end: isActive ? 1 : 0),
-      duration: _seekBarActiveDuration,
+      duration: Dimens.seekBarActiveDuration,
       builder: (context, active, _) {
-        if (!live) return _buildTrack(activeController.value, active);
+        final played = playedColor ?? Theme.of(context).colorScheme.primary;
+        if (!live) return _buildTrack(activeController.value, active, played);
         return ValueListenableBuilder<VideoPlayerValue>(
           valueListenable: activeController,
-          builder: (context, value, _) => _buildTrack(value, active),
+          builder: (context, value, _) => _buildTrack(value, active, played),
         );
       },
     );
@@ -464,9 +468,9 @@ class VideoSeekBar extends StatelessWidget {
 
   /// [active] runs from 0 (resting) to 1 (focused, hovered or held) while the
   /// bar thickens, and everything that grows with it is interpolated from it.
-  Widget _buildTrack(VideoPlayerValue value, double active) {
-    final trackHeight = lerpDouble(4, 6, active)!;
-    final thumbSize = lerpDouble(10, 14, active)!;
+  Widget _buildTrack(VideoPlayerValue value, double active, Color playedColor) {
+    final trackHeight = SeekBarStyle.trackHeight(active);
+    final thumbSize = SeekBarStyle.thumbSize(active);
     final totalMs = value.duration.inMilliseconds;
     final positionMs = value.position.inMilliseconds;
 
@@ -493,7 +497,7 @@ class VideoSeekBar extends StatelessWidget {
         final radius = BorderRadius.circular(trackHeight / 2);
 
         return SizedBox(
-          height: 20,
+          height: Dimens.seekBarTouchHeight,
           width: width,
           child: Stack(
             alignment: Alignment.centerLeft,
@@ -535,23 +539,7 @@ class VideoSeekBar extends StatelessWidget {
                 child: Container(
                   width: thumbSize,
                   height: thumbSize,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: playedColor,
-                      width: lerpDouble(2, 3, active)!,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: playedColor.withValues(
-                          alpha: lerpDouble(0.4, 0.8, active)!,
-                        ),
-                        blurRadius: lerpDouble(4, 8, active)!,
-                        spreadRadius: lerpDouble(1, 2, active)!,
-                      ),
-                    ],
-                  ),
+                  decoration: SeekBarStyle.thumbDecoration(playedColor, active),
                 ),
               ),
             ],

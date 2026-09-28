@@ -1,4 +1,7 @@
+import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
+import 'package:do_x/widgets/seek_bar_style.dart';
+import 'package:do_x/widgets/tv_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,11 +16,28 @@ import 'package:provider/provider.dart';
 /// [builder] lays the [Slider] out with whatever goes around it; the
 /// position it is handed is the thumb's, so the time beside the bar moves
 /// with a drag too.
+///
+/// Drawn in the look every seek bar shares (see [SeekBarStyle]): it
+/// thickens while it is focused, hovered or dragged. On a television that is
+/// how it says it has the remote, rather than by the shell's ring — a
+/// rectangle around a thin line reads as a box, not as the bar lighting up.
 class MusicSeekBar extends StatefulWidget {
-  const MusicSeekBar({super.key, required this.builder});
+  const MusicSeekBar({
+    super.key,
+    required this.builder,
+    this.playedColor,
+    this.trackColor,
+  });
 
   final Widget Function(BuildContext context, Duration position, Widget slider)
   builder;
+
+  /// The played length and the thumb's ring; the theme's primary colour if
+  /// null.
+  final Color? playedColor;
+
+  /// The length still to play; a faint shade of the text colour if null.
+  final Color? trackColor;
 
   @override
   State<MusicSeekBar> createState() => _MusicSeekBarState();
@@ -27,10 +47,14 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
   /// Where the thumb is being dragged to, in milliseconds; null while it is
   /// left alone.
   final _dragValue = ValueNotifier<double?>(null);
+  final _focusNode = FocusNode(debugLabel: 'music-seek-bar');
+  final _isHovered = ValueNotifier<bool>(false);
 
   @override
   void dispose() {
     _dragValue.dispose();
+    _focusNode.dispose();
+    _isHovered.dispose();
     super.dispose();
   }
 
@@ -50,6 +74,7 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
           duration,
         );
         final slider = Slider(
+          focusNode: _focusNode,
           value: value,
           max: duration == 0 ? 1 : duration,
           onChangeStart: (value) => _dragValue.value = value,
@@ -61,10 +86,50 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
             _dragValue.value = null;
           },
         );
+        final styled = TvOwnFocusRing(
+          node: _focusNode,
+          child: MouseRegion(
+            onEnter: (_) => _isHovered.value = true,
+            onExit: (_) => _isHovered.value = false,
+            child: _styled(slider),
+          ),
+        );
         final position = dragged == null
             ? vm.position
             : Duration(milliseconds: value.toInt());
-        return widget.builder(context, position, slider);
+        return widget.builder(context, position, styled);
+      },
+    );
+  }
+
+  /// [slider] in the shared look, thickening while it is focused, hovered or
+  /// dragged.
+  Widget _styled(Widget slider) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([_focusNode, _isHovered, _dragValue]),
+      child: slider,
+      builder: (context, slider) {
+        final isActive =
+            _focusNode.hasFocus || _isHovered.value || _dragValue.value != null;
+        return TweenAnimationBuilder<double>(
+          tween: Tween<double>(end: isActive ? 1 : 0),
+          duration: Dimens.seekBarActiveDuration,
+          child: slider,
+          builder: (context, active, slider) {
+            final colors = Theme.of(context).colorScheme;
+            return SliderTheme(
+              data: seekBarSliderTheme(
+                SliderTheme.of(context),
+                active: active,
+                playedColor: widget.playedColor ?? colors.primary,
+                trackColor:
+                    widget.trackColor ??
+                    colors.onSurface.withValues(alpha: 0.12),
+              ),
+              child: slider!,
+            );
+          },
+        );
       },
     );
   }

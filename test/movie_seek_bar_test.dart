@@ -25,6 +25,10 @@ void main() {
 
   tearDown(() => controller.dispose());
 
+  /// Named outright, so the played part can be told from the rest of the bar
+  /// by its colour.
+  const playedColor = Colors.pinkAccent;
+
   Future<void> pumpBar(WidgetTester tester, {bool live = true}) {
     return tester.pumpWidget(
       MaterialApp(
@@ -38,6 +42,7 @@ void main() {
               isDragging: false,
               isScrubbing: false,
               live: live,
+              playedColor: playedColor,
             ),
           ),
         ),
@@ -51,7 +56,7 @@ void main() {
       (widget) =>
           widget is Container &&
           widget.decoration is BoxDecoration &&
-          (widget.decoration! as BoxDecoration).color == Colors.pinkAccent,
+          (widget.decoration! as BoxDecoration).color == playedColor,
     );
     return tester.getSize(played).width;
   }

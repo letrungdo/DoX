@@ -144,6 +144,20 @@ class Dimens {
   /// more of the load than the growth and the focused fill beside it.
   static const focusRingWidth = 3.0;
 
+  /// Every seek bar's sizes, resting and active (focused, hovered, held) —
+  /// see `SeekBarStyle`. Thickening is the bar's own focus cue, in place of
+  /// the ring around it.
+  static const seekBarTrackHeight = 4.0;
+  static const seekBarActiveTrackHeight = 6.0;
+  static const seekBarThumbSize = 10.0;
+  static const seekBarActiveThumbSize = 14.0;
+
+  /// The height a seek bar is laid out at, so a finger has more than the
+  /// thin track to land on.
+  static const seekBarTouchHeight = 20.0;
+  static const seekBarTouchRadius = seekBarTouchHeight / 2;
+  static const seekBarActiveDuration = Duration(milliseconds: 150);
+
   /// Shared television margins, injected by `TvShell` for every page.
   ///
   /// The same inset on both sides. The left edge used to be twice the right
@@ -322,6 +336,10 @@ class Dimens {
   /// peek above and below telling the viewer the grid carries on.
   static const tvFocusScrollAlignment = 0.5;
   static const tvFocusScrollDuration = Duration(milliseconds: 180);
+
+  /// How long a remote's scrub along the film's seek bar waits, after the
+  /// last arrow, before it seeks there by itself.
+  static const playerScrubCommitDelay = Duration(milliseconds: 1500);
 
   /// How long the player's control overlay stays up after the last key press.
   ///

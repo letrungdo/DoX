@@ -240,6 +240,9 @@ class _MovieDetailScreenState
   final _virtualSeek = ValueNotifier<Duration?>(null);
   Timer? _virtualSeekTimer;
 
+  /// Settles a remote's scrub once the arrows have rested — see [_scrubBy].
+  Timer? _scrubCommitTimer;
+
   /// True while the platform player is refilling its buffer. Without this the
   /// frame simply freezes and a normal stall is indistinguishable from a dead
   /// player. Only the spinner listens to it.
@@ -381,6 +384,7 @@ class _MovieDetailScreenState
     _skipForwardTimer?.cancel();
     _skipBackwardTimer?.cancel();
     _virtualSeekTimer?.cancel();
+    _scrubCommitTimer?.cancel();
     _orientationSubscription?.cancel();
     _skipForward.dispose();
     _skipBackward.dispose();
@@ -1454,7 +1458,10 @@ class _MovieDetailScreenState
   ///
   /// A remote has no pointer to drag, so the timeline is scrubbed the way a
   /// set-top box does it: the arrows walk a marker along the bar with the
-  /// thumbnail preview following it, and the film only moves once OK says so.
+  /// thumbnail preview following it, and the film moves once OK says so — or
+  /// once the arrows have rested a moment, which is where the viewer stopped.
+  /// Left pending, the marker held the preview up and the overlay with it, for
+  /// as long as nobody pressed OK.
   void _scrubBy(Duration offset) {
     final controller = _videoController;
     if (controller == null || !controller.value.isInitialized) return;
@@ -1477,9 +1484,14 @@ class _MovieDetailScreenState
           position: target,
           cue: _vm.thumbnailTrack?.cueAt(target),
         );
+    _scrubCommitTimer?.cancel();
+    _scrubCommitTimer = Timer(Dimens.playerScrubCommitDelay, () {
+      if (mounted) _commitScrub();
+    });
   }
 
   void _commitScrub() {
+    _scrubCommitTimer?.cancel();
     final controller = _videoController;
     if (!_isScrubbing || controller == null) return;
     final target = _dragPosition;
@@ -1489,6 +1501,7 @@ class _MovieDetailScreenState
   }
 
   void _cancelScrub() {
+    _scrubCommitTimer?.cancel();
     if (!_isScrubbing) return;
     _timeline.value = _timeline.value.copyWith(isScrubbing: false);
     _startControlsTimer();
@@ -2533,134 +2546,140 @@ class _MovieDetailScreenState
                                                     // can stand on it: the
                                                     // arrows walk a marker
                                                     // along it and OK commits.
-                                                    Focus(
-                                                      focusNode:
-                                                          _timelineFocusNode,
-                                                      onKeyEvent:
-                                                          _handleTimelineKeyEvent,
-                                                      child: MouseRegion(
-                                                        cursor:
-                                                            SystemMouseCursors
-                                                                .click,
-                                                        onEnter: (event) =>
-                                                            _updateHoverPreview(
-                                                              event
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            ),
-                                                        onHover: (event) =>
-                                                            _updateHoverPreview(
-                                                              event
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                            ),
-                                                        onExit: (_) {
-                                                          if (_isTimelineHovering) {
-                                                            _timeline.value =
-                                                                _timeline.value
-                                                                    .copyWith(
-                                                                      isHovering:
-                                                                          false,
-                                                                    );
-                                                          }
-                                                          _startControlsTimer();
-                                                        },
-                                                        child: GestureDetector(
-                                                          behavior:
-                                                              HitTestBehavior
-                                                                  .opaque,
-                                                          onHorizontalDragStart:
-                                                              (details) {
-                                                                _startDragging(
-                                                                  controller,
-                                                                );
-                                                                _updateDragPosition(
-                                                                  controller,
-                                                                  details
-                                                                      .localPosition
-                                                                      .dx,
-                                                                  constraints
-                                                                      .maxWidth,
-                                                                );
-                                                              },
-                                                          onHorizontalDragUpdate:
-                                                              (details) {
-                                                                _updateDragPosition(
-                                                                  controller,
-                                                                  details
-                                                                      .localPosition
-                                                                      .dx,
-                                                                  constraints
-                                                                      .maxWidth,
-                                                                );
-                                                              },
-                                                          onHorizontalDragEnd:
-                                                              (_) => unawaited(
-                                                                _finishDragging(
-                                                                  controller,
-                                                                ),
+                                                    TvOwnFocusRing(
+                                                      node: _timelineFocusNode,
+                                                      child: Focus(
+                                                        focusNode:
+                                                            _timelineFocusNode,
+                                                        onKeyEvent:
+                                                            _handleTimelineKeyEvent,
+                                                        child: MouseRegion(
+                                                          cursor:
+                                                              SystemMouseCursors
+                                                                  .click,
+                                                          onEnter: (event) =>
+                                                              _updateHoverPreview(
+                                                                event
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
                                                               ),
-                                                          onHorizontalDragCancel:
-                                                              () => unawaited(
-                                                                _finishDragging(
-                                                                  controller,
-                                                                ),
+                                                          onHover: (event) =>
+                                                              _updateHoverPreview(
+                                                                event
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
                                                               ),
-                                                          onTapDown: (details) {
-                                                            _updateDragPosition(
-                                                              controller,
-                                                              details
-                                                                  .localPosition
-                                                                  .dx,
-                                                              constraints
-                                                                  .maxWidth,
-                                                              seek: true,
-                                                            );
+                                                          onExit: (_) {
+                                                            if (_isTimelineHovering) {
+                                                              _timeline
+                                                                  .value = _timeline
+                                                                  .value
+                                                                  .copyWith(
+                                                                    isHovering:
+                                                                        false,
+                                                                  );
+                                                            }
+                                                            _startControlsTimer();
                                                           },
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets.only(
-                                                                  top: 10,
-                                                                  bottom: 2,
+                                                          child: GestureDetector(
+                                                            behavior:
+                                                                HitTestBehavior
+                                                                    .opaque,
+                                                            onHorizontalDragStart:
+                                                                (details) {
+                                                                  _startDragging(
+                                                                    controller,
+                                                                  );
+                                                                  _updateDragPosition(
+                                                                    controller,
+                                                                    details
+                                                                        .localPosition
+                                                                        .dx,
+                                                                    constraints
+                                                                        .maxWidth,
+                                                                  );
+                                                                },
+                                                            onHorizontalDragUpdate:
+                                                                (details) {
+                                                                  _updateDragPosition(
+                                                                    controller,
+                                                                    details
+                                                                        .localPosition
+                                                                        .dx,
+                                                                    constraints
+                                                                        .maxWidth,
+                                                                  );
+                                                                },
+                                                            onHorizontalDragEnd:
+                                                                (
+                                                                  _,
+                                                                ) => unawaited(
+                                                                  _finishDragging(
+                                                                    controller,
+                                                                  ),
                                                                 ),
-                                                            // Follows the
-                                                            // pointer and the
-                                                            // focus without
-                                                            // rebuilding the
-                                                            // player around it.
-                                                            child: ListenableBuilder(
-                                                              listenable:
-                                                                  _timelineBar,
-                                                              builder: (context, _) {
-                                                                final timeline =
-                                                                    _timeline
-                                                                        .value;
-                                                                return VideoSeekBar(
-                                                                  controller:
-                                                                      controller,
-                                                                  isFocused:
-                                                                      _timelineFocusNode
-                                                                          .hasFocus,
-                                                                  isHovered:
-                                                                      timeline
-                                                                          .isHovering,
-                                                                  isDragging:
-                                                                      timeline
-                                                                          .isDragging,
-                                                                  isScrubbing:
-                                                                      timeline
-                                                                          .isScrubbing,
-                                                                  dragFraction:
-                                                                      timeline
-                                                                          .fraction,
-                                                                  live:
-                                                                      !_controlsIdle,
-                                                                );
-                                                              },
+                                                            onHorizontalDragCancel:
+                                                                () => unawaited(
+                                                                  _finishDragging(
+                                                                    controller,
+                                                                  ),
+                                                                ),
+                                                            onTapDown: (details) {
+                                                              _updateDragPosition(
+                                                                controller,
+                                                                details
+                                                                    .localPosition
+                                                                    .dx,
+                                                                constraints
+                                                                    .maxWidth,
+                                                                seek: true,
+                                                              );
+                                                            },
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets.only(
+                                                                    top: 10,
+                                                                    bottom: 2,
+                                                                  ),
+                                                              // Follows the
+                                                              // pointer and the
+                                                              // focus without
+                                                              // rebuilding the
+                                                              // player around it.
+                                                              child: ListenableBuilder(
+                                                                listenable:
+                                                                    _timelineBar,
+                                                                builder: (context, _) {
+                                                                  final timeline =
+                                                                      _timeline
+                                                                          .value;
+                                                                  return VideoSeekBar(
+                                                                    controller:
+                                                                        controller,
+                                                                    isFocused:
+                                                                        _timelineFocusNode
+                                                                            .hasFocus,
+                                                                    isHovered:
+                                                                        timeline
+                                                                            .isHovering,
+                                                                    isDragging:
+                                                                        timeline
+                                                                            .isDragging,
+                                                                    isScrubbing:
+                                                                        timeline
+                                                                            .isScrubbing,
+                                                                    dragFraction:
+                                                                        timeline
+                                                                            .fraction,
+                                                                    live:
+                                                                        !_controlsIdle,
+                                                                  );
+                                                                },
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
