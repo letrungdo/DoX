@@ -88,8 +88,21 @@ class _MusicFullscreenVideoPlayerState
   @override
   void initState() {
     super.initState();
-    _showControls();
-    if (!deviceType.isTv) _takeTheScreen();
+    if (deviceType.isTv) {
+      // Opened on the bare picture, the way a set's own player opens: the
+      // controls wait for the first press, with the remote on the picture
+      // to take it.
+      _controlsVisible = false;
+      _controlsGone = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_controlsVisible && !_isCovered) {
+          _pictureNode.requestFocus();
+        }
+      });
+    } else {
+      _showControls();
+      _takeTheScreen();
+    }
   }
 
   /// The phone's whole screen: the bars and the tab bar out of the way.

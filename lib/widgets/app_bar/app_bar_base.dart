@@ -1,4 +1,5 @@
 import 'package:do_x/constants/dimens.dart';
+import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
 
@@ -113,6 +114,9 @@ class _DoAppBarState extends State<DoAppBar> {
       backgroundColor: widget.backgroundColor,
       title: titleWidget,
       leading: widget.leading,
+      // No back arrow on a television: the remote has a Back key of its own,
+      // and an arrow on screen was one more stop for the D-pad to walk past.
+      automaticallyImplyLeading: !deviceType.isTv,
       leadingWidth: widget.leadingWidth,
       // AppBar stretches actions to the full toolbar height; centring keeps a
       // square button square, with room above and below it in the bar.

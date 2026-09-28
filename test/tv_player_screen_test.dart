@@ -141,7 +141,9 @@ void main() {
       expect(find.byType(GridView), findsNothing);
     });
 
-    testWidgets('a second arrow hands the overlay the remote', (tester) async {
+    testWidgets('a second arrow still leaves the remote on the picture', (
+      tester,
+    ) async {
       VideoPlayerPlatform.instance = FakeVideoPlayerPlatform(
         playing: {_channel.urls.first},
       );
@@ -155,13 +157,13 @@ void main() {
       // grid, the channel pair and the keypad all still answer.
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-video');
 
+      // Nor the second: a television's overlay has nothing to focus — the
+      // remote's own Back key stands in for the back button.
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
-      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-back');
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-video');
 
-      // And the overlay still goes away on its own, taking the remote back
-      // to the picture with it — a button resting under the focus is no
-      // reason to leave the bar over the programme for ever.
+      // And the overlay still goes away on its own.
       await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();
       expect(_controlsOpacity(tester), 0);
@@ -319,13 +321,15 @@ void main() {
       expect(find.text('9'), findsNothing);
     });
 
-    testWidgets('the back button is not a stop for the remote', (tester) async {
+    testWidgets('a television draws no back button', (tester) async {
       await pumpPlayer(tester);
 
-      // It is there to say what the remote's own Back key does. Taking the
-      // focus into it would take the channel buttons and the keypad away
-      // with it, which are the whole point of the page.
-      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      // The remote's own Back key does what it would. An arrow on the
+      // overlay leaves the keys with the picture, so the channel buttons and
+      // the keypad still answer.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
 
@@ -489,7 +493,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('VTV1'), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
     });
   });
 }

@@ -494,7 +494,10 @@ class _MovieDetailScreenState
     if (!isRecovery) _recoveryAttempts = 0;
 
     _vm.setStreamLoading(true);
-    setState(() => _showControls = true);
+    // A television's full screen opens on the bare picture, and a stream
+    // starting there — the first, or the next episode — keeps it bare; the
+    // first press brings the bar up.
+    setState(() => _showControls = !(deviceType.isTv && _isFullScreen));
     _timeline.value = _timeline.value.copyWith(isHovering: false);
 
     final controller = VideoPlayerController.networkUrl(
@@ -842,10 +845,10 @@ class _MovieDetailScreenState
     });
   }
 
-  /// Whether the bar at the top has anything to focus. On a television the
-  /// settings button lives in the bottom bar, which leaves the top one only
-  /// the full screen's back button.
-  bool get _topBarHasControls => !deviceType.isTv || _isFullScreen;
+  /// Whether the bar at the top has anything to focus. On a television it has
+  /// nothing: the settings button lives in the bottom bar, and the remote's
+  /// own Back key stands in for the back button.
+  bool get _topBarHasControls => !deviceType.isTv;
 
   /// Takes the remote off the control bars and puts it back on the video —
   /// what a press away from a bar does, and what hiding the bars has to do
@@ -1380,9 +1383,18 @@ class _MovieDetailScreenState
 
   void _enterFullScreen() {
     if (_isFullScreen) return;
+    // On a television the picture comes up bare, the way a set's own player
+    // opens: the bar waits for the first press. The remote is taken off the
+    // button that asked for the full screen before the bar leaves under it.
+    final isTv = deviceType.isTv;
+    if (isTv) {
+      _controlsTimer?.cancel();
+      _releaseControlsFocus();
+    }
     setState(() {
       _isFullScreen = true;
-      _showControls = true;
+      _showControls = !isTv;
+      if (isTv) _showVolumeControl = false;
     });
     widget.onFullScreenChanged?.call(true);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -3011,7 +3023,8 @@ class _MovieDetailScreenState
                                         _startControlsTimer();
                                       },
                                       child: PlayerTopBar(
-                                        showBack: isFullScreen,
+                                        showBack:
+                                            isFullScreen && !deviceType.isTv,
                                         onBack: _toggleFullScreen,
                                         onSettings: _showSettingsBottomSheet,
                                         // In the bottom bar on a television,

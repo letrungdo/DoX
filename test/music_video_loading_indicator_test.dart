@@ -9,6 +9,7 @@ import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/view_model/music/music_view_model.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
@@ -88,6 +89,10 @@ void main() {
       );
       unawaited(vm.playTrack(_track));
       await tester.pump(const Duration(milliseconds: 100));
+      // A television opens on the bare picture; a press brings the controls
+      // — and the video button in them — up.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
 
       // Nothing is playing yet: the spinner is over the picture, and the
       // video button is its plain self.
@@ -98,7 +103,11 @@ void main() {
 
       // Past the wait for an official sound: the track's own stream plays,
       // and only the picture is still to come.
-      await tester.pump(const Duration(seconds: 5));
+      // With a press on the way, so the controls, which go away on their
+      // own after as long, are still up to be looked at.
+      await tester.pump(const Duration(seconds: 3));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump(const Duration(seconds: 2));
       await tester.pump();
       expect(vm.audioController, isNotNull);
       expect(vm.isVideoLoadingOverSound, isTrue);

@@ -92,7 +92,11 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
 
   bool _isLoading = true;
   bool _hasError = false;
-  bool _showControls = true;
+
+  /// Down from the start on a television, the way a set's own player opens:
+  /// the picture comes up bare, and the first arrow brings the bar. Up on a
+  /// phone, where a tap takes it away.
+  bool _showControls = !deviceType.isTv;
   Timer? _hideControlsTimer;
 
   /// Holds the remote while it is on the picture rather than on a control.
@@ -583,27 +587,6 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
     _scheduleHideControls();
   }
 
-  /// Hands the remote to the controls, which on a live channel means the back
-  /// button — and the press that leaves it goes back to the picture.
-  ///
-  /// [afterFrame] for controls that are only now being shown: hidden ones are
-  /// held out of the focus tree, so there is nothing to hand the remote to
-  /// until the frame carrying them exists.
-  void _enterControls({required bool afterFrame}) {
-    void enter() {
-      focusPlayerControls(_controlsScope, preferred: _backFocusNode);
-    }
-
-    if (!afterFrame) {
-      enter();
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_showControls) return;
-      enter();
-    });
-  }
-
   /// The remote, on the picture itself.
   ///
   /// The keys are a television's, not a video player's, because that is what
@@ -638,19 +621,11 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
         key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight;
     if (isArrow) {
-      final wasVisible = _showControls;
-      if (!wasVisible) setState(() => _showControls = true);
+      // Only the overlay comes up: on a television it has nothing to focus —
+      // Back is the remote's own key — so the keys stay with the picture,
+      // where the grid, the channel pair and the keypad are.
+      if (!_showControls) setState(() => _showControls = true);
       _scheduleHideControls();
-      // The remote only goes into the overlay once the overlay is already
-      // up. Handed it on the press that revealed it, the picture would lose
-      // the keys — the grid, the channel pair and the keypad are all the
-      // picture's — before the viewer had seen what they were reaching for.
-      //
-      // And only on a press: a key held down is the viewer waiting for
-      // something, not asking for it twice.
-      if (deviceType.isTv && wasVisible && isPress) {
-        _enterControls(afterFrame: false);
-      }
       return KeyEventResult.handled;
     }
 
@@ -1073,21 +1048,22 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                 child: Row(
                   spacing: 8,
                   children: [
-                    // Reachable on a television too, now that the remote
-                    // only comes in here on the second press of an arrow:
-                    // the first press leaves the keys with the picture,
-                    // where the grid, the channel pair and the keypad are.
-                    FocusableTap(
-                      focusNode: _backFocusNode,
-                      onTap: () => Navigator.of(context).pop(_channel),
-                      child: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
+                    // Not on a television, where the remote's own Back key
+                    // does the same.
+                    if (!deviceType.isTv)
+                      FocusableTap(
+                        focusNode: _backFocusNode,
+                        onTap: () => Navigator.of(context).pop(_channel),
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ),
+                      )
+                    else
+                      const SizedBox(width: 12, height: 48),
                     Expanded(
                       child: Text(
                         _channel.name,
