@@ -16,7 +16,6 @@ import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/services/youtube_music_service.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
-import 'package:do_x/utils/video_view.dart';
 import 'package:do_x/view_model/core/core_view_model.dart';
 
 enum MusicTab { home, search, likes }
@@ -551,17 +550,12 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
           controller = await _tryOpen(
             hdAudio,
             background: true,
-            hasPicture: false,
             headers: early.hdHeaders,
           );
         }
         final muxed = early.muxedUrl;
         if (controller == null && muxed != null) {
-          controller = await _tryOpen(
-            muxed,
-            background: true,
-            hasPicture: true,
-          );
+          controller = await _tryOpen(muxed, background: true);
           if (controller != null) soundPicture = muxed;
         }
         if (controller != null) official = early;
@@ -577,11 +571,7 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         if (mediaStreamUrl.isEmpty) {
           throw Exception('Could not resolve playable dynamic media link');
         }
-        controller = await _openPlayer(
-          mediaStreamUrl,
-          background: true,
-          hasPicture: false,
-        );
+        controller = await _openPlayer(mediaStreamUrl, background: true);
         if (!_isCurrentPlay(generation)) {
           await controller.dispose();
           return;
@@ -673,15 +663,9 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   /// [background] keeps it going once the app has left the screen, which is
   /// what the sound wants and what a muted picture must not do: nobody is
   /// watching it, and it would spend data and battery on nothing.
-  ///
-  /// [hasPicture] says the stream carries a picture to show. Only such a
-  /// stream may go to a platform view: Android's platform-view player reads
-  /// the video format as it opens and crashes the app on a stream of sound
-  /// alone, which has none.
   Future<VideoPlayerController> _openPlayer(
     String url, {
     required bool background,
-    required bool hasPicture,
     Map<String, String> headers = const {},
   }) async {
     final controller = VideoPlayerController.networkUrl(
@@ -697,7 +681,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
         mixWithOthers:
             !background && defaultTargetPlatform == TargetPlatform.android,
       ),
-      viewType: hasPicture ? pictureViewType : VideoViewType.textureView,
     );
     try {
       await controller.initialize();
@@ -720,27 +703,17 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
   Future<VideoPlayerController?> _tryOpen(
     String url, {
     required bool background,
-    required bool hasPicture,
     Map<String, String> headers = const {},
   }) async {
     try {
-      return await _openPlayer(
-        url,
-        background: background,
-        hasPicture: hasPicture,
-        headers: headers,
-      );
+      return await _openPlayer(url, background: background, headers: headers);
     } on Object catch (e) {
       logger.d('[MusicVideo] stream would not open: $e');
       if (headers.isEmpty) return null;
       // Only the HD streams carry headers. Tried once more without them: a
       // player may not take a User-Agent of someone else's.
       try {
-        return await _openPlayer(
-          url,
-          background: background,
-          hasPicture: hasPicture,
-        );
+        return await _openPlayer(url, background: background);
       } on Object catch (e) {
         logger.d('[MusicVideo] stream would not open without headers: $e');
         return null;
@@ -834,7 +807,6 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
       final follower = await _tryOpen(
         url,
         background: false,
-        hasPicture: true,
         headers: video.headersFor(url),
       );
       if (follower == null) continue;

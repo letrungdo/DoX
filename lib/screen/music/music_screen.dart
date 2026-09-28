@@ -147,8 +147,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   final _videoLayerKey = GlobalKey();
 
   /// A television's one picture, which moves between the dashboard and the
-  /// full screen instead of being made again: it is a platform view, and a
-  /// new one is a new native view for the player to find its surface in.
+  /// full screen instead of being made again.
   final _tvVideoKey = GlobalKey();
 
   /// Where the page's route is looked up, to tell whether it is the one on
@@ -1379,22 +1378,21 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                 child: Center(
                   child: viewModel.videoController != null
                       ? showFullscreen
-                            // Up on the full screen; one picture is all a
-                            // platform view has.
+                            // Up on the full screen, which has taken the
+                            // picture over — see [_tvVideoKey].
                             ? const SizedBox.shrink()
-                            // Kept off the remote's path: the platform view
-                            // takes the focus of its own accord, and OK on it
-                            // does nothing — the full-screen button beside it
-                            // is the way in.
+                            // Kept off the remote's path: OK on it does
+                            // nothing — the full-screen button beside it is
+                            // the way in.
                             : ExcludeFocus(
                                 child: MusicVideoView(
                                   key: _tvVideoKey,
                                   controller: viewModel.videoController!,
                                   isOfficialAudio: viewModel.isAudioFromVideo,
-                                  // Square: a rounded clip over a platform
-                                  // view is paid for on every frame of the
-                                  // video, and it also lets the picture move
-                                  // to the full screen unchanged.
+                                  // Square: a rounded clip over the video is
+                                  // paid for on every frame of it, and it
+                                  // also lets the picture move to the full
+                                  // screen unchanged.
                                   borderRadius: BorderRadius.zero,
                                 ),
                               )

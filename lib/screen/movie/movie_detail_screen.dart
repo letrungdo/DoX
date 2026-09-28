@@ -17,7 +17,6 @@ import 'package:do_x/screen/movie/movie_thumbnail_track.dart';
 import 'package:do_x/services/movie_service.dart';
 import 'package:do_x/utils/device_type.dart';
 import 'package:do_x/utils/logger.dart';
-import 'package:do_x/utils/video_view.dart';
 import 'package:do_x/view_model/movie/movie_detail_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
@@ -495,7 +494,6 @@ class _MovieDetailScreenState
     final controller = VideoPlayerController.networkUrl(
       Uri.parse(url),
       httpHeaders: {'Referer': '${movieService.effectiveBaseUrl}/'},
-      viewType: pictureViewType,
     );
 
     try {
@@ -2149,12 +2147,8 @@ class _MovieDetailScreenState
             cue: timeline.cue,
             width: previewWidth,
             referer: '${movieService.effectiveBaseUrl}/',
-            // No sprite: the live frame, where a second view of it can be
-            // had. A platform view's one surface would leave the screen
-            // behind it black.
-            fallback: pictureViewType == VideoViewType.textureView
-                ? VideoPlayer(controller)
-                : const SizedBox.shrink(),
+            // No sprite: the live frame, a second view of the same texture.
+            fallback: VideoPlayer(controller),
             position: timeline.position,
           ),
         );
@@ -2192,10 +2186,9 @@ class _MovieDetailScreenState
     setState(() => _controlsFadedOut = fadedOut);
   }
 
-  /// The picture of [controller], keyed to it. On a television the picture is
-  /// a platform view, created once with the player it was first handed — a
-  /// new episode's controller dropped into the same element would leave it
-  /// showing the old player's last frame until the tree was rebuilt.
+  /// The picture of [controller], keyed to it, so a new episode's controller
+  /// gets a picture of its own rather than being dropped into the element of
+  /// the old one.
   Widget _buildPicture(VideoPlayerController controller) =>
       VideoPlayer(key: ObjectKey(controller), controller);
 
