@@ -291,6 +291,9 @@ class Dimens {
   static const musicFullscreenControlsHideDelay = Duration(seconds: 5);
   static const musicFullscreenControlsFade = Duration(milliseconds: 200);
 
+  /// How long a skip's badge stays over the full-screen picture.
+  static const musicSkipBadgeDuration = Duration(milliseconds: 600);
+
   /// Around the phone's full-screen controls, inside the safe area; the top
   /// is where the fade starts.
   static const musicPhoneControlsPadding = EdgeInsets.fromLTRB(16, 48, 16, 12);

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_track.dart';
+import 'package:do_x/screen/movie/movie_player_controls.dart';
 import 'package:do_x/screen/music/music_seek_bar.dart';
 import 'package:do_x/screen/music/music_video_view.dart';
 import 'package:do_x/store/immersive_mode.dart';
@@ -22,8 +23,9 @@ import 'package:provider/provider.dart';
 ///
 /// On a television it is built for the remote. The controls come up over the
 /// picture and go away again on their own, the way a television's own player
-/// behaves: any arrow or OK on the bare picture brings them back with the
-/// remote on play, and the transport keys a remote is printed with — play,
+/// behaves: up, down or OK on the bare picture brings them back with the
+/// remote on play, left and right skip through the track the way they do in
+/// the film player, and the transport keys a remote is printed with — play,
 /// pause, next, previous, the channel pair — work whether the controls are up
 /// or not. Back leaves for the track list, and the music plays on.
 ///
@@ -72,6 +74,17 @@ class _MusicFullscreenVideoPlayerState
   bool _controlsGone = false;
   Timer? _hideTimer;
 
+  /// How far the skips of the last moment went, for the badges over the
+  /// picture — the film player's, so a skip reads the same in both.
+  final _skipForward = ValueNotifier<int>(0);
+  final _skipBackward = ValueNotifier<int>(0);
+  late final Listenable _skipBadges = Listenable.merge([
+    _skipForward,
+    _skipBackward,
+  ]);
+  Timer? _skipBadgeTimer;
+  int _seekRepeatCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -111,15 +124,23 @@ class _MusicFullscreenVideoPlayerState
   void dispose() {
     if (!deviceType.isTv) _giveTheScreenBack();
     _hideTimer?.cancel();
+    _skipBadgeTimer?.cancel();
+    _skipForward.dispose();
+    _skipBackward.dispose();
     _pictureNode.dispose();
     _controlsScope.dispose();
     _playNode.dispose();
     super.dispose();
   }
 
-  /// Brings the controls up with the remote on them, and starts the clock
-  /// that takes them down again.
-  void _showControls() {
+  /// A sheet or a page is up over the player — the bot check a like can ask
+  /// for, the sign-in page — and the remote is its, not the player's.
+  bool get _isCovered => !(ModalRoute.of(context)?.isCurrent ?? true);
+
+  /// Brings the controls up and starts the clock that takes them down again.
+  /// [focus] puts the remote on them; a skip leaves it on the picture, so the
+  /// next press of the same arrow skips again.
+  void _showControls({bool focus = true}) {
     if (!_controlsVisible || _controlsGone) {
       setState(() {
         _controlsVisible = true;
@@ -128,11 +149,11 @@ class _MusicFullscreenVideoPlayerState
     }
     _scheduleHide();
     // Only a remote needs to be put anywhere.
-    if (!deviceType.isTv) return;
+    if (!deviceType.isTv || !focus) return;
     // After the frame: hidden controls are out of the focus tree, so there
     // is nothing to focus until they have been laid out again.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_controlsVisible) return;
+      if (!mounted || !_controlsVisible || _isCovered) return;
       if (!_controlsScope.hasFocus) {
         focusPlayerControls(_controlsScope, preferred: _playNode);
       }
@@ -146,6 +167,13 @@ class _MusicFullscreenVideoPlayerState
 
   void _hideControls() {
     if (!mounted) return;
+    // Taken down under a sheet, the controls would pull the remote back to
+    // the picture out of the sheet's web view. They stay up until it closes,
+    // so the remote comes back to the button that opened it.
+    if (_isCovered) {
+      _scheduleHide();
+      return;
+    }
     setState(() => _controlsVisible = false);
     _pictureNode.requestFocus();
   }
@@ -161,25 +189,64 @@ class _MusicFullscreenVideoPlayerState
     }
   }
 
-  static bool _isArrowOrSelect(LogicalKeyboardKey key) =>
+  static bool _isUpDownOrSelect(LogicalKeyboardKey key) =>
       key == LogicalKeyboardKey.arrowUp ||
       key == LogicalKeyboardKey.arrowDown ||
-      key == LogicalKeyboardKey.arrowLeft ||
-      key == LogicalKeyboardKey.arrowRight ||
       key == LogicalKeyboardKey.select ||
       key == LogicalKeyboardKey.enter ||
       key == LogicalKeyboardKey.gameButtonA;
 
-  /// The bare picture: the first press only brings the controls up, so the
-  /// viewer sees what they are reaching for before anything happens.
+  /// How far one press of left or right skips, as in the film player. A held
+  /// key skips further, so crossing a long track is a moment of holding.
+  static const _seekStepShort = 10;
+  static const _seekStepLong = 30;
+  static const _seekRepeatsBeforeLongStep = 5;
+
+  /// The bare picture. Left and right skip through the track at once; up,
+  /// down and OK only bring the controls up, so the viewer sees what they
+  /// are reaching for before anything happens.
+  ///
+  /// A held key arrives as repeats, and each one is claimed too: left alone,
+  /// a repeat walks up to `TvShell`'s shortcuts and off the picture.
   KeyEventResult _onPictureKey(FocusNode node, KeyEvent event) {
     if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
+    final isPress = event is KeyDownEvent;
+    if (!isPress && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _seekRepeatCount = isPress ? 0 : _seekRepeatCount + 1;
+      final seconds = _seekRepeatCount >= _seekRepeatsBeforeLongStep
+          ? _seekStepLong
+          : _seekStepShort;
+      _skip(forward: key == LogicalKeyboardKey.arrowRight, seconds: seconds);
+      return KeyEventResult.handled;
     }
-    if (!_isArrowOrSelect(event.logicalKey)) return KeyEventResult.ignored;
-    if (event is KeyDownEvent) _showControls();
+    if (!_isUpDownOrSelect(key)) return KeyEventResult.ignored;
+    if (isPress) _showControls();
     return KeyEventResult.handled;
+  }
+
+  /// Skips [seconds] through the track, with the badge that says so and the
+  /// controls up to show where it landed.
+  void _skip({required bool forward, required int seconds}) {
+    final vm = context.read<MusicViewModel>();
+    if (vm.duration <= Duration.zero) return;
+    final offset = Duration(seconds: forward ? seconds : -seconds);
+    var target = vm.position + offset;
+    if (target < Duration.zero) target = Duration.zero;
+    if (target > vm.duration) target = vm.duration;
+    vm.seekTo(target);
+
+    final badge = forward ? _skipForward : _skipBackward;
+    (forward ? _skipBackward : _skipForward).value = 0;
+    badge.value += seconds;
+    _skipBadgeTimer?.cancel();
+    _skipBadgeTimer = Timer(Dimens.musicSkipBadgeDuration, () {
+      _skipForward.value = 0;
+      _skipBackward.value = 0;
+    });
+    _showControls(focus: false);
   }
 
   /// The transport keys, wherever the remote is resting. Every other key
@@ -195,6 +262,12 @@ class _MusicFullscreenVideoPlayerState
       vm.resume();
     } else if (key == LogicalKeyboardKey.mediaPause) {
       vm.pause();
+    } else if (key == LogicalKeyboardKey.mediaFastForward ||
+        key == LogicalKeyboardKey.mediaRewind) {
+      _skip(
+        forward: key == LogicalKeyboardKey.mediaFastForward,
+        seconds: _seekStepLong,
+      );
     } else if (key == LogicalKeyboardKey.mediaTrackNext ||
         key == LogicalKeyboardKey.channelUp) {
       vm.nextTrack();
@@ -258,6 +331,16 @@ class _MusicFullscreenVideoPlayerState
                                   !vm.isVideoLoadingOverSound,
                             ),
                     ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: ListenableBuilder(
+                  listenable: _skipBadges,
+                  builder: (context, _) => PlayerGestureOverlays(
+                    isSpeedBoosted: false,
+                    skipForwardValue: _skipForward.value,
+                    skipBackwardValue: _skipBackward.value,
                   ),
                 ),
               ),
