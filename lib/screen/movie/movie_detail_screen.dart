@@ -137,6 +137,11 @@ class _MovieDetailScreenState
   StreamSubscription<Orientation>? _orientationSubscription;
   final FocusNode _videoFocusNode = FocusNode(debugLabel: 'movie-video');
 
+  /// The button that loads the stream again when it would not open.
+  final FocusNode _loadStreamFocusNode = FocusNode(
+    debugLabel: 'movie-load-stream',
+  );
+
   /// The two control bars, named so the remote can be handed to them: they sit
   /// inside the video's own focus node, where directional traversal has no way
   /// to find them. See [PlayerControlsFocus].
@@ -391,6 +396,7 @@ class _MovieDetailScreenState
     _virtualSeek.dispose();
     _buffering.dispose();
     _videoFocusNode.dispose();
+    _loadStreamFocusNode.dispose();
     _topControlsScope.dispose();
     _bottomControlsScope.dispose();
     _timelineFocusNode.dispose();
@@ -823,7 +829,9 @@ class _MovieDetailScreenState
   /// entered straight away — waiting on a frame nobody has asked for would
   /// leave the press doing nothing at all.
   void _enterControls(bool top, {required bool afterFrame}) {
-    final scope = top ? _topControlsScope : _bottomControlsScope;
+    final scope = top && _topBarHasControls
+        ? _topControlsScope
+        : _bottomControlsScope;
     if (!afterFrame) {
       focusPlayerControls(scope);
       return;
@@ -833,6 +841,11 @@ class _MovieDetailScreenState
       focusPlayerControls(scope);
     });
   }
+
+  /// Whether the bar at the top has anything to focus. On a television the
+  /// settings button lives in the bottom bar, which leaves the top one only
+  /// the full screen's back button.
+  bool get _topBarHasControls => !deviceType.isTv || _isFullScreen;
 
   /// Takes the remote off the control bars and puts it back on the video —
   /// what a press away from a bar does, and what hiding the bars has to do
@@ -998,6 +1011,24 @@ class _MovieDetailScreenState
     // to press the button the remote is sitting on.
     if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
 
+    // No film, only the button that loads it again. It sits inside this
+    // node's rectangle, where traversal cannot find it, so the remote is
+    // handed to it by name — and every key the picture would claim goes to
+    // that instead.
+    if (_showsLoadStreamButton) {
+      if (event is KeyDownEvent &&
+          (_isSelectKey(event.logicalKey) ||
+              event.logicalKey == LogicalKeyboardKey.arrowUp ||
+              event.logicalKey == LogicalKeyboardKey.arrowDown ||
+              event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+              event.logicalKey == LogicalKeyboardKey.arrowRight) &&
+          _loadStreamFocusNode.context != null) {
+        _loadStreamFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
     // A held arrow arrives as a repeat, and a repeat left alone walks up to
     // `TvShell`'s shortcuts — whose activators count repeats — and carries the
     // remote off the picture. Every arrow the player claims is claimed on the
@@ -1093,6 +1124,25 @@ class _MovieDetailScreenState
       }
     }
     return KeyEventResult.ignored;
+  }
+
+  /// Whether the picture's place holds the button that loads the stream again:
+  /// no film ready, and none on its way.
+  bool get _showsLoadStreamButton =>
+      !(_videoController?.value.isInitialized ?? false) &&
+      !_vm.isLoadingStream &&
+      !_vm.isLoading;
+
+  /// Loads the stream again — the episode picked, or the whole film when
+  /// there is none. The remote goes back to the picture first: the button
+  /// is about to give way to the spinner, and the focus with it.
+  void _reloadStream() {
+    if (_loadStreamFocusNode.hasFocus) _videoFocusNode.requestFocus();
+    if (_vm.selectedEpisode != null) {
+      _playEpisode(_vm.selectedEpisode!);
+    } else {
+      _vm.loadDetail(widget.movieUrl, widget.movieId, force: true);
+    }
   }
 
   /// The OK button, under each of the names a remote sends it by.
@@ -2306,17 +2356,8 @@ class _MovieDetailScreenState
                           ),
                           const SizedBox(height: 12),
                           AppButton(
-                            onPressed: () {
-                              if (_vm.selectedEpisode != null) {
-                                _playEpisode(_vm.selectedEpisode!);
-                              } else {
-                                _vm.loadDetail(
-                                  widget.movieUrl,
-                                  widget.movieId,
-                                  force: true,
-                                );
-                              }
-                            },
+                            focusNode: _loadStreamFocusNode,
+                            onPressed: _reloadStream,
                             accent: Theme.of(context).colorScheme.primary,
                             child: Text(l10n.loadStream),
                           ),
@@ -2485,7 +2526,8 @@ class _MovieDetailScreenState
                                     exit: TraversalDirection.up,
                                     onExit: () {
                                       _cancelScrub();
-                                      if (deviceType.isTv) {
+                                      if (deviceType.isTv &&
+                                          _topBarHasControls) {
                                         _enterControls(true, afterFrame: false);
                                       } else {
                                         _videoFocusNode.requestFocus();
@@ -2808,6 +2850,17 @@ class _MovieDetailScreenState
                                                               !_isVideoCover,
                                                             ),
                                                       ),
+                                                    if (deviceType.isTv)
+                                                      IconButton(
+                                                        tooltip: l10n.settings,
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .settings_rounded,
+                                                          color: Colors.white,
+                                                        ),
+                                                        onPressed:
+                                                            _showSettingsBottomSheet,
+                                                      ),
                                                     // Fullscreen button
                                                     IconButton(
                                                       icon: Icon(
@@ -2961,6 +3014,10 @@ class _MovieDetailScreenState
                                         showBack: isFullScreen,
                                         onBack: _toggleFullScreen,
                                         onSettings: _showSettingsBottomSheet,
+                                        // In the bottom bar on a television,
+                                        // beside the other buttons the remote
+                                        // walks along.
+                                        showSettings: !deviceType.isTv,
                                         title: isFullScreen
                                             ? splitMovieTitle(
                                                 _vm.detail?.title ?? '',

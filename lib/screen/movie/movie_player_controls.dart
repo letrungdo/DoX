@@ -291,12 +291,16 @@ class PlayerVolumePopup extends StatelessWidget {
 }
 
 /// Back (full screen only) and settings buttons floating over the video.
+///
+/// [showSettings] off leaves the settings to wherever else the page puts
+/// them — the bottom bar, on a television.
 class PlayerTopBar extends StatelessWidget {
   const PlayerTopBar({
     super.key,
     required this.showBack,
     required this.onBack,
     required this.onSettings,
+    this.showSettings = true,
     this.title,
     this.subtitle,
   });
@@ -304,6 +308,7 @@ class PlayerTopBar extends StatelessWidget {
   final bool showBack;
   final VoidCallback onBack;
   final VoidCallback onSettings;
+  final bool showSettings;
   final String? title;
   final String? subtitle;
 
@@ -353,11 +358,12 @@ class PlayerTopBar extends StatelessWidget {
           ),
         ] else
           const Spacer(),
-        _RoundIconButton(
-          icon: Icons.settings_rounded,
-          size: 24,
-          onTap: onSettings,
-        ),
+        if (showSettings)
+          _RoundIconButton(
+            icon: Icons.settings_rounded,
+            size: 24,
+            onTap: onSettings,
+          ),
       ],
     );
   }
@@ -390,7 +396,6 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-/// How long the bar takes to thicken when it is focused, hovered or held.
 /// Sleek seek bar with animated track expansion and glowing thumb handle, in
 /// the look every seek bar shares — see [SeekBarStyle].
 ///
