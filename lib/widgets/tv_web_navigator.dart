@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/utils/device_type.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/text_field.dart';
 import 'package:flutter/material.dart';
@@ -209,7 +209,7 @@ class _TvWebFieldDialogState extends State<_TvWebFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return CuteDialog(
+    return FormDialog(
       title: widget.label.isEmpty ? context.l10n.tvWebFieldTitle : widget.label,
       confirmText: context.l10n.ok,
       onConfirm: _submit,

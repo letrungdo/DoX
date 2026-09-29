@@ -1,7 +1,7 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/widget_extensions.dart';
-import 'package:do_x/widgets/input/cute_segmented_button.dart';
+import 'package:do_x/widgets/input/app_segmented_button.dart';
 import 'package:flutter/material.dart';
 
 /// Narrows all three asset lists to one year, or to every year at once.
@@ -34,7 +34,7 @@ class AssetYearFilter extends StatelessWidget {
         Dimens.pagePadding,
         0,
       ),
-      child: CuteSegmentedButton<int?>(
+      child: AppSegmentedButton<int?>(
         value: selected,
         onChanged: onChanged,
         segments: [

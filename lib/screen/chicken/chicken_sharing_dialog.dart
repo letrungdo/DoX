@@ -3,7 +3,7 @@ import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -119,7 +119,7 @@ class _ChickenSharingDialogState extends State<_ChickenSharingDialog> {
         children: [
           Text(l10n.chickenSharingDescription),
           const SizedBox(height: 16),
-          CuteTextField(
+          AppTextField(
             controller: _emailController,
             label: l10n.shareWithEmail,
             keyboardType: TextInputType.emailAddress,

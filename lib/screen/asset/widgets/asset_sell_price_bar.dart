@@ -4,9 +4,9 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/extensions/text_style_extensions.dart';
 import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/money_field.dart';
 import 'package:flutter/material.dart';
 
 /// One kind of holding and the price everything of that kind is valued at.
@@ -219,7 +219,7 @@ class _SellPriceDialogState extends State<_SellPriceDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return CuteDialog(
+    return FormDialog(
       title: widget.price.caption ?? l10n.assetSellPriceOf(widget.price.label),
       confirmText: l10n.save,
       onConfirm: () {
@@ -231,7 +231,7 @@ class _SellPriceDialogState extends State<_SellPriceDialog> {
         Navigator.pop(context, value);
       },
       children: [
-        CuteMoneyField(
+        MoneyField(
           controller: _controller,
           label:
               widget.price.caption ??

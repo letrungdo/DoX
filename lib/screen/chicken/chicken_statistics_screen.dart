@@ -11,7 +11,7 @@ import 'package:do_x/view_model/chicken_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/chart/cute_bar_chart.dart';
+import 'package:do_x/widgets/chart/bar_chart_view.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
@@ -591,17 +591,17 @@ class _ChickenStatisticsScreenState
               ],
             ),
             const SizedBox(height: 10),
-            CuteBarChart(
+            BarChartView(
               items: [
                 for (final period in periods)
-                  CuteBarChartItem(
+                  BarChartItem(
                     label: period.shortLabel,
                     value: _revenueOf(period.data),
                     compareValue: period.data.expense,
                     segments: [
-                      CuteBarSegment(_chickColor, period.data.batchRevenue),
-                      CuteBarSegment(_cockColor, period.data.cockRevenue),
-                      CuteBarSegment(_meatColor, period.data.meatRevenue),
+                      BarChartSegment(_chickColor, period.data.batchRevenue),
+                      BarChartSegment(_cockColor, period.data.cockRevenue),
+                      BarChartSegment(_meatColor, period.data.meatRevenue),
                     ],
                   ),
               ],

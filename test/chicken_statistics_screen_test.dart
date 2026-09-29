@@ -11,7 +11,7 @@ import 'package:do_x/screen/chicken/chicken_statistics_screen.dart';
 import 'package:do_x/services/storage_service.dart';
 import 'package:do_x/theme/app_theme.dart';
 import 'package:do_x/view_model/chicken_view_model.dart';
-import 'package:do_x/widgets/chart/cute_bar_chart.dart';
+import 'package:do_x/widgets/chart/bar_chart_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -214,7 +214,7 @@ void main() {
     // 5M + 4M meat - 2M = 7M profit, shown as the headline figure.
     expect(_texts(tester), contains('7,000,000đ'));
 
-    final chart = tester.widget<CuteBarChart>(find.byType(CuteBarChart));
+    final chart = tester.widget<BarChartView>(find.byType(BarChartView));
     final march = chart.items[2];
     expect(march.label, 'T3');
     expect(march.value, 9000000);
@@ -247,7 +247,7 @@ void main() {
     expect(texts, contains('1,200,000đ'));
     expect(texts, contains('1,800,000đ'));
 
-    final chart = tester.widget<CuteBarChart>(find.byType(CuteBarChart));
+    final chart = tester.widget<BarChartView>(find.byType(BarChartView));
     expect(chart.items.last.compareValue, 1200000);
   });
 
@@ -262,7 +262,7 @@ void main() {
       ),
     );
 
-    final chart = tester.widget<CuteBarChart>(find.byType(CuteBarChart));
+    final chart = tester.widget<BarChartView>(find.byType(BarChartView));
     // Months 1..5: the gaps in between are real, the empty tail is not — the
     // chart highlights its rightmost group, and that must be a month with data.
     expect(chart.items.length, 5);
@@ -273,7 +273,7 @@ void main() {
   testWidgets('a year with no records shows the empty state', (tester) async {
     await _pumpScreen(tester, _FakeRepository());
 
-    expect(find.byType(CuteBarChart), findsNothing);
+    expect(find.byType(BarChartView), findsNothing);
     expect(find.textContaining('Không có dữ liệu trong năm'), findsOneWidget);
   });
 }

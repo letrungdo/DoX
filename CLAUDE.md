@@ -96,13 +96,13 @@ and safe-area handling identical:
 | Any dialog | `showAppModal<T>(context, builder: ...)` |
 | Dialog surface | `AppDialog(title:, message:/content:, actions: [DialogActionButton(...)])` |
 | "Are you sure?" | `showAppConfirmDialog(context, title:, message:, isDestructive:)` |
-| Form dialog with the cute icon header | `CuteDialog` |
+| Form dialog with the illustrated icon header | `FormDialog` |
 | Any bottom sheet | `showAppBottomSheet<T>(context, title:, builder: ...)` |
 | Sheet that picks one value from a list | `showAppOptionSheet<T>(context, title:, options:, selected:)` |
 
 Dialog buttons are always `DialogActionButton` (`primary` / `cancel` /
 `destructive` / `destructiveOutline`) — not `TextButton` or `FilledButton`.
-`AppDialog` and `CuteDialog` lay them out; do not wrap them in `DialogActions`
+`AppDialog` and `FormDialog` lay them out; do not wrap them in `DialogActions`
 yourself.
 
 `showAppBottomSheet` draws the drag handle, the title and the surface itself —
@@ -186,8 +186,8 @@ Use ~/.claude/skills/gstack/... for gstack file paths (the global path).
 
 - **Strict l10n**: All user-facing strings MUST use `l10n` from `context.l10n`. Never hard-code Vietnamese or English text in widgets.
 - **In-place Validation**: Prefer showing errors directly on input fields via `errorText` rather than using `showToast`.
-- **Form Dialogs**: Always use `CuteDialog` for data entry forms to ensure consistent layout, scrolling, and keyboard handling.
-- **Money Input**: Use `CuteMoneyField` for all currency amounts to get automatic formatting and suggestions.
+- **Form Dialogs**: Always use `FormDialog` for data entry forms to ensure consistent layout, scrolling, and keyboard handling.
+- **Money Input**: Use `MoneyField` for all currency amounts to get automatic formatting and suggestions.
 
 ## Skill routing
 

@@ -20,11 +20,11 @@ import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_segmented_button.dart';
+import 'package:do_x/widgets/input/money_field.dart';
+import 'package:do_x/widgets/input/app_segmented_button.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
@@ -161,7 +161,7 @@ class _CockSalesScreenState
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: CuteSegmentedButton<SaleCategory?>(
+                  child: AppSegmentedButton<SaleCategory?>(
                     segments: [
                       ButtonSegment(value: null, label: Text(l10n.all)),
                       ButtonSegment(
@@ -379,7 +379,7 @@ class _CockSalesScreenState
     await showAppModal<void>(
       context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
+        builder: (context, setState) => FormDialog(
           icon: category == SaleCategory.meat
               ? Assets.images.drumstickCute
               : Assets.images.roosterCute,
@@ -435,7 +435,7 @@ class _CockSalesScreenState
             }
           },
           children: [
-            CuteSegmentedButton<SaleCategory>(
+            AppSegmentedButton<SaleCategory>(
               segments: [
                 ButtonSegment(
                   value: SaleCategory.fighting,
@@ -449,7 +449,7 @@ class _CockSalesScreenState
               value: category,
               onChanged: (val) => setState(() => category = val),
             ),
-            CuteMoneyField(
+            MoneyField(
               controller: amountController,
               label: l10n.salePrice,
               autofocus: !isEditing,
@@ -491,7 +491,7 @@ class _CockSalesScreenState
     final l10n = AppLocalizations.of(context);
     final shouldDelete = await showAppModal<bool>(
       context,
-      builder: (context) => CuteDialog(
+      builder: (context) => FormDialog(
         icon: sale.category == SaleCategory.meat
             ? Assets.images.drumstickCute
             : Assets.images.roosterCute,

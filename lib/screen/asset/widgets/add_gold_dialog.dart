@@ -1,13 +1,14 @@
+import 'package:do_x/widgets/input/formatters/decimal_input_formatter.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/asset/asset_gold.dart';
 import 'package:do_x/model/asset/gold_type.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
+import 'package:do_x/widgets/input/date_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
+import 'package:do_x/widgets/input/money_field.dart';
 import 'package:do_x/constants/app_const.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -99,7 +100,7 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return CuteDialog(
+    return FormDialog(
       title: _isEditing ? l10n.update : l10n.assetAdd,
       confirmText: _isEditing ? l10n.update : l10n.add,
       onConfirm: () => _submit(l10n),
@@ -141,17 +142,18 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
         ),
         // The unit sits inside the field, the way the đồng does on a money
         // field, rather than in the label where it scrolls away while typing.
-        CuteTextField(
+        AppTextField(
           controller: _quantityController,
           label: l10n.assetQuantity,
           suffixText: l10n.assetUnitTael,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [DecimalInputFormatter()],
           errorText: _quantityError,
           onChanged: (_) {
             if (_quantityError != null) setState(() => _quantityError = null);
           },
         ),
-        CuteMoneyField(
+        MoneyField(
           controller: _priceController,
           label: l10n.assetBuyPrice,
           maxSuggestion: AppConst.moneySuggestionHigh,
@@ -160,12 +162,12 @@ class _AddGoldDialogState extends State<AddGoldDialog> {
             if (_priceError != null) setState(() => _priceError = null);
           },
         ),
-        CuteDateField(
+        DateField(
           label: l10n.assetBuyDate,
           value: _buyDate,
           onChanged: (d) => setState(() => _buyDate = d),
         ),
-        CuteTextField(
+        AppTextField(
           controller: _noteController,
           label: l10n.assetNote,
           textCapitalization: TextCapitalization.sentences,

@@ -4,11 +4,11 @@ import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
 import 'package:do_x/model/chicken/expense.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_segmented_button.dart';
+import 'package:do_x/widgets/input/money_field.dart';
+import 'package:do_x/widgets/input/app_segmented_button.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +41,7 @@ Future<void> showExpenseDialog(
   return showAppModal<void>(
     context,
     builder: (context) => StatefulBuilder(
-      builder: (context, setState) => CuteDialog(
+      builder: (context, setState) => FormDialog(
         icon: _expenseAsset(selectedType),
         title: isEditing ? editTitle : addTitle,
         accent: context.colors.warning,
@@ -81,7 +81,7 @@ Future<void> showExpenseDialog(
           if (ok && context.mounted) Navigator.pop(context);
         },
         children: [
-          CuteSegmentedButton<ExpenseType>(
+          AppSegmentedButton<ExpenseType>(
             segments: [
               for (final type in ExpenseType.values)
                 // Water is optional; keep it only when allowed or when editing
@@ -99,7 +99,7 @@ Future<void> showExpenseDialog(
           ),
           Padding(
             padding: const EdgeInsets.only(top: 5),
-            child: CuteMoneyField(
+            child: MoneyField(
               controller: amountController,
               label: l10n.amountLabel,
               autofocus: !isEditing,

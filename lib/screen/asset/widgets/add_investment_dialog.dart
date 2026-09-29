@@ -1,3 +1,4 @@
+import 'package:do_x/widgets/input/formatters/decimal_input_formatter.dart';
 import 'package:do_x/constants/app_const.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
@@ -8,11 +9,11 @@ import 'package:do_x/screen/asset/widgets/asset_tile_format.dart';
 import 'package:do_x/screen/asset/widgets/coin_logo.dart';
 import 'package:do_x/services/binance_service.dart';
 import 'package:do_x/view_model/asset_view_model.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
+import 'package:do_x/widgets/input/date_field.dart';
+import 'package:do_x/widgets/input/app_input_decoration.dart';
+import 'package:do_x/widgets/input/money_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -206,7 +207,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
     final l10n = context.l10n;
     final base = _base;
 
-    return CuteDialog(
+    return FormDialog(
       title: _isEditing ? l10n.update : l10n.assetAdd,
       confirmText: _isEditing ? l10n.update : l10n.add,
       onConfirm: () => _submit(l10n),
@@ -249,7 +250,8 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
         TextField(
           controller: _quantityController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: cuteInputDecoration(
+          inputFormatters: [DecimalInputFormatter()],
+          decoration: appInputDecoration(
             context,
             l10n.assetQuantity,
           ).copyWith(errorText: _quantityError),
@@ -262,7 +264,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
         if (_isStablecoin)
           Text(l10n.assetUsdtFixedPrice, style: context.textTheme.secondary)
         else
-          CuteMoneyField(
+          MoneyField(
             controller: _priceController,
             label: l10n.assetBuyPriceUsd,
             maxSuggestion: AppConst.moneySuggestionHigh,
@@ -274,7 +276,7 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
           ),
         // What the đồng cost: the coin's price alone says nothing about a gain
         // made while the currency itself moved.
-        CuteMoneyField(
+        MoneyField(
           controller: _rateController,
           label: l10n.assetBuyFxRate,
           hint: l10n.assetBuyFxRateHint,
@@ -284,12 +286,12 @@ class _AddInvestmentDialogState extends State<AddInvestmentDialog> {
             if (_rateError != null) setState(() => _rateError = null);
           },
         ),
-        CuteDateField(
+        DateField(
           label: l10n.assetBuyDate,
           value: _buyDate,
           onChanged: (d) => setState(() => _buyDate = d),
         ),
-        CuteTextField(
+        AppTextField(
           controller: _noteController,
           label: l10n.assetNote,
           textCapitalization: TextCapitalization.sentences,

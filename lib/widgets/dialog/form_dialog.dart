@@ -8,11 +8,11 @@ import 'package:do_x/widgets/dialog/dialog_action_button.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
 import 'package:flutter/material.dart';
 
-/// Large rounded dialog with a cute SVG icon next to the title, shared by input forms.
+/// Large rounded dialog with an illustrated SVG icon next to the title, shared by input forms.
 ///
 /// Publishes the elevated fill through [SurfaceScope], so cards and neutral
 /// buttons inside step off the dialog instead of vanishing into it.
-class CuteDialog extends StatefulWidget {
+class FormDialog extends StatefulWidget {
   final SvgGenImage? icon;
   final String title;
   final Color? accent;
@@ -30,7 +30,7 @@ class CuteDialog extends StatefulWidget {
   final String? destructiveText;
   final VoidCallback? onDestructive;
 
-  const CuteDialog({
+  const FormDialog({
     super.key,
     this.icon,
     required this.title,
@@ -45,19 +45,19 @@ class CuteDialog extends StatefulWidget {
   });
 
   @override
-  State<CuteDialog> createState() => _CuteDialogState();
+  State<FormDialog> createState() => _FormDialogState();
 
   /// Runs [action] without the confirm spinner, for the part of a confirm
   /// handler that waits on the user (a follow-up dialog) rather than on a write.
   /// The dialog stays disabled throughout, so nothing can be submitted twice.
   static Future<T> pauseLoading<T>(Future<T> Function() action) =>
-      _CuteDialogState._pauseLoading(action);
+      _FormDialogState._pauseLoading(action);
 }
 
-class _CuteDialogState extends State<CuteDialog> {
+class _FormDialogState extends State<FormDialog> {
   /// The dialog whose confirm handler is running, if any. Only one confirm can
   /// be in flight at a time: every other dialog is behind a modal barrier.
-  static _CuteDialogState? _confirming;
+  static _FormDialogState? _confirming;
 
   /// True while an async confirm handler is still running.
   bool _saving = false;

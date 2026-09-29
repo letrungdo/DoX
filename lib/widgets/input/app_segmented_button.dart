@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 
 /// Single-choice option group rendered as wrapping tags, highlighted with the
 /// app's primary color.
-class CuteSegmentedButton<T> extends StatelessWidget {
+class AppSegmentedButton<T> extends StatelessWidget {
   final List<ButtonSegment<T>> segments;
   final T value;
   final ValueChanged<T> onChanged;
 
-  const CuteSegmentedButton({
+  const AppSegmentedButton({
     super.key,
     required this.segments,
     required this.value,

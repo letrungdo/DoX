@@ -2,7 +2,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 
 /// Rounded, soft-filled decoration shared by TextFields/Dropdowns in dialogs.
-InputDecoration cuteInputDecoration(
+InputDecoration appInputDecoration(
   BuildContext context,
   String label, {
   String? hint,

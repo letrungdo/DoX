@@ -20,7 +20,7 @@ import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
@@ -297,7 +297,7 @@ class _GlobalExpensesScreenState
     final l10n = AppLocalizations.of(context);
     final shouldDelete = await showAppModal<bool>(
       context,
-      builder: (context) => CuteDialog(
+      builder: (context) => FormDialog(
         icon: Assets.images.feedCute,
         title: l10n.deleteCommonExpense,
         accent: context.colors.danger,

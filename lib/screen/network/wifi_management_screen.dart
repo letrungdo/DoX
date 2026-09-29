@@ -12,9 +12,9 @@ import 'package:do_x/view_model/wifi_management_view_model.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/button/button.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:do_x/widgets/surface/surface_scope.dart';
@@ -1039,7 +1039,7 @@ class _UpstreamDialogState extends State<_UpstreamDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return CuteDialog(
+    return FormDialog(
       title: l10n.repeaterPickTitle,
       confirmText: l10n.repeaterApplyConfirm,
       onConfirm: _confirm,
@@ -1052,7 +1052,7 @@ class _UpstreamDialogState extends State<_UpstreamDialog> {
         ),
         const SizedBox(height: 12),
         if (!widget.wifi.isOpen)
-          CuteTextField(
+          AppTextField(
             controller: _controller,
             label: l10n.repeaterWifiPassword,
             obscureText: _obscure,

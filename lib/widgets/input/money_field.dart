@@ -1,9 +1,9 @@
 import 'package:do_x/constants/app_const.dart';
 import 'package:do_x/constants/dimens.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:do_x/widgets/input/formatters/thousands_separator_input_formatter.dart';
 
 /// Money input: a currency unit on the right, thousands separators added
 /// while typing.
@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 /// - empty field: the [presetSuggestions] for this field (e.g. chick prices),
 /// - after typing: length-aware completions, e.g. "25" -> 25k / 250k / 2.5tr,
 ///   suppressed once the typed number already looks full (5+ digits).
-class CuteMoneyField extends StatefulWidget {
+class MoneyField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final String? hint;
@@ -36,7 +36,7 @@ class CuteMoneyField extends StatefulWidget {
   /// are scaled for đồng and mean nothing next to a dollar price.
   final String suffixText;
 
-  const CuteMoneyField({
+  const MoneyField({
     super.key,
     required this.controller,
     required this.label,
@@ -51,10 +51,10 @@ class CuteMoneyField extends StatefulWidget {
   });
 
   @override
-  State<CuteMoneyField> createState() => _CuteMoneyFieldState();
+  State<MoneyField> createState() => _MoneyFieldState();
 }
 
-class _CuteMoneyFieldState extends State<CuteMoneyField> {
+class _MoneyFieldState extends State<MoneyField> {
   final FocusNode _focusNode = FocusNode();
   OverlayEntry? _overlayEntry;
 
@@ -77,8 +77,9 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
     super.dispose();
   }
 
-  bool get _suggestionsEnabled =>
-      widget.showSuggestions && widget.suffixText == "đ";
+  bool get _isDong => widget.suffixText == "đ";
+
+  bool get _suggestionsEnabled => widget.showSuggestions && _isDong;
 
   void _onFocusChanged() {
     if (_focusNode.hasFocus && _suggestionsEnabled) {
@@ -205,15 +206,20 @@ class _CuteMoneyFieldState extends State<CuteMoneyField> {
 
   @override
   Widget build(BuildContext context) {
-    return CuteTextField(
+    return AppTextField(
       controller: widget.controller,
       focusNode: _focusNode,
       label: widget.label,
       hint: widget.hint,
       errorText: widget.errorText,
       suffixText: widget.suffixText,
-      keyboardType: TextInputType.number,
-      inputFormatters: [ThousandsSeparatorInputFormatter()],
+      // Only đồng is always whole; a dollar price needs its cents.
+      keyboardType: _isDong
+          ? TextInputType.number
+          : const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        ThousandsSeparatorInputFormatter(decimalComma: !_isDong),
+      ],
       onChanged: widget.onChanged,
       autofocus: widget.autofocus,
     );
@@ -240,83 +246,4 @@ String _formatThousands(String intText) {
     buffer.write(intText[i]);
   }
   return buffer.toString();
-}
-
-/// Strips leading zeros from a plain integer field: "01" -> "1", "00" -> "0".
-/// Pair it after [FilteringTextInputFormatter.digitsOnly] on quantity inputs.
-class NoLeadingZeroInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text;
-    final stripped = text.replaceFirst(RegExp(r'^0+(?=\d)'), '');
-    if (stripped == text) return newValue;
-    final removed = text.length - stripped.length;
-    var offset = newValue.selection.end - removed;
-    offset = offset.clamp(0, stripped.length);
-    return TextEditingValue(
-      text: stripped,
-      selection: TextSelection.collapsed(offset: offset),
-    );
-  }
-}
-
-/// Inserts thousands separators while typing, keeping the cursor in place.
-class ThousandsSeparatorInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text;
-    if (text.isEmpty) return newValue;
-
-    // Keep digits and at most one decimal point.
-    final raw = StringBuffer();
-    var seenDot = false;
-    var rawCharsBeforeCursor = 0;
-    for (var i = 0; i < text.length; i++) {
-      final c = text[i];
-      final isDigit = c.compareTo('0') >= 0 && c.compareTo('9') <= 0;
-      if (isDigit || (c == '.' && !seenDot)) {
-        if (c == '.') seenDot = true;
-        raw.write(c);
-        if (i < newValue.selection.end) rawCharsBeforeCursor++;
-      }
-    }
-    final rawText = raw.toString();
-    if (rawText.isEmpty) return const TextEditingValue(text: '');
-
-    final dotIndex = rawText.indexOf('.');
-    final rawInt = dotIndex < 0 ? rawText : rawText.substring(0, dotIndex);
-    final decPart = dotIndex < 0 ? '' : rawText.substring(dotIndex);
-    // Drop leading zeros: "01" -> "1", "00" -> "0" (keep a single leading 0 so
-    // "0.5" still works). Shift the cursor back past any zeros we removed.
-    final intPart = rawInt.replaceFirst(RegExp(r'^0+(?=\d)'), '');
-    final removedZeros = rawInt.length - intPart.length;
-    if (removedZeros > 0) {
-      rawCharsBeforeCursor = rawCharsBeforeCursor > removedZeros
-          ? rawCharsBeforeCursor - removedZeros
-          : 0;
-    }
-    final formattedInt = StringBuffer();
-    for (var i = 0; i < intPart.length; i++) {
-      if (i > 0 && (intPart.length - i) % 3 == 0) formattedInt.write(',');
-      formattedInt.write(intPart[i]);
-    }
-    final formatted = '$formattedInt$decPart';
-
-    var cursor = 0;
-    var seen = 0;
-    while (cursor < formatted.length && seen < rawCharsBeforeCursor) {
-      if (formatted[cursor] != ',') seen++;
-      cursor++;
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: cursor),
-    );
-  }
 }

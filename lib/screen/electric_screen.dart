@@ -16,10 +16,10 @@ import 'package:do_x/view_model/electric_view_model.dart';
 import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/app_bar/app_bar_base.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
-import 'package:do_x/widgets/chart/cute_bar_chart.dart';
+import 'package:do_x/widgets/chart/bar_chart_view.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/dialog_action_button.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
+import 'package:do_x/widgets/input/app_input_decoration.dart';
 import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/surface/app_button.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
@@ -515,7 +515,7 @@ class _ElectricScreenState
         final items = usages
             .skip(usages.length <= 14 ? 0 : usages.length - 14)
             .map(
-              (e) => CuteBarChartItem(
+              (e) => BarChartItem(
                 label: DateFormat("d/M").format(e.day),
                 value: e.kwh,
               ),
@@ -526,7 +526,7 @@ class _ElectricScreenState
           children: [
             Text(l10n.dailyUsage, style: context.textTheme.primary.size16.bold),
             const SizedBox(height: 8),
-            CuteBarChart(
+            BarChartView(
               items: items,
               primaryColor: _ChartColors.current(context),
               formatValue: (v) => "${v.formatUnit(digit: 2)} kWh",
@@ -549,7 +549,7 @@ class _ElectricScreenState
         // Chart reads left→right in time; the list keeps newest first.
         final chartItems = items.reversed
             .map(
-              (e) => CuteBarChartItem(
+              (e) => BarChartItem(
                 label: "${e.month}/${(e.year ?? 0) % 100}",
                 value: e.usageKwh?.toDouble(),
                 compareValue: e.lastYearUsageKwh?.toDouble(),
@@ -567,7 +567,7 @@ class _ElectricScreenState
             const SizedBox(height: 8),
             _buildChartLegend(l10n),
             const SizedBox(height: 6),
-            CuteBarChart(
+            BarChartView(
               items: chartItems,
               primaryColor: _ChartColors.current(context),
               compareColor: _ChartColors.compare(context),
@@ -1000,7 +1000,7 @@ class _ElectricScreenState
     final items = usages
         .skip(usages.length <= 14 ? 0 : usages.length - 14)
         .map(
-          (e) => CuteBarChartItem(
+          (e) => BarChartItem(
             label: DateFormat("d/M").format(e.day),
             value: e.kwh,
           ),
@@ -1011,7 +1011,7 @@ class _ElectricScreenState
       children: [
         Text(l10n.dailyUsage, style: context.textTheme.primary.size16.bold),
         const SizedBox(height: 8),
-        CuteBarChart(
+        BarChartView(
           items: items,
           primaryColor: _ChartColors.current(context),
           formatValue: (v) => "${v.formatUnit(digit: 2)} kWh",
@@ -1029,7 +1029,7 @@ class _ElectricScreenState
     // really paid.
     final chartItems = merged.months.reversed
         .map(
-          (m) => CuteBarChartItem(
+          (m) => BarChartItem(
             label: "${m.month}/${m.year % 100}",
             value: m.actualAmount.toDouble(),
             compareValue: m.singleMeterAmount.toDouble(),
@@ -1046,7 +1046,7 @@ class _ElectricScreenState
         const SizedBox(height: 8),
         _buildMergedLegend(l10n),
         const SizedBox(height: 6),
-        CuteBarChart(
+        BarChartView(
           items: chartItems,
           primaryColor: _ChartColors.current(context),
           compareColor: _ChartColors.compare(context),
@@ -1291,7 +1291,7 @@ class _LoginFormState extends State<_LoginForm> {
                 // which on a television means walking the D-pad back to a form
                 // the full-screen keyboard was covering.
                 textInputAction: TextInputAction.next,
-                decoration: cuteInputDecoration(context, l10n.username),
+                decoration: appInputDecoration(context, l10n.username),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -1300,19 +1300,17 @@ class _LoginFormState extends State<_LoginForm> {
                 autocorrect: false,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _submit(),
-                decoration: cuteInputDecoration(context, l10n.password)
-                    .copyWith(
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                        ),
-                      ),
+                decoration: appInputDecoration(context, l10n.password).copyWith(
+                  suffixIcon: IconButton(
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
                     ),
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               AppButton(
@@ -1430,7 +1428,7 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
               autofocus: true,
               autocorrect: false,
               textInputAction: TextInputAction.next,
-              decoration: cuteInputDecoration(context, l10n.username),
+              decoration: appInputDecoration(context, l10n.username),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -1439,7 +1437,7 @@ class _AddAccountDialogState extends State<_AddAccountDialog> {
               autocorrect: false,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
-              decoration: cuteInputDecoration(context, l10n.password).copyWith(
+              decoration: appInputDecoration(context, l10n.password).copyWith(
                 suffixIcon: IconButton(
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),

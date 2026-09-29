@@ -2,8 +2,8 @@ import 'dart:math' as math;
 import 'package:do_x/constants/dimens.dart';
 import 'package:flutter/material.dart';
 
-class CuteBarChartItem {
-  const CuteBarChartItem({
+class BarChartItem {
+  const BarChartItem({
     required this.label,
     this.value,
     this.compareValue,
@@ -20,12 +20,12 @@ class CuteBarChartItem {
   /// of one solid bar. Slices whose sum differs from [value] are not adjusted:
   /// the bar's height always comes from [value], so heights stay comparable
   /// across groups.
-  final List<CuteBarSegment> segments;
+  final List<BarChartSegment> segments;
 }
 
 /// One slice of a stacked bar.
-class CuteBarSegment {
-  const CuteBarSegment(this.color, this.value);
+class BarChartSegment {
+  const BarChartSegment(this.color, this.value);
 
   final Color color;
   final double value;
@@ -35,8 +35,8 @@ class CuteBarSegment {
 /// gap between paired bars, recessive baseline, tap to inspect a group.
 /// The selected group's values are shown in the header row, so bars stay
 /// unlabeled and the chart stays quiet.
-class CuteBarChart extends StatefulWidget {
-  const CuteBarChart({
+class BarChartView extends StatefulWidget {
+  const BarChartView({
     super.key,
     required this.items,
     required this.primaryColor,
@@ -45,19 +45,19 @@ class CuteBarChart extends StatefulWidget {
     this.formatValue,
   });
 
-  final List<CuteBarChartItem> items;
+  final List<BarChartItem> items;
   final Color primaryColor;
 
-  /// Required when any item has [CuteBarChartItem.compareValue].
+  /// Required when any item has [BarChartItem.compareValue].
   final Color? compareColor;
   final double height;
   final String Function(double value)? formatValue;
 
   @override
-  State<CuteBarChart> createState() => _CuteBarChartState();
+  State<BarChartView> createState() => _BarChartViewState();
 }
 
-class _CuteBarChartState extends State<CuteBarChart> {
+class _BarChartViewState extends State<BarChartView> {
   int? _selected;
 
   bool get _hasCompare => widget.items.any((e) => e.compareValue != null);
@@ -66,7 +66,7 @@ class _CuteBarChartState extends State<CuteBarChart> {
       widget.formatValue?.call(value) ?? value.toStringAsFixed(1);
 
   @override
-  void didUpdateWidget(covariant CuteBarChart oldWidget) {
+  void didUpdateWidget(covariant BarChartView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_selected != null && _selected! >= widget.items.length) {
       _selected = null;
@@ -117,7 +117,7 @@ class _CuteBarChartState extends State<CuteBarChart> {
   }
 
   /// Selected group details: label + one dot-value pair per series.
-  Widget _buildHeader(ThemeData theme, CuteBarChartItem item) {
+  Widget _buildHeader(ThemeData theme, BarChartItem item) {
     final textStyle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
@@ -181,7 +181,7 @@ class _BarChartPainter extends CustomPainter {
     required this.surfaceColor,
   });
 
-  final List<CuteBarChartItem> items;
+  final List<BarChartItem> items;
   final Color primaryColor;
   final Color? compareColor;
   final int selectedIndex;
@@ -296,12 +296,12 @@ class _BarChartPainter extends CustomPainter {
     canvas.drawRRect(rect, Paint()..color = color);
   }
 
-  /// Same footprint as [_drawBar], sliced by [CuteBarChartItem.segments]. Only
+  /// Same footprint as [_drawBar], sliced by [BarChartItem.segments]. Only
   /// the topmost slice gets rounded corners, so the stack reads as one bar.
   void _drawStackedBar(
     Canvas canvas,
     double x,
-    CuteBarChartItem item,
+    BarChartItem item,
     double maxValue,
     double plotHeight,
     double width,

@@ -1,6 +1,6 @@
 import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/utils/chicken_date.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
+import 'package:do_x/widgets/input/app_input_decoration.dart';
 import 'package:do_x/widgets/input/lunar_date_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -40,7 +40,7 @@ class LunarDateField extends StatelessWidget {
       onTap: () => _pick(context),
       child: InputDecorator(
         isEmpty: value == null,
-        decoration: cuteInputDecoration(
+        decoration: appInputDecoration(
           context,
           label,
           suffixIcon: const Icon(Icons.calendar_month_rounded, size: 20),

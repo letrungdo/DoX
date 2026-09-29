@@ -1,4 +1,4 @@
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:flutter/material.dart';
 
 /// A note text field with a dropdown of previously used notes. Tapping the
@@ -31,7 +31,7 @@ class NoteField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = suggestions.take(maxSuggestions).toList();
-    return CuteTextField(
+    return AppTextField(
       controller: controller,
       label: label,
       suffixIcon: items.isEmpty

@@ -2,7 +2,7 @@ import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
 import 'package:do_x/gen/assets.gen.dart';
 import 'package:do_x/l10n/app_localizations.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:flutter/material.dart';
 
@@ -23,10 +23,10 @@ Future<bool> confirmSuspiciousPrice(
   final l10n = AppLocalizations.of(context);
   // This waits on the user, so the dialog underneath must not sit there
   // spinning as if it were saving.
-  final confirmed = await CuteDialog.pauseLoading(
+  final confirmed = await FormDialog.pauseLoading(
     () => showAppModal<bool>(
       context,
-      builder: (context) => CuteDialog(
+      builder: (context) => FormDialog(
         icon: icon ?? Assets.images.coinCute,
         title: l10n.lowPriceWarningTitle,
         accent: context.colors.warning,

@@ -1,4 +1,4 @@
-import 'package:do_x/widgets/chart/cute_bar_chart.dart';
+import 'package:do_x/widgets/chart/bar_chart_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,10 +16,10 @@ void main() {
   ) async {
     final items = List.generate(
       14,
-      (i) => CuteBarChartItem(label: "${i + 1}/7", value: (i % 5) + 1.0),
+      (i) => BarChartItem(label: "${i + 1}/7", value: (i % 5) + 1.0),
     );
     await tester.pumpWidget(
-      wrap(CuteBarChart(items: items, primaryColor: Colors.teal)),
+      wrap(BarChartView(items: items, primaryColor: Colors.teal)),
     );
     expect(tester.takeException(), isNull);
 
@@ -38,7 +38,7 @@ void main() {
   ) async {
     final items = List.generate(
       12,
-      (i) => CuteBarChartItem(
+      (i) => BarChartItem(
         label: "${i + 1}/26",
         value: 100.0 + i,
         compareValue: 90.0 + i,
@@ -46,7 +46,7 @@ void main() {
     );
     await tester.pumpWidget(
       wrap(
-        CuteBarChart(
+        BarChartView(
           items: items,
           primaryColor: Colors.teal,
           compareColor: Colors.orange,
@@ -58,14 +58,14 @@ void main() {
 
   testWidgets('handles empty and zero-value data', (tester) async {
     await tester.pumpWidget(
-      wrap(CuteBarChart(items: const [], primaryColor: Colors.teal)),
+      wrap(BarChartView(items: const [], primaryColor: Colors.teal)),
     );
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(
       wrap(
-        CuteBarChart(
-          items: const [CuteBarChartItem(label: "1/7", value: 0)],
+        BarChartView(
+          items: const [BarChartItem(label: "1/7", value: 0)],
           primaryColor: Colors.teal,
         ),
       ),

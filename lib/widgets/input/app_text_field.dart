@@ -1,9 +1,9 @@
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
+import 'package:do_x/widgets/input/app_input_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Rounded text field styled with [cuteInputDecoration].
-class CuteTextField extends StatelessWidget {
+/// Rounded text field styled with [appInputDecoration].
+class AppTextField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode? focusNode;
   final String label;
@@ -21,7 +21,7 @@ class CuteTextField extends StatelessWidget {
   final bool obscureText;
   final TextCapitalization textCapitalization;
 
-  const CuteTextField({
+  const AppTextField({
     super.key,
     required this.controller,
     this.focusNode,
@@ -54,7 +54,7 @@ class CuteTextField extends StatelessWidget {
       autofocus: autofocus,
       obscureText: obscureText,
       textCapitalization: textCapitalization,
-      decoration: cuteInputDecoration(
+      decoration: appInputDecoration(
         context,
         label,
         hint: hint,

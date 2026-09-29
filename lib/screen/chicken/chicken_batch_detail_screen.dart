@@ -1,3 +1,4 @@
+import 'package:do_x/widgets/input/formatters/no_leading_zero_input_formatter.dart';
 import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
@@ -23,13 +24,13 @@ import 'package:do_x/widgets/app_bar/app_bar_sync_icon.dart';
 import 'package:do_x/widgets/app_scaffold.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
 import 'package:do_x/widgets/dialog/low_price_warning_dialog.dart';
 import 'package:do_x/widgets/dialog/password_confirm_dialog.dart';
 import 'package:do_x/widgets/expense_dialog.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/money_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/note_field.dart';
 import 'package:do_x/widgets/surface/app_button.dart';
@@ -935,7 +936,7 @@ class _ChickenBatchDetailScreenState
     final l10n = AppLocalizations.of(context);
     showAppModal(
       context,
-      builder: (context) => CuteDialog(
+      builder: (context) => FormDialog(
         icon: Assets.images.coinCute,
         title: l10n.deleteSaleRound,
         accent: context.colors.danger,
@@ -962,7 +963,7 @@ class _ChickenBatchDetailScreenState
     final l10n = AppLocalizations.of(context);
     showAppModal(
       context,
-      builder: (context) => CuteDialog(
+      builder: (context) => FormDialog(
         icon: Assets.images.feedCute,
         title: l10n.deleteExpense,
         accent: context.colors.danger,
@@ -1111,7 +1112,7 @@ class _ChickenBatchDetailScreenState
             ageInDays: batch.ageInDaysAt(saleDate),
             excludeSaleId: sale?.id,
           );
-          return CuteDialog(
+          return FormDialog(
             icon: Assets.images.coinCute,
             title: isEditing ? l10n.editSaleRound : l10n.recordSale,
             accent: context.colors.success,
@@ -1167,7 +1168,7 @@ class _ChickenBatchDetailScreenState
               Row(
                 children: [
                   Expanded(
-                    child: CuteTextField(
+                    child: AppTextField(
                       controller: qtyController,
                       label: l10n.quantityLabel,
                       autofocus: !isEditing,
@@ -1185,7 +1186,7 @@ class _ChickenBatchDetailScreenState
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: CuteMoneyField(
+                    child: MoneyField(
                       controller: unitPriceController,
                       label: l10n.pricePerUnit,
                       // The suggested price leads the one-tap bar when there is
@@ -1221,7 +1222,7 @@ class _ChickenBatchDetailScreenState
                     updateTotal();
                   }),
                 ),
-              CuteMoneyField(
+              MoneyField(
                 controller: totalAmountController,
                 label: l10n.totalAutoCalculated,
                 errorText: amountError,
@@ -1342,7 +1343,7 @@ class _ChickenBatchDetailScreenState
     showAppModal(
       context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
+        builder: (context, setState) => FormDialog(
           icon: Assets.images.chickCute,
           title: l10n.editBatchInfo,
           confirmText: l10n.save,
@@ -1377,7 +1378,7 @@ class _ChickenBatchDetailScreenState
             Navigator.pop(context);
           },
           children: [
-            CuteTextField(
+            AppTextField(
               controller: nameController,
               label: l10n.batchName,
               errorText: nameError,
@@ -1385,7 +1386,7 @@ class _ChickenBatchDetailScreenState
                 if (nameError != null) setState(() => nameError = null);
               },
             ),
-            CuteTextField(
+            AppTextField(
               controller: quantityController,
               label: l10n.initialQuantity,
               keyboardType: TextInputType.number,
@@ -1398,13 +1399,13 @@ class _ChickenBatchDetailScreenState
                 if (qtyError != null) setState(() => qtyError = null);
               },
             ),
-            CuteTextField(
+            AppTextField(
               controller: deadQuantityController,
               label: l10n.deadQuantityLabel,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
-            CuteTextField(
+            AppTextField(
               controller: keptQuantityController,
               label: l10n.keptQuantityLabel,
               keyboardType: TextInputType.number,

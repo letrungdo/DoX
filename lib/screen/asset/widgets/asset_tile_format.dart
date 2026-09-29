@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 /// list it appears in.
 ///
 /// Numbers are grouped with commas and suffixed "đ", which is how the app
-/// writes money everywhere else — `CuteMoneyField` types it that way and the
+/// writes money everywhere else — `MoneyField` types it that way and the
 /// news page prints its rates that way — so a tile using Vietnamese dot
 /// grouping was the odd one out. It also drops the space `NumberFormat`'s
 /// currency mode puts before the symbol, which pushed the unit onto its own

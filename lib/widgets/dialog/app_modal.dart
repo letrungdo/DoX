@@ -204,7 +204,7 @@ class AppDialog extends StatelessWidget {
       child: ConstrainedBox(
         // [insetPadding] is added back on purpose: AlertDialog subtracts its own
         // inset from whatever width it is handed, so capping at [maxWidth] here
-        // would leave the panel narrower than a `CuteDialog` by twice the inset
+        // would leave the panel narrower than a `FormDialog` by twice the inset
         // — a difference you only see on a wide (landscape) screen, where the
         // cap is what binds rather than the inset.
         constraints: BoxConstraints(

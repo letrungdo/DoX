@@ -86,7 +86,7 @@ class _MainScreenState extends ScreenState<MainScreen, MainViewModel> {
     label: label,
   );
 
-  /// Nav item backed by a Material [IconData] for tabs without a cute SVG.
+  /// Nav item backed by a Material [IconData] for tabs without an illustrated SVG.
   _NavVisuals _navItemIcon(IconData icon, String label) => (
     icon: Icon(icon, size: 26, color: Colors.grey),
     activeIcon: Icon(

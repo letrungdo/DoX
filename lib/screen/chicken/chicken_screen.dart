@@ -1,3 +1,4 @@
+import 'package:do_x/widgets/input/formatters/no_leading_zero_input_formatter.dart';
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
@@ -23,10 +24,9 @@ import 'package:do_x/widgets/chicken_add_icon.dart';
 import 'package:do_x/widgets/chicken_list_tile_card.dart';
 import 'package:do_x/widgets/chicken_change_badge.dart';
 import 'package:do_x/widgets/chicken_stale_banner.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:do_x/widgets/input/lunar_date_field.dart';
 import 'package:do_x/widgets/input/year_filter.dart';
 import 'package:do_x/widgets/total_amount_text.dart';
@@ -832,7 +832,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
     showAppModal(
       context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => CuteDialog(
+        builder: (context, setState) => FormDialog(
           icon: Assets.images.eggCute,
           title: l10n.addNewBatch,
           confirmText: l10n.add,
@@ -862,7 +862,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
             Navigator.pop(context);
           },
           children: [
-            CuteTextField(
+            AppTextField(
               controller: nameController,
               label: l10n.batchName,
               hint: l10n.batchNameHint,
@@ -871,7 +871,7 @@ class _ChickenScreenState extends ScreenState<ChickenScreen, ChickenViewModel>
                 if (nameError != null) setState(() => nameError = null);
               },
             ),
-            CuteTextField(
+            AppTextField(
               controller: quantityController,
               label: l10n.eggQuantity,
               autofocus: true,

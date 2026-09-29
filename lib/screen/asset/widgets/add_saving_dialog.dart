@@ -1,3 +1,4 @@
+import 'package:do_x/widgets/input/formatters/decimal_input_formatter.dart';
 import 'package:do_x/constants/app_const.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/extensions/number_extensions.dart';
@@ -7,11 +8,11 @@ import 'package:do_x/model/bank/bank.dart';
 import 'package:do_x/screen/asset/widgets/bank_logo.dart';
 import 'package:do_x/services/bank_service.dart';
 import 'package:do_x/widgets/dialog/app_modal.dart';
-import 'package:do_x/widgets/cute_dialog.dart';
-import 'package:do_x/widgets/input/cute_date_field.dart';
-import 'package:do_x/widgets/input/cute_input_decoration.dart';
-import 'package:do_x/widgets/input/cute_money_field.dart';
-import 'package:do_x/widgets/input/cute_text_field.dart';
+import 'package:do_x/widgets/dialog/form_dialog.dart';
+import 'package:do_x/widgets/input/date_field.dart';
+import 'package:do_x/widgets/input/app_input_decoration.dart';
+import 'package:do_x/widgets/input/money_field.dart';
+import 'package:do_x/widgets/input/app_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -144,7 +145,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return CuteDialog(
+    return FormDialog(
       title: _isEditing ? l10n.update : l10n.assetAdd,
       confirmText: _isEditing ? l10n.update : l10n.add,
       onConfirm: () => _submit(l10n),
@@ -159,7 +160,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
         TextField(
           controller: _bankController,
           textCapitalization: TextCapitalization.words,
-          decoration: cuteInputDecoration(context, l10n.assetBankName).copyWith(
+          decoration: appInputDecoration(context, l10n.assetBankName).copyWith(
             errorText: _bankError,
             suffixIcon: IconButton(
               tooltip: l10n.assetBankPick,
@@ -176,7 +177,7 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
             if (_bankError != null) setState(() => _bankError = null);
           },
         ),
-        CuteMoneyField(
+        MoneyField(
           controller: _amountController,
           label: l10n.assetAmount,
           maxSuggestion: AppConst.moneySuggestionHigh,
@@ -188,7 +189,8 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
         TextField(
           controller: _rateController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: cuteInputDecoration(
+          inputFormatters: [DecimalInputFormatter()],
+          decoration: appInputDecoration(
             context,
             l10n.assetInterestRate,
           ).copyWith(errorText: _rateError),
@@ -196,12 +198,12 @@ class _AddSavingDialogState extends State<AddSavingDialog> {
             if (_rateError != null) setState(() => _rateError = null);
           },
         ),
-        CuteDateField(
+        DateField(
           label: l10n.assetStartDate,
           value: _startDate,
           onChanged: (d) => setState(() => _startDate = d),
         ),
-        CuteTextField(
+        AppTextField(
           controller: _noteController,
           label: l10n.assetNote,
           textCapitalization: TextCapitalization.sentences,
