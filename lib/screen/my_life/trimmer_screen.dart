@@ -177,7 +177,7 @@ class _TrimmerScreenState extends State<TrimmerScreen> {
       // large enough to exceed MyLife's storage-rule size limit, which surfaces
       // as a 403 "Permission denied" on the finalize PUT.
       editor.compress(resolution: resolution);
-      return editor.export(
+      return await editor.export(
         onProgress: (progress) {
           _exportingProgress.value = progress;
         },

@@ -9,7 +9,7 @@ class LocationService {
 
   Future<String?> getLocationName(Position position) async {
     try {
-      final placemarks = await placemarkFromCoordinates(
+      final placemarks = await Geocoding().placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
