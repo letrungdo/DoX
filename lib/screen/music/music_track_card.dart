@@ -5,6 +5,7 @@ import 'package:do_x/constants/dimens.dart';
 import 'package:do_x/extensions/context_extensions.dart';
 import 'package:do_x/model/music_track.dart';
 import 'package:do_x/utils/device_type.dart';
+import 'package:do_x/widgets/loading.dart';
 import 'package:do_x/widgets/surface/app_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +24,7 @@ class MusicTrackCard extends StatelessWidget {
     required this.track,
     required this.isCurrent,
     required this.isLiked,
+    this.isLiking = false,
     required this.focusNode,
     required this.likeFocusNode,
     required this.onTap,
@@ -33,6 +35,7 @@ class MusicTrackCard extends StatelessWidget {
   final MusicTrack track;
   final bool isCurrent;
   final bool isLiked;
+  final bool isLiking;
 
   /// The row itself, which is what the remote walks the list by.
   final FocusNode focusNode;
@@ -147,16 +150,18 @@ class MusicTrackCard extends StatelessWidget {
               descendantsAreTraversable: !deviceType.isTv,
               child: IconButton(
                 focusNode: likeFocusNode,
-                icon: Icon(
-                  isLiked
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  size: 20,
-                ),
+                icon: isLiking
+                    ? const Loading(size: 20)
+                    : Icon(
+                        isLiked
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        size: 20,
+                      ),
                 color: isLiked
                     ? context.theme.colorScheme.error
                     : context.theme.hintColor,
-                onPressed: onToggleLike,
+                onPressed: isLiking ? null : onToggleLike,
               ),
             ),
             const SizedBox(width: 4),

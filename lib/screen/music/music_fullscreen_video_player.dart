@@ -439,6 +439,7 @@ class _MusicFullscreenVideoPlayerState
     final l10n = context.l10n;
     final track = vm.currentTrack;
     final isLiked = track != null && vm.isLiked(track.id);
+    final isLiking = track != null && vm.isLiking(track.id);
     final isTv = deviceType.isTv;
     const white = Colors.white;
     final muted = Colors.white.withValues(alpha: 0.7);
@@ -554,7 +555,8 @@ class _MusicFullscreenVideoPlayerState
                           ? Icons.favorite_rounded
                           : Icons.favorite_border_rounded,
                       color: isLiked ? context.theme.colorScheme.error : null,
-                      onTap: widget.onToggleLike,
+                      loading: isLiking,
+                      onTap: isLiking ? null : widget.onToggleLike,
                     ),
                     // The video's state, as in the page's player; live only
                     // for a track that has one to show or hide, but always

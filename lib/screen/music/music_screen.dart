@@ -811,29 +811,35 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   /// of failing where they cannot see it, and finishes the like they asked for
   /// once they are back.
   Future<void> _onToggleLike(MusicTrack track) async {
-    final l10n = context.l10n;
-    final outcome = await vm.toggleLike(track);
-    if (!mounted) return;
-    switch (outcome) {
-      case MusicLikeOutcome.done:
-        break;
-      case MusicLikeOutcome.signInRequired:
-        context.showToast(l10n.musicSignInRequired);
-        final signedIn = await _openMusicLogin();
-        if (signedIn && mounted) await vm.toggleLike(track);
-      case MusicLikeOutcome.challengeRequired:
-        // Once: a like still refused after the check is a failure to report,
-        // not a reason to put the check up again.
-        final url = vm.likeChallengeUrl;
-        if (url == null) return;
-        final passed = await showMusicChallengeSheet(context, url);
-        if (!passed || !mounted) return;
-        final retried = await vm.toggleLike(track);
-        if (retried != MusicLikeOutcome.done && mounted) {
+    if (vm.isLiking(track.id)) return;
+    vm.setLiking(track.id, true);
+    try {
+      final l10n = context.l10n;
+      final outcome = await vm.toggleLike(track);
+      if (!mounted) return;
+      switch (outcome) {
+        case MusicLikeOutcome.done:
+          break;
+        case MusicLikeOutcome.signInRequired:
+          context.showToast(l10n.musicSignInRequired);
+          final signedIn = await _openMusicLogin();
+          if (signedIn && mounted) await vm.toggleLike(track);
+        case MusicLikeOutcome.challengeRequired:
+          // Once: a like still refused after the check is a failure to report,
+          // not a reason to put the check up again.
+          final url = vm.likeChallengeUrl;
+          if (url == null) return;
+          final passed = await showMusicChallengeSheet(context, url);
+          if (!passed || !mounted) return;
+          final retried = await vm.toggleLike(track);
+          if (retried != MusicLikeOutcome.done && mounted) {
+            context.showToast(l10n.musicLikeFailed, isError: true);
+          }
+        case MusicLikeOutcome.failed:
           context.showToast(l10n.musicLikeFailed, isError: true);
-        }
-      case MusicLikeOutcome.failed:
-        context.showToast(l10n.musicLikeFailed, isError: true);
+      }
+    } finally {
+      vm.setLiking(track.id, false);
     }
   }
 
@@ -1508,6 +1514,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
   Widget _buildBottomMobilePlayer(MusicViewModel viewModel) {
     if (viewModel.currentTrack == null) return const SizedBox.shrink();
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
+    final isTrackLiking = viewModel.isLiking(viewModel.currentTrack!.id);
     final video = viewModel.isVideoEnabled ? viewModel.videoController : null;
     final miniArtPixels =
         Dimens.musicMiniVideoHeight * MediaQuery.devicePixelRatioOf(context);
@@ -1586,16 +1593,20 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   ),
                 ),
                 IconButton(
-                  icon: Icon(
-                    isTrackLiked
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: 20,
-                  ),
+                  icon: isTrackLiking
+                      ? const Loading(size: 20)
+                      : Icon(
+                          isTrackLiked
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: 20,
+                        ),
                   color: isTrackLiked
                       ? context.theme.colorScheme.error
                       : context.theme.hintColor,
-                  onPressed: () => _onToggleLike(viewModel.currentTrack!),
+                  onPressed: isTrackLiking
+                      ? null
+                      : () => _onToggleLike(viewModel.currentTrack!),
                 ),
                 // Always there, and only live for a track that has a video
                 // to show or hide: coming and going with each skip, it shoved
@@ -1656,6 +1667,7 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
 
   Widget _buildPlayerControls(MusicViewModel viewModel) {
     final isTrackLiked = viewModel.isLiked(viewModel.currentTrack!.id);
+    final isTrackLiking = viewModel.isLiking(viewModel.currentTrack!.id);
     return Column(
       children: [
         MusicSeekBar(
@@ -1735,8 +1747,11 @@ class _MusicScreenState extends ScreenState<MusicScreen, MusicViewModel>
                   : Icons.favorite_border_rounded,
               focusNode: _likeActionFocusNode,
               size: 36,
+              loading: isTrackLiking,
               color: isTrackLiked ? context.theme.colorScheme.error : null,
-              onPressed: () => _onToggleLike(viewModel.currentTrack!),
+              onPressed: isTrackLiking
+                  ? null
+                  : () => _onToggleLike(viewModel.currentTrack!),
             ),
             // Both always there, and live only while they have something to
             // do: coming and going with each skip, they shoved the row along.
@@ -1793,14 +1808,18 @@ class _TrackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (isCurrent, isLiked) = context.select(
-      (MusicViewModel vm) =>
-          (vm.currentTrack?.id == track.id, vm.isLiked(track.id)),
+    final (isCurrent, isLiked, isLiking) = context.select(
+      (MusicViewModel vm) => (
+        vm.currentTrack?.id == track.id,
+        vm.isLiked(track.id),
+        vm.isLiking(track.id),
+      ),
     );
     return MusicTrackCard(
       track: track,
       isCurrent: isCurrent,
       isLiked: isLiked,
+      isLiking: isLiking,
       focusNode: focusNode,
       likeFocusNode: likeFocusNode,
       onTap: onTap,

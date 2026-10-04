@@ -456,6 +456,19 @@ class MusicViewModel extends CoreViewModel implements MusicPlaybackControls {
     await musicAuth.signOut();
   }
 
+  final Set<String> _likingTrackIds = {};
+
+  bool isLiking(String trackId) => _likingTrackIds.contains(trackId);
+
+  void setLiking(String trackId, bool liking) {
+    if (liking) {
+      _likingTrackIds.add(trackId);
+    } else {
+      _likingTrackIds.remove(trackId);
+    }
+    notifyListenersSafe();
+  }
+
   bool isLiked(String trackId) => musicService.isTrackLiked(trackId);
 
   /// Bumped by every tap on a track and by the page going away. A track
