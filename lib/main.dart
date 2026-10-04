@@ -17,6 +17,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import 'utils/logger.dart';
 
@@ -24,6 +25,7 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      VideoPlayerMediaKit.ensureInitialized(windows: true);
       debugPrint = (String? message, {int? wrapWidth}) {
         if (kDebugMode) {
           // ignore: avoid_print
@@ -89,15 +91,14 @@ Future<void> _initializeApp() async {
     initSupabase(),
   ];
 
-  // Neither local notifications nor Firebase Messaging is used by the web
-  // app. Avoid initializing Firebase there: it adds work to the critical path
-  // without enabling a feature. Native platforms keep their launch behavior.
-  if (!kIsWeb) {
-    initializers.addAll([
+  // Firebase is configured only for Android and Apple platforms. Windows
+  // must not request the unconfigured options or unsupported Crashlytics API.
+  if (supportsFirebaseServices) {
+    initializers.add(
       Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
-      notificationService.init(),
-    ]);
+    );
   }
+  initializers.add(notificationService.init());
 
   await Future.wait(initializers);
 
@@ -209,16 +210,23 @@ void _catchAllError() {
   if (kDebugMode) return;
   FlutterError.onError = (details) {
     logger.e(details.exceptionAsString(), stackTrace: details.stack);
-    if (kReleaseMode && !kIsWeb && Firebase.apps.isNotEmpty) {
+    if (kReleaseMode && supportsFirebaseServices && Firebase.apps.isNotEmpty) {
       FirebaseCrashlytics.instance.recordFlutterFatalError(details);
     }
     FlutterError.presentError(details);
   };
   PlatformDispatcher.instance.onError = (error, stack) {
     logger.e("__PlatformDispatcher Error!!", error: error, stackTrace: stack);
-    if (kReleaseMode && !kIsWeb && Firebase.apps.isNotEmpty) {
+    if (kReleaseMode && supportsFirebaseServices && Firebase.apps.isNotEmpty) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     }
     return true;
   };
 }
+
+@visibleForTesting
+bool get supportsFirebaseServices =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS);

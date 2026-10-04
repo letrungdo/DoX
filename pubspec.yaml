@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.12.16+123
+version: 2.13.0+124
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -97,6 +97,8 @@ dependencies:
   mobile_scanner: ^7.4.2
   audio_service: ^0.18.19
   youtube_explode_dart: 3.1.0
+  video_player_media_kit: ^2.0.0
+  media_kit_libs_windows_video: ^1.0.11
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -116,6 +118,22 @@ dev_dependencies:
   # A stand-in platform player, so a test can watch which stream the TV page
   # asks for when the one in front of it will not come up.
   video_player_platform_interface: ^6.9.0
+  msix: ^3.18.0
+
+msix_config:
+  display_name: Do X
+  publisher_display_name: letrungdo
+  identity_name: vn.dox.app
+  logo_path: assets/app_icon/icon_android.png
+  capabilities: internetClient, privateNetworkClientServer, location, microphone, webcam
+  languages: en-us, vi-vn
+  protocol_activation: vn.dox.app
+  architecture: x64
+  output_path: build/windows/msix
+  output_name: do-x
+  # Use the package's shared test certificate for direct testing installs.
+  store: false
+  install_certificate: false
 
 flutter_gen:
   output: lib/gen/

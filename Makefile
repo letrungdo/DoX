@@ -40,10 +40,12 @@ build-macos:
 		--build-name 1.0.0 --build-number 1
 
 build-windows:
-	fvm flutter build windows \
+	fvm flutter build windows --release \
 		--dart-define-from-file envs/dev/dart-define.env \
-		--obfuscate --split-debug-info=build/obfuscate \
-		--build-name 1.0.0 --build-number 1
+		--obfuscate --split-debug-info=build/obfuscate/windows
+
+build-msix:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-msix.ps1
 
 # git delete all local branch without remote branch
 delete-local-branch:

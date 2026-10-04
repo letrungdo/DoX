@@ -1,4 +1,4 @@
-name: Build Flutter Android, iOS, and macOS
+name: Build Flutter Android, iOS, macOS, and Windows
 
 on:
   push:
@@ -253,11 +253,79 @@ jobs:
           target_commit: ${{ github.sha }}
           overwrite: true
 
+  build-windows:
+    runs-on: windows-2025
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate Windows environment configuration
+        env:
+          DART_DEFINE_BASE64: ${{ secrets.DART_DEFINE_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DART_DEFINE_BASE64)) {
+            throw 'DART_DEFINE_BASE64 is required for the Windows build.'
+          }
+          $envDirectory = "envs/$env:BUILD_ENV"
+          New-Item -ItemType Directory -Force -Path $envDirectory | Out-Null
+          [IO.File]::WriteAllBytes(
+            (Join-Path $PWD "$envDirectory/dart-define.env"),
+            [Convert]::FromBase64String($env:DART_DEFINE_BASE64)
+          )
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        uses: ./.github/actions/get-pubspec-version
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version-file: pubspec.yaml
+
+      - name: Build and sign testing MSIX
+        run: ./scripts/build-windows-msix.ps1 -Environment $env:BUILD_ENV -UseSystemFlutter
+
+      - name: Upload Windows installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: do-x-windows-msix
+          path: |
+            build/windows/msix/do-x.msix
+            build/windows/msix/do-x.cer
+          if-no-files-found: error
+
+      - name: Upload MSIX to Release
+        uses: svenstaro/upload-release-action@2.11.5
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/windows/msix/do-x.msix
+          asset_name: do-x.msix
+          tag: ${{ steps.get_version.outputs.version }}
+          release_name: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
+          overwrite: true
+
+      - name: Upload testing certificate to Release
+        uses: svenstaro/upload-release-action@2.11.5
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/windows/msix/do-x.cer
+          asset_name: do-x.cer
+          tag: ${{ steps.get_version.outputs.version }}
+          target_commit: ${{ github.sha }}
+          overwrite: true
+
   update-release-notes:
     needs:
       - build-android
       - build-ios
       - build-macos
+      - build-windows
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
