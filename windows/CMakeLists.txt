@@ -57,6 +57,15 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# flutter_inappwebview_windows 0.6.0 uses C++17 WinRT headers that include
+# <experimental/coroutine>. New MSVC toolsets reject this with STL1011 unless
+# legacy coroutine support is explicitly acknowledged. Keep this workaround
+# scoped to the plugin until it migrates to standard C++20 coroutines.
+if(MSVC AND TARGET flutter_inappwebview_windows_plugin)
+  target_compile_definitions(flutter_inappwebview_windows_plugin PRIVATE
+    _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
