@@ -287,36 +287,32 @@ jobs:
           channel: "stable"
           flutter-version-file: pubspec.yaml
 
-      - name: Build and sign testing MSIX
-        run: ./scripts/build-windows-msix.ps1 -Environment $env:BUILD_ENV -UseSystemFlutter
+      # Inno Setup ships on GitHub's Windows images; install it if it is missing.
+      - name: Ensure Inno Setup
+        run: |
+          $paths = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe")
+          if (!($paths | Where-Object { Test-Path $_ })) {
+            choco install innosetup -y --no-progress
+          }
 
-      - name: Upload Windows installer artifacts
+      - name: Build Windows installer
+        run: ./scripts/build-windows-installer.ps1 -Environment $env:BUILD_ENV -UseSystemFlutter
+
+      - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: do-x-windows-msix
-          path: |
-            build/windows/msix/do-x.msix
-            build/windows/msix/do-x.cer
+          name: do-x-windows-installer
+          path: build/windows/installer/do-x-setup.exe
           if-no-files-found: error
 
-      - name: Upload MSIX to Release
+      - name: Upload installer to Release
         uses: svenstaro/upload-release-action@2.11.5
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/windows/msix/do-x.msix
-          asset_name: do-x.msix
+          file: build/windows/installer/do-x-setup.exe
+          asset_name: do-x-setup.exe
           tag: ${{ steps.get_version.outputs.version }}
           release_name: ${{ steps.get_version.outputs.version }}
-          target_commit: ${{ github.sha }}
-          overwrite: true
-
-      - name: Upload testing certificate to Release
-        uses: svenstaro/upload-release-action@2.11.5
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/windows/msix/do-x.cer
-          asset_name: do-x.cer
-          tag: ${{ steps.get_version.outputs.version }}
           target_commit: ${{ github.sha }}
           overwrite: true
 

@@ -44,8 +44,8 @@ build-windows:
 		--dart-define-from-file envs/dev/dart-define.env \
 		--obfuscate --split-debug-info=build/obfuscate/windows
 
-build-msix:
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-msix.ps1
+build-windows-installer:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-installer.ps1
 
 # git delete all local branch without remote branch
 delete-local-branch:

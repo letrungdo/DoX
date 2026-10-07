@@ -27,8 +27,8 @@ utilities. The release version is managed in `pubspec.yaml`.
   visibility/order, and Android update checks through GitHub Releases.
 
 The repository includes platform runners for **Android, iOS, macOS, Windows, and Web**.
-CI publishes Android APKs, an unsigned iOS IPA, a macOS DMG, and a Windows MSIX
-with its public testing certificate. The Web app
+CI publishes Android APKs, an unsigned iOS IPA, a macOS DMG, and a Windows
+setup `.exe`. The Web app
 is deployed through Netlify.
 
 ## Tech stack
@@ -180,41 +180,35 @@ version:
 | Swift imports | Missing `import Dispatch`. |
 | `workItem` | Swift 6.2 (Xcode 27) rejects a local `lazy var` whose initializer refers to itself, failing every command handler with "Use of local variable 'workItem' before its declaration". |
 
-### Windows MSIX (direct testing installs)
+### Windows installer
 
 Build on **Windows x64** with Visual Studio's **Desktop development with C++**
-workload and a Windows SDK installed. Use the Flutter version pinned by FVM.
+workload, a Windows SDK and [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+(`winget install JRSoftware.InnoSetup`). Use the Flutter version pinned by FVM.
 From PowerShell in the repository root:
 
 ```powershell
 fvm install
-./scripts/build-windows-msix.ps1 -Environment dev
+./scripts/build-windows-installer.ps1 -Environment dev
 ```
 
-The script reads `envs/dev/dart-define.env`, builds the release runner, and
-creates `build/windows/msix/do-x.msix` and `do-x.cer`. Its four-part package
-version comes from `pubspec.yaml`, including the build number. `make build-msix`
-invokes the same script when Make is available. `make build-windows` builds the
-unpackaged executable only.
+The script reads `envs/dev/dart-define.env`, builds the release runner, copies
+the MSVC runtime DLLs next to `do_x.exe`, and compiles
+`windows/installer/do-x.iss` into `build/windows/installer/do-x-setup.exe`. Its
+four-part version comes from `pubspec.yaml`, including the build number.
+`make build-windows-installer` invokes the same script when Make is available.
+`make build-windows` builds the unpackaged executable only.
 
-Copy both files to the test PC. Import the public certificate once from an
-**administrator PowerShell** session, then open the MSIX to install:
-
-```powershell
-Import-Certificate -FilePath ./do-x.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage -Path ./do-x.msix
-```
-
-These packages use the `msix` tool's shared development certificate. They are
-for testing installs; production distribution needs a publisher-owned signing
-certificate or Microsoft Store signing. The build does not automatically
-install any certificate into the build machine's trust store.
+The installer needs no certificate and no administrator rights: it installs per
+user into `%LOCALAPPDATA%\Programs\Do X`, adds Start menu and optional desktop
+shortcuts, and registers the `vn.dox.app://` URL scheme used by sign-in
+callbacks. Because it is unsigned, SmartScreen shows "Windows protected your
+PC" on first run; choose **More info → Run anyway**. Keep the `AppId` in the
+`.iss` file fixed so newer installers upgrade the existing install in place.
 
 The Windows CI job uses `DART_DEFINE_BASE64` from the selected GitHub
-environment and publishes both files as workflow artifacts and release assets.
-It runs on `windows-2025`; macOS cannot compile the Windows runner. After
-pushing, download `do-x.msix` and `do-x.cer` from the release or the
-`do-x-windows-msix` workflow artifact.
+environment and publishes `do-x-setup.exe` as a workflow artifact and a release
+asset. It runs on `windows-2025`; macOS cannot compile the Windows runner.
 
 Windows video playback uses Media Kit; Android, Apple, and Web keep their
 existing player backends. Firebase initialization, Crashlytics, push messages,
